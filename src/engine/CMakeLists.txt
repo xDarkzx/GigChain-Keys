@@ -4,6 +4,12 @@ add_library(openstage_engine STATIC
     include/openstage/engine/FakeEngineFactory.h
     internal/FakeEngine.h
     internal/FakeEngine.cpp
+    internal/MidiEvent.h
+    internal/INode.h
+    internal/MidiRouter.h
+    internal/MidiRouter.cpp
+    internal/RenderGraph.h
+    internal/RenderGraph.cpp
 )
 add_library(openstage::engine ALIAS openstage_engine)
 target_include_directories(openstage_engine
