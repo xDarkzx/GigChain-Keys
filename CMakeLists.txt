@@ -15,6 +15,7 @@ qt_standard_project_setup(REQUIRES 6.8)
 enable_testing()
 
 add_subdirectory(src/core)
+add_subdirectory(src/engine)
 add_subdirectory(tests)
 
 # Throwaway experiments (engine spike). Off by default; use the "spike" preset.
