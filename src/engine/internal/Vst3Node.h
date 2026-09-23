@@ -51,6 +51,11 @@ public:
     };
     Problems takeProblems();
 
+    // Main thread: the next processed block starts with note-offs for every
+    // note this plugin is still holding. Used when the node leaves the graph
+    // (patch change) so its notes do not hang when it returns.
+    void releaseAllNotes();
+
     [[nodiscard]] QString name() const;
     [[nodiscard]] bool isInstrument() const;
 

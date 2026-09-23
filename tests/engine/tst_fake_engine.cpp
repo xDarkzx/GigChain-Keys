@@ -59,7 +59,7 @@ private slots:
         for (int step = 0; step < 200; ++step) {
             clock.now = step * 0.05;
             for (const auto& channel : patch.channels) {
-                const auto level = engine->channelLevel(channel.id);
+                auto level = engine->channelLevel(channel.id);
                 QVERIFY(level.peak >= 0.0F && level.peak <= 1.0F);
                 QVERIFY(level.rms >= 0.0F && level.rms <= level.peak);
             }

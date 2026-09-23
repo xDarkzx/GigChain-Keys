@@ -36,6 +36,14 @@ QStringList MidiInput::listPorts()
     QStringList ports;
     try {
         RtMidiIn probe;
+        // Route RtMidi's own messages into our log instead of stderr.
+        probe.setErrorCallback([](RtMidiError::Type type, const std::string& text, void*) {
+            if (type == RtMidiError::WARNING || type == RtMidiError::DEBUG_WARNING) {
+                qCInfo(lcEngine).noquote() << "MIDI:" << QString::fromStdString(text);
+            } else {
+                qCWarning(lcEngine).noquote() << "MIDI:" << QString::fromStdString(text);
+            }
+        });
         for (unsigned int i = 0; i < probe.getPortCount(); ++i) {
             ports << QString::fromStdString(probe.getPortName(i));
         }

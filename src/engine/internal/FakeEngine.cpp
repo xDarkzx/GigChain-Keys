@@ -61,7 +61,7 @@ std::vector<PluginInfo> FakeEngine::availablePlugins() const
     return demoPlugins();
 }
 
-LevelReading FakeEngine::channelLevel(const core::ChannelId& id) const
+LevelReading FakeEngine::channelLevel(const core::ChannelId& id)
 {
     const auto it = std::find_if(m_channels.begin(), m_channels.end(),
                                  [&id](const ChannelState& state) { return state.id == id; });
@@ -112,6 +112,21 @@ void FakeEngine::setMasterVolume(double volumeDb)
 double FakeEngine::masterVolume() const
 {
     return m_masterDb;
+}
+
+void FakeEngine::injectNote(int, int, int)
+{
+    // The fake engine makes no sound; notes are accepted and dropped by design.
+}
+
+std::vector<QString> FakeEngine::poll()
+{
+    return {};
+}
+
+QString FakeEngine::statusText() const
+{
+    return u"Demo engine (no audio)"_s;
 }
 
 FakeEngine::ChannelState* FakeEngine::find(const core::ChannelId& id)
