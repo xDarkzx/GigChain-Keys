@@ -1,0 +1,101 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+ToolBar {
+    id: bar
+
+    required property DocumentController doc
+    required property EngineStatus engineStatus
+    required property bool performMode
+    required property bool sidePanelOpen
+    required property bool inspectorOpen
+
+    signal toggleMode()
+    signal toggleSidePanel()
+    signal toggleInspector()
+    signal newRequested()
+    signal openRequested()
+    signal saveRequested()
+    signal saveAsRequested()
+    signal settingsRequested()
+
+    background: Rectangle { color: Theme.panelRaised }
+
+    RowLayout {
+        anchors.fill: parent
+        anchors.leftMargin: Theme.spacing
+        anchors.rightMargin: Theme.spacing
+        spacing: Theme.spacing
+
+        ToolButton {
+            text: bar.sidePanelOpen ? "◀" : "▶"
+            focusPolicy: Qt.NoFocus
+            onClicked: bar.toggleSidePanel()
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Show or hide the side panel")
+        }
+        ToolButton {
+            text: qsTr("File")
+            visible: !bar.performMode
+            focusPolicy: Qt.NoFocus
+            onClicked: fileMenu.popup()
+            Menu {
+                id: fileMenu
+                MenuItem { text: qsTr("New"); onTriggered: bar.newRequested() }
+                MenuItem { text: qsTr("Open…"); onTriggered: bar.openRequested() }
+                MenuItem { text: qsTr("Save"); onTriggered: bar.saveRequested() }
+                MenuItem { text: qsTr("Save As…"); onTriggered: bar.saveAsRequested() }
+            }
+        }
+
+        Rectangle { width: 1; Layout.fillHeight: true; Layout.margins: 6; color: Theme.border }
+
+        Button {
+            text: qsTr("Edit")
+            highlighted: !bar.performMode
+            focusPolicy: Qt.NoFocus
+            onClicked: if (bar.performMode) bar.toggleMode()
+        }
+        Button {
+            objectName: "performButton"
+            text: qsTr("Perform")
+            highlighted: bar.performMode
+            focusPolicy: Qt.NoFocus
+            onClicked: if (!bar.performMode) bar.toggleMode()
+        }
+
+        Label {
+            text: bar.doc.hasPatch ? bar.doc.currentSongName + "  ·  " + bar.doc.currentPatchName : ""
+            color: Theme.textDim
+            elide: Text.ElideRight
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        Label {
+            text: qsTr("CPU %1%").arg(Math.round(bar.engineStatus.cpuLoad * 100))
+            color: bar.engineStatus.cpuLoad > 0.8 ? Theme.danger : Theme.text
+        }
+        Rectangle {
+            width: 10
+            height: 10
+            radius: 5
+            color: bar.engineStatus.midiActivity ? Theme.meterLow : Theme.border
+        }
+        Label { text: qsTr("MIDI"); color: Theme.textDim }
+        ToolButton {
+            text: qsTr("Inspector")
+            visible: !bar.performMode
+            checkable: true
+            checked: bar.inspectorOpen
+            focusPolicy: Qt.NoFocus
+            onClicked: bar.toggleInspector()
+        }
+        ToolButton {
+            text: qsTr("Settings")
+            focusPolicy: Qt.NoFocus
+            onClicked: bar.settingsRequested()
+        }
+    }
+}

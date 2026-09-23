@@ -1,2 +1,3 @@
 openstage_add_test(tst_document_controller SOURCES tst_document_controller.cpp LIBS openstage_ui)
 openstage_add_test(tst_models SOURCES tst_models.cpp LIBS openstage_ui)
+openstage_add_test(tst_qml_smoke SOURCES tst_qml_smoke.cpp LIBS openstage_ui openstage_uiplugin Qt6::QuickControls2)
