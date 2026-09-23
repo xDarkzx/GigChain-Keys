@@ -16,3 +16,9 @@ enable_testing()
 
 add_subdirectory(src/core)
 add_subdirectory(tests)
+
+# Throwaway experiments (engine spike). Off by default; use the "spike" preset.
+option(OPENSTAGE_BUILD_SPIKES "Build throwaway spike programs" OFF)
+if(OPENSTAGE_BUILD_SPIKES)
+    add_subdirectory(spikes/engine_spike)
+endif()
