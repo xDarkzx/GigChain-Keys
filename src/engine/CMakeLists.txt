@@ -19,6 +19,8 @@ add_library(openstage_engine STATIC
     internal/EngineLog.cpp
     internal/AudioDevice.h
     internal/AudioDevice.cpp
+    internal/MidiInput.h
+    internal/MidiInput.cpp
 )
 add_library(openstage::engine ALIAS openstage_engine)
 target_include_directories(openstage_engine
