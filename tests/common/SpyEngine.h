@@ -1,0 +1,55 @@
+#pragma once
+
+#include "openstage/engine/IEngine.h"
+
+#include <array>
+#include <map>
+#include <vector>
+
+namespace openstage::test {
+
+// An IEngine that records what the UI asked of it.
+class SpyEngine final : public engine::IEngine
+{
+public:
+    int applyCount = 0;
+    core::Patch lastPatch;
+    std::map<QString, double> volumes;
+    std::map<QString, bool> mutes;
+    std::map<QString, bool> solos;
+    double master = 0.0;
+    std::vector<std::array<int, 3>> notes;
+    std::vector<QString> pendingNotices;
+
+    void applyPatch(const core::Patch& patch) override
+    {
+        ++applyCount;
+        lastPatch = patch;
+    }
+    [[nodiscard]] std::vector<engine::PluginInfo> availablePlugins() const override
+    {
+        return {
+            {QStringLiteral("spy/Piano.vst3"), QStringLiteral("Spy Piano"), QStringLiteral("Spy"), engine::PluginKind::Instrument},
+            {QStringLiteral("spy/Pad.vst3"), QStringLiteral("Spy Pad"), QStringLiteral("Spy"), engine::PluginKind::Instrument},
+            {QStringLiteral("spy/Reverb.vst3"), QStringLiteral("Spy Reverb"), QStringLiteral("Other"), engine::PluginKind::Effect},
+        };
+    }
+    [[nodiscard]] engine::LevelReading channelLevel(const core::ChannelId&) override { return {0.5F, 0.25F}; }
+    [[nodiscard]] float cpuLoad() const override { return 0.25F; }
+    [[nodiscard]] bool midiActivity() const override { return true; }
+    void setChannelVolume(const core::ChannelId& id, double db) override { volumes[id.value()] = db; }
+    void setChannelMute(const core::ChannelId& id, bool mute) override { mutes[id.value()] = mute; }
+    void setChannelSolo(const core::ChannelId& id, bool solo) override { solos[id.value()] = solo; }
+    void setMasterVolume(double db) override { master = db; }
+    [[nodiscard]] double masterVolume() const override { return master; }
+    void injectNote(int channel, int note, int velocity) override { notes.push_back({channel, note, velocity}); }
+    std::vector<QString> poll() override
+    {
+        std::vector<QString> out;
+        out.swap(pendingNotices);
+        return out;
+    }
+    [[nodiscard]] QString statusText() const override { return QStringLiteral("Spy engine"); }
+};
+
+} // namespace openstage::test

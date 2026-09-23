@@ -1,0 +1,1 @@
+openstage_add_test(tst_document_controller SOURCES tst_document_controller.cpp LIBS openstage_ui)
