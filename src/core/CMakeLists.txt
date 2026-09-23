@@ -5,10 +5,12 @@ add_library(openstage_core STATIC
     include/openstage/core/Model.h
     include/openstage/core/Validation.h
     include/openstage/core/SetlistJson.h
+    include/openstage/core/SetlistFile.h
     internal/Error.cpp
     internal/Model.cpp
     internal/Validation.cpp
     internal/SetlistJson.cpp
+    internal/SetlistFile.cpp
 )
 add_library(openstage::core ALIAS openstage_core)
 target_include_directories(openstage_core
