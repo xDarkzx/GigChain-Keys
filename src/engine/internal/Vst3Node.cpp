@@ -1,6 +1,7 @@
 #include "Vst3Node.h"
 
 #include "EngineLog.h"
+#include "LoaderErrors.h"
 
 #include "public.sdk/source/common/memorystream.h"
 #include "public.sdk/source/vst/hosting/eventlist.h"
@@ -17,10 +18,9 @@
 
 #include <QFileInfo>
 
-#include <windows.h>
-
 #include <algorithm>
 #include <atomic>
+#include <bitset>
 #include <exception>
 #include <string>
 
@@ -43,22 +43,6 @@ Vst::HostApplication& hostContext()
     return host;
 }
 
-// While alive, the Windows loader reports bad or missing DLLs (corrupt,
-// 32-bit, missing dependency) as errors instead of showing a modal "Bad
-// Image" / "missing DLL" dialog. Restores the previous mode on exit.
-class SilentLoaderErrors
-{
-public:
-    SilentLoaderErrors() { SetThreadErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX, &m_previous); }
-    ~SilentLoaderErrors() { SetThreadErrorMode(m_previous, nullptr); }
-    SilentLoaderErrors(const SilentLoaderErrors&) = delete;
-    SilentLoaderErrors& operator=(const SilentLoaderErrors&) = delete;
-    SilentLoaderErrors(SilentLoaderErrors&&) = delete;
-    SilentLoaderErrors& operator=(SilentLoaderErrors&&) = delete;
-
-private:
-    DWORD m_previous = 0;
-};
 
 // kNotImplemented means "nothing to do" for optional calls; anything else
 // that is not kResultOk is a real failure.
@@ -116,6 +100,10 @@ struct Vst3Node::Impl
     std::atomic<uint64_t> processFailures{0};
     std::atomic<uint64_t> droppedEvents{0};
     std::atomic<uint64_t> oversizedBlocks{0};
+    // Notes currently held, per MIDI channel (audio thread only), and a
+    // main-thread request to release them on the next block.
+    std::bitset<16 * 128> heldNotes;
+    std::atomic<bool> releaseRequested{false};
 
     core::Result<void> activate(double sampleRate, int block)
     {
@@ -285,6 +273,18 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
     }
 
     impl.events.clear();
+    if (impl.releaseRequested.exchange(false, std::memory_order_acquire) && impl.heldNotes.any()) {
+        for (std::size_t i = 0; i < impl.heldNotes.size(); ++i) {
+            if (!impl.heldNotes.test(i)) continue;
+            Vst::Event off{};
+            off.type = Vst::Event::kNoteOffEvent;
+            off.noteOff.channel = static_cast<int16>(i / 128);
+            off.noteOff.pitch = static_cast<int16>(i % 128);
+            off.noteOff.noteId = -1;
+            if (impl.events.addEvent(off) != kResultOk) impl.droppedEvents.fetch_add(1, std::memory_order_relaxed);
+        }
+        impl.heldNotes.reset();
+    }
     for (const MidiEvent& e : events) {
         const int type = e.status & 0xF0;
         Vst::Event event{};
@@ -296,7 +296,9 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
             event.noteOn.pitch = e.data1;
             event.noteOn.velocity = static_cast<float>(e.data2) / 127.0F;
             event.noteOn.noteId = -1;
+            impl.heldNotes.set(static_cast<std::size_t>((e.status & 0x0F) * 128 + e.data1));
         } else if (type == 0x80 || type == 0x90) {
+            impl.heldNotes.reset(static_cast<std::size_t>((e.status & 0x0F) * 128 + e.data1));
             event.type = Vst::Event::kNoteOffEvent;
             event.noteOff.channel = static_cast<int16>(e.status & 0x0F);
             event.noteOff.pitch = e.data1;
@@ -335,6 +337,11 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
         std::fill_n(io.left, frames, 0.0F);
         std::fill_n(io.right, frames, 0.0F);
     }
+}
+
+void Vst3Node::releaseAllNotes()
+{
+    m_impl->releaseRequested.store(true, std::memory_order_release);
 }
 
 Vst3Node::Problems Vst3Node::takeProblems()

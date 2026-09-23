@@ -14,7 +14,7 @@ public:
 
     void applyPatch(const core::Patch& patch) override;
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override;
-    [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) const override;
+    [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
     [[nodiscard]] float cpuLoad() const override;
     [[nodiscard]] bool midiActivity() const override;
     void setChannelVolume(const core::ChannelId& id, double volumeDb) override;
@@ -22,6 +22,9 @@ public:
     void setChannelSolo(const core::ChannelId& id, bool solo) override;
     void setMasterVolume(double volumeDb) override;
     [[nodiscard]] double masterVolume() const override;
+    void injectNote(int midiChannel, int note, int velocity) override;
+    std::vector<QString> poll() override;
+    [[nodiscard]] QString statusText() const override;
 
 private:
     struct ChannelState

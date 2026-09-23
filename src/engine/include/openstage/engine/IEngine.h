@@ -25,7 +25,8 @@ public:
     virtual void applyPatch(const core::Patch& patch) = 0;
 
     [[nodiscard]] virtual std::vector<PluginInfo> availablePlugins() const = 0;
-    [[nodiscard]] virtual LevelReading channelLevel(const core::ChannelId& id) const = 0;
+    // Peak since the previous call for this channel (then reset) and current RMS.
+    [[nodiscard]] virtual LevelReading channelLevel(const core::ChannelId& id) = 0;
     [[nodiscard]] virtual float cpuLoad() const = 0;
     [[nodiscard]] virtual bool midiActivity() const = 0;
 
@@ -36,6 +37,18 @@ public:
     virtual void setChannelSolo(const core::ChannelId& id, bool solo) = 0;
     virtual void setMasterVolume(double volumeDb) = 0;
     [[nodiscard]] virtual double masterVolume() const = 0;
+
+    // Plays a note as if it came from the keyboard (on-screen keyboard,
+    // auditioning). velocity 0 = note off. Out-of-range values are ignored.
+    virtual void injectNote(int midiChannel, int note, int velocity) = 0;
+
+    // Main thread, regularly (the UI polls ~30 Hz): housekeeping, logging of
+    // anything the audio thread counted, device recovery. Returns messages the
+    // user should see (each is also logged).
+    virtual std::vector<QString> poll() = 0;
+
+    // One line describing the audio setup, e.g. "Scarlett Solo · WASAPI · 5.3 ms".
+    [[nodiscard]] virtual QString statusText() const = 0;
 
 protected:
     IEngine() = default;

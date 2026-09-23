@@ -11,3 +11,5 @@ openstage_add_test(tst_audio_device SOURCES tst_audio_device.cpp LIBS openstage:
 target_include_directories(tst_audio_device PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 openstage_add_test(tst_midi_input SOURCES tst_midi_input.cpp LIBS openstage::engine)
 target_include_directories(tst_midi_input PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+openstage_add_test(tst_real_engine SOURCES tst_real_engine.cpp LIBS openstage::engine)
+target_include_directories(tst_real_engine PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
