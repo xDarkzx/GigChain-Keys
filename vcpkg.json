@@ -1,0 +1,6 @@
+{
+  "name": "openstage",
+  "version-string": "0.1.0",
+  "builtin-baseline": "3ddaad9be959816602453ecb05533f8732464ef4",
+  "dependencies": ["tl-expected"]
+}

@@ -1,0 +1,10 @@
+add_library(openstage_core STATIC
+    include/openstage/core/Error.h
+    internal/Error.cpp
+)
+add_library(openstage::core ALIAS openstage_core)
+target_include_directories(openstage_core
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/internal)
+target_link_libraries(openstage_core PUBLIC Qt6::Core tl::expected)
+openstage_target_defaults(openstage_core)
