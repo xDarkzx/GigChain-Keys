@@ -13,10 +13,13 @@ add_library(openstage_engine STATIC
     internal/GraphExchange.h
     internal/GraphExchange.cpp
     internal/MidiQueue.h
+    internal/Vst3Node.h
+    internal/Vst3Node.cpp
 )
 add_library(openstage::engine ALIAS openstage_engine)
 target_include_directories(openstage_engine
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/internal)
-target_link_libraries(openstage_engine PUBLIC openstage::core)
+target_link_libraries(openstage_engine PUBLIC openstage::core PRIVATE vst3_host_support)
+target_compile_definitions(openstage_engine PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 openstage_target_defaults(openstage_engine)

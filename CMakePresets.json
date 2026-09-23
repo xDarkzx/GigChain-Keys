@@ -45,8 +45,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "OPENSTAGE_BUILD_SPIKES": "ON",
-        "VCPKG_MANIFEST_FEATURES": "audio"
+        "OPENSTAGE_BUILD_SPIKES": "ON"
       }
     }
   ],

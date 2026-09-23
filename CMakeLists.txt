@@ -10,6 +10,16 @@ include(CompilerHardening)
 
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Test)
 find_package(tl-expected CONFIG REQUIRED)
+find_package(RtAudio CONFIG REQUIRED)
+find_package(RtMidi CONFIG REQUIRED)
+# MSVC refuses to link ASan-instrumented objects with uninstrumented ones
+# that use the same STL containers, so third-party code built here (the VST3
+# SDK) is instrumented too.
+if(OPENSTAGE_ASAN AND MSVC)
+    add_compile_options(/fsanitize=address)
+    add_link_options(/INCREMENTAL:NO)
+endif()
+include(Vst3Sdk)
 qt_standard_project_setup(REQUIRES 6.8)
 
 enable_testing()
