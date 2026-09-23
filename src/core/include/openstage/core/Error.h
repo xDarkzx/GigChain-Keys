@@ -19,6 +19,7 @@ enum class ErrorCode
     InvalidData,
     LimitExceeded,
     OutOfRange,
+    DeviceUnavailable,
 };
 
 // A failure the user can be told about: `message` is ready to show in the UI.
