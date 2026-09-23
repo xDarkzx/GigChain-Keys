@@ -1,3 +1,4 @@
 openstage_add_test(tst_error SOURCES tst_error.cpp LIBS openstage::core)
 openstage_add_test(tst_validation SOURCES tst_validation.cpp LIBS openstage::core)
 openstage_add_test(tst_setlist_json SOURCES tst_setlist_json.cpp LIBS openstage::core)
+openstage_add_test(tst_setlist_file SOURCES tst_setlist_file.cpp LIBS openstage::core)
