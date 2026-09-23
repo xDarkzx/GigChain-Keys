@@ -81,10 +81,12 @@ OpenStage/
     core/     include/openstage/core/*.h   internal/*.cpp  CMakeLists.txt
     engine/   include/openstage/engine/IEngine.h, EngineTypes.h
               internal/FakeEngine.{h,cpp}   CMakeLists.txt
-    ui/       include/openstage/ui/*.h     internal/*.cpp
-              qml/  Main.qml Theme.qml Toolbar.qml SidePanel.qml
-                    SetlistView.qml PluginBrowser.qml PluginArea.qml
-                    Mixer.qml ChannelStrip.qml Inspector.qml PerformView.qml
+    ui/       cpp/*.h *.cpp   (C++ models/controllers, QML-registered)
+              Main.qml Theme.qml Toolbar.qml SidePanel.qml SetlistView.qml
+              PluginBrowser.qml PluginArea.qml Mixer.qml ChannelStrip.qml
+              Inspector.qml PerformView.qml DragSource.qml LevelMeter.qml
+              (QML sits at the module root so it sees the module's C++
+              types through the implicit import)
     app/      main.cpp  CMakeLists.txt
   tests/      core/  engine/  ui/
   docs/superpowers/specs/
@@ -229,9 +231,14 @@ icons or names are used.
 - MSVC: `/W4 /WX /permissive- /sdl /guard:cf /utf-8 /Zc:__cplusplus`;
   linker `/guard:cf /DYNAMICBASE /NXCOMPAT /HIGHENTROPYVA`. Warnings-as-errors
   applies to project code only, not third-party headers (included as SYSTEM).
-- `asan` preset builds with `/fsanitize=address`; tests run under it.
-- Debug builds enable the CRT leak checker (`_CrtSetDbgFlag`); the test
-  runner fails if leaks are reported at exit.
+- `asan` preset builds RelWithDebInfo with `/fsanitize=address` (Debug's
+  `/RTC1` is incompatible with ASan); tests run under it.
+- Leak checks use the CRT debug heap in the `debug` preset: tests run an
+  operation once to warm caches, then many times, and fail if the count of
+  live heap blocks grew (`_CrtMemCheckpoint`). A whole-process check at exit
+  is not used because Qt keeps some allocations alive until unload, which
+  gives false reports. The app enables `_CRTDBG_LEAK_CHECK_DF` in Debug so
+  leaks show in the debugger output during development.
 - `.clang-tidy` enables `cppcoreguidelines-*`, `bugprone-*`,
   `modernize-*`, `performance-*` (with noisy checks disabled);
   `.clang-format` defines the house style.
