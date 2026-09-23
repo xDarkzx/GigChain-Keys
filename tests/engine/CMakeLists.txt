@@ -9,3 +9,5 @@ target_include_directories(tst_vst3_node PRIVATE ${PROJECT_SOURCE_DIR}/src/engin
 target_compile_definitions(tst_vst3_node PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 openstage_add_test(tst_audio_device SOURCES tst_audio_device.cpp LIBS openstage::engine)
 target_include_directories(tst_audio_device PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+openstage_add_test(tst_midi_input SOURCES tst_midi_input.cpp LIBS openstage::engine)
+target_include_directories(tst_midi_input PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
