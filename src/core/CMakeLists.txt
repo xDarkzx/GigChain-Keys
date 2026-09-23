@@ -1,6 +1,12 @@
 add_library(openstage_core STATIC
     include/openstage/core/Error.h
+    include/openstage/core/Ids.h
+    include/openstage/core/Limits.h
+    include/openstage/core/Model.h
+    include/openstage/core/Validation.h
     internal/Error.cpp
+    internal/Model.cpp
+    internal/Validation.cpp
 )
 add_library(openstage::core ALIAS openstage_core)
 target_include_directories(openstage_core
