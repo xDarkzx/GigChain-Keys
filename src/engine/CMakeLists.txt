@@ -10,6 +10,9 @@ add_library(openstage_engine STATIC
     internal/MidiRouter.cpp
     internal/RenderGraph.h
     internal/RenderGraph.cpp
+    internal/GraphExchange.h
+    internal/GraphExchange.cpp
+    internal/MidiQueue.h
 )
 add_library(openstage::engine ALIAS openstage_engine)
 target_include_directories(openstage_engine
