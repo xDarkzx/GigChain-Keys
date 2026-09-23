@@ -7,6 +7,7 @@
 #include "openstage/engine/EngineTypes.h"
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <vector>
@@ -78,6 +79,9 @@ public:
     [[nodiscard]] ChannelStrip* strip(std::size_t index);
     [[nodiscard]] ChannelStrip* findStrip(const core::ChannelId& id);
     [[nodiscard]] std::size_t stripCount() const { return m_strips.size(); }
+    // Blocks refused (rendered as silence) because they exceeded maxBlock,
+    // since the last call. The audio thread cannot log; the main thread polls.
+    uint64_t takeOversizedBlocks() { return m_oversizedBlocks.exchange(0, std::memory_order_relaxed); }
     [[nodiscard]] double sampleRate() const { return m_sampleRate; }
     [[nodiscard]] int maxBlock() const { return m_maxBlock; }
 
@@ -85,6 +89,7 @@ private:
     std::vector<std::unique_ptr<ChannelStrip>> m_strips;
     double m_sampleRate;
     int m_maxBlock;
+    std::atomic<uint64_t> m_oversizedBlocks{0};
 };
 
 // Linear gain for a volume in dB; the floor (-96 dB) is silence.

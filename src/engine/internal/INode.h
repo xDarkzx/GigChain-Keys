@@ -2,6 +2,8 @@
 
 #include "MidiEvent.h"
 
+#include "openstage/core/Error.h"
+
 #include <span>
 
 namespace openstage::engine {
@@ -30,7 +32,8 @@ public:
     INode(INode&&) = delete;
     INode& operator=(INode&&) = delete;
 
-    virtual void prepare(double sampleRate, int maxBlock) = 0;
+    // Fails with the precise cause when the node cannot run at this setup.
+    virtual core::Result<void> prepare(double sampleRate, int maxBlock) = 0;
     virtual void process(std::span<const MidiEvent> events, AudioBlock io) = 0;
 
 protected:

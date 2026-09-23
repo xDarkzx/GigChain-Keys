@@ -1,5 +1,7 @@
 #include "Vst3Node.h"
 
+#include "EngineLog.h"
+
 #include "public.sdk/source/common/memorystream.h"
 #include "public.sdk/source/vst/hosting/eventlist.h"
 #include "public.sdk/source/vst/hosting/hostclasses.h"
@@ -18,6 +20,7 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <exception>
 #include <string>
 
@@ -57,18 +60,38 @@ private:
     DWORD m_previous = 0;
 };
 
-void activateMainBuses(Vst::IComponent& component, Vst::BusDirection direction)
+// kNotImplemented means "nothing to do" for optional calls; anything else
+// that is not kResultOk is a real failure.
+bool succeeded(tresult result)
+{
+    return result == kResultOk || result == kNotImplemented;
+}
+
+QString directionName(Vst::BusDirection direction)
+{
+    return direction == Vst::kInput ? u"input"_s : u"output"_s;
+}
+
+// Activates the main audio buses in one direction (bus 0 when none is marked
+// main). A plugin that refuses is a load error, never ignored.
+core::Result<void> activateMainBuses(Vst::IComponent& component, Vst::BusDirection direction, const QString& name)
 {
     const int32 count = component.getBusCount(Vst::kAudio, direction);
     bool any = false;
     for (int32 i = 0; i < count; ++i) {
         Vst::BusInfo info{};
-        if (component.getBusInfo(Vst::kAudio, direction, i, info) == kResultOk && info.busType == Vst::kMain) {
-            component.activateBus(Vst::kAudio, direction, i, true);
-            any = true;
+        if (component.getBusInfo(Vst::kAudio, direction, i, info) != kResultOk || info.busType != Vst::kMain) continue;
+        if (!succeeded(component.activateBus(Vst::kAudio, direction, i, true))) {
+            return core::fail(core::ErrorCode::InvalidData,
+                              u"%1 refused to activate audio %2 bus %3"_s.arg(name, directionName(direction)).arg(i));
         }
+        any = true;
     }
-    if (!any && count > 0) component.activateBus(Vst::kAudio, direction, 0, true);
+    if (!any && count > 0 && !succeeded(component.activateBus(Vst::kAudio, direction, 0, true))) {
+        return core::fail(core::ErrorCode::InvalidData,
+                          u"%1 refused to activate audio %2 bus 0"_s.arg(name, directionName(direction)));
+    }
+    return {};
 }
 
 } // namespace
@@ -88,16 +111,24 @@ struct Vst3Node::Impl
     bool instrument = false;
     bool active = false;
     int maxBlock = 0;
+    // The audio thread cannot log; it counts problems here and the main
+    // thread reports them (Vst3Node::takeProblems()).
+    std::atomic<uint64_t> processFailures{0};
+    std::atomic<uint64_t> droppedEvents{0};
+    std::atomic<uint64_t> oversizedBlocks{0};
 
-    bool activate(double sampleRate, int block)
+    core::Result<void> activate(double sampleRate, int block)
     {
         Vst::ProcessSetup setup{Vst::kRealtime, Vst::kSample32, block, sampleRate};
-        if (processor->setupProcessing(setup) != kResultOk) return false;
-
-        activateMainBuses(*component, Vst::kInput);
-        activateMainBuses(*component, Vst::kOutput);
-        if (component->getBusCount(Vst::kEvent, Vst::kInput) > 0) {
-            component->activateBus(Vst::kEvent, Vst::kInput, 0, true);
+        if (processor->setupProcessing(setup) != kResultOk) {
+            return core::fail(core::ErrorCode::InvalidData,
+                              u"%1 does not support %2 Hz / %3-sample blocks"_s.arg(name).arg(sampleRate).arg(block));
+        }
+        if (auto r = activateMainBuses(*component, Vst::kInput, name); !r) return r;
+        if (auto r = activateMainBuses(*component, Vst::kOutput, name); !r) return r;
+        if (component->getBusCount(Vst::kEvent, Vst::kInput) > 0 &&
+            !succeeded(component->activateBus(Vst::kEvent, Vst::kInput, 0, true))) {
+            return core::fail(core::ErrorCode::InvalidData, u"%1 refused to activate its MIDI input"_s.arg(name));
         }
 
         data.prepare(*component, block, Vst::kSample32);
@@ -108,24 +139,38 @@ struct Vst3Node::Impl
         data.inputParameterChanges = &parameterChanges;
         data.processContext = &context;
 
-        component->setActive(true);
-        processor->setProcessing(true);
+        if (!succeeded(component->setActive(true))) {
+            data.unprepare();
+            return core::fail(core::ErrorCode::InvalidData, u"%1 failed to activate"_s.arg(name));
+        }
+        if (!succeeded(processor->setProcessing(true))) {
+            if (!succeeded(component->setActive(false))) {
+                qCWarning(lcEngine).noquote() << name << "also failed to deactivate after a failed start";
+            }
+            data.unprepare();
+            return core::fail(core::ErrorCode::InvalidData, u"%1 failed to start processing"_s.arg(name));
+        }
         active = true;
         maxBlock = block;
-        return true;
+        return {};
     }
 
+    // Main thread. Failures here cannot be undone, but they are logged.
     void deactivate()
     {
         if (!active) return;
-        processor->setProcessing(false);
-        component->setActive(false);
+        if (!succeeded(processor->setProcessing(false))) {
+            qCWarning(lcEngine).noquote() << name << "reported an error when stopping processing";
+        }
+        if (!succeeded(component->setActive(false))) {
+            qCWarning(lcEngine).noquote() << name << "reported an error when deactivating";
+        }
         data.unprepare();
         active = false;
     }
 };
 
-core::Result<std::shared_ptr<Vst3Node>> Vst3Node::load(const QString& bundlePath, double sampleRate, int maxBlock)
+core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bundlePath, double sampleRate, int maxBlock)
 {
     if (!QFileInfo::exists(bundlePath)) {
         return core::fail(core::ErrorCode::FileNotFound, u"Plugin not found: %1"_s.arg(bundlePath));
@@ -173,13 +218,15 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::load(const QString& bundlePath
             MemoryStream state;
             if (impl->component->getState(&state) == kResultOk && state.getSize() > 0) {
                 state.seek(0, IBStream::kIBSeekSet, nullptr);
-                impl->controller->setComponentState(&state);
+                if (!succeeded(impl->controller->setComponentState(&state))) {
+                    // Not fatal (the plugin still plays), but recorded.
+                    qCWarning(lcEngine).noquote() << impl->name << "rejected its own default state";
+                }
             }
         }
 
-        if (!impl->activate(sampleRate, maxBlock)) {
-            return core::fail(core::ErrorCode::InvalidData,
-                              u"%1 does not support %2 Hz / %3-sample blocks"_s.arg(impl->name).arg(sampleRate).arg(maxBlock));
+        if (auto activated = impl->activate(sampleRate, maxBlock); !activated) {
+            return tl::unexpected(activated.error());
         }
         return std::make_shared<Vst3Node>(Token{}, std::move(impl));
     } catch (const std::exception& e) {
@@ -188,6 +235,17 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::load(const QString& bundlePath
     } catch (...) {
         return core::fail(core::ErrorCode::InvalidData, u"Loading %1 failed"_s.arg(bundlePath));
     }
+}
+
+core::Result<std::shared_ptr<Vst3Node>> Vst3Node::load(const QString& bundlePath, double sampleRate, int maxBlock)
+{
+    auto node = loadUnlogged(bundlePath, sampleRate, maxBlock);
+    if (node) {
+        qCInfo(lcEngine).noquote() << "Loaded plugin" << (*node)->name() << "from" << bundlePath;
+    } else {
+        qCWarning(lcEngine).noquote() << node.error().message;
+    }
+    return node;
 }
 
 Vst3Node::Vst3Node(Token, std::unique_ptr<Impl> impl) : m_impl(std::move(impl)) {}
@@ -204,10 +262,15 @@ Vst3Node::~Vst3Node()
     m_impl->module = nullptr;
 }
 
-void Vst3Node::prepare(double sampleRate, int maxBlock)
+core::Result<void> Vst3Node::prepare(double sampleRate, int maxBlock)
 {
     m_impl->deactivate();
-    m_impl->activate(sampleRate, maxBlock);
+    auto activated = m_impl->activate(sampleRate, maxBlock);
+    if (!activated) {
+        // The node stays inactive and process() outputs silence.
+        qCWarning(lcEngine).noquote() << activated.error().message;
+    }
+    return activated;
 }
 
 void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
@@ -215,6 +278,7 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
     Impl& impl = *m_impl;
     const auto frames = static_cast<std::size_t>(std::max(io.frames, 0));
     if (!impl.active || io.frames <= 0 || io.frames > impl.maxBlock) {
+        if (io.frames > impl.maxBlock) impl.oversizedBlocks.fetch_add(1, std::memory_order_relaxed);
         std::fill_n(io.left, frames, 0.0F);
         std::fill_n(io.right, frames, 0.0F);
         return;
@@ -247,7 +311,7 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
         } else {
             continue; // controllers need IMidiMapping (not in v1)
         }
-        impl.events.addEvent(event);
+        if (impl.events.addEvent(event) != kResultOk) impl.droppedEvents.fetch_add(1, std::memory_order_relaxed);
     }
 
     // Effects read their input from the main input bus.
@@ -259,7 +323,9 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
     }
 
     impl.data.numSamples = static_cast<int32>(io.frames);
-    impl.processor->process(impl.data);
+    if (impl.processor->process(impl.data) != kResultOk) {
+        impl.processFailures.fetch_add(1, std::memory_order_relaxed);
+    }
 
     if (impl.data.numOutputs > 0 && impl.data.outputs[0].numChannels > 0) {
         const Vst::AudioBusBuffers& out = impl.data.outputs[0];
@@ -269,6 +335,12 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
         std::fill_n(io.left, frames, 0.0F);
         std::fill_n(io.right, frames, 0.0F);
     }
+}
+
+Vst3Node::Problems Vst3Node::takeProblems()
+{
+    return Problems{m_impl->processFailures.exchange(0), m_impl->droppedEvents.exchange(0),
+                    m_impl->oversizedBlocks.exchange(0)};
 }
 
 QString Vst3Node::name() const

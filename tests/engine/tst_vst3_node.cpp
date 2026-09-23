@@ -40,6 +40,7 @@ class TestVst3Node : public QObject
 private slots:
     void missingBundleIsAnError()
     {
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Plugin not found: C:/nowhere/Nothing.vst3"_s));
         const auto node = Vst3Node::load(u"C:/nowhere/Nothing.vst3"_s, kRate, kBlock);
         QVERIFY(!node);
         QVERIFY(node.error().code == core::ErrorCode::FileNotFound);
@@ -47,7 +48,8 @@ private slots:
 
     void notAPluginIsAnError()
     {
-        // Rejected before the Windows loader ever sees it.
+        // Rejected before the Windows loader ever sees it, and logged.
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"is not a \\.vst3 plugin"_s));
         const auto node = Vst3Node::load(QFINDTESTDATA("tst_vst3_node.cpp"), kRate, kBlock);
         QVERIFY(!node);
         QVERIFY(node.error().code == core::ErrorCode::InvalidData);
@@ -66,10 +68,13 @@ private slots:
             QVERIFY(file.open(QIODevice::WriteOnly));
             file.write("MZ this is not a real plugin");
         }
+        // The exact Windows loader reason is both returned and logged.
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Corrupt\\.vst3.*LoadLibraryW failed"_s));
         const DWORD before = GetThreadErrorMode();
         const auto node = Vst3Node::load(path, kRate, kBlock);
         QVERIFY(!node);
         QVERIFY(node.error().code == core::ErrorCode::InvalidData);
+        QVERIFY2(node.error().message.contains(u"LoadLibraryW failed"_s), qPrintable(node.error().message));
         QCOMPARE(GetThreadErrorMode(), before);
     }
 
@@ -91,6 +96,15 @@ private slots:
             loudest = std::max(loudest, blockPeak(left, right));
         }
         QVERIFY2(loudest > 0.001F, "piano produced silence");
+        QVERIFY(!(*node)->takeProblems().any());
+
+        // A block bigger than prepared is refused (silence) and counted, not ignored.
+        std::vector<float> bigLeft(kBlock * 2);
+        std::vector<float> bigRight(kBlock * 2);
+        (*node)->process({}, AudioBlock{bigLeft.data(), bigRight.data(), kBlock * 2});
+        const auto problems = (*node)->takeProblems();
+        QCOMPARE(problems.oversizedBlocks, uint64_t{1});
+        QVERIFY(!(*node)->takeProblems().any()); // taking resets
     }
 
     void effectPassesAudioThrough()

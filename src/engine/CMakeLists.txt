@@ -15,6 +15,8 @@ add_library(openstage_engine STATIC
     internal/MidiQueue.h
     internal/Vst3Node.h
     internal/Vst3Node.cpp
+    internal/EngineLog.h
+    internal/EngineLog.cpp
 )
 add_library(openstage::engine ALIAS openstage_engine)
 target_include_directories(openstage_engine
