@@ -16,6 +16,7 @@ QString toString(ErrorCode code)
     case ErrorCode::InvalidData: return u"Invalid data"_s;
     case ErrorCode::LimitExceeded: return u"Limit exceeded"_s;
     case ErrorCode::OutOfRange: return u"Value out of range"_s;
+    case ErrorCode::DeviceUnavailable: return u"Audio or MIDI device unavailable"_s;
     }
     return u"Unknown error"_s;
 }
