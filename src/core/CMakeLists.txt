@@ -8,6 +8,7 @@ add_library(openstage_core STATIC
     include/openstage/core/SetlistFile.h
     include/openstage/core/Navigation.h
     include/openstage/core/Editing.h
+    include/openstage/core/FileLog.h
     internal/Error.cpp
     internal/Model.cpp
     internal/Validation.cpp
@@ -15,6 +16,7 @@ add_library(openstage_core STATIC
     internal/SetlistFile.cpp
     internal/Navigation.cpp
     internal/Editing.cpp
+    internal/FileLog.cpp
 )
 add_library(openstage::core ALIAS openstage_core)
 target_include_directories(openstage_core

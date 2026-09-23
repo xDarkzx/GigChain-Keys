@@ -38,7 +38,7 @@ class HeldNoteNode final : public INode
 {
 public:
     explicit HeldNoteNode(float value) : m_value(value) {}
-    void prepare(double, int) override {}
+    core::Result<void> prepare(double, int) override { return {}; }
     void process(std::span<const MidiEvent> events, AudioBlock out) override
     {
         for (const MidiEvent& e : events) {
@@ -61,7 +61,7 @@ class MathEffect final : public INode
 {
 public:
     MathEffect(float add, float mul) : m_add(add), m_mul(mul) {}
-    void prepare(double, int) override {}
+    core::Result<void> prepare(double, int) override { return {}; }
     void process(std::span<const MidiEvent>, AudioBlock io) override
     {
         for (int i = 0; i < io.frames; ++i) {
@@ -219,6 +219,20 @@ private slots:
         const LevelReading level = graph.strip(0)->takeLevel();
         QVERIFY(std::abs(level.peak - 0.8F) < 1e-6F); // peak survived the silent block
         QCOMPARE(graph.strip(0)->takeLevel().peak, 0.0F);
+    }
+
+    void oversizedBlockIsSilentAndCounted()
+    {
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(std::make_shared<HeldNoteNode>(0.5F)));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        std::vector<float> left(kFrames * 2, 1.0F);
+        std::vector<float> right(kFrames * 2, 1.0F);
+        const MidiEvent events[] = {noteOn(60)};
+        graph.render(events, AudioBlock{left.data(), right.data(), kFrames * 2}, 1.0F);
+        QVERIFY(std::all_of(left.begin(), left.end(), [](float v) { return v == 0.0F; }));
+        QCOMPARE(graph.takeOversizedBlocks(), uint64_t{1});
+        QCOMPARE(graph.takeOversizedBlocks(), uint64_t{0});
     }
 
     void findsStripsById()

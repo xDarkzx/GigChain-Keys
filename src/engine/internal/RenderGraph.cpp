@@ -101,7 +101,11 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
     const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
     std::fill_n(out.left, frames, 0.0F);
     std::fill_n(out.right, frames, 0.0F);
-    if (out.frames <= 0 || out.frames > m_maxBlock) return; // never overrun strip buffers
+    if (out.frames > m_maxBlock) {
+        m_oversizedBlocks.fetch_add(1, std::memory_order_relaxed); // never overrun strip buffers
+        return;
+    }
+    if (out.frames <= 0) return;
 
     const bool anySolo = std::any_of(m_strips.begin(), m_strips.end(), [](const auto& s) { return s->solo(); });
     for (const auto& strip : m_strips) {
