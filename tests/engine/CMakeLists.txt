@@ -4,3 +4,6 @@ openstage_add_test(tst_render_graph SOURCES tst_render_graph.cpp LIBS openstage:
 target_include_directories(tst_render_graph PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 openstage_add_test(tst_graph_exchange SOURCES tst_graph_exchange.cpp LIBS openstage::engine)
 target_include_directories(tst_graph_exchange PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+openstage_add_test(tst_vst3_node SOURCES tst_vst3_node.cpp LIBS openstage::engine)
+target_include_directories(tst_vst3_node PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+target_compile_definitions(tst_vst3_node PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
