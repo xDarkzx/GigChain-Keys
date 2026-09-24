@@ -96,6 +96,7 @@ int main(int argc, char* argv[])
     engineOptions.progress = [&startup, &starting](const QString& what, int done, int total) {
         if (!starting) return;
         if (total > 0) {
+            startup.addPlugin(what);
             startup.report(QGuiApplication::tr("Scanning plugins (%1 of %2)").arg(done + 1).arg(total), what,
                            static_cast<double>(done) / total);
         } else {

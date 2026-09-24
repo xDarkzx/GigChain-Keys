@@ -127,22 +127,38 @@ private slots:
         splash.setInitialProperties({{u"startup"_s, QVariant::fromValue(&startup)}});
         splash.loadFromModule(u"GigChain.Ui"_s, u"Splash"_s);
         QCOMPARE(splash.rootObjects().size(), 1);
-        startup.report(u"Scanning plugins (3 of 63)"_s, u"Piano V2"_s, 2.0 / 63.0);
+        startup.report(u"Scanning plugins (3 of 63)"_s, u"Test Plugin C"_s, 2.0 / 63.0);
         auto* step = splash.rootObjects().value(0)->findChild<QObject*>(u"splashStep"_s);
         QVERIFY(step != nullptr);
         QCOMPARE(step->property("text").toString(), u"Scanning plugins (3 of 63)"_s);
         auto* detail = splash.rootObjects().value(0)->findChild<QObject*>(u"splashDetail"_s);
         QVERIFY(detail != nullptr);
-        QCOMPARE(detail->property("text").toString(), u"Piano V2"_s); // the plugin being scanned
+        QCOMPARE(detail->property("text").toString(), u"Test Plugin C"_s); // the plugin being scanned
         auto* image = splash.rootObjects().value(0)->findChild<QObject*>(u"splashImage"_s);
         QVERIFY(image != nullptr);
         QCOMPARE(image->property("status").toInt(), 1); // Image.Ready: the branding picture is built in
         QVERIFY(splash.rootObjects().value(0)->property("flags").toInt() & Qt::WindowStaysOnTopHint); // in front
 
-        startup.finish(300); // loaded early: "Ready", the bar glides to full
+        // Loaded early: while it stays up, the splash names each plugin the
+        // scanner reported (made-up names here), the bar filling from the
+        // left, then says "Ready". The position in the list is set directly
+        // so the test does not depend on animation timing.
+        startup.addPlugin(u"Test Plugin A"_s);
+        startup.addPlugin(u"Test Plugin B"_s);
+        startup.finish(600);
+        QObject* root = splash.rootObjects().value(0);
+        auto* fill = root->findChild<QObject*>(u"splashFill"_s);
+        QVERIFY(fill != nullptr);
+        QVERIFY(root->setProperty("playhead", 0.5));
+        QCOMPARE(detail->property("text").toString(), u"Test Plugin A"_s);
+        QCOMPARE(step->property("text").toString(), u"Loading plugins (1 of 2)"_s);
+        QCOMPARE(fill->property("fraction").toDouble(), 0.25);
+        QVERIFY(root->setProperty("playhead", 1.5));
+        QCOMPARE(detail->property("text").toString(), u"Test Plugin B"_s);
+        QCOMPARE(fill->property("fraction").toDouble(), 0.75);
+        QVERIFY(root->setProperty("playhead", 2.0));
         QCOMPARE(step->property("text").toString(), u"Ready"_s);
-        QCOMPARE(startup.progress(), 1.0);
-        QCOMPARE(startup.glideMs(), 300);
+        QCOMPARE(fill->property("fraction").toDouble(), 1.0);
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(u'\n')));
     }
 
