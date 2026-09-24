@@ -46,8 +46,10 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_preparedBlock = engine->m_audio.maxBlock();
     engine->m_midiSetup = options.midi;
     for (QString& notice : engine->openMidi()) engine->m_pendingNotices.push_back(std::move(notice));
+    engine->m_progress = options.progress;
     engine->m_plugins = PluginCatalog::scan(
-        options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder, options.pluginCacheFile);
+        options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder, options.pluginCacheFile,
+        nullptr, options.progress);
     return engine;
 }
 
@@ -78,6 +80,7 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& cacheKey, const cor
         else qCWarning(lcEngine).noquote() << size.error().message;
     }
 
+    if (m_progress) m_progress(slot.displayName, 0, 0);
     QElapsedTimer timer;
     timer.start();
     auto node = Vst3Node::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());

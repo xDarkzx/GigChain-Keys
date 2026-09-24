@@ -2,6 +2,7 @@
 // which engine runs and wires it to the UI.
 #include "Session.h"
 #include "SettingsController.h"
+#include "StartupProgress.h"
 
 #include "openstage/core/FileLog.h"
 #include "openstage/engine/FakeEngineFactory.h"
@@ -65,12 +66,31 @@ int main(int argc, char* argv[])
     QQuickStyle::setStyle(u"Basic"_s); // fully themeable by Theme.qml
     QSettings settings;
 
-    std::unique_ptr<engine::IEngine> engine;
-    QString engineProblem;
-    // The audio and MIDI setup saved by the Settings window.
+    // Splash first: opening audio, scanning plugins and loading the last
+    // setlist's sounds all happen before the main window appears.
+    ui::StartupProgress startup;
+    bool starting = true; // progress is shown only until the main window is up
+    auto splash = std::make_unique<QQmlApplicationEngine>();
+    splash->setInitialProperties({{u"startup"_s, QVariant::fromValue(&startup)}});
+    splash->loadFromModule(u"OpenStage.Ui"_s, u"Splash"_s);
+    if (splash->rootObjects().isEmpty()) qCWarning(lcApp) << "The splash screen failed to load"; // not fatal
+    startup.report(QGuiApplication::tr("Opening audio and MIDI"));
+
     engine::RealEngineOptions engineOptions = ui::SettingsController::engineOptions(settings);
     engineOptions.pluginCacheFile =
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-cache.json"_s;
+    engineOptions.progress = [&startup, &starting](const QString& what, int done, int total) {
+        if (!starting) return;
+        if (total > 0) {
+            startup.report(QGuiApplication::tr("Scanning plugins (%1 of %2)").arg(done + 1).arg(total), what,
+                           static_cast<double>(done) / total);
+        } else {
+            startup.report(QGuiApplication::tr("Loading sounds"), what);
+        }
+    };
+
+    std::unique_ptr<engine::IEngine> engine;
+    QString engineProblem;
     if (auto real = engine::createRealEngine(engineOptions)) {
         engine = std::move(*real);
     } else {
@@ -84,6 +104,17 @@ int main(int argc, char* argv[])
         session.document().reportMessage(QGuiApplication::tr("No audio output (%1). Running without sound.").arg(engineProblem));
     }
 
+    // "openstage.exe <setlist>" opens that file; otherwise reopen the last one.
+    // Its sounds load now, behind the splash, not in a frozen main window.
+    startup.report(QGuiApplication::tr("Loading your setlist"));
+    const QStringList arguments = QGuiApplication::arguments();
+    if (arguments.size() > 1) {
+        (void)session.document().open(arguments.at(1)); // a failure is shown in the banner and logged
+    } else {
+        session.document().restoreLastSession();
+    }
+
+    startup.report(QGuiApplication::tr("Opening the window"));
     QQmlApplicationEngine qml;
     QObject::connect(&qml, &QQmlApplicationEngine::warnings, &app, [](const QList<QQmlError>& warnings) {
         for (const QQmlError& warning : warnings) qCWarning(lcApp).noquote() << warning.toString();
@@ -94,14 +125,8 @@ int main(int argc, char* argv[])
         qCCritical(lcApp) << "The main window failed to load";
         return 1;
     }
-
-    // "openstage.exe <setlist>" opens that file; otherwise reopen the last one.
-    const QStringList arguments = QGuiApplication::arguments();
-    if (arguments.size() > 1) {
-        (void)session.document().open(arguments.at(1)); // a failure is shown in the banner and logged
-    } else {
-        session.document().restoreLastSession();
-    }
+    starting = false;
+    splash.reset(); // the main window is up
     const int code = QGuiApplication::exec();
     qCInfo(lcApp) << "OpenStage exiting with code" << code;
     return code;

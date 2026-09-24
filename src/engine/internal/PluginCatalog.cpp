@@ -206,7 +206,8 @@ CacheEntry openAndRead(const QString& bundle)
 
 } // namespace
 
-std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString& cacheFile, ScanStats* stats)
+std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString& cacheFile, ScanStats* stats,
+                                            const Progress& progress)
 {
     ScanStats local;
     ScanStats& counts = stats != nullptr ? *stats : local;
@@ -224,7 +225,10 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString
 
     const std::map<QString, CacheEntry> cached = readCache(cacheFile);
     std::map<QString, CacheEntry> fresh; // only plugins that exist now
-    for (const QString& bundle : bundles) {
+    const int total = static_cast<int>(bundles.size());
+    for (int done = 0; done < total; ++done) {
+        const QString& bundle = bundles[done];
+        if (progress) progress(QFileInfo(bundle).completeBaseName(), done, total);
         const auto hit = cached.find(bundle);
         const bool unchanged = hit != cached.end() && hit->second.fingerprint == fingerprintOf(bundle);
         CacheEntry entry = unchanged ? hit->second : openAndRead(bundle);

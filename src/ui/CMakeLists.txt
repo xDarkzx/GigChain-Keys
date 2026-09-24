@@ -12,6 +12,7 @@ qt_add_qml_module(openstage_ui
         cpp/PluginListModel.h cpp/PluginListModel.cpp
         cpp/EngineStatus.h cpp/EngineStatus.cpp
         cpp/SettingsController.h cpp/SettingsController.cpp
+        cpp/StartupProgress.h cpp/StartupProgress.cpp
         cpp/Session.h cpp/Session.cpp
         cpp/EditorService.h cpp/EditorService.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
@@ -34,6 +35,7 @@ qt_add_qml_module(openstage_ui
         StageMenu.qml
         StageComboBox.qml
         StatBox.qml
+        Splash.qml
         SettingsDialog.qml
         SettingsSection.qml
         SettingsRow.qml
