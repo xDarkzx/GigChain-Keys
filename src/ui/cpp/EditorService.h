@@ -5,6 +5,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QTimer>
 #include <QtQml/qqmlregistration.h>
 
 #include <memory>
@@ -38,11 +39,13 @@ public:
 
 signals:
     // The editor to show may have changed (selection, patch or channels).
+    // Emitted once per burst of document changes (opening an editor is slow).
     void targetChanged();
 
 private:
     engine::IEngine& m_engine;
     DocumentController& m_document;
+    QTimer m_coalesce; // merges the several signals one edit emits
 };
 
 } // namespace openstage::ui

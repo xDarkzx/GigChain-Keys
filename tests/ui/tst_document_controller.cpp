@@ -172,6 +172,30 @@ private slots:
         QCOMPARE(m_doc->selectedChannel(), -1);
     }
 
+    void engineHasThePatchBeforeTheUiHearsAboutIt()
+    {
+        // Views (e.g. the plugin editor) ask the engine about the new channels
+        // as soon as they are told; the engine must already be on that patch.
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->addPatch(0));
+        QVERIFY(m_doc->addChannel(u"spy/Pad.vst3"_s, u"Spy Pad"_s));
+        int checks = 0;
+        const auto engineIsCurrent = [this, &checks] {
+            ++checks;
+            const core::Patch* patch = m_doc->currentPatch();
+            QVERIFY(patch != nullptr);
+            QCOMPARE(m_engine->lastPatch.id, patch->id);
+            QCOMPARE(m_engine->lastPatch.channels.size(), patch->channels.size());
+        };
+        connect(m_doc.get(), &DocumentController::channelsChanged, this, engineIsCurrent);
+        connect(m_doc.get(), &DocumentController::selectedChannelChanged, this, engineIsCurrent);
+
+        m_doc->previousPatch();                                                  // patch change
+        QVERIFY(m_doc->addChannel(u"spy/Reverb.vst3"_s, u"Spy Reverb"_s));        // channel added
+        QVERIFY(m_doc->removeChannel(0));                                         // channel removed
+        QVERIFY(checks >= 4);
+    }
+
     void restoreLastSessionReopensTheFile()
     {
         QVERIFY(m_doc->addSong());

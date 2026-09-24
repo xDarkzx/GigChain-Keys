@@ -397,10 +397,12 @@ void DocumentController::setCursor(core::Cursor cursor, bool force)
     if (cursor == m_cursor && !force) return;
     m_cursor = cursor;
     resetSelectedChannel();
+    // The engine first: views react to these signals by asking the engine
+    // about the new channels (e.g. for plugin editors).
+    applyCurrentPatchToEngine();
     emit currentChanged();
     emit channelsChanged();
     emit selectedChannelChanged();
-    applyCurrentPatchToEngine();
 }
 
 void DocumentController::commitStructure(core::Cursor target, const std::optional<core::PatchId>& previous)
@@ -429,16 +431,16 @@ void DocumentController::commitChannels(int select)
 {
     setDirty(true);
     m_selectedChannel = select;
+    applyCurrentPatchToEngine(); // before the signals, as in setCursor
     emit channelsChanged();
     emit selectedChannelChanged();
-    applyCurrentPatchToEngine();
 }
 
 void DocumentController::commitChannelField(int channel, bool reapply)
 {
     setDirty(true);
+    if (reapply) applyCurrentPatchToEngine(); // before the signal, as in setCursor
     emit channelUpdated(channel);
-    if (reapply) applyCurrentPatchToEngine();
 }
 
 std::optional<core::PatchId> DocumentController::currentPatchId() const

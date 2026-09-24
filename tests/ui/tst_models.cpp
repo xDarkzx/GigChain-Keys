@@ -141,7 +141,7 @@ private slots:
 
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
         QVERIFY(m_doc->addChannel(u"spy/Pad.vst3"_s, u"Spy Pad"_s));
-        QVERIFY(target.count() >= 2);
+        QTRY_VERIFY(target.count() >= 1);
 
         m_doc->setSelectedChannel(0);
         const auto editor = service.createForSelection();
@@ -151,6 +151,21 @@ private slots:
 
         m_doc->setSelectedChannel(-1);
         QCOMPARE(service.emptyReason(), u"Select a channel in the mixer"_s);
+    }
+
+    void editorServiceSignalsOncePerChange()
+    {
+        // A patch change emits several document signals; the editor (slow to
+        // open) must be rebuilt once, not once per signal.
+        EditorService service(*m_engine, *m_doc);
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->addPatch(0));
+        QTest::qWait(10);
+        QSignalSpy target(&service, &EditorService::targetChanged);
+        m_doc->previousPatch();
+        QVERIFY(target.wait(500));
+        QTest::qWait(20);
+        QCOMPARE(target.count(), 1);
     }
 
     void engineStatusPollsAndForwardsNotices()
