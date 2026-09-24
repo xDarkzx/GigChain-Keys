@@ -48,6 +48,8 @@ QtObject {
     readonly property int sidePanelWidth: 270
     readonly property int stripWidth: 88
     readonly property int mixerHeight: 360
+    // A channel strip's fixed height (REAPER/Audacity size): never stretched to the window.
+    readonly property int stripHeight: 470
     readonly property int fontSize: 13
     readonly property int smallFontSize: 11
     readonly property int headerFontSize: 20
