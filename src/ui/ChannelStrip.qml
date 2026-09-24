@@ -2,7 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// One Logic-style channel strip.
+// One MainStage/Logic-style channel strip. Right-click anywhere for the
+// channel menu; ✕ (on hover) removes the channel.
 Rectangle {
     id: strip
 
@@ -10,6 +11,7 @@ Rectangle {
     required property string name
     required property string instrumentName
     required property var effectNames
+    required property var effectBypassed
     required property double volumeDb
     required property double pan
     required property bool mute
@@ -23,6 +25,7 @@ Rectangle {
     required property PluginListModel pluginModel
 
     readonly property real peakDb: peak > 0 ? 20 * Math.log10(peak) : -200
+    property int menuEffect: -1 // effect the effect menu acts on
 
     width: Theme.stripWidth
     radius: Theme.radius
@@ -30,7 +33,17 @@ Rectangle {
     border.color: selected ? Theme.accent : Theme.stripBorder
     border.width: selected ? 2 : 1
 
-    TapHandler { onTapped: strip.doc.selectedChannel = strip.index }
+    HoverHandler { id: stripHover }
+
+    // Background: left click selects, right click opens the channel menu.
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: (mouse) => {
+            strip.doc.selectedChannel = strip.index
+            if (mouse.button === Qt.RightButton) channelMenu.popup(mouse.x, mouse.y)
+        }
+    }
 
     DropArea {
         anchors.fill: parent
@@ -38,17 +51,88 @@ Rectangle {
         function acceptDrop(payload) { strip.doc.addEffect(strip.index, payload.pluginId, payload.name) }
     }
 
+    // ---------------------------------------------------------------- menus
+    StageMenu {
+        id: channelMenu
+        StageMenuItem { text: qsTr("Open %1").arg(strip.instrumentName || qsTr("instrument")); onTriggered: strip.doc.selectedChannel = strip.index }
+        StageMenuItem { text: strip.mute ? qsTr("Unmute") : qsTr("Mute"); onTriggered: strip.doc.setChannelMute(strip.index, !strip.mute) }
+        StageMenuItem { text: strip.solo ? qsTr("Unsolo") : qsTr("Solo"); onTriggered: strip.doc.setChannelSolo(strip.index, !strip.solo) }
+        EffectPickerMenu {
+            title: qsTr("Add Effect")
+            pluginModel: strip.pluginModel
+            onPicked: (pluginId, name) => strip.doc.addEffect(strip.index, pluginId, name)
+        }
+        InstrumentPickerMenu {
+            title: qsTr("Replace Instrument")
+            pluginModel: strip.pluginModel
+            onPicked: (pluginId, name) => strip.doc.setChannelInstrument(strip.index, pluginId, name)
+        }
+        MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+        StageMenuItem { text: qsTr("Remove Channel"); onTriggered: strip.doc.removeChannel(strip.index) }
+    }
+
+    StageMenu {
+        id: effectMenu
+        StageMenuItem {
+            text: strip.menuEffect >= 0 && strip.effectBypassed[strip.menuEffect] ? qsTr("Turn On") : qsTr("Bypass")
+            onTriggered: strip.doc.setEffectBypass(strip.index, strip.menuEffect, !strip.effectBypassed[strip.menuEffect])
+        }
+        EffectPickerMenu {
+            title: qsTr("Replace With")
+            pluginModel: strip.pluginModel
+            onPicked: (pluginId, name) => strip.doc.replaceEffect(strip.index, strip.menuEffect, pluginId, name)
+        }
+        MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+        StageMenuItem { text: qsTr("Remove Effect"); onTriggered: strip.doc.removeEffect(strip.index, strip.menuEffect) }
+    }
+
+    EffectPickerMenu {
+        id: addEffectMenu
+        pluginModel: strip.pluginModel
+        onPicked: (pluginId, name) => strip.doc.addEffect(strip.index, pluginId, name)
+    }
+
+    InstrumentPickerMenu {
+        id: instrumentPicker
+        pluginModel: strip.pluginModel
+        onPicked: (pluginId, name) => strip.doc.setChannelInstrument(strip.index, pluginId, name)
+    }
+
+    // ---------------------------------------------------------------- layout
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 4
         spacing: 3
 
-        // colour tag
-        Rectangle {
+        // colour tag with the ✕ remove button
+        Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: 3
-            radius: 1.5
-            color: strip.color
+            Layout.preferredHeight: 12
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - 16
+                height: 3
+                radius: 1.5
+                color: strip.color
+            }
+            Text {
+                objectName: "removeChannelButton"
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                visible: stripHover.hovered
+                text: "✕"
+                color: closeArea.containsMouse ? Theme.danger : Theme.textDim
+                font.pixelSize: 11
+                MouseArea {
+                    id: closeArea
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    hoverEnabled: true
+                    onClicked: strip.doc.removeChannel(strip.index)
+                }
+                ToolTip.visible: closeArea.containsMouse
+                ToolTip.text: qsTr("Remove this channel")
+            }
         }
 
         // instrument icon
@@ -63,7 +147,6 @@ Rectangle {
             Image {
                 anchors.centerIn: parent
                 source: strip.icon
-                // the maker's own icon fills the circle; category icons sit inside it
                 width: strip.officialIcon ? 32 : 20
                 height: width
                 sourceSize: Qt.size(64, 64)
@@ -73,48 +156,43 @@ Rectangle {
         }
 
         // instrument slot
-        SlotButton {
+        EffectSlot {
+            id: instrumentSlot
             Layout.fillWidth: true
-            text: strip.instrumentName === "" ? qsTr("Instrument") : strip.instrumentName
-            accentColor: strip.color
-            primary: true
-            onClicked: strip.doc.selectedChannel = strip.index
+            implicitHeight: 22
+            text: strip.instrumentName
+            showPower: false
+            loadedColor: Theme.slotInstrument
+            onClicked: {
+                strip.doc.selectedChannel = strip.index
+                if (!loaded) instrumentPicker.popup(instrumentSlot, 0, instrumentSlot.height)
+            }
+            onMenuRequested: channelMenu.popup(instrumentSlot, 0, instrumentSlot.height)
         }
 
-        // effect slots
+        // effect slots, then one empty slot to add another
         Repeater {
             model: strip.effectNames
-            delegate: SlotButton {
-                id: effectSlot
+            delegate: EffectSlot {
+                id: fxSlot
                 required property int index
                 required property string modelData
                 Layout.fillWidth: true
                 text: modelData
-                onClicked: effectMenu.popup()
-                Menu {
-                    id: effectMenu
-                    MenuItem { text: qsTr("Remove %1").arg(effectSlot.modelData); onTriggered: strip.doc.removeEffect(strip.index, effectSlot.index) }
+                bypassed: strip.effectBypassed[index] === true
+                onClicked: strip.doc.selectedChannel = strip.index
+                onPowerToggled: strip.doc.setEffectBypass(strip.index, index, !bypassed)
+                onMenuRequested: {
+                    strip.menuEffect = index
+                    effectMenu.popup(fxSlot, 0, fxSlot.height)
                 }
             }
         }
-        SlotButton {
+        EffectSlot {
+            id: addSlot
             Layout.fillWidth: true
-            text: "+"
-            empty: true
-            onClicked: addMenu.popup()
-            Menu {
-                id: addMenu
-                Instantiator {
-                    model: strip.pluginModel.effects()
-                    delegate: MenuItem {
-                        required property var modelData
-                        text: modelData.name
-                        onTriggered: strip.doc.addEffect(strip.index, modelData.pluginId, modelData.name)
-                    }
-                    onObjectAdded: (index, object) => addMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => addMenu.removeItem(object)
-                }
-            }
+            text: ""
+            onClicked: addEffectMenu.popup(addSlot, 0, addSlot.height)
         }
 
         PanKnob {
@@ -124,7 +202,6 @@ Rectangle {
             onPanMoved: (v) => strip.doc.setChannelPan(strip.index, v)
         }
 
-        // volume and peak readouts
         RowLayout {
             Layout.fillWidth: true
             spacing: 2

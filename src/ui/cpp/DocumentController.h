@@ -89,6 +89,10 @@ public:
     Q_INVOKABLE bool removeChannel(int channel);
     Q_INVOKABLE bool addEffect(int channel, const QString& pluginId, const QString& name);
     Q_INVOKABLE bool removeEffect(int channel, int effect);
+    // A bypassed effect stays in the chain but is not played.
+    Q_INVOKABLE bool setEffectBypass(int channel, int effect, bool bypass);
+    Q_INVOKABLE bool replaceEffect(int channel, int effect, const QString& pluginId, const QString& name);
+    Q_INVOKABLE bool setChannelInstrument(int channel, const QString& pluginId, const QString& name);
     Q_INVOKABLE bool setChannelName(int channel, const QString& name);
     Q_INVOKABLE bool setChannelKeyRange(int channel, int low, int high);
     Q_INVOKABLE bool setChannelTranspose(int channel, int semitones);
@@ -135,6 +139,7 @@ private:
     void resetSelectedChannel();
     void applyCurrentPatchToEngine();
     void setDirty(bool dirty);
+    [[nodiscard]] bool effectExists(int channel, int effect) const;
     void setFilePath(const QString& path);
 
     engine::IEngine& m_engine;

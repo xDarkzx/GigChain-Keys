@@ -44,30 +44,28 @@ Rectangle {
                 pluginModel: mixer.pluginModel
             }
             footer: Item {
-                width: addStrip.width + 8
+                width: Theme.stripWidth + 8
                 height: strips.height
-                // Add a channel: pick an instrument
-                SlotButton {
-                    id: addStrip
+                // Add a channel: pick an instrument (grouped by maker)
+                EffectSlot {
+                    id: newChannelSlot
                     x: 4
                     width: Theme.stripWidth
                     height: strips.height
-                    empty: true
-                    text: qsTr("+ Instrument")
-                    onClicked: instrumentMenu.popup()
-                    Menu {
-                        id: instrumentMenu
-                        Instantiator {
-                            model: mixer.pluginModel.instruments()
-                            delegate: MenuItem {
-                                required property var modelData
-                                text: modelData.name
-                                onTriggered: mixer.doc.addChannel(modelData.pluginId, modelData.name)
-                            }
-                            onObjectAdded: (index, object) => instrumentMenu.insertItem(index, object)
-                            onObjectRemoved: (index, object) => instrumentMenu.removeItem(object)
-                        }
+                    text: ""
+                    onClicked: newChannelPicker.popup(newChannelSlot, newChannelSlot.width / 2, newChannelSlot.height / 2)
+                    Text {
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: 18
+                        text: qsTr("Instrument")
+                        color: Theme.textDim
+                        font.pixelSize: Theme.smallFontSize
                     }
+                }
+                InstrumentPickerMenu {
+                    id: newChannelPicker
+                    pluginModel: mixer.pluginModel
+                    onPicked: (pluginId, name) => mixer.doc.addChannel(pluginId, name)
                 }
             }
         }

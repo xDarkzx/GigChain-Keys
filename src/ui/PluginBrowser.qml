@@ -40,6 +40,14 @@ Item {
             }
         }
 
+        Button {
+            text: qsTr("Show hidden instruments")
+            flat: true
+            focusPolicy: Qt.NoFocus
+            Layout.alignment: Qt.AlignRight
+            onClicked: browser.pluginModel.showAll()
+        }
+
         ListView {
             objectName: "pluginList"
             Layout.fillWidth: true
@@ -140,6 +148,11 @@ Item {
                     label: card.name
                     payload: ({ pluginId: card.pluginId, name: card.name, kind: card.kind })
                     onDoubleClicked: browser.doc.addChannel(card.pluginId, card.name)
+                    onRightClicked: cardMenu.popup()
+                }
+                StageMenu {
+                    id: cardMenu
+                    StageMenuItem { text: qsTr("Hide from list"); onTriggered: browser.pluginModel.hide(card.pluginId) }
                 }
             }
         }

@@ -34,6 +34,12 @@ QtObject {
     readonly property color faderCapBottom: "#5d6167"
     readonly property color meterBackground: "#0c0d0f"
     readonly property color meterMid: "#e0c526"
+    readonly property color menuBackground: "#2a2d33"
+    readonly property color slotEmpty: "#191b1f"
+    readonly property color slotEmptyBorder: "#2c3036"
+    readonly property color slotLoaded: "#3d73c4"
+    readonly property color slotInstrument: "#3f8f6a"
+    readonly property color slotBypassed: "#3a3d44"
     readonly property color muteColor: "#4ab3e7"
     readonly property color soloColor: "#e0c526"
 

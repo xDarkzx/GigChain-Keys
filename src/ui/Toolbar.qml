@@ -39,13 +39,13 @@ ToolBar {
             text: qsTr("File")
             visible: !bar.performMode
             focusPolicy: Qt.NoFocus
-            onClicked: fileMenu.popup()
-            Menu {
+            onClicked: fileMenu.popup(0, height)
+            StageMenu {
                 id: fileMenu
-                MenuItem { text: qsTr("New"); onTriggered: bar.newRequested() }
-                MenuItem { text: qsTr("Open…"); onTriggered: bar.openRequested() }
-                MenuItem { text: qsTr("Save"); onTriggered: bar.saveRequested() }
-                MenuItem { text: qsTr("Save As…"); onTriggered: bar.saveAsRequested() }
+                StageMenuItem { text: qsTr("New"); onTriggered: bar.newRequested() }
+                StageMenuItem { text: qsTr("Open…"); onTriggered: bar.openRequested() }
+                StageMenuItem { text: qsTr("Save"); onTriggered: bar.saveRequested() }
+                StageMenuItem { text: qsTr("Save As…"); onTriggered: bar.saveAsRequested() }
             }
         }
 

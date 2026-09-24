@@ -34,6 +34,7 @@ public:
         NameRole,
         InstrumentNameRole,
         EffectNamesRole,
+        EffectBypassedRole, // list of bools, parallel to effectNames
         VolumeDbRole,
         MuteRole,
         SoloRole,

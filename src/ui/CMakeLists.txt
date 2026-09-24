@@ -15,6 +15,7 @@ qt_add_qml_module(openstage_ui
         cpp/EditorService.h cpp/EditorService.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
         cpp/PluginIcons.h cpp/PluginIcons.cpp
+        cpp/EditorPlacement.h cpp/EditorPlacement.cpp
         cpp/OfficialArtwork.h cpp/OfficialArtwork.cpp
     QML_FILES
         Theme.qml
@@ -29,7 +30,12 @@ qt_add_qml_module(openstage_ui
         Mixer.qml
         PanKnob.qml
         VolumeFader.qml
-        SlotButton.qml
+        StageMenu.qml
+        StageMenuItem.qml
+        EffectPickerMenu.qml
+        PluginGroupMenu.qml
+        InstrumentPickerMenu.qml
+        EffectSlot.qml
         Readout.qml
         ToggleChip.qml
         PerformView.qml

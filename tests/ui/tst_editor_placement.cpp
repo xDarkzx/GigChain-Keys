@@ -1,0 +1,48 @@
+#include "EditorPlacement.h"
+
+#include <QtTest>
+
+using namespace openstage::ui;
+
+class TestEditorPlacement : public QObject
+{
+    Q_OBJECT
+
+private slots:
+    void smallEditorIsCentred()
+    {
+        const auto p = placeEditor(QRectF(100, 50, 800, 600), QSizeF(400, 300), QPointF());
+        QVERIFY(!p.scrollHorizontally && !p.scrollVertically);
+        QCOMPARE(p.viewport, QRectF(100, 50, 800, 600));
+        QCOMPARE(p.editor, QRectF(300, 200, 400, 300)); // centred: 100 + (800-400)/2, 50 + (600-300)/2
+    }
+
+    void tooWideEditorScrollsSideways()
+    {
+        // Analog Lab V is 1280 wide at 100 %; the area here is 900 wide.
+        const auto p = placeEditor(QRectF(0, 0, 900, 700), QSizeF(1280, 600), QPointF(200, 0));
+        QVERIFY(p.scrollHorizontally);
+        QVERIFY(!p.scrollVertically);
+        QCOMPARE(p.viewport.height(), 700 - kScrollBarSize); // room for the horizontal bar
+        QCOMPARE(p.editor.x(), -200.0);                      // scrolled 200 px
+        QCOMPARE(p.contentSize, QSizeF(1280, 600));
+    }
+
+    void tooBigEditorScrollsBothWays()
+    {
+        const auto p = placeEditor(QRectF(0, 0, 900, 500), QSizeF(1280, 886), QPointF());
+        QVERIFY(p.scrollHorizontally && p.scrollVertically);
+        QCOMPARE(p.viewport, QRectF(0, 0, 900 - kScrollBarSize, 500 - kScrollBarSize));
+    }
+
+    void scrollIsClampedToTheEdges()
+    {
+        const auto p = placeEditor(QRectF(0, 0, 900, 700), QSizeF(1280, 600), QPointF(5000, -40));
+        const double maxX = 1280 - 900;
+        QCOMPARE(p.scroll, QPointF(maxX, 0));
+        QCOMPARE(p.editor.x(), -maxX);
+    }
+};
+
+QTEST_GUILESS_MAIN(TestEditorPlacement)
+#include "tst_editor_placement.moc"

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EditorPlacement.h"
 #include "EditorService.h"
 
 #include "openstage/engine/IPluginEditor.h"
@@ -29,6 +30,15 @@ class PluginEditorHost : public QQuickItem
     Q_PROPERTY(bool hasEditor READ hasEditor NOTIFY editorChanged)
     Q_PROPERTY(QString title READ title NOTIFY editorChanged)
     Q_PROPERTY(QString emptyReason READ emptyReason NOTIFY editorChanged)
+    // Scrolling for editors bigger than the area (plugins that cannot be scaled).
+    Q_PROPERTY(bool scrollHorizontally READ scrollHorizontally NOTIFY placementChanged)
+    Q_PROPERTY(bool scrollVertically READ scrollVertically NOTIFY placementChanged)
+    Q_PROPERTY(double contentWidth READ contentWidth NOTIFY placementChanged)
+    Q_PROPERTY(double contentHeight READ contentHeight NOTIFY placementChanged)
+    Q_PROPERTY(double viewportWidth READ viewportWidth NOTIFY placementChanged)
+    Q_PROPERTY(double viewportHeight READ viewportHeight NOTIFY placementChanged)
+    Q_PROPERTY(double scrollX READ scrollX WRITE setScrollX NOTIFY placementChanged)
+    Q_PROPERTY(double scrollY READ scrollY WRITE setScrollY NOTIFY placementChanged)
 
 public:
     explicit PluginEditorHost(QQuickItem* parent = nullptr);
@@ -45,11 +55,22 @@ public:
     [[nodiscard]] bool hasEditor() const { return m_editor != nullptr; }
     [[nodiscard]] QString title() const { return m_editor ? m_editor->title() : QString(); }
     [[nodiscard]] QString emptyReason() const;
+    [[nodiscard]] bool scrollHorizontally() const { return m_placement.scrollHorizontally; }
+    [[nodiscard]] bool scrollVertically() const { return m_placement.scrollVertically; }
+    [[nodiscard]] double contentWidth() const { return m_placement.contentSize.width(); }
+    [[nodiscard]] double contentHeight() const { return m_placement.contentSize.height(); }
+    [[nodiscard]] double viewportWidth() const { return m_placement.viewport.width(); }
+    [[nodiscard]] double viewportHeight() const { return m_placement.viewport.height(); }
+    [[nodiscard]] double scrollX() const { return m_placement.scroll.x(); }
+    [[nodiscard]] double scrollY() const { return m_placement.scroll.y(); }
+    void setScrollX(double x);
+    void setScrollY(double y);
 
 signals:
     void serviceChanged();
     void suspendedChanged();
     void editorChanged();
+    void placementChanged();
 
 protected:
     void geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry) override;
@@ -63,7 +84,10 @@ private:
 
     QPointer<EditorService> m_service;
     std::unique_ptr<engine::IPluginEditor> m_editor;
-    QPointer<QWindow> m_child; // owned by the main window (Qt parent)
+    QPointer<QWindow> m_viewport; // clips the editor; owned by the main window (Qt parent)
+    QPointer<QWindow> m_child;    // the plugin draws here; child of m_viewport
+    QPointF m_scroll;             // requested scroll offset
+    EditorPlacement m_placement;  // last applied placement
     QSize m_editorSize;        // physical pixels, as the plugin reports
     QSize m_baseSize;          // physical pixels at 100 % zoom (scalable editors)
     bool m_scalable = false;   // the plugin accepts host zoom

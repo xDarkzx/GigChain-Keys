@@ -171,6 +171,16 @@ private slots:
 
         QVERIFY(m_doc->addEffect(0, u"spy/Reverb.vst3"_s, u"Spy Reverb"_s));
         QCOMPARE(m_engine->lastPatch.channels[0].effects.size(), std::size_t{1});
+        QVERIFY(m_doc->setEffectBypass(0, 0, true));
+        QVERIFY(m_engine->lastPatch.channels[0].effects[0].bypass);
+        QVERIFY(!m_doc->setEffectBypass(0, 5, true)); // no such effect: reported, not ignored
+        QVERIFY(!m_doc->lastError().isEmpty());
+        QVERIFY(m_doc->setEffectBypass(0, 0, false));
+        QVERIFY(m_doc->replaceEffect(0, 0, u"spy/Delay.vst3"_s, u"Spy Delay"_s));
+        QCOMPARE(m_engine->lastPatch.channels[0].effects[0].pluginId, u"spy/Delay.vst3"_s);
+        QVERIFY(!m_doc->replaceEffect(0, 9, u"spy/Delay.vst3"_s, u"Spy Delay"_s));
+        QVERIFY(m_doc->setChannelInstrument(0, u"spy/Pad.vst3"_s, u"Spy Pad"_s));
+        QCOMPARE(m_engine->lastPatch.channels[0].instrument->pluginId, u"spy/Pad.vst3"_s);
         QVERIFY(m_doc->removeEffect(0, 0));
         QVERIFY(m_doc->removeChannel(0));
         QCOMPARE(m_doc->selectedChannel(), -1);

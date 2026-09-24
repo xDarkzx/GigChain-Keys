@@ -77,7 +77,11 @@ void PluginEditorHost::rebuild()
         return;
     }
 
-    auto child = new QWindow(host); // Qt-owned native child of the main window
+    // viewport (clips) -> child (the plugin draws here); both Qt-owned by the main window.
+    auto viewport = new QWindow(host);
+    viewport->setFlag(Qt::FramelessWindowHint);
+    viewport->create();
+    auto child = new QWindow(viewport);
     child->setFlag(Qt::FramelessWindowHint);
     child->create();
     std::unique_ptr<engine::IPluginEditor> editor = std::move(*created);
@@ -85,13 +89,15 @@ void PluginEditorHost::rebuild()
     // the plugin supports zoom is checked after attach (m_scalable).
     (void)editor->setContentScale(host->devicePixelRatio());
     if (auto attached = editor->attach(static_cast<quintptr>(child->winId())); !attached) {
-        child->deleteLater();
+        viewport->deleteLater(); // deletes its child window too
         m_service->reportFailure(attached.error().message); // already logged by the editor; now shown too
         emit editorChanged();
         return;
     }
     m_editor = std::move(editor);
+    m_viewport = viewport;
     m_child = child;
+    m_scroll = {};
     m_zoom = 1.0;
     m_scalable = !m_editor->canResize() && m_editor->setContentScale(host->devicePixelRatio());
     m_editorSize = m_editor->preferredSize();
@@ -120,18 +126,21 @@ void PluginEditorHost::teardown()
         m_editor->detach(); // must happen before its window is destroyed
         m_editor.reset();
     }
-    if (m_child) {
-        m_child->hide();
-        m_child->deleteLater();
-        m_child = nullptr;
+    if (m_viewport) {
+        m_viewport->hide();
+        m_viewport->deleteLater(); // deletes the plugin's window with it
+        m_viewport = nullptr;
     }
+    m_child = nullptr;
+    m_placement = {};
+    emit placementChanged();
     m_editorSize = {};
     m_placedArea = {};
 }
 
 void PluginEditorHost::place()
 {
-    if (!m_editor || !m_child || window() == nullptr) return;
+    if (!m_editor || !m_child || !m_viewport || window() == nullptr) return;
     const QRectF area = mapRectToScene(boundingRect());
     if (area == m_placedArea) return;
     m_placedArea = area;
@@ -150,26 +159,45 @@ void PluginEditorHost::place()
         if (std::abs(zoom - m_zoom) > 0.01 && m_editor->setContentScale(dpr * zoom)) m_zoom = zoom;
         m_editorSize = m_editor->preferredSize();
     }
-    // Fixed editors (e.g. Arturia) keep their own size and are centred;
-    // they zoom from their own menu and OpenStage follows the resize.
-    const double width = std::min(area.width(), m_editorSize.width() / dpr);
-    const double height = std::min(area.height(), m_editorSize.height() / dpr);
-    const double x = area.x() + std::max(0.0, (area.width() - width) / 2.0);
-    const double y = area.y() + std::max(0.0, (area.height() - height) / 2.0);
-    m_child->setGeometry(static_cast<int>(std::lround(x)), static_cast<int>(std::lround(y)),
-                         static_cast<int>(std::lround(width)), static_cast<int>(std::lround(height)));
+    // Editors that cannot shrink to the area (e.g. Arturia, which only zooms
+    // from its own menu) keep their size and scroll inside a clipping viewport.
+    const QSizeF editorSize(m_editorSize.width() / dpr, m_editorSize.height() / dpr);
+    m_placement = placeEditor(area, editorSize, m_scroll);
+    m_viewport->setGeometry(m_placement.viewport.toAlignedRect());
+    const QPointF inside = m_placement.editor.topLeft() - m_placement.viewport.topLeft();
+    m_child->setGeometry(static_cast<int>(std::lround(inside.x())), static_cast<int>(std::lround(inside.y())),
+                         static_cast<int>(std::lround(editorSize.width())),
+                         static_cast<int>(std::lround(editorSize.height())));
+    emit placementChanged();
+}
+
+void PluginEditorHost::setScrollX(double x)
+{
+    if (std::abs(x - m_scroll.x()) < 0.5) return;
+    m_scroll.setX(x);
+    m_placedArea = {};
+    place();
+}
+
+void PluginEditorHost::setScrollY(double y)
+{
+    if (std::abs(y - m_scroll.y()) < 0.5) return;
+    m_scroll.setY(y);
+    m_placedArea = {};
+    place();
 }
 
 void PluginEditorHost::updateVisibility()
 {
-    if (!m_child) return;
+    if (!m_viewport || !m_child) return;
     const bool show = isVisible() && !m_suspended && width() > 0 && height() > 0;
     if (show) {
         m_placedArea = {};
         place();
         m_child->show();
+        m_viewport->show();
     } else {
-        m_child->hide();
+        m_viewport->hide();
     }
 }
 
