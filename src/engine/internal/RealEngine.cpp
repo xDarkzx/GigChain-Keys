@@ -7,6 +7,8 @@
 
 #include <QElapsedTimer>
 
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <set>
@@ -26,21 +28,22 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
 {
     std::unique_ptr<RealEngine> engine(new RealEngine()); // private constructor; owned immediately
 
-    std::optional<DeviceChoice> choice;
-    if (!options.asioDevice.isEmpty()) choice = DeviceChoice{AudioApi::Asio, options.asioDevice};
-    RealEngine* self = engine.get();
-    auto opened = engine->m_audio.open(choice, options.bufferFrames, [self](AudioBlock out) { self->render(out); });
-    if (!opened && choice) {
-        // ASIO was requested but failed: fall back to system audio (logged by open()).
-        engine->m_pendingNotices.push_back(
-            u"%1 could not be used (%2); using system audio instead"_s.arg(options.asioDevice, opened.error().message));
-        opened = engine->m_audio.open(std::nullopt, options.bufferFrames, [self](AudioBlock out) { self->render(out); });
+    auto opened = engine->openAudio(options.audio);
+    const AudioSetup systemAudio{AudioDriver::System, {}, 0, options.audio.bufferFrames};
+    if (!opened && options.audio != systemAudio) {
+        // The saved setup failed: fall back to system audio (logged by open()).
+        engine->m_pendingNotices.push_back(u"%1 could not be used (%2); using system audio instead"_s.arg(
+            options.audio.device.isEmpty() ? u"The saved audio setup"_s : options.audio.device, opened.error().message));
+        opened = engine->openAudio(systemAudio);
     }
     if (!opened) {
         return core::fail(core::ErrorCode::DeviceUnavailable, opened.error().message);
     }
 
-    for (const QString& notice : engine->m_midi.openAll()) engine->m_pendingNotices.push_back(notice);
+    engine->m_preparedRate = engine->m_audio.sampleRate();
+    engine->m_preparedBlock = engine->m_audio.maxBlock();
+    engine->m_midiOff = options.midiInputsOff;
+    for (const QString& notice : engine->m_midi.openAll(engine->m_midiOff)) engine->m_pendingNotices.push_back(notice);
     engine->m_plugins =
         PluginCatalog::scan(options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder);
     return engine;
@@ -73,8 +76,109 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& cacheKey, const cor
     return *node;
 }
 
+core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
+{
+    std::optional<DeviceChoice> choice;
+    if (!setup.device.isEmpty()) {
+        choice = DeviceChoice{setup.driver == AudioDriver::Asio ? AudioApi::Asio : AudioApi::Wasapi, setup.device};
+    } else if (setup.driver == AudioDriver::Asio) {
+        return core::fail(core::ErrorCode::InvalidData, u"Choose an ASIO device"_s);
+    }
+    return m_audio.open(choice, setup.bufferFrames, [this](AudioBlock out) { render(out); }, setup.sampleRate);
+}
+
+std::vector<AudioOutput> RealEngine::audioOutputs() const
+{
+    std::vector<AudioOutput> outputs;
+    constexpr std::array<unsigned int, 4> kLiveRates{44100, 48000, 88200, 96000};
+    for (const AudioDeviceInfo& info : AudioDevice::listOutputs()) {
+        std::vector<unsigned int> rates;
+        for (const unsigned int rate : info.sampleRates) {
+            if (std::find(kLiveRates.begin(), kLiveRates.end(), rate) != kLiveRates.end()) rates.push_back(rate);
+        }
+        outputs.push_back(AudioOutput{info.api == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System, info.name,
+                                      std::move(rates), info.preferredSampleRate, info.isDefault});
+    }
+    return outputs;
+}
+
+AudioSetup RealEngine::audioSetup() const
+{
+    return AudioSetup{m_audio.api() == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System, m_audio.deviceName(),
+                      static_cast<unsigned int>(m_audio.sampleRate()), static_cast<unsigned int>(m_audio.maxBlock())};
+}
+
+core::Result<void> RealEngine::setAudioSetup(const AudioSetup& setup)
+{
+    const AudioSetup before = audioSetup();
+    AudioSetup previous = before; // as it was asked for, so it reopens the same way
+    previous.sampleRate = m_audio.requestedSampleRate();
+    previous.bufferFrames = m_audio.requestedBufferFrames();
+    if (auto opened = openAudio(setup); !opened) {
+        // Logged by open(). Put the working setup back.
+        if (auto restored = openAudio(previous); !restored) {
+            m_pendingNotices.push_back(u"Could not go back to %1 either: %2"_s.arg(before.device, restored.error().message));
+            qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+        }
+        syncPluginsToDevice();
+        return opened;
+    }
+    syncPluginsToDevice();
+    qCInfo(lcEngine).noquote() << "Audio setup changed:" << statusText();
+    return {};
+}
+
+void RealEngine::syncPluginsToDevice()
+{
+    const double rate = m_audio.sampleRate();
+    const int block = m_audio.maxBlock();
+    if (!m_audio.isOpen() || (rate == m_preparedRate && block == m_preparedBlock)) return;
+
+    // No render callback may touch a plugin while it is re-prepared.
+    if (auto paused = m_audio.pause(); !paused) {
+        m_pendingNotices.push_back(paused.error().message);
+        qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+        return; // plugins stay as they were; the graph skips blocks larger than they expect
+    }
+    for (const auto& [key, node] : m_nodes) {
+        if (auto prepared = node->prepare(rate, block); !prepared) { // logged by prepare()
+            m_pendingNotices.push_back(prepared.error().message);
+        }
+    }
+    m_preparedRate = rate;
+    m_preparedBlock = block;
+    applyPatch(m_patch); // a graph sized for the new block
+    if (auto resumed = m_audio.resume(); !resumed) {
+        m_pendingNotices.push_back(resumed.error().message);
+        qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+    }
+}
+
+std::vector<MidiPort> RealEngine::midiInputs() const
+{
+    std::vector<MidiPort> ports;
+    for (const QString& name : MidiInput::listPorts()) ports.push_back(MidiPort{name, !m_midiOff.contains(name)});
+    return ports;
+}
+
+core::Result<void> RealEngine::setMidiInputsOff(const QStringList& names)
+{
+    // The audio thread drains the ports: pause it while they change.
+    if (auto paused = m_audio.pause(); !paused) return paused;
+    m_midiOff = names;
+    const std::vector<QString> problems = m_midi.openAll(m_midiOff); // each logged
+    if (auto resumed = m_audio.resume(); !resumed) return resumed;
+    if (!problems.empty()) {
+        QStringList text;
+        for (const QString& problem : problems) text << problem;
+        return core::fail(core::ErrorCode::DeviceUnavailable, text.join(u"; "_s));
+    }
+    return {};
+}
+
 void RealEngine::applyPatch(const core::Patch& patch)
 {
+    if (&patch != &m_patch) m_patch = patch;
     std::set<Vst3Node*> used;
     m_currentInstruments.clear();
     std::vector<StripSpec> specs;
@@ -171,6 +275,10 @@ std::vector<QString> RealEngine::poll()
 
     m_exchange.collectGarbage();
     for (QString& notice : m_audio.poll()) notices.push_back(std::move(notice));
+    // A lost device may have come back at another rate or block size.
+    syncPluginsToDevice();
+    for (QString& notice : m_pendingNotices) notices.push_back(std::move(notice));
+    m_pendingNotices.clear();
 
     if (const uint64_t dropped = m_midi.takeDropped() + m_droppedInjected.exchange(0); dropped > 0) {
         qCWarning(lcEngine) << "Dropped" << dropped << "MIDI events (input queue full)";

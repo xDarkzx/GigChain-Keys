@@ -42,6 +42,11 @@ public:
     void injectNote(int midiChannel, int note, int velocity) override;
     std::vector<QString> poll() override;
     [[nodiscard]] QString statusText() const override;
+    [[nodiscard]] std::vector<AudioOutput> audioOutputs() const override;
+    [[nodiscard]] AudioSetup audioSetup() const override;
+    core::Result<void> setAudioSetup(const AudioSetup& setup) override;
+    [[nodiscard]] std::vector<MidiPort> midiInputs() const override;
+    core::Result<void> setMidiInputsOff(const QStringList& names) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) override;
 
@@ -49,6 +54,10 @@ private:
     RealEngine() = default;
     void render(AudioBlock out) noexcept;
     std::shared_ptr<Vst3Node> nodeFor(const QString& cacheKey, const core::PluginSlot& slot);
+    core::Result<void> openAudio(const AudioSetup& setup);
+    // After the device changed rate or block size: with audio paused, every
+    // plugin is re-prepared and the patch rebuilt for the new size.
+    void syncPluginsToDevice();
 
     AudioDevice m_audio;
     MidiInput m_midi;
@@ -59,6 +68,10 @@ private:
     // Main thread: every plugin instance created so far, by channel slot.
     std::map<QString, std::shared_ptr<Vst3Node>> m_nodes;
     std::vector<QString> m_pendingNotices;
+    core::Patch m_patch;         // the sounding patch, rebuilt after a device change
+    double m_preparedRate = 0.0; // what the plugins are prepared for
+    int m_preparedBlock = 0;
+    QStringList m_midiOff;
     // Main thread: the instrument each channel of the current patch plays.
     std::map<QString, std::shared_ptr<Vst3Node>> m_currentInstruments;
 

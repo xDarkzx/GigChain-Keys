@@ -52,18 +52,31 @@ std::vector<AudioDeviceInfo> AudioDevice::listOutputs()
         for (const unsigned int id : rt->getDeviceIds()) {
             const RtAudio::DeviceInfo info = rt->getDeviceInfo(id);
             if (info.outputChannels < 2) continue;
-            outputs.push_back(AudioDeviceInfo{api, QString::fromStdString(info.name), static_cast<int>(info.outputChannels),
-                                              info.preferredSampleRate, api == AudioApi::Wasapi && info.isDefaultOutput});
+            AudioDeviceInfo device;
+            device.api = api;
+            device.name = QString::fromStdString(info.name);
+            device.outputChannels = static_cast<int>(info.outputChannels);
+            device.preferredSampleRate = info.preferredSampleRate;
+            device.isDefault = api == AudioApi::Wasapi && info.isDefaultOutput;
+            device.sampleRates.assign(info.sampleRates.begin(), info.sampleRates.end());
+            if (device.preferredSampleRate != 0 &&
+                std::find(device.sampleRates.begin(), device.sampleRates.end(), device.preferredSampleRate) ==
+                    device.sampleRates.end()) {
+                device.sampleRates.push_back(device.preferredSampleRate);
+            }
+            std::sort(device.sampleRates.begin(), device.sampleRates.end());
+            outputs.push_back(std::move(device));
         }
     }
     return outputs;
 }
 
-core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigned int bufferFrames, RenderCallback render)
+core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigned int bufferFrames, RenderCallback render,
+                                     unsigned int sampleRate)
 {
     m_render = std::move(render);
     m_asioRetried = false;
-    auto opened = openUnlogged(std::move(choice), bufferFrames);
+    auto opened = openUnlogged(std::move(choice), bufferFrames, sampleRate);
     if (opened) {
         qCInfo(lcEngine).noquote() << "Audio output:" << m_choice.name << "(" << apiName(m_choice.api) << ")"
                                    << m_sampleRate << "Hz," << m_maxBlock << "frames, latency" << m_latencyMs << "ms";
@@ -73,10 +86,12 @@ core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigne
     return opened;
 }
 
-core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames)
+core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames,
+                                             unsigned int sampleRate)
 {
     close();
     m_requestedFrames = bufferFrames;
+    m_requestedRate = sampleRate;
     const AudioApi api = choice ? choice->api : AudioApi::Wasapi;
     auto rt = std::make_unique<RtAudio>(
         toRtApi(api), [this](RtAudioErrorType type, const std::string& text) { onError(type, text); });
@@ -108,7 +123,13 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     RtAudio::StreamOptions options;
     options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
     options.streamName = "OpenStage";
-    const unsigned int rate = info.preferredSampleRate != 0 ? info.preferredSampleRate : 48000;
+    const unsigned int ownRate = info.preferredSampleRate != 0 ? info.preferredSampleRate : 48000;
+    const unsigned int rate = sampleRate != 0 ? sampleRate : ownRate;
+    if (sampleRate != 0 && sampleRate != info.preferredSampleRate &&
+        std::find(info.sampleRates.begin(), info.sampleRates.end(), sampleRate) == info.sampleRates.end()) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 (%2) cannot run at %3 Hz"_s.arg(
+                                                            QString::fromStdString(info.name), apiName(api)).arg(sampleRate));
+    }
     unsigned int frames = bufferFrames;
 
     const auto takeLastError = [this](const QString& fallback) {
@@ -149,6 +170,33 @@ void AudioDevice::close()
     m_rtaudio.reset();
 }
 
+core::Result<void> AudioDevice::pause()
+{
+    if (!m_rtaudio || !m_rtaudio->isStreamRunning()) return {};
+    if (m_rtaudio->stopStream() != RTAUDIO_NO_ERROR) {
+        const std::lock_guard lock(m_errorMutex);
+        const QString why = m_errors.empty() ? u"unknown error"_s : m_errors.back();
+        m_errors.clear();
+        return core::fail(core::ErrorCode::DeviceUnavailable, u"Could not pause %1: %2"_s.arg(m_choice.name, why));
+    }
+    return {};
+}
+
+core::Result<void> AudioDevice::resume()
+{
+    if (!m_rtaudio || !m_rtaudio->isStreamOpen()) {
+        return core::fail(core::ErrorCode::DeviceUnavailable, u"No audio output is open to resume"_s);
+    }
+    if (m_rtaudio->isStreamRunning()) return {};
+    if (m_rtaudio->startStream() != RTAUDIO_NO_ERROR) {
+        const std::lock_guard lock(m_errorMutex);
+        const QString why = m_errors.empty() ? u"unknown error"_s : m_errors.back();
+        m_errors.clear();
+        return core::fail(core::ErrorCode::DeviceUnavailable, u"Could not restart %1: %2"_s.arg(m_choice.name, why));
+    }
+    return {};
+}
+
 bool AudioDevice::isOpen() const
 {
     return m_rtaudio && m_rtaudio->isStreamOpen();
@@ -177,7 +225,7 @@ std::vector<QString> AudioDevice::poll()
 
     if (lost.api == AudioApi::Asio && !m_asioRetried) {
         m_asioRetried = true;
-        if (auto reopened = openUnlogged(lost, m_requestedFrames)) {
+        if (auto reopened = openUnlogged(lost, m_requestedFrames, m_requestedRate)) {
             notices.push_back(u"%1 restarted after the driver asked for a reset"_s.arg(lost.name));
             qCInfo(lcEngine).noquote() << notices.back();
             return notices;
@@ -186,7 +234,9 @@ std::vector<QString> AudioDevice::poll()
         }
     }
 
-    if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames)) {
+    // System audio at its own rate: the chosen rate may not exist there. The
+    // engine re-prepares plugins for whatever rate this ends up at.
+    if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0)) {
         notices.push_back(u"%1 stopped working; switched to system audio (%2)"_s.arg(lost.name, m_choice.name));
         qCWarning(lcEngine).noquote() << notices.back();
     } else {

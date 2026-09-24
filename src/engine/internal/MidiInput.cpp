@@ -53,7 +53,7 @@ QStringList MidiInput::listPorts()
     return ports;
 }
 
-std::vector<QString> MidiInput::openAll()
+std::vector<QString> MidiInput::openAll(const QStringList& switchedOff)
 {
     close();
     std::vector<QString> notices;
@@ -63,6 +63,10 @@ std::vector<QString> MidiInput::openAll()
         return notices;
     }
     for (qsizetype i = 0; i < names.size(); ++i) {
+        if (switchedOff.contains(names[i])) {
+            qCInfo(lcEngine).noquote() << "MIDI input switched off in Settings:" << names[i];
+            continue;
+        }
         auto port = std::make_unique<Port>();
         port->owner = this;
         port->name = names[i];
