@@ -18,19 +18,23 @@ EditorPlacement placeEditor(const QRectF& area, const QSizeF& editorSize, const 
     p.scrollHorizontally = horizontal;
     p.scrollVertically = vertical;
 
-    p.viewport = QRectF(area.x(), area.y(), area.width() - (vertical ? kScrollBarSize : 0.0),
-                        area.height() - (horizontal ? kScrollBarSize : 0.0));
+    // What is visible of the area once the scroll bars take their room.
+    const QRectF visible(area.x(), area.y(), area.width() - (vertical ? kScrollBarSize : 0.0),
+                         area.height() - (horizontal ? kScrollBarSize : 0.0));
 
-    const double maxX = std::max(0.0, editorSize.width() - p.viewport.width());
-    const double maxY = std::max(0.0, editorSize.height() - p.viewport.height());
+    const double maxX = std::max(0.0, editorSize.width() - visible.width());
+    const double maxY = std::max(0.0, editorSize.height() - visible.height());
     p.scroll = QPointF(horizontal ? std::clamp(scroll.x(), 0.0, maxX) : 0.0,
                        vertical ? std::clamp(scroll.y(), 0.0, maxY) : 0.0);
 
-    const double x = horizontal ? p.viewport.x() - p.scroll.x()
-                                : p.viewport.x() + (p.viewport.width() - editorSize.width()) / 2.0;
-    const double y = vertical ? p.viewport.y() - p.scroll.y()
-                              : p.viewport.y() + (p.viewport.height() - editorSize.height()) / 2.0;
+    const double x = horizontal ? visible.x() - p.scroll.x()
+                                : visible.x() + (visible.width() - editorSize.width()) / 2.0;
+    const double y = vertical ? visible.y() - p.scroll.y()
+                              : visible.y() + (visible.height() - editorSize.height()) / 2.0;
     p.editor = QRectF(QPointF(x, y), editorSize);
+    // The clipping window paints nothing itself, so it covers only the part of
+    // the editor that is visible; the rest of the area stays QML-painted.
+    p.viewport = p.editor.intersected(visible);
     return p;
 }
 

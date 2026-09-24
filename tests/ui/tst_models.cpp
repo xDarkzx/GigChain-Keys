@@ -273,6 +273,7 @@ private slots:
         status.poll();
         QCOMPARE(polled.count(), 1);
         QCOMPARE(status.cpuLoad(), 0.25F);
+        QVERIFY(status.memoryMb() > 1.0); // this process's working set
         QVERIFY(status.midiActivity());
         QCOMPARE(status.statusText(), u"Spy engine"_s);
         QCOMPARE(m_doc->lastError(), u"Audio device restarted"_s);

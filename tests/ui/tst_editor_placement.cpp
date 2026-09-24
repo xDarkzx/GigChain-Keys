@@ -13,8 +13,10 @@ private slots:
     {
         const auto p = placeEditor(QRectF(100, 50, 800, 600), QSizeF(400, 300), QPointF());
         QVERIFY(!p.scrollHorizontally && !p.scrollVertically);
-        QCOMPARE(p.viewport, QRectF(100, 50, 800, 600));
         QCOMPARE(p.editor, QRectF(300, 200, 400, 300)); // centred: 100 + (800-400)/2, 50 + (600-300)/2
+        // The clipping window covers only the editor: it paints nothing itself,
+        // so any area it covered beyond the editor would show stale pixels.
+        QCOMPARE(p.viewport, p.editor);
     }
 
     void tooWideEditorScrollsSideways()
@@ -23,8 +25,9 @@ private slots:
         const auto p = placeEditor(QRectF(0, 0, 900, 700), QSizeF(1280, 600), QPointF(200, 0));
         QVERIFY(p.scrollHorizontally);
         QVERIFY(!p.scrollVertically);
-        QCOMPARE(p.viewport.height(), 700 - kScrollBarSize); // room for the horizontal bar
-        QCOMPARE(p.editor.x(), -200.0);                      // scrolled 200 px
+        QCOMPARE(p.editor.x(), -200.0); // scrolled 200 px
+        // clipped to the area's width, and to the (centred) editor's height
+        QCOMPARE(p.viewport, QRectF(0, (700 - kScrollBarSize - 600) / 2.0, 900, 600));
         QCOMPARE(p.contentSize, QSizeF(1280, 600));
     }
 
