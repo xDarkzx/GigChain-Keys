@@ -1,51 +1,75 @@
-# OpenStage (working name, not final)
+# OpenStage
 
-Pre-design notes only — nothing below is a decision, just context carried over
-from the conversation that started this project. Open a fresh Claude Code
-session in this folder and run the brainstorming process properly from here.
+An open-source, Windows-first live-performance host for keyboard players, in
+the spirit of MainStage. Load the VST3 instruments and effects already
+installed on your machine, build a setlist of songs and patches, and switch
+sounds instantly on stage.
 
-## The idea, roughly
+> **Status: early development.** It plays, but file formats and features
+> will still change.
 
-An open-source, Windows-first live-performance host for keyboard/piano
-players. Boot fast, skip DAW project setup, host VST instruments and sample
-libraries already installed on the machine, assign patches per song in a
-setlist, auto-switch patches at song sections (verse -> chorus -> verse),
-route straight to an audio interface for live use.
+## What works today
 
-## Why "open source" instead of just building another closed one
+- **Setlists:** songs and patches, with rename, reorder, duplicate and
+  delete. Space / arrow keys switch patches; Tab enters full-screen
+  **Perform** mode.
+- **VST3 hosting:** each installed instrument's own window fills the main
+  area. Plugins that support it resize or zoom to fit; Arturia plugins are
+  reloaded at their own window size when the window is maximized or restored.
+- **Mixer:** Logic-style channel strips along the bottom, each with an
+  instrument slot, effect slots (bypass, replace, remove), pan, volume, meters,
+  mute and solo. Right-click a strip for everything else.
+- **Instruments browser:** your installed VST3 instruments, shown with each
+  maker's own artwork where the plugin provides it.
+- **Settings** (Ctrl+,):
+  - **Audio:** Windows Audio (WASAPI) or ASIO, device, sample rate and buffer
+    size. Plugins are re-prepared, not reloaded, when these change.
+  - **MIDI:** each input with its own mode and channel. By default only the
+    first port of a keyboard plays; plugged-in keyboards are picked up
+    automatically.
 
-Existing tools in this space (Cantabile, Gig Performer, MainStage, Camelot
-Pro) are mature and closed-source. General-purpose open-source plugin hosts
-exist (Carla, Pedalboard2, Light Host, Kushview Element) but none specialize
-in the gig-focused setlist/scene-switching workflow those paid tools own.
+## Building
 
-## Known close competitor — check this before assuming a gap
+Requirements (Windows 10/11, x64):
 
-**KeyStage** (iOS/iPadOS, commercial, in-app purchases) already does almost
-exactly this for keyboard players specifically: MIDI controller mapping,
-setlists with quick song-to-song switching, AND automatic instrument-preset
-matching from a database when it detects a new MIDI connection. It is not
-open source and not on Windows. That's the actual gap, not the core concept.
+- Visual Studio 2022 or newer with the C++ workload
+- CMake 3.24+ and Ninja (both ship with Visual Studio)
+- Qt 6.10 for MSVC 2022 x64 (`msvc2022_64`)
+- [vcpkg](https://github.com/microsoft/vcpkg); RtAudio (with ASIO), RtMidi
+  and the other libraries are installed from `vcpkg.json`. The Steinberg
+  VST3 SDK is fetched by CMake.
 
-## Possible differentiator under consideration
+```powershell
+$env:VCPKG_ROOT  = 'C:\path\to\vcpkg'
+$env:QT_ROOT_DIR = 'C:\Qt\6.10.2\msvc2022_64'
+.\tools\build.ps1 -Preset debug     # configure, build and run every test
+.\tools\run.ps1                     # start OpenStage
+```
 
-Smart plugin/preset discovery and ranking — reusing plugin-detection/ranking
-work already built in the sibling Reaper-MCP project (`../Reaper-MCP`) rather
-than starting that logic from scratch.
+Other presets: `release`, and `asan` (AddressSanitizer). To build and test
+one target, pass `-Target <name> -Filter <test>`.
 
-## Real architecture question, not yet resolved
+## Layout
 
-Qt (via the already-installed Audacity4 dev build environment) gives
-cross-platform UI + build tooling, but not VST hosting or a real-time audio
-engine (no ASIO/WASAPI abstraction, no VST3/AU plugin loading) — that's what
-JUCE specializes in. Whether to use JUCE outright, or Qt for UI with a
-separate audio-hosting layer, is unresolved and should be one of the first
-things the brainstorming process nails down.
+| Folder | What lives there |
+|---|---|
+| `src/core` | Setlist model, JSON files, navigation and editing, logging |
+| `src/engine` | Audio and MIDI devices, the render graph, VST3 hosting; the only code that touches the SDKs |
+| `src/ui` | The QML interface and the C++ models behind it |
+| `src/app` | Startup: wires the engine, settings and UI together |
+| `tests` | Qt Test suites for every module |
+| `docs/superpowers` | Design specs and implementation plans |
 
-## Constraints worth keeping in view
+## Contributing
 
-- Sole author (with AI pairing), not a team — scope accordingly.
-- Prefers demand-driven scope over building ahead of real need.
-- This is a much bigger technical lift than anything in Reaper-MCP: real-time
-  audio/DSP, a new framework (JUCE and/or Qt), likely a new language (C++).
-- Nothing has been scaffolded yet. No stack, no name, no design is final.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: see
+[SECURITY.md](SECURITY.md).
+
+## License
+
+OpenStage is licensed under the **GNU General Public License v3.0** — see
+[LICENSE](LICENSE). It builds on Qt (LGPL-3.0), the Steinberg VST3 SDK (MIT),
+the Steinberg ASIO SDK (GPL-3.0), RtAudio and RtMidi (MIT).
+
+VST is a registered trademark of Steinberg Media Technologies GmbH. ASIO is a
+trademark of Steinberg Media Technologies GmbH.

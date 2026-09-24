@@ -1,0 +1,9 @@
+version: 2
+updates:
+  # vcpkg libraries are pinned by vcpkg.json's builtin-baseline and are
+  # updated by hand (a new baseline needs a full rebuild and test on real
+  # hardware); Dependabot keeps the CI actions current.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
