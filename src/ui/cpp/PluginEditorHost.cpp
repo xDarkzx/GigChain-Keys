@@ -1,7 +1,14 @@
 ﻿#include "PluginEditorHost.h"
 
+#include <QAbstractNativeEventFilter>
+#include <QCoreApplication>
 #include <QLoggingCategory>
 #include <QQuickWindow>
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 
 #include <algorithm>
 #include <cmath>
@@ -10,20 +17,29 @@ Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
 namespace openstage::ui {
 
-PluginEditorHost::PluginEditorHost(QQuickItem* parent) : QQuickItem(parent)
+// Windows tells a window when the user finishes dragging its edge.
+class PluginEditorHost::DragEndFilter final : public QAbstractNativeEventFilter
 {
-    m_followTimer.setInterval(50);
-    connect(&m_followTimer, &QTimer::timeout, this, &PluginEditorHost::place);
-    m_fitTimer.setSingleShot(true);
-    m_fitTimer.setInterval(700); // the window has stopped resizing
-    connect(&m_fitTimer, &QTimer::timeout, this, [this] {
-        if (!m_editor || !m_service || !m_fixedSize || window() == nullptr) return;
-        const double dpr = window()->devicePixelRatio();
-        const QSize area(static_cast<int>(width() * dpr), static_cast<int>(height() * dpr));
-        m_service->fitToArea(m_editorSize, area);
-    });
+public:
+    explicit DragEndFilter(PluginEditorHost& host) : m_host(host) {}
 
-}
+    bool nativeEventFilter(const QByteArray& type, void* message, qintptr*) override
+    {
+        if (type != "windows_generic_MSG") return false;
+        const auto* msg = static_cast<const MSG*>(message);
+        QQuickWindow* window = m_host.window();
+        if (msg->message == WM_EXITSIZEMOVE && window != nullptr &&
+            msg->hwnd == reinterpret_cast<HWND>(window->winId())) {
+            m_host.fitNow();
+        }
+        return false; // Qt still handles it
+    }
+
+private:
+    PluginEditorHost& m_host;
+};
+
+PluginEditorHost::PluginEditorHost(QQuickItem* parent) : QQuickItem(parent) {}
 
 PluginEditorHost::~PluginEditorHost()
 {
@@ -124,15 +140,26 @@ void PluginEditorHost::rebuild()
     m_placedArea = {};
     place();
     updateVisibility();
-    m_followTimer.start();
+    m_frameConnection = connect(host, &QQuickWindow::afterAnimating, this, &PluginEditorHost::place);
+    m_stateConnection = connect(host, &QWindow::windowStateChanged, this, [this] { m_fitOnNextArea = true; });
+    if (m_fixedSize) {
+        m_dragEnd = std::make_unique<DragEndFilter>(*this);
+        QCoreApplication::instance()->installNativeEventFilter(m_dragEnd.get());
+        fitNow(); // the editor just opened: fit it to the area it opened in
+    }
     emit editorChanged();
 }
 
 void PluginEditorHost::teardown()
 {
-    m_followTimer.stop();
-    m_fitTimer.stop();
+    disconnect(m_frameConnection);
+    disconnect(m_stateConnection);
+    if (m_dragEnd) {
+        QCoreApplication::instance()->removeNativeEventFilter(m_dragEnd.get());
+        m_dragEnd.reset();
+    }
     m_fixedSize = false;
+    m_fitOnNextArea = false;
     if (m_editor) {
         m_editor->detach(); // must happen before its window is destroyed
         m_editor.reset();
@@ -173,7 +200,6 @@ void PluginEditorHost::place()
     // Editors that cannot shrink to the area (e.g. Arturia, which only zooms
     // from its own menu) keep their size and scroll inside a clipping viewport.
     const QSizeF editorSize(m_editorSize.width() / dpr, m_editorSize.height() / dpr);
-    if (m_fixedSize) m_fitTimer.start(); // restarts while the area keeps changing
     m_placement = placeEditor(area, editorSize, m_scroll);
     m_viewport->setGeometry(m_placement.viewport.toAlignedRect());
     const QPointF inside = m_placement.editor.topLeft() - m_placement.viewport.topLeft();
@@ -181,6 +207,18 @@ void PluginEditorHost::place()
                          static_cast<int>(std::lround(editorSize.width())),
                          static_cast<int>(std::lround(editorSize.height())));
     emit placementChanged();
+    if (m_fitOnNextArea && m_fixedSize) {
+        m_fitOnNextArea = false;
+        fitNow(); // first layout after maximize / restore / full screen
+    }
+}
+
+void PluginEditorHost::fitNow()
+{
+    if (!m_editor || !m_service || !m_fixedSize || window() == nullptr) return;
+    const double dpr = window()->devicePixelRatio();
+    const QSize area(static_cast<int>(width() * dpr), static_cast<int>(height() * dpr));
+    m_service->fitToArea(m_editorSize, area);
 }
 
 void PluginEditorHost::setScrollX(double x)

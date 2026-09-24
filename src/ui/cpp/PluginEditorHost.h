@@ -7,7 +7,6 @@
 
 #include <QPointer>
 #include <QQuickItem>
-#include <QTimer>
 #include <QWindow>
 #include <QtQml/qqmlregistration.h>
 
@@ -93,11 +92,19 @@ private:
     bool m_scalable = false;   // the plugin accepts host zoom
     double m_zoom = 1.0;       // current zoom applied to a scalable editor
     QRectF m_placedArea;       // last scene rect the editor was fitted to
-    QTimer m_followTimer;
-    // Fixed-size editors: after the area stops changing, ask for a better
-    // fitting size (Arturia reloads at its own window size).
-    QTimer m_fitTimer;
-    bool m_fixedSize = false;      // catches moves of ancestors (splitter drags)
+    // Event-driven, no timers: every frame the scene changes (afterAnimating)
+    // the editor follows its item (ancestors move it without a geometry
+    // change, e.g. splitter drags).
+    QMetaObject::Connection m_frameConnection;
+    QMetaObject::Connection m_stateConnection;
+    // Fixed-size editors (Arturia): asked to fit when the editor opens, on the
+    // first layout after maximize / restore / full screen, and when a window
+    // edge drag ends (WM_EXITSIZEMOVE). Never while a drag is in progress.
+    bool m_fixedSize = false;
+    bool m_fitOnNextArea = false;
+    void fitNow();
+    class DragEndFilter;
+    std::unique_ptr<DragEndFilter> m_dragEnd;
     bool m_suspended = false;
 };
 
