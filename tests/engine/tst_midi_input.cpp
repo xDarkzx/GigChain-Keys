@@ -54,6 +54,16 @@ private slots:
         input.close();
         QVERIFY(input.openPortNames().isEmpty());
     }
+
+    void switchedOffPortsStayClosed()
+    {
+        const QStringList ports = MidiInput::listPorts();
+        if (ports.isEmpty()) QSKIP("No MIDI inputs on this machine");
+        MidiInput input;
+        (void)input.openAll({ports.first()}); // the Settings page switched this one off
+        QVERIFY(!input.openPortNames().contains(ports.first()));
+        input.close();
+    }
 };
 
 QTEST_GUILESS_MAIN(TestMidiInput)

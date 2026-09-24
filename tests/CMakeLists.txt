@@ -7,7 +7,10 @@ function(openstage_add_test name)
     target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/tests/common)
     target_link_libraries(${name} PRIVATE Qt6::Test ${ARG_LIBS})
     openstage_target_defaults(${name})
-    add_test(NAME ${name} COMMAND ${name})
+    # Passes only on Qt Test's own summary (see RunQtTest.cmake).
+    add_test(NAME ${name}
+             COMMAND ${CMAKE_COMMAND} -DTEST_EXE=$<TARGET_FILE:${name}>
+                     -DTEST_LOG=${CMAKE_CURRENT_BINARY_DIR}/${name}.log -P ${PROJECT_SOURCE_DIR}/tests/RunQtTest.cmake)
     set_tests_properties(${name} PROPERTIES
         ENVIRONMENT_MODIFICATION
             "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;QT_QPA_PLATFORM=set:offscreen")

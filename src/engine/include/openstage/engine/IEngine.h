@@ -5,6 +5,8 @@
 #include "openstage/engine/EngineTypes.h"
 #include "openstage/engine/IPluginEditor.h"
 
+#include <QStringList>
+
 #include <memory>
 
 #include <vector>
@@ -59,6 +61,22 @@ public:
     // The editor of any installed plugin, loaded on its own (not playing).
     // Used to take pictures of plugins. nullptr when it has no editor.
     virtual core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) = 0;
+
+    // Settings. Outputs are probed when asked (ASIO drivers can take a moment).
+    // Only 44.1, 48, 88.2 and 96 kHz are offered: what instruments are made
+    // for (Arturia's Piano V2 crashed the whole process at 192 kHz).
+    [[nodiscard]] virtual std::vector<AudioOutput> audioOutputs() const = 0;
+    // What is running now: the device by name, the actual rate and buffer.
+    [[nodiscard]] virtual AudioSetup audioSetup() const = 0;
+    // Switches audio over; plugins keep their state (re-prepared, not
+    // reloaded). If `setup` cannot run, the previous setup is restored and
+    // the error says why (also logged).
+    virtual core::Result<void> setAudioSetup(const AudioSetup& setup) = 0;
+    // Every MIDI input on the machine, with whether it is switched on.
+    [[nodiscard]] virtual std::vector<MidiPort> midiInputs() const = 0;
+    // Switches off exactly the named inputs and on all others. An input that
+    // fails to open is an error naming it (the others still open).
+    virtual core::Result<void> setMidiInputsOff(const QStringList& names) = 0;
 
     // One line describing the audio setup, e.g. "Scarlett Solo · WASAPI · 5.3 ms".
     [[nodiscard]] virtual QString statusText() const = 0;

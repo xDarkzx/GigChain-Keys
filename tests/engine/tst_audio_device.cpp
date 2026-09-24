@@ -25,6 +25,11 @@ private slots:
         for (const auto& device : outputs) {
             QVERIFY(!device.name.isEmpty());
             QVERIFY(device.outputChannels >= 2);
+            QVERIFY2(!device.sampleRates.empty(), qPrintable(device.name)); // for the Settings rate list
+            if (device.preferredSampleRate != 0) {
+                QVERIFY(std::find(device.sampleRates.begin(), device.sampleRates.end(), device.preferredSampleRate) !=
+                        device.sampleRates.end());
+            }
             if (device.api == AudioApi::Wasapi && device.isDefault) ++wasapiDefaults;
         }
         QCOMPARE(wasapiDefaults, 1);
@@ -55,6 +60,42 @@ private slots:
 
         device.close();
         QVERIFY(!device.isOpen());
+    }
+
+    void opensAtTheRequestedRateAndPauses()
+    {
+        const auto outputs = AudioDevice::listOutputs();
+        const auto system = std::find_if(outputs.begin(), outputs.end(),
+                                         [](const AudioDeviceInfo& d) { return d.api == AudioApi::Wasapi && d.isDefault; });
+        if (system == outputs.end()) QSKIP("No default system output");
+        // A rate other than the device's own, when it offers one.
+        unsigned int rate = system->sampleRates.front();
+        for (const unsigned int r : system->sampleRates) {
+            if (r != system->preferredSampleRate) rate = r;
+        }
+        AudioDevice device;
+        std::atomic<int> blocks{0};
+        const auto opened = device.open(DeviceChoice{AudioApi::Wasapi, system->name}, 256, [&](AudioBlock out) {
+            std::fill_n(out.left, out.frames, 0.0F);
+            std::fill_n(out.right, out.frames, 0.0F);
+            blocks.fetch_add(1);
+        }, rate);
+        QVERIFY2(opened.has_value(), opened ? "" : qPrintable(opened.error().message));
+        QCOMPARE(device.sampleRate(), static_cast<double>(rate));
+        QCOMPARE(device.requestedSampleRate(), rate);
+
+        for (int i = 0; i < 50 && blocks.load() < 5; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        QVERIFY(blocks.load() >= 5);
+
+        QVERIFY(device.pause().has_value()); // no callback runs after this returns
+        const int paused = blocks.load();
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        QCOMPARE(blocks.load(), paused);
+
+        QVERIFY(device.resume().has_value());
+        for (int i = 0; i < 50 && blocks.load() < paused + 5; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        QVERIFY(blocks.load() >= paused + 5);
+        QVERIFY(device.poll().empty());
     }
 
     void unknownDeviceIsAnError()

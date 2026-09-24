@@ -36,9 +36,10 @@ public:
 
     static QStringList listPorts();
 
-    // Main thread. Opens every port; a port that fails is logged and named in
-    // the returned notices while the others still open.
-    std::vector<QString> openAll();
+    // Main thread. Opens every port except those named in `switchedOff`; a port
+    // that fails is logged and named in the returned notices while the others
+    // still open. Not while the audio thread drains (pause the stream first).
+    std::vector<QString> openAll(const QStringList& switchedOff = {});
     void close();
     [[nodiscard]] QStringList openPortNames() const;
 

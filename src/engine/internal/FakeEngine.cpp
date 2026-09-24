@@ -139,6 +139,27 @@ core::Result<std::unique_ptr<IPluginEditor>> FakeEngine::createEditorForPlugin(c
     return std::unique_ptr<IPluginEditor>(); // demo plugins have no editors
 }
 
+std::vector<AudioOutput> FakeEngine::audioOutputs() const
+{
+    return {AudioOutput{AudioDriver::System, m_setup.device, {44100, 48000}, 48000, true}};
+}
+
+core::Result<void> FakeEngine::setAudioSetup(const AudioSetup& setup)
+{
+    if (!setup.device.isEmpty() && setup.device != m_setup.device) {
+        return core::fail(core::ErrorCode::InvalidData, u"No audio output named \"%1\" (demo engine)"_s.arg(setup.device));
+    }
+    m_setup.sampleRate = setup.sampleRate != 0 ? setup.sampleRate : 48000;
+    m_setup.bufferFrames = setup.bufferFrames;
+    return {};
+}
+
+core::Result<void> FakeEngine::setMidiInputsOff(const QStringList& names)
+{
+    if (names.isEmpty()) return {};
+    return core::fail(core::ErrorCode::InvalidData, u"The demo engine has no MIDI inputs"_s);
+}
+
 QString FakeEngine::statusText() const
 {
     return u"Demo engine (no audio)"_s;

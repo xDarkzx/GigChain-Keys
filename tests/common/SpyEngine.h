@@ -67,6 +67,36 @@ public:
         return std::unique_ptr<engine::IPluginEditor>();
     }
     std::vector<QString> pluginEditorRequests;
+
+    engine::AudioSetup setup{engine::AudioDriver::System, QStringLiteral("Spy Speakers"), 48000, 256};
+    std::vector<engine::MidiPort> midi{{QStringLiteral("Spy Keys"), true}, {QStringLiteral("Spy Pads"), true}};
+    int setupChanges = 0;
+    [[nodiscard]] std::vector<engine::AudioOutput> audioOutputs() const override
+    {
+        return {
+            {engine::AudioDriver::System, QStringLiteral("Spy Speakers"), {44100, 48000, 96000}, 48000, true},
+            {engine::AudioDriver::System, QStringLiteral("Spy Headphones"), {48000}, 48000, false},
+            {engine::AudioDriver::Asio, QStringLiteral("Spy ASIO"), {44100, 48000}, 44100, false},
+        };
+    }
+    [[nodiscard]] engine::AudioSetup audioSetup() const override { return setup; }
+    core::Result<void> setAudioSetup(const engine::AudioSetup& wanted) override
+    {
+        if (wanted.device == QStringLiteral("Broken")) {
+            return core::fail(core::ErrorCode::DeviceUnavailable, QStringLiteral("Broken cannot open"));
+        }
+        ++setupChanges;
+        setup = wanted;
+        if (setup.device.isEmpty()) setup.device = QStringLiteral("Spy Speakers");
+        if (setup.sampleRate == 0) setup.sampleRate = 48000;
+        return {};
+    }
+    [[nodiscard]] std::vector<engine::MidiPort> midiInputs() const override { return midi; }
+    core::Result<void> setMidiInputsOff(const QStringList& names) override
+    {
+        for (auto& port : midi) port.enabled = !names.contains(port.name);
+        return {};
+    }
 };
 
 } // namespace openstage::test

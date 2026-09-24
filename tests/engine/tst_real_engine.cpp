@@ -84,6 +84,85 @@ private slots:
         QVERIFY(engine.cpuLoad() > 0.0F && engine.cpuLoad() < 1.0F);
     }
 
+    void changingTheSampleRateKeepsPlaying()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb); // silent test
+        const core::Patch patch = pianoPatch();
+        engine.applyPatch(patch);
+        QVERIFY(engine.poll().empty());
+
+        const AudioSetup before = engine.audioSetup();
+        QVERIFY(before.driver == AudioDriver::System);
+        QVERIFY(!before.device.isEmpty()); // the device actually open, by name
+        const auto outputs = engine.audioOutputs();
+        const auto current = std::find_if(outputs.begin(), outputs.end(), [&](const AudioOutput& o) {
+            return o.driver == before.driver && o.name == before.device;
+        });
+        QVERIFY(current != outputs.end());
+        for (const unsigned int rate : current->sampleRates) {
+            QVERIFY2(rate >= 44100 && rate <= 96000, "only live-safe rates are offered"); // 192 kHz crashed Piano V2
+        }
+        unsigned int other = 0;
+        for (const unsigned int rate : current->sampleRates) {
+            if (rate != before.sampleRate) {
+                other = rate; // the lowest other rate: 44.1 kHz when running at 48
+                break;
+            }
+        }
+        if (other == 0) QSKIP("The system output offers only one sample rate");
+
+        AudioSetup wanted = before;
+        wanted.sampleRate = other;
+        wanted.bufferFrames = 512;
+        const auto changed = engine.setAudioSetup(wanted);
+        QVERIFY2(changed.has_value(), changed ? "" : qPrintable(changed.error().message));
+        QCOMPARE(engine.audioSetup().sampleRate, other);
+
+        // The same plugin, re-prepared for the new rate, still plays.
+        engine.injectNote(1, 64, 110);
+        pump(engine, 400);
+        const float peak = engine.channelLevel(patch.channels[0].id).peak;
+        engine.injectNote(1, 64, 0);
+        pump(engine, 50);
+        QVERIFY2(peak > 0.001F, "piano went silent after the rate change");
+    }
+
+    void unusableAudioSetupKeepsTheCurrentOne()
+    {
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        const AudioSetup before = engine.audioSetup();
+        AudioSetup wanted = before;
+        wanted.device = u"No Such Device"_s;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"No audio output named \"No Such Device\""_s));
+        const auto changed = engine.setAudioSetup(wanted);
+        QVERIFY(!changed);
+        QVERIFY(changed.error().message.contains(u"No Such Device"_s));
+        QCOMPARE(engine.audioSetup().device, before.device); // still playing on the old one
+    }
+
+    void midiInputsCanBeSwitchedOff()
+    {
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        const auto inputs = engine.midiInputs();
+        if (inputs.empty()) QSKIP("No MIDI inputs on this machine");
+        QVERIFY(inputs.front().enabled);
+        QVERIFY(engine.setMidiInputsOff({inputs.front().name}).has_value());
+        QVERIFY(!engine.midiInputs().front().enabled);
+        QVERIFY(engine.setMidiInputsOff({}).has_value());
+        QVERIFY(engine.midiInputs().front().enabled);
+    }
+
     void unknownPluginIsReportedNotIgnored()
     {
         auto created = createRealEngine();
