@@ -24,16 +24,38 @@ Window {
         smooth: true
     }
 
+    // After loading, the splash steps through every plugin found while it
+    // stays up: `playhead` runs from 0 to the number of plugins.
+    readonly property bool finishing: startup.glideMs > 0
+    readonly property int pluginCount: startup.plugins.length
+    property real playhead: 0
+    readonly property int current: Math.min(pluginCount - 1, Math.floor(playhead))
+    readonly property bool listing: finishing && playhead < pluginCount
+
+    NumberAnimation {
+        id: replay
+        target: splash
+        property: "playhead"
+        from: 0
+    }
+    onFinishingChanged: {
+        if (!finishing) return
+        replay.to = pluginCount
+        replay.duration = startup.glideMs * 0.9 // the last moment shows "Ready"
+        replay.start()
+    }
+
     Column {
         x: 60
         width: splash.width - 120
-        y: splash.height - 78
+        y: splash.height - 82
         spacing: 6
 
         Text {
             objectName: "splashStep"
             width: parent.width
-            text: splash.startup.step
+            text: splash.listing ? qsTr("Loading plugins (%1 of %2)").arg(splash.current + 1).arg(splash.pluginCount)
+                                 : splash.startup.step
             color: "#c9d6e6"
             font.pixelSize: 12
             font.family: Theme.fontFamily
@@ -46,24 +68,22 @@ Window {
             radius: 2
             color: "#26344a"
             Rectangle {
-                // Steps without a known length show a short centred bar.
-                readonly property bool known: splash.startup.progress >= 0
+                objectName: "splashFill"
+                // Always fills from the left.
+                readonly property real fraction: splash.finishing
+                    ? (splash.pluginCount > 0 ? Math.min(1, splash.playhead / splash.pluginCount) : 1)
+                    : Math.max(0, splash.startup.progress)
                 height: parent.height
                 radius: 2
                 color: "#4fb3d9" // the chain's blue
-                width: known ? parent.width * splash.startup.progress : parent.width * 0.25
-                x: known ? 0 : parent.width * 0.375
-                // At the end the bar glides to full while the splash stays up.
-                Behavior on width {
-                    enabled: splash.startup.glideMs > 0
-                    NumberAnimation { duration: splash.startup.glideMs; easing.type: Easing.InOutQuad }
-                }
+                width: parent.width * fraction
             }
         }
         Text {
             objectName: "splashDetail"
             width: parent.width
-            text: splash.startup.detail // the plugin being scanned or loaded
+            // The plugin being scanned or loaded, then each plugin found.
+            text: splash.listing ? splash.startup.plugins[splash.current] : splash.startup.detail
             color: "#7f93ad"
             font.pixelSize: 11
             font.family: Theme.fontFamily
