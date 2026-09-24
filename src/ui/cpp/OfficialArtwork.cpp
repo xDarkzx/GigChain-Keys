@@ -1,12 +1,11 @@
 #include "OfficialArtwork.h"
 
-#include "KontaktLibraries.h"
-
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QLoggingCategory>
 #include <QSettings>
+#include <QXmlStreamReader>
 
 #include <utility>
 
@@ -30,6 +29,43 @@ QString firstExisting(const QString& folder, const QStringList& names)
         }
     }
     return {};
+}
+
+// Native Instruments "ProductHints" (Service Center XML): the first
+// <Product>'s own Name/Company/RegKey/BinName; nested blocks are skipped.
+struct NiProductHints
+{
+    QString name;
+    QString company;
+    QString regKey;
+    QString binName;
+};
+
+NiProductHints parseProductHints(const QByteArray& xmlText, const QString& origin)
+{
+    NiProductHints product;
+    QXmlStreamReader xml(xmlText);
+    if (xml.readNextStartElement() && xml.name() == "ProductHints"_L1) {
+        while (xml.readNextStartElement()) {
+            if (xml.name() != "Product"_L1) {
+                xml.skipCurrentElement();
+                continue;
+            }
+            while (xml.readNextStartElement()) {
+                const auto element = xml.name();
+                if (element == "Name"_L1) product.name = xml.readElementText();
+                else if (element == "Company"_L1) product.company = xml.readElementText();
+                else if (element == "RegKey"_L1) product.regKey = xml.readElementText();
+                else if (element == "BinName"_L1) product.binName = xml.readElementText();
+                else xml.skipCurrentElement();
+            }
+            break;
+        }
+    }
+    if (xml.hasError() && product.name.isEmpty()) {
+        qCWarning(lcUi).noquote() << "Malformed NI product information in" << origin << ":" << xml.errorString();
+    }
+    return product;
 }
 
 } // namespace

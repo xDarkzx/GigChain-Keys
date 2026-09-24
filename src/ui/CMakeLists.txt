@@ -16,8 +16,6 @@ qt_add_qml_module(openstage_ui
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
         cpp/PluginIcons.h cpp/PluginIcons.cpp
         cpp/OfficialArtwork.h cpp/OfficialArtwork.cpp
-        cpp/KontaktLibraries.h cpp/KontaktLibraries.cpp
-        cpp/LibraryListModel.h cpp/LibraryListModel.cpp
     QML_FILES
         Theme.qml
         Main.qml
@@ -26,7 +24,6 @@ qt_add_qml_module(openstage_ui
         SetlistView.qml
         DragSource.qml
         PluginBrowser.qml
-        LibraryBrowser.qml
         PluginArea.qml
         ChannelStrip.qml
         Mixer.qml
@@ -55,7 +52,7 @@ qt_add_qml_module(openstage_ui
 )
 target_include_directories(openstage_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 target_link_libraries(openstage_ui PUBLIC
-    openstage::core openstage::engine Qt6::Core Qt6::Concurrent Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2)
+    openstage::core openstage::engine Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2)
 openstage_target_defaults(openstage_ui)
 
 # Qt's generated QML-to-C++ files (qmlcachegen) trip MSVC's code-generation

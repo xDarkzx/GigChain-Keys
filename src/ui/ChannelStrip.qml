@@ -63,7 +63,7 @@ Rectangle {
             Image {
                 anchors.centerIn: parent
                 source: strip.icon
-                // the maker's icon fills the circle; category icons sit inside it
+                // the maker's own icon fills the circle; category icons sit inside it
                 width: strip.officialIcon ? 32 : 20
                 height: width
                 sourceSize: Qt.size(64, 64)

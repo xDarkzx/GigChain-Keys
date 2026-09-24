@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerHardening)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Concurrent Gui Qml Quick QuickControls2 Test)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Test)
 find_package(tl-expected CONFIG REQUIRED)
 find_package(RtAudio CONFIG REQUIRED)
 find_package(RtMidi CONFIG REQUIRED)
