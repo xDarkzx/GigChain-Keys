@@ -1,0 +1,99 @@
+#pragma once
+
+#include "openstage/engine/EngineTypes.h"
+#include "openstage/engine/RealEngineFactory.h"
+
+#include <QObject>
+#include <QString>
+#include <QStringList>
+#include <QVariantList>
+#include <QtQml/qqmlregistration.h>
+
+#include <vector>
+
+class QSettings;
+
+namespace openstage::engine {
+class IEngine;
+}
+
+namespace openstage::ui {
+
+class DocumentController;
+
+// The Settings window's Audio and MIDI pages, Audacity 4 style: load() fills
+// the pages from what is running, edits stay pending, apply() (OK) changes
+// the engine and saves; closing without OK changes nothing. A failure is
+// shown in the window (error) and the banner, logged by the engine, and the
+// failed choice is not saved.
+class SettingsController : public QObject
+{
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Created by the application")
+
+    Q_PROPERTY(QString driver READ driver WRITE setDriver NOTIFY changed)         // "system" or "asio"
+    Q_PROPERTY(QString device READ device WRITE setDevice NOTIFY changed)
+    Q_PROPERTY(QStringList devices READ devices NOTIFY changed)                  // for the chosen driver
+    Q_PROPERTY(bool asioAvailable READ asioAvailable NOTIFY changed)
+    Q_PROPERTY(int sampleRate READ sampleRate WRITE setSampleRate NOTIFY changed)
+    Q_PROPERTY(QVariantList sampleRates READ sampleRates NOTIFY changed)          // of the chosen device
+    Q_PROPERTY(int bufferFrames READ bufferFrames WRITE setBufferFrames NOTIFY changed)
+    Q_PROPERTY(QVariantList bufferSizes READ bufferSizes CONSTANT)
+    Q_PROPERTY(double latencyMs READ latencyMs NOTIFY changed)                   // one buffer at the chosen rate
+    Q_PROPERTY(QVariantList midiInputs READ midiInputs NOTIFY changed)            // [{name, enabled}]
+    Q_PROPERTY(QString running READ running NOTIFY changed)                      // the engine's status line
+    Q_PROPERTY(QString error READ error NOTIFY changed)
+
+public:
+    SettingsController(engine::IEngine& engine, DocumentController& document, QSettings& settings,
+                       QObject* parent = nullptr);
+
+    // What the engine should start with (saved by apply()).
+    [[nodiscard]] static engine::RealEngineOptions engineOptions(QSettings& settings);
+
+    [[nodiscard]] QString driver() const;
+    void setDriver(const QString& driver);
+    [[nodiscard]] QString device() const { return m_pending.device; }
+    void setDevice(const QString& device);
+    [[nodiscard]] QStringList devices() const;
+    [[nodiscard]] bool asioAvailable() const;
+    [[nodiscard]] int sampleRate() const { return static_cast<int>(m_pending.sampleRate); }
+    void setSampleRate(int rate);
+    [[nodiscard]] QVariantList sampleRates() const;
+    [[nodiscard]] int bufferFrames() const { return static_cast<int>(m_pending.bufferFrames); }
+    void setBufferFrames(int frames);
+    [[nodiscard]] static QVariantList bufferSizes();
+    [[nodiscard]] double latencyMs() const;
+    [[nodiscard]] QVariantList midiInputs() const;
+    [[nodiscard]] QString running() const { return m_running; }
+    [[nodiscard]] QString error() const { return m_error; }
+
+    // Probes the devices (ASIO drivers can take a moment) and shows what runs now.
+    Q_INVOKABLE void load();
+    Q_INVOKABLE void setMidiInputEnabled(const QString& name, bool enabled);
+    // Windows default output at its own rate, 256 frames, every MIDI input on.
+    Q_INVOKABLE void resetToDefaults();
+    // OK: true when everything took effect (and was saved).
+    Q_INVOKABLE bool apply();
+
+signals:
+    void changed();
+
+private:
+    [[nodiscard]] const engine::AudioOutput* chosenOutput() const;
+    void keepRateValid();
+    [[nodiscard]] QStringList midiOff() const;
+
+    engine::IEngine& m_engine;
+    DocumentController& m_document;
+    QSettings& m_settings;
+    std::vector<engine::AudioOutput> m_outputs;
+    engine::AudioSetup m_pending;
+    engine::AudioSetup m_loaded; // what ran when the window opened
+    std::vector<engine::MidiPort> m_midi;
+    QString m_running;
+    QString m_error;
+};
+
+} // namespace openstage::ui

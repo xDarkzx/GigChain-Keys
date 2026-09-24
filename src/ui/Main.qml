@@ -13,6 +13,7 @@ ApplicationWindow {
     required property PluginListModel pluginModel
     required property EngineStatus engineStatus
     required property EditorService editorService
+    required property SettingsController settings
 
     property bool performMode: false
     property bool sidePanelOpen: true
@@ -132,17 +133,11 @@ ApplicationWindow {
                 root.pendingAction = ""
         }
     }
-    Dialog {
+    SettingsDialog {
         id: settingsDialog
-        title: qsTr("Audio & MIDI")
-        modal: true
-        anchors.centerIn: parent
-        standardButtons: Dialog.Close
-        Label {
-            text: root.engineStatus.statusText + "\n\n" + qsTr("Choosing devices and ASIO drivers comes in the next version.")
-            wrapMode: Text.WordWrap
-            width: 420
-        }
+        objectName: "settingsDialog"
+        settings: root.settings
+        pluginModel: root.pluginModel
     }
 
     // ------------------------------------------------------------- shortcuts
@@ -156,6 +151,7 @@ ApplicationWindow {
     Shortcut { sequences: [StandardKey.Open]; enabled: !root.performMode; onActivated: root.guarded("open") }
     Shortcut { sequences: [StandardKey.Save]; enabled: !root.performMode; onActivated: root.save() }
     Shortcut { sequence: "Ctrl+Shift+S"; enabled: !root.performMode; onActivated: saveDialog.open() }
+    Shortcut { sequence: "Ctrl+,"; enabled: !root.performMode; onActivated: settingsDialog.open() }
 
     header: Toolbar {
         doc: root.doc

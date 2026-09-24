@@ -71,6 +71,7 @@ public:
     engine::AudioSetup setup{engine::AudioDriver::System, QStringLiteral("Spy Speakers"), 48000, 256};
     std::vector<engine::MidiPort> midi{{QStringLiteral("Spy Keys"), true}, {QStringLiteral("Spy Pads"), true}};
     int setupChanges = 0;
+    QString failingDevice; // setAudioSetup fails for this device
     [[nodiscard]] std::vector<engine::AudioOutput> audioOutputs() const override
     {
         return {
@@ -82,8 +83,8 @@ public:
     [[nodiscard]] engine::AudioSetup audioSetup() const override { return setup; }
     core::Result<void> setAudioSetup(const engine::AudioSetup& wanted) override
     {
-        if (wanted.device == QStringLiteral("Broken")) {
-            return core::fail(core::ErrorCode::DeviceUnavailable, QStringLiteral("Broken cannot open"));
+        if (!failingDevice.isEmpty() && wanted.device == failingDevice) {
+            return core::fail(core::ErrorCode::DeviceUnavailable, failingDevice + QStringLiteral(" cannot open"));
         }
         ++setupChanges;
         setup = wanted;
