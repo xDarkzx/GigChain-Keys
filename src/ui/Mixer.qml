@@ -2,15 +2,17 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// The right-hand mixer: one strip per channel of the current patch.
+// The Logic-style mixer along the bottom: one strip per channel of the current
+// patch, then the master strip.
 Rectangle {
     id: mixer
 
     required property DocumentController doc
     required property ChannelModel channelModel
     required property PluginListModel pluginModel
+    required property EngineStatus engineStatus
 
-    color: Theme.panel
+    color: Theme.mixerBackground
 
     DropArea {
         anchors.fill: parent
@@ -18,21 +20,12 @@ Rectangle {
         function acceptDrop(payload) { mixer.doc.addChannel(payload.pluginId, payload.name) }
     }
 
-    ColumnLayout {
+    Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.border }
+
+    RowLayout {
         anchors.fill: parent
         anchors.margins: Theme.spacing
         spacing: Theme.spacing
-
-        RowLayout {
-            Layout.fillWidth: true
-            Label { text: qsTr("MIXER"); color: Theme.textDim; font.bold: true; Layout.fillWidth: true }
-            ToolButton {
-                text: qsTr("Remove")
-                enabled: mixer.doc.selectedChannel >= 0
-                focusPolicy: Qt.NoFocus
-                onClicked: mixer.doc.removeChannel(mixer.doc.selectedChannel)
-            }
-        }
 
         ListView {
             id: strips
@@ -50,15 +43,76 @@ Rectangle {
                 doc: mixer.doc
                 pluginModel: mixer.pluginModel
             }
+            footer: Item {
+                width: addStrip.width + 8
+                height: strips.height
+                // Add a channel: pick an instrument
+                SlotButton {
+                    id: addStrip
+                    x: 4
+                    width: Theme.stripWidth
+                    height: strips.height
+                    empty: true
+                    text: qsTr("+ Instrument")
+                    onClicked: instrumentMenu.popup()
+                    Menu {
+                        id: instrumentMenu
+                        Instantiator {
+                            model: mixer.pluginModel.instruments()
+                            delegate: MenuItem {
+                                required property var modelData
+                                text: modelData.name
+                                onTriggered: mixer.doc.addChannel(modelData.pluginId, modelData.name)
+                            }
+                            onObjectAdded: (index, object) => instrumentMenu.insertItem(index, object)
+                            onObjectRemoved: (index, object) => instrumentMenu.removeItem(object)
+                        }
+                    }
+                }
+            }
         }
 
-        Label {
-            visible: strips.count === 0
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            horizontalAlignment: Text.AlignHCenter
-            color: Theme.textDim
-            text: qsTr("Drag an instrument here to add a channel")
+        // Master strip
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.preferredWidth: Theme.stripWidth
+            radius: Theme.radius
+            color: Theme.stripBackground
+            border.color: Theme.stripBorder
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 4
+                spacing: 3
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 3; radius: 1.5; color: Theme.text }
+                Item { Layout.fillWidth: true; Layout.preferredHeight: 34
+                    Image {
+                        anchors.centerIn: parent
+                        source: "icons/volume.svg"
+                        sourceSize: Qt.size(22, 22)
+                    }
+                }
+                Readout { Layout.fillWidth: true; text: mixer.engineStatus.masterVolumeDb.toFixed(1) }
+                VolumeFader {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    volumeDb: mixer.engineStatus.masterVolumeDb
+                    onVolumeMoved: (db) => mixer.engineStatus.masterVolumeDb = db
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 22
+                    radius: 3
+                    color: Theme.panelRaised
+                    Text {
+                        anchors.centerIn: parent
+                        text: qsTr("Master")
+                        color: Theme.text
+                        font.pixelSize: Theme.smallFontSize
+                        font.bold: true
+                    }
+                }
+            }
         }
     }
 }

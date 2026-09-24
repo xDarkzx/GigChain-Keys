@@ -17,6 +17,7 @@ Item {
         spacing: Theme.spacing
 
         TextField {
+            objectName: "pluginSearch"
             Layout.fillWidth: true
             placeholderText: qsTr("Search plugins")
             onTextChanged: browser.pluginModel.filterText = text

@@ -73,7 +73,9 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder)
                 if (vendor.isEmpty()) vendor = QString::fromStdString(factory.info().vendor());
                 const bool instrument = QString::fromStdString(info.subCategoriesString()).contains(u"Instrument"_s);
                 plugins.push_back(PluginInfo{bundle, QString::fromStdString(info.name()), vendor,
-                                             instrument ? PluginKind::Instrument : PluginKind::Effect});
+                                             instrument ? PluginKind::Instrument : PluginKind::Effect,
+                                             QString::fromStdString(info.subCategoriesString()),
+                                             QString::fromStdString(info.version())});
                 found = true;
                 break; // v1: one plugin per bundle (the first audio class), matching Vst3Node::load
             }

@@ -30,9 +30,12 @@ public:
     [[nodiscard]] std::vector<engine::PluginInfo> availablePlugins() const override
     {
         return {
-            {QStringLiteral("spy/Piano.vst3"), QStringLiteral("Spy Piano"), QStringLiteral("Spy"), engine::PluginKind::Instrument},
-            {QStringLiteral("spy/Pad.vst3"), QStringLiteral("Spy Pad"), QStringLiteral("Spy"), engine::PluginKind::Instrument},
-            {QStringLiteral("spy/Reverb.vst3"), QStringLiteral("Spy Reverb"), QStringLiteral("Other"), engine::PluginKind::Effect},
+            {QStringLiteral("spy/Piano.vst3"), QStringLiteral("Spy Piano"), QStringLiteral("Spy"), engine::PluginKind::Instrument,
+             QStringLiteral("Instrument|Piano"), QStringLiteral("1.0")},
+            {QStringLiteral("spy/Pad.vst3"), QStringLiteral("Spy Pad"), QStringLiteral("Spy"), engine::PluginKind::Instrument,
+             QStringLiteral("Instrument|Synth"), QStringLiteral("1.0")},
+            {QStringLiteral("spy/Reverb.vst3"), QStringLiteral("Spy Reverb"), QStringLiteral("Other"), engine::PluginKind::Effect,
+             QStringLiteral("Fx|Reverb"), QStringLiteral("1.0")},
         };
     }
     [[nodiscard]] engine::LevelReading channelLevel(const core::ChannelId&) override { return {0.5F, 0.25F}; }

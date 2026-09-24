@@ -44,6 +44,8 @@ public:
 
     // Every effect as {pluginId, name}, for the mixer's "+" menu.
     Q_INVOKABLE QVariantList effects() const;
+    // Every instrument as {pluginId, name}, for the mixer's "+ Instrument" menu.
+    Q_INVOKABLE QVariantList instruments() const;
 
 signals:
     void filterTextChanged();

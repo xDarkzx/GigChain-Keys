@@ -51,14 +51,28 @@ void PluginListModel::setFilterText(const QString& text)
     emit filterTextChanged();
 }
 
-QVariantList PluginListModel::effects() const
+namespace {
+
+QVariantList pluginsOfKind(const std::vector<engine::PluginInfo>& plugins, engine::PluginKind kind)
 {
     QVariantList list;
-    for (const auto& plugin : m_all) {
-        if (plugin.kind != engine::PluginKind::Effect) continue;
+    for (const auto& plugin : plugins) {
+        if (plugin.kind != kind) continue;
         list.append(QVariantMap{{u"pluginId"_s, plugin.id}, {u"name"_s, plugin.name}});
     }
     return list;
+}
+
+} // namespace
+
+QVariantList PluginListModel::effects() const
+{
+    return pluginsOfKind(m_all, engine::PluginKind::Effect);
+}
+
+QVariantList PluginListModel::instruments() const
+{
+    return pluginsOfKind(m_all, engine::PluginKind::Instrument);
 }
 
 void PluginListModel::applyFilter()

@@ -6,6 +6,8 @@
 #include <QAbstractListModel>
 #include <QtQml/qqmlregistration.h>
 
+#include <QHash>
+
 #include <vector>
 
 namespace openstage::engine {
@@ -40,6 +42,9 @@ public:
         PeakRole,
         RmsRole,
         SelectedRole,
+        PanRole,
+        IconRole,  // qrc URL of the instrument's icon
+        ColorRole, // the strip's colour tag, "#rrggbb"
     };
     Q_ENUM(Role)
 
@@ -61,6 +66,7 @@ private:
     engine::IEngine& m_engine;
     int m_rowCount = 0;
     std::vector<engine::LevelReading> m_levels;
+    QHash<QString, engine::PluginInfo> m_plugins; // by plugin id, for icons
 };
 
 } // namespace openstage::ui
