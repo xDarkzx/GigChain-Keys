@@ -72,7 +72,10 @@ QString PluginEditorHost::emptyReason() const
 void PluginEditorHost::geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry)
 {
     QQuickItem::geometryChange(newGeometry, oldGeometry);
-    place();
+    // An editor opened before the layout gave this area a size (the setlist
+    // loads before the main window appears) is shown once it has one.
+    if (m_viewport && !m_viewport->isVisible()) updateVisibility();
+    else place();
 }
 
 void PluginEditorHost::itemChange(ItemChange change, const ItemChangeData& value)
