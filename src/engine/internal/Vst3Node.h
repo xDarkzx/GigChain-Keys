@@ -5,7 +5,6 @@
 #include "openstage/core/Error.h"
 #include "openstage/engine/IPluginEditor.h"
 
-#include <QByteArray>
 #include <QString>
 
 #include <cstdint>
@@ -62,19 +61,6 @@ public:
     // editor keeps `node` alive until it is destroyed.
     static core::Result<std::unique_ptr<IPluginEditor>> createEditor(const std::shared_ptr<Vst3Node>& node);
 
-    // A plugin's full state (its sound and settings), as VST3 hosts save it:
-    // the component's state and the controller's.
-    struct State
-    {
-        QByteArray component;
-        QByteArray controller;
-    };
-    // Main thread.
-    [[nodiscard]] core::Result<State> saveState() const;
-    // Main thread, before the node is published to the audio graph.
-    core::Result<void> restoreState(const State& state);
-
-    [[nodiscard]] QString bundlePath() const;
     [[nodiscard]] QString name() const;
     [[nodiscard]] bool isInstrument() const;
 
