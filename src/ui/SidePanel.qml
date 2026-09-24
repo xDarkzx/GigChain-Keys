@@ -9,6 +9,7 @@ Rectangle {
     required property DocumentController doc
     required property SetlistModel setlistModel
     required property PluginListModel pluginModel
+    required property ArtworkBuilder artworkBuilder
     property bool editable: true
 
     color: Theme.panel
@@ -39,6 +40,7 @@ Rectangle {
             PluginBrowser {
                 doc: panel.doc
                 pluginModel: panel.pluginModel
+                artworkBuilder: panel.artworkBuilder
             }
         }
     }

@@ -15,6 +15,9 @@ qt_add_qml_module(openstage_ui
         cpp/EditorService.h cpp/EditorService.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
         cpp/PluginIcons.h cpp/PluginIcons.cpp
+        cpp/ArtworkCache.h cpp/ArtworkCache.cpp
+        cpp/ArtworkBuilder.h cpp/ArtworkBuilder.cpp
+        cpp/WindowCapture.h cpp/WindowCapture.cpp
     QML_FILES
         Theme.qml
         Main.qml

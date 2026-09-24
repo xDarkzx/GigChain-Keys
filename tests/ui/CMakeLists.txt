@@ -2,3 +2,5 @@ openstage_add_test(tst_document_controller SOURCES tst_document_controller.cpp L
 openstage_add_test(tst_models SOURCES tst_models.cpp LIBS openstage_ui)
 openstage_add_test(tst_qml_smoke SOURCES tst_qml_smoke.cpp LIBS openstage_ui openstage_uiplugin Qt6::QuickControls2)
 openstage_add_test(tst_plugin_icons SOURCES tst_plugin_icons.cpp LIBS openstage_ui)
+openstage_add_test(tst_artwork_cache SOURCES tst_artwork_cache.cpp LIBS openstage_ui)
+openstage_add_test(tst_artwork_capture SOURCES tst_artwork_capture.cpp LIBS openstage_ui)

@@ -6,8 +6,9 @@
 
 namespace openstage::ui {
 
-EditorService::EditorService(engine::IEngine& engine, DocumentController& document, QObject* parent)
-    : QObject(parent), m_engine(engine), m_document(document)
+EditorService::EditorService(engine::IEngine& engine, DocumentController& document, ArtworkCache& artwork,
+                             QObject* parent)
+    : QObject(parent), m_engine(engine), m_document(document), m_artwork(artwork)
 {
     m_coalesce.setSingleShot(true);
     m_coalesce.setInterval(0);
@@ -29,6 +30,15 @@ core::Result<std::unique_ptr<engine::IPluginEditor>> EditorService::createForSel
     auto editor = m_engine.createEditor(patch->channels[static_cast<std::size_t>(index)].id);
     if (!editor) m_document.reportMessage(editor.error().message);
     return editor;
+}
+
+QString EditorService::selectedPluginId() const
+{
+    const core::Patch* patch = m_document.currentPatch();
+    const int index = m_document.selectedChannel();
+    if (patch == nullptr || index < 0 || static_cast<std::size_t>(index) >= patch->channels.size()) return {};
+    const core::Channel& channel = patch->channels[static_cast<std::size_t>(index)];
+    return channel.instrument ? channel.instrument->pluginId : QString();
 }
 
 void EditorService::reportFailure(const QString& message)

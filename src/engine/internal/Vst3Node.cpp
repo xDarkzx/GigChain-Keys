@@ -46,6 +46,30 @@ Vst::HostApplication& hostContext()
 }
 
 
+// The host side of IComponentHandler: plugins report parameter edits and
+// ask for restarts through it. Some plugins (e.g. FabFilter Pro-DS) call it
+// during setup and crash when a host has not provided one. v1 accepts the
+// calls; forwarding edits to automation comes later.
+class ComponentHandler final : public Vst::IComponentHandler
+{
+public:
+    tresult PLUGIN_API beginEdit(Vst::ParamID) override { return kResultOk; }
+    tresult PLUGIN_API performEdit(Vst::ParamID, Vst::ParamValue) override { return kResultOk; }
+    tresult PLUGIN_API endEdit(Vst::ParamID) override { return kResultOk; }
+    tresult PLUGIN_API restartComponent(int32) override { return kResultOk; }
+
+    tresult PLUGIN_API queryInterface(const TUID requested, void** object) override
+    {
+        QUERY_INTERFACE(requested, object, FUnknown::iid, Vst::IComponentHandler)
+        QUERY_INTERFACE(requested, object, Vst::IComponentHandler::iid, Vst::IComponentHandler)
+        *object = nullptr;
+        return kNoInterface;
+    }
+    // Owned by the node (lives as long as the controller that uses it).
+    uint32 PLUGIN_API addRef() override { return 1; }
+    uint32 PLUGIN_API release() override { return 1; }
+};
+
 // kNotImplemented means "nothing to do" for optional calls; anything else
 // that is not kResultOk is a real failure.
 bool succeeded(tresult result)
@@ -89,6 +113,7 @@ struct Vst3Node::Impl
     IPtr<Vst::IComponent> component;
     IPtr<Vst::IAudioProcessor> processor;
     IPtr<Vst::IEditController> controller;
+    ComponentHandler componentHandler;
     Vst::HostProcessData data;
     Vst::EventList events{kMaxEventsPerBlock};
     Vst::ParameterChanges parameterChanges;
@@ -109,16 +134,18 @@ struct Vst3Node::Impl
 
     core::Result<void> activate(double sampleRate, int block)
     {
-        Vst::ProcessSetup setup{Vst::kRealtime, Vst::kSample32, block, sampleRate};
-        if (processor->setupProcessing(setup) != kResultOk) {
-            return core::fail(core::ErrorCode::InvalidData,
-                              u"%1 does not support %2 Hz / %3-sample blocks"_s.arg(name).arg(sampleRate).arg(block));
-        }
+        // Steinberg's host order: activate buses, then setupProcessing, then
+        // setActive / setProcessing.
         if (auto r = activateMainBuses(*component, Vst::kInput, name); !r) return r;
         if (auto r = activateMainBuses(*component, Vst::kOutput, name); !r) return r;
         if (component->getBusCount(Vst::kEvent, Vst::kInput) > 0 &&
             !succeeded(component->activateBus(Vst::kEvent, Vst::kInput, 0, true))) {
             return core::fail(core::ErrorCode::InvalidData, u"%1 refused to activate its MIDI input"_s.arg(name));
+        }
+        Vst::ProcessSetup setup{Vst::kRealtime, Vst::kSample32, block, sampleRate};
+        if (processor->setupProcessing(setup) != kResultOk) {
+            return core::fail(core::ErrorCode::InvalidData,
+                              u"%1 does not support %2 Hz / %3-sample blocks"_s.arg(name).arg(sampleRate).arg(block));
         }
 
         data.prepare(*component, block, Vst::kSample32);
@@ -205,6 +232,9 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
         // Some plugins only finish initialising once the controller has seen
         // the component's state (Muse notes crashes in editors without this).
         if (impl->controller) {
+            if (impl->controller->setComponentHandler(&impl->componentHandler) != kResultOk) {
+                qCInfo(lcEngine).noquote() << impl->name << "did not accept a component handler";
+            }
             MemoryStream state;
             if (impl->component->getState(&state) == kResultOk && state.getSize() > 0) {
                 state.seek(0, IBStream::kIBSeekSet, nullptr);

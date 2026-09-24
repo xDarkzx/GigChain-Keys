@@ -1,5 +1,7 @@
 #include "ChannelModel.h"
 #include "DocumentController.h"
+#include "ArtworkBuilder.h"
+#include "ArtworkCache.h"
 #include "EditorService.h"
 #include "EngineStatus.h"
 #include "PluginListModel.h"
@@ -117,9 +119,45 @@ private slots:
         QVERIFY(changed.count() >= 2);
     }
 
+    void pluginListShowsArtworkAndDetails()
+    {
+        ArtworkCache cache(m_dir->filePath(u"artwork"_s));
+        PluginListModel model(*m_engine, cache);
+        QAbstractItemModelTester tester(&model, QAbstractItemModelTester::FailureReportingMode::QtTest);
+        QCOMPARE(roleData(model, 0, "name").toString(), u"Spy Pad"_s);
+        QCOMPARE(roleData(model, 0, "version").toString(), u"1.0"_s);
+        QCOMPARE(roleData(model, 0, "category").toString(), u"Synth"_s);
+        QVERIFY(roleData(model, 0, "icon").toString().endsWith(u"wave-sine.svg"_s));
+        QVERIFY(roleData(model, 0, "imageUrl").toString().isEmpty());
+
+        QSignalSpy changed(&model, &QAbstractItemModel::dataChanged);
+        QImage picture(200, 100, QImage::Format_ARGB32);
+        picture.fill(Qt::red);
+        QVERIFY(cache.store(u"spy/Pad.vst3"_s, picture).has_value());
+        QCOMPARE(changed.count(), 1);
+        QVERIFY(roleData(model, 0, "imageUrl").toString().startsWith(u"file:"_s));
+    }
+
+    void artworkBuilderWalksEveryPluginWithoutArtwork()
+    {
+        ArtworkCache cache(m_dir->filePath(u"artwork"_s));
+        ArtworkBuilder builder(*m_engine, cache);
+        QSignalSpy finished(&builder, &ArtworkBuilder::finished);
+        builder.start();
+        QVERIFY(builder.isRunning());
+        QVERIFY(finished.wait(5000));
+        QVERIFY(!builder.isRunning());
+        QCOMPARE(builder.done(), builder.total());
+        QCOMPARE(builder.total(), 3);
+        // The spy has no editors, so it was asked for each and nothing was stored.
+        QCOMPARE(m_engine->pluginEditorRequests.size(), std::size_t{3});
+        QVERIFY(!cache.has(u"spy/Piano.vst3"_s));
+    }
+
     void pluginListGroupsAndFilters()
     {
-        PluginListModel model(*m_engine);
+        ArtworkCache cache(m_dir->filePath(u"artwork"_s));
+        PluginListModel model(*m_engine, cache);
         QAbstractItemModelTester tester(&model, QAbstractItemModelTester::FailureReportingMode::QtTest);
         QCOMPARE(model.rowCount(), 3);
         QCOMPARE(roleData(model, 0, "kind").toString(), u"instrument"_s); // instruments first
@@ -141,7 +179,8 @@ private slots:
 
     void editorServiceFollowsTheSelectedChannel()
     {
-        EditorService service(*m_engine, *m_doc);
+        ArtworkCache cache(m_dir->filePath(u"artwork"_s));
+        EditorService service(*m_engine, *m_doc, cache);
         QSignalSpy target(&service, &EditorService::targetChanged);
         QCOMPARE(service.emptyReason(), u"Drag an instrument here to start this patch"_s);
 
@@ -163,7 +202,8 @@ private slots:
     {
         // Volume, pan, mute and solo never change which plugin is shown; the
         // editor must not be closed and reopened while a fader moves.
-        EditorService service(*m_engine, *m_doc);
+        ArtworkCache cache(m_dir->filePath(u"artwork"_s));
+        EditorService service(*m_engine, *m_doc, cache);
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
         QTest::qWait(10);
         QSignalSpy target(&service, &EditorService::targetChanged);
@@ -180,7 +220,8 @@ private slots:
     {
         // A patch change emits several document signals; the editor (slow to
         // open) must be rebuilt once, not once per signal.
-        EditorService service(*m_engine, *m_doc);
+        ArtworkCache cache(m_dir->filePath(u"artwork"_s));
+        EditorService service(*m_engine, *m_doc, cache);
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
         QVERIFY(m_doc->addPatch(0));
         QTest::qWait(10);

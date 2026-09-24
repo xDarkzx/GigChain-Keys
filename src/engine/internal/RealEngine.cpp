@@ -202,6 +202,14 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditor(const core
     return Vst3Node::createEditor(it->second);
 }
 
+core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(const QString& pluginId)
+{
+    // A separate instance, not in the audio graph; the editor keeps it alive.
+    auto node = Vst3Node::load(pluginId, m_audio.sampleRate(), m_audio.maxBlock());
+    if (!node) return tl::unexpected(node.error()); // logged by Vst3Node::load
+    return Vst3Node::createEditor(*node);
+}
+
 QString RealEngine::statusText() const
 {
     const QStringList ports = m_midi.openPortNames();

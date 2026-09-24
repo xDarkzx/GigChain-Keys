@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ArtworkCache.h"
+
 #include "openstage/engine/EngineTypes.h"
 
 #include <QAbstractListModel>
@@ -29,11 +31,15 @@ public:
         PluginIdRole = Qt::UserRole + 1,
         NameRole,
         VendorRole,
-        KindRole, // "instrument" or "effect"
+        KindRole,     // "instrument" or "effect"
+        VersionRole,
+        CategoryRole, // the most specific VST3 sub-category, e.g. "Piano"
+        IconRole,     // qrc URL
+        ImageUrlRole, // file: URL of the captured picture, or empty
     };
     Q_ENUM(Role)
 
-    explicit PluginListModel(const engine::IEngine& engine, QObject* parent = nullptr);
+    PluginListModel(const engine::IEngine& engine, const ArtworkCache& artwork, QObject* parent = nullptr);
 
     [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override;
     [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
@@ -53,6 +59,7 @@ signals:
 private:
     void applyFilter();
 
+    const ArtworkCache& m_artwork;
     std::vector<engine::PluginInfo> m_all;
     std::vector<std::size_t> m_visible;
     QString m_filterText;

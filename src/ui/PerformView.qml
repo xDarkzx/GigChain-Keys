@@ -10,6 +10,7 @@ Rectangle {
     required property DocumentController doc
     required property SetlistModel setlistModel
     required property PluginListModel pluginModel
+    required property ArtworkBuilder artworkBuilder
     required property EngineStatus engineStatus
     required property bool sidePanelOpen
 
@@ -26,6 +27,7 @@ Rectangle {
             doc: perform.doc
             setlistModel: perform.setlistModel
             pluginModel: perform.pluginModel
+            artworkBuilder: perform.artworkBuilder
             editable: false
         }
 

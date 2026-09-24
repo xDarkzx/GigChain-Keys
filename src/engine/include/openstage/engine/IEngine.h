@@ -56,6 +56,10 @@ public:
     // an error when opening it failed (also logged).
     virtual core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) = 0;
 
+    // The editor of any installed plugin, loaded on its own (not playing).
+    // Used to take pictures of plugins. nullptr when it has no editor.
+    virtual core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) = 0;
+
     // One line describing the audio setup, e.g. "Scarlett Solo · WASAPI · 5.3 ms".
     [[nodiscard]] virtual QString statusText() const = 0;
 

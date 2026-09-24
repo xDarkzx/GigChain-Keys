@@ -1,5 +1,7 @@
 #include "PluginListModel.h"
 
+#include "PluginIcons.h"
+
 #include "openstage/engine/IEngine.h"
 
 #include <QVariantMap>
@@ -10,9 +12,16 @@ using namespace Qt::StringLiterals;
 
 namespace openstage::ui {
 
-PluginListModel::PluginListModel(const engine::IEngine& engine, QObject* parent)
-    : QAbstractListModel(parent), m_all(engine.availablePlugins())
+PluginListModel::PluginListModel(const engine::IEngine& engine, const ArtworkCache& artwork, QObject* parent)
+    : QAbstractListModel(parent), m_artwork(artwork), m_all(engine.availablePlugins())
 {
+    connect(&m_artwork, &ArtworkCache::artworkChanged, this, [this](const QString& pluginId) {
+        for (std::size_t row = 0; row < m_visible.size(); ++row) {
+            if (m_all[m_visible[row]].id != pluginId) continue;
+            const QModelIndex changed = index(static_cast<int>(row));
+            emit dataChanged(changed, changed, {ImageUrlRole});
+        }
+    });
     std::stable_sort(m_all.begin(), m_all.end(), [](const engine::PluginInfo& a, const engine::PluginInfo& b) {
         if (a.kind != b.kind) return a.kind == engine::PluginKind::Instrument;
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
@@ -34,13 +43,22 @@ QVariant PluginListModel::data(const QModelIndex& index, int role) const
     case NameRole: return plugin.name;
     case VendorRole: return plugin.vendor;
     case KindRole: return plugin.kind == engine::PluginKind::Instrument ? u"instrument"_s : u"effect"_s;
+    case VersionRole: return plugin.version;
+    case CategoryRole: {
+        const QStringList parts = plugin.subCategories.split(u'|', Qt::SkipEmptyParts);
+        return parts.size() > 1 ? parts.last() : QString();
+    }
+    case IconRole: return iconUrl(iconFor(plugin));
+    case ImageUrlRole: return m_artwork.urlFor(plugin.id);
     default: return {};
     }
 }
 
 QHash<int, QByteArray> PluginListModel::roleNames() const
 {
-    return {{PluginIdRole, "pluginId"}, {NameRole, "name"}, {VendorRole, "vendor"}, {KindRole, "kind"}};
+    return {{PluginIdRole, "pluginId"}, {NameRole, "name"},       {VendorRole, "vendor"},
+            {KindRole, "kind"},         {VersionRole, "version"}, {CategoryRole, "category"},
+            {IconRole, "icon"},         {ImageUrlRole, "imageUrl"}};
 }
 
 void PluginListModel::setFilterText(const QString& text)
