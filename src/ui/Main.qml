@@ -220,7 +220,7 @@ ApplicationWindow {
                     SplitView.fillWidth: true
                     orientation: Qt.Vertical
 
-                    PluginArea {
+                    MainArea {
                         SplitView.fillHeight: true
                         SplitView.minimumHeight: 200
                         doc: root.doc

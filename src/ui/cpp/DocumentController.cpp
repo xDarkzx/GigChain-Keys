@@ -5,7 +5,9 @@
 
 #include <QStringDecoder>
 
+#include <QClipboard>
 #include <QFile>
+#include <QGuiApplication>
 
 #include "gigchain/core/Editing.h"
 #include "gigchain/core/SetlistFile.h"
@@ -168,6 +170,12 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
     return setSongChart(song, core::tidyChordSheet(pasted));
 }
 
+bool DocumentController::pasteChartFromClipboard(int song)
+{
+    const QClipboard* clipboard = QGuiApplication::clipboard();
+    return pasteChart(song, clipboard != nullptr ? clipboard->text() : QString());
+}
+
 bool DocumentController::importChartFile(int song, const QUrl& file)
 {
     const QString path = file.toLocalFile();
@@ -220,6 +228,8 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
         }
         lines << QVariantMap{{u"kind"_s, kind}, {u"label"_s, line.label}, {u"segments"_s, segments}};
     }
+    // No empty space after the last line (a chart usually ends with a newline).
+    while (!lines.isEmpty() && lines.last().toMap().value(u"kind"_s).toString() == u"blank"_s) lines.removeLast();
     return lines;
 }
 
