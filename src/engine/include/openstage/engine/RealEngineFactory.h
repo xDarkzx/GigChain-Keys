@@ -18,6 +18,7 @@ struct RealEngineOptions
     AudioSetup audio;
     MidiSetup midi;            // the inputs chosen in Settings
     QString pluginFolder;      // empty: the standard VST3 folder
+    QString pluginCacheFile;   // what the plugin scan learned; empty: open every plugin
 };
 
 // Opens the audio output and every MIDI input and scans plugins. Fails with

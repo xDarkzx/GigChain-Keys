@@ -68,7 +68,10 @@ int main(int argc, char* argv[])
     std::unique_ptr<engine::IEngine> engine;
     QString engineProblem;
     // The audio and MIDI setup saved by the Settings window.
-    if (auto real = engine::createRealEngine(ui::SettingsController::engineOptions(settings))) {
+    engine::RealEngineOptions engineOptions = ui::SettingsController::engineOptions(settings);
+    engineOptions.pluginCacheFile =
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-cache.json"_s;
+    if (auto real = engine::createRealEngine(engineOptions)) {
         engine = std::move(*real);
     } else {
         engineProblem = real.error().message;

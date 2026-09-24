@@ -46,8 +46,8 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_preparedBlock = engine->m_audio.maxBlock();
     engine->m_midiSetup = options.midi;
     for (QString& notice : engine->openMidi()) engine->m_pendingNotices.push_back(std::move(notice));
-    engine->m_plugins =
-        PluginCatalog::scan(options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder);
+    engine->m_plugins = PluginCatalog::scan(
+        options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder, options.pluginCacheFile);
     return engine;
 }
 
