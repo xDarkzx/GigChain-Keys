@@ -16,6 +16,11 @@ Item {
 
     Component.onCompleted: pluginModel.instrumentsOnly = true
 
+    // What each number of stars means.
+    function ratingWord(stars) {
+        return [qsTr("Rate it"), qsTr("Poor"), qsTr("Okay"), qsTr("Good"), qsTr("Great"), qsTr("Outstanding")][stars] || ""
+    }
+
     // A stable colour per maker for the banner.
     function vendorColor(vendor) {
         const palette = ["#3d5a80", "#6d4c9f", "#2a7f62", "#8a4b2f", "#7a2e45", "#2f6f8f", "#5b6b2f", "#4f4f7a"]
@@ -198,8 +203,16 @@ Item {
 
                     // Rating on the left; category and version on the right.
                     RowLayout {
+                        id: ratingRow
                         Layout.fillWidth: true
                         spacing: 0
+                        property int hovered: 0 // the star under the mouse, 1-5
+                        Label {
+                            text: qsTr("Rating")
+                            color: Theme.textDim
+                            font.pixelSize: 10
+                            rightPadding: 4
+                        }
                         Repeater {
                             model: 5
                             delegate: Text {
@@ -212,11 +225,21 @@ Item {
                                 MouseArea {
                                     anchors.fill: parent
                                     anchors.margins: -2
+                                    hoverEnabled: true
+                                    onContainsMouseChanged: ratingRow.hovered = containsMouse ? starText.index + 1 : 0
                                     // The same star again clears the rating.
                                     onClicked: browser.pluginModel.setRating(
                                                    card.pluginId, card.rating === starText.index + 1 ? 0 : starText.index + 1)
                                 }
                             }
+                        }
+                        Label {
+                            objectName: "ratingWord"
+                            leftPadding: 4
+                            // The word for the star under the mouse, else for the rating.
+                            text: browser.ratingWord(ratingRow.hovered > 0 ? ratingRow.hovered : card.rating)
+                            color: ratingRow.hovered > 0 || card.rating > 0 ? Theme.text : Theme.textDim
+                            font.pixelSize: 10
                         }
                         Label {
                             Layout.fillWidth: true

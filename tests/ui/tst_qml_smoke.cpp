@@ -186,6 +186,10 @@ private slots:
         QVERIFY(maker != nullptr);
         QVERIFY(!maker->property("text").toString().isEmpty()); // the maker, up front
 
+        auto* word = findItem(scene, u"ratingWord"_s);
+        QVERIFY(word != nullptr);
+        QCOMPARE(word->property("text").toString(), u"Rate it"_s); // not rated yet
+
         auto* details = findItem(scene, u"cardDetails"_s);
         auto* info = findItem(scene, u"infoButton"_s);
         QVERIFY(details != nullptr && info != nullptr);
