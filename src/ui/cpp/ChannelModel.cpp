@@ -3,6 +3,8 @@
 #include "DocumentController.h"
 #include "PluginIcons.h"
 
+#include <QUrl>
+
 #include <array>
 
 #include "openstage/engine/IEngine.h"
@@ -11,10 +13,15 @@ using namespace Qt::StringLiterals;
 
 namespace openstage::ui {
 
-ChannelModel::ChannelModel(const DocumentController& document, engine::IEngine& engine, QObject* parent)
+ChannelModel::ChannelModel(const DocumentController& document, engine::IEngine& engine,
+                           const OfficialArtwork& artwork, QObject* parent)
     : QAbstractListModel(parent), m_document(document), m_engine(engine)
 {
-    for (const auto& plugin : m_engine.availablePlugins()) m_plugins.insert(plugin.id, plugin);
+    for (const auto& plugin : m_engine.availablePlugins()) {
+        m_plugins.insert(plugin.id, plugin);
+        const PluginArtwork art = artwork.find(plugin);
+        if (!art.icon.isEmpty()) m_officialIcons.insert(plugin.id, QUrl::fromLocalFile(art.icon).toString());
+    }
     connect(&m_document, &DocumentController::channelsChanged, this, &ChannelModel::reset);
     connect(&m_document, &DocumentController::channelUpdated, this, [this](int row) {
         if (row >= 0 && row < m_rowCount) emit dataChanged(index(row), index(row));
@@ -68,6 +75,10 @@ QVariant ChannelModel::data(const QModelIndex& index, int role) const
     case PanRole: return channel->pan;
     case IconRole: {
         if (!channel->instrument) return iconUrl(u"plus"_s);
+        if (const auto official = m_officialIcons.constFind(channel->instrument->pluginId);
+            official != m_officialIcons.constEnd()) {
+            return *official; // the maker's own product icon
+        }
         // Unknown ids (plugin removed since) still get an icon from the name.
         const engine::PluginInfo plugin = m_plugins.value(
             channel->instrument->pluginId,
@@ -75,6 +86,7 @@ QVariant ChannelModel::data(const QModelIndex& index, int role) const
                                engine::PluginKind::Instrument, {}, {}});
         return iconUrl(iconFor(plugin));
     }
+    case OfficialIconRole: return channel->instrument && m_officialIcons.contains(channel->instrument->pluginId);
     case ColorRole: {
         static const std::array<const char*, 8> palette = {"#4a8fe7", "#45b36b", "#e0a526", "#e5484d",
                                                            "#9b6dff", "#2bb5c9", "#f07b3f", "#c96dd8"};
@@ -92,7 +104,7 @@ QHash<int, QByteArray> ChannelModel::roleNames() const
         {SoloRole, "solo"},           {KeyLowRole, "keyLow"},      {KeyHighRole, "keyHigh"},
         {TransposeRole, "transpose"}, {MidiChannelRole, "midiChannel"}, {PeakRole, "peak"},
         {RmsRole, "rms"},             {SelectedRole, "selected"},    {PanRole, "pan"},
-        {IconRole, "icon"},           {ColorRole, "color"},
+        {IconRole, "icon"},           {ColorRole, "color"},          {OfficialIconRole, "officialIcon"},
     };
 }
 

@@ -17,6 +17,7 @@ Rectangle {
     required property real peak
     required property bool selected
     required property string icon
+    required property bool officialIcon
     required property string color
     required property DocumentController doc
     required property PluginListModel pluginModel
@@ -58,10 +59,16 @@ Rectangle {
             radius: 17
             color: Qt.darker(strip.color, 2.2)
             border.color: strip.color
+            clip: true
             Image {
                 anchors.centerIn: parent
                 source: strip.icon
-                sourceSize: Qt.size(20, 20)
+                // the maker's icon fills the circle; category icons sit inside it
+                width: strip.officialIcon ? 32 : 20
+                height: width
+                sourceSize: Qt.size(64, 64)
+                fillMode: Image.PreserveAspectCrop
+                smooth: true
             }
         }
 

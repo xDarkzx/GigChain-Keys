@@ -3,14 +3,14 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // Installed plugins as a Kontakt-style library shelf: a banner card per
-// plugin (a picture of its own editor once captured). Drag an instrument onto
+// plugin with the maker's official artwork (VST3 snapshot, NKS, Arturia),
+// or a styled card when the maker publishes none. Drag an instrument onto
 // the mixer (or double-click) to add a channel; drag an effect onto a strip.
 Item {
     id: browser
 
     required property DocumentController doc
     required property PluginListModel pluginModel
-    required property ArtworkBuilder artworkBuilder
 
     // Stable colour per vendor for banners without a picture yet.
     function vendorColor(vendor) {
@@ -34,46 +34,6 @@ Item {
             Keys.onEscapePressed: {
                 text = ""
                 focus = false
-            }
-        }
-
-        // Build artwork: take a picture of every plugin's own editor.
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.spacing
-            Button {
-                visible: !browser.artworkBuilder.running
-                text: qsTr("Build artwork")
-                focusPolicy: Qt.NoFocus
-                Layout.fillWidth: true
-                onClicked: browser.artworkBuilder.start()
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Opens each plugin once, off-screen, to take a picture of it")
-            }
-            ColumnLayout {
-                visible: browser.artworkBuilder.running
-                Layout.fillWidth: true
-                spacing: 2
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("Capturing %1 (%2 of %3)").arg(browser.artworkBuilder.current)
-                          .arg(browser.artworkBuilder.done + 1).arg(browser.artworkBuilder.total)
-                    color: Theme.textDim
-                    font.pixelSize: Theme.smallFontSize
-                    elide: Text.ElideRight
-                }
-                ProgressBar {
-                    Layout.fillWidth: true
-                    from: 0
-                    to: Math.max(1, browser.artworkBuilder.total)
-                    value: browser.artworkBuilder.done
-                }
-            }
-            Button {
-                visible: browser.artworkBuilder.running
-                text: qsTr("Cancel")
-                focusPolicy: Qt.NoFocus
-                onClicked: browser.artworkBuilder.cancel()
             }
         }
 
@@ -152,9 +112,7 @@ Item {
                             anchors.fill: parent
                             source: card.imageUrl
                             fillMode: Image.PreserveAspectCrop
-                            verticalAlignment: Image.AlignTop // editors carry their branding at the top
                             asynchronous: true
-                            cache: false
                             visible: status === Image.Ready
                         }
                         Rectangle {

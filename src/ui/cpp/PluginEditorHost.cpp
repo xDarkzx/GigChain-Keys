@@ -1,7 +1,5 @@
 ﻿#include "PluginEditorHost.h"
 
-#include "WindowCapture.h"
-
 #include <QLoggingCategory>
 #include <QQuickWindow>
 
@@ -16,9 +14,7 @@ PluginEditorHost::PluginEditorHost(QQuickItem* parent) : QQuickItem(parent)
 {
     m_followTimer.setInterval(50);
     connect(&m_followTimer, &QTimer::timeout, this, &PluginEditorHost::place);
-    m_captureTimer.setSingleShot(true);
-    m_captureTimer.setInterval(1500);
-    connect(&m_captureTimer, &QTimer::timeout, this, &PluginEditorHost::captureArtworkIfMissing);
+
 }
 
 PluginEditorHost::~PluginEditorHost()
@@ -114,30 +110,12 @@ void PluginEditorHost::rebuild()
     place();
     updateVisibility();
     m_followTimer.start();
-    m_pluginId = m_service->selectedPluginId();
-    if (!m_service->artwork().has(m_pluginId)) m_captureTimer.start();
     emit editorChanged();
-}
-
-void PluginEditorHost::captureArtworkIfMissing()
-{
-    if (!m_editor || !m_child || !m_child->isVisible() || !m_service || m_pluginId.isEmpty()) return;
-    if (m_service->artwork().has(m_pluginId)) return;
-    // Capture the part of the main window the plugin occupies.
-    const double dpr = m_child->devicePixelRatio();
-    const QRect logical = m_child->geometry();
-    const QRect physical(static_cast<int>(logical.x() * dpr), static_cast<int>(logical.y() * dpr),
-                         static_cast<int>(logical.width() * dpr), static_cast<int>(logical.height() * dpr));
-    const QImage image = captureWindow(window(), physical);
-    if (image.isNull()) return; // logged by captureWindow
-    (void)m_service->artwork().store(m_pluginId, image); // a failure is logged by the cache
 }
 
 void PluginEditorHost::teardown()
 {
     m_followTimer.stop();
-    m_captureTimer.stop();
-    m_pluginId.clear();
     if (m_editor) {
         m_editor->detach(); // must happen before its window is destroyed
         m_editor.reset();
