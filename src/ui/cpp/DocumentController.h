@@ -5,6 +5,7 @@
 #include "gigchain/core/Navigation.h"
 
 #include <QObject>
+#include <QVariantList>
 #include <QString>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
@@ -42,6 +43,8 @@ class DocumentController : public QObject
     Q_PROPERTY(QString filePath READ filePath NOTIFY filePathChanged)
     Q_PROPERTY(QString displayName READ displayName NOTIFY filePathChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+    // The current song's chart (ChordPro).
+    Q_PROPERTY(QString currentChart READ currentChart NOTIFY chartChanged)
 
 public:
     DocumentController(engine::IEngine& engine, QSettings& settings, QObject* parent = nullptr);
@@ -77,6 +80,18 @@ public:
     Q_INVOKABLE bool addPatch(int song);
     Q_INVOKABLE bool renameSong(int song, const QString& name);
     Q_INVOKABLE bool renamePatch(int song, int patch, const QString& name);
+
+    // Song charts. setSongChart takes ChordPro as typed in the editor;
+    // pasteChart takes anything with chords and lyrics (a chord site, a text
+    // file's contents) and cleans it (core::tidyChordSheet) first.
+    [[nodiscard]] QString currentChart() const;
+    Q_INVOKABLE bool setSongChart(int song, const QString& chordPro);
+    Q_INVOKABLE bool pasteChart(int song, const QString& pasted);
+    // A downloaded text chart: .txt, .cho, .chopro, .chordpro, .crd, .pro, .onsong.
+    Q_INVOKABLE bool importChartFile(int song, const QUrl& file);
+    // For the chart view: [{kind: "lyrics"|"section"|"comment"|"blank",
+    // label, segments: [{chord, text}]}]; title/key lines are left out.
+    Q_INVOKABLE QVariantList chartLines(const QString& chordPro) const;
     Q_INVOKABLE bool duplicateSong(int song);
     Q_INVOKABLE bool duplicatePatch(int song, int patch);
     Q_INVOKABLE bool removeSong(int song);
@@ -126,6 +141,7 @@ signals:
     void dirtyChanged();
     void filePathChanged();
     void lastErrorChanged();
+    void chartChanged(); // the current song's chart, or which song is current
 
 private:
     bool report(const core::Error& error);

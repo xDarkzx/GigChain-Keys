@@ -14,6 +14,8 @@ Result<int> addSong(Setlist& setlist, const QString& name);
 Result<int> addPatch(Setlist& setlist, int songIndex, const QString& name);
 Result<void> renameSong(Setlist& setlist, int songIndex, const QString& name);
 Result<void> renamePatch(Setlist& setlist, Cursor cursor, const QString& name);
+// The song's chart (ChordPro). Refused when longer than limits::kMaxChartLength.
+Result<void> setSongChart(Setlist& setlist, int songIndex, const QString& chart);
 
 // Inserts the copy directly after the original and returns its index.
 Result<int> duplicateSong(Setlist& setlist, int songIndex);

@@ -149,6 +149,11 @@ private slots:
         QCOMPARE(tidyChordSheet(chordPro), u"{title: X}\n[G]One [D]two\n\nthree\n"_s);
     }
 
+    void aChordOverTheSpaceBeforeAWordGoesOnTheWord()
+    {
+        QCOMPARE(tidyChordSheet(u"C        G\nHello my   friend\n"_s), u"[C]Hello my [G]friend\n"_s);
+    }
+
     void writingBackGivesTheSameChart()
     {
         const QString text = u"{title: Test}\n{key: G}\n[G]One [D]two\nlyrics\n"_s;

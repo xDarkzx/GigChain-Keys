@@ -86,6 +86,17 @@ Result<void> renameSong(Setlist& setlist, int songIndex, const QString& name)
     return {};
 }
 
+Result<void> setSongChart(Setlist& setlist, int songIndex, const QString& chart)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (chart.size() > limits::kMaxChartLength) {
+        return fail(ErrorCode::LimitExceeded,
+                    u"The chart is longer than %1 characters"_s.arg(limits::kMaxChartLength));
+    }
+    setlist.songs[toIndex(songIndex)].chart = chart;
+    return {};
+}
+
 Result<void> renamePatch(Setlist& setlist, Cursor cursor, const QString& name)
 {
     Patch* patch = patchAt(setlist, cursor);
