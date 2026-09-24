@@ -1,4 +1,4 @@
-# Contributing to OpenStage
+# Contributing to GigChain Keys
 
 Thanks for your interest in contributing! Bug fixes, features, tests and docs
 are all welcome.

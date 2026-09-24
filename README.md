@@ -1,4 +1,4 @@
-# OpenStage
+# GigChain Keys
 
 An open-source, Windows-first live-performance host for keyboard players, in
 the spirit of MainStage. Load the VST3 instruments and effects already
@@ -43,11 +43,19 @@ Requirements (Windows 10/11, x64):
 $env:VCPKG_ROOT  = 'C:\path\to\vcpkg'
 $env:QT_ROOT_DIR = 'C:\Qt\6.10.2\msvc2022_64'
 .\tools\build.ps1 -Preset debug     # configure, build and run every test
-.\tools\run.ps1                     # start OpenStage
+.\tools\run.ps1                     # start GigChain Keys
 ```
 
 Other presets: `release`, and `asan` (AddressSanitizer). To build and test
 one target, pass `-Target <name> -Filter <test>`.
+
+## Name and branding
+
+The product's name, version, executable, settings folder, setlist file
+extension and splash picture all come from **[`branding.cmake`](branding.cmake)**.
+To rename, edit that file (and swap `branding/splash.png`, which has the name
+in it) and rebuild. A test fails if a product name is typed anywhere else in
+the source. Settings saved under earlier names carry over on first start.
 
 ## Layout
 
@@ -67,7 +75,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: see
 
 ## License
 
-OpenStage is licensed under the **GNU General Public License v3.0** — see
+GigChain Keys is licensed under the **GNU General Public License v3.0** — see
 [LICENSE](LICENSE). It builds on Qt (LGPL-3.0), the Steinberg VST3 SDK (MIT),
 the Steinberg ASIO SDK (GPL-3.0), RtAudio and RtMidi (MIT).
 
