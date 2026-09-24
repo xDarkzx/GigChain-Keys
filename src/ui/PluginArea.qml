@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// The main area: the current patch header and, below it, the selected
-// channel's own plugin window. The plugin does the heavy lifting here.
+// The main area: the selected channel's own plugin window, as big as it can
+// be (the toolbar already names the song and patch). The plugin does the
+// heavy lifting here.
 Rectangle {
     id: area
 
@@ -22,34 +23,6 @@ Rectangle {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
-
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 52
-            color: Theme.panelRaised
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: Theme.spacing * 2
-                anchors.rightMargin: Theme.spacing * 2
-                spacing: Theme.spacing * 2
-                Label {
-                    text: area.doc.hasPatch ? area.doc.currentPatchNumber : ""
-                    color: Theme.accent
-                    font.pixelSize: Theme.headerFontSize + 6
-                    font.bold: true
-                }
-                Label {
-                    text: area.doc.currentPatchName
-                    font.pixelSize: Theme.headerFontSize
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-                Label {
-                    text: editorHost.hasEditor ? editorHost.title : ""
-                    color: Theme.textDim
-                }
-            }
-        }
 
         Item {
             Layout.fillWidth: true
