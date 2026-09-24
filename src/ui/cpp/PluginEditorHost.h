@@ -93,7 +93,11 @@ private:
     bool m_scalable = false;   // the plugin accepts host zoom
     double m_zoom = 1.0;       // current zoom applied to a scalable editor
     QRectF m_placedArea;       // last scene rect the editor was fitted to
-    QTimer m_followTimer;      // catches moves of ancestors (splitter drags)
+    QTimer m_followTimer;
+    // Fixed-size editors: after the area stops changing, ask for a better
+    // fitting size (Arturia reloads at its own window size).
+    QTimer m_fitTimer;
+    bool m_fixedSize = false;      // catches moves of ancestors (splitter drags)
     bool m_suspended = false;
 };
 

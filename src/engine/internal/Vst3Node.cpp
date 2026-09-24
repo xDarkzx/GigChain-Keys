@@ -119,6 +119,7 @@ struct Vst3Node::Impl
     Vst::ParameterChanges parameterChanges;
     Vst::ProcessContext context{};
     QString name;
+    QString bundlePath;
     bool instrument = false;
     bool active = false;
     int maxBlock = 0;
@@ -211,6 +212,7 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
         for (const auto& info : factory.classInfos()) {
             if (info.category() != kVstAudioEffectClass) continue;
             impl->name = QString::fromStdString(info.name());
+            impl->bundlePath = bundlePath;
             impl->instrument = QString::fromStdString(info.subCategoriesString()).contains(u"Instrument"_s);
             impl->provider = owned(new Vst::PlugProvider(factory, info, true));
             break;
@@ -380,6 +382,59 @@ Vst3Node::Problems Vst3Node::takeProblems()
 {
     return Problems{m_impl->processFailures.exchange(0), m_impl->droppedEvents.exchange(0),
                     m_impl->oversizedBlocks.exchange(0)};
+}
+
+namespace {
+
+QByteArray streamBytes(MemoryStream& stream)
+{
+    return QByteArray(stream.getData(), static_cast<qsizetype>(stream.getSize()));
+}
+
+} // namespace
+
+core::Result<Vst3Node::State> Vst3Node::saveState() const
+{
+    State state;
+    MemoryStream component;
+    if (m_impl->component->getState(&component) != kResultOk) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 did not give its state"_s.arg(m_impl->name));
+    }
+    state.component = streamBytes(component);
+    if (m_impl->controller) {
+        MemoryStream controller;
+        // Controllers without their own state say so; that is not a failure.
+        if (m_impl->controller->getState(&controller) == kResultOk) state.controller = streamBytes(controller);
+    }
+    return state;
+}
+
+core::Result<void> Vst3Node::restoreState(const State& state)
+{
+    if (state.component.isEmpty()) return {};
+    MemoryStream component(const_cast<char*>(state.component.constData()), state.component.size());
+    if (m_impl->component->setState(&component) != kResultOk) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 rejected its saved state"_s.arg(m_impl->name));
+    }
+    if (m_impl->controller) {
+        component.seek(0, IBStream::kIBSeekSet, nullptr);
+        if (!succeeded(m_impl->controller->setComponentState(&component))) {
+            return core::fail(core::ErrorCode::InvalidData, u"%1's editor rejected its saved state"_s.arg(m_impl->name));
+        }
+        if (!state.controller.isEmpty()) {
+            MemoryStream controller(const_cast<char*>(state.controller.constData()), state.controller.size());
+            if (!succeeded(m_impl->controller->setState(&controller))) {
+                return core::fail(core::ErrorCode::InvalidData,
+                                  u"%1's editor rejected its saved settings"_s.arg(m_impl->name));
+            }
+        }
+    }
+    return {};
+}
+
+QString Vst3Node::bundlePath() const
+{
+    return m_impl->bundlePath;
 }
 
 QString Vst3Node::name() const

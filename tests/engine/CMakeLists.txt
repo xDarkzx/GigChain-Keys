@@ -18,3 +18,5 @@ target_include_directories(tst_vst3_editor PRIVATE ${PROJECT_SOURCE_DIR}/src/eng
 target_compile_definitions(tst_vst3_editor PRIVATE NOMINMAX)
 target_link_libraries(tst_vst3_editor PRIVATE ole32)
 openstage_add_test(tst_midi_setup SOURCES tst_midi_setup.cpp LIBS openstage::engine)
+openstage_add_test(tst_arturia_size SOURCES tst_arturia_size.cpp LIBS openstage::engine)
+target_include_directories(tst_arturia_size PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)

@@ -83,6 +83,12 @@ public:
         };
     }
     [[nodiscard]] engine::AudioSetup audioSetup() const override { return setup; }
+    int fitRequests = 0;
+    core::Result<bool> fitEditorToArea(const core::ChannelId&, QSize, QSize) override
+    {
+        ++fitRequests;
+        return false;
+    }
     core::Result<void> setAudioSetup(const engine::AudioSetup& wanted) override
     {
         if (!failingDevice.isEmpty() && wanted.device == failingDevice) {

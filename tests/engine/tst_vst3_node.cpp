@@ -107,6 +107,26 @@ private slots:
         QVERIFY(!(*node)->takeProblems().any()); // taking resets
     }
 
+    void stateMovesToAFreshInstance()
+    {
+        // How a plugin is reloaded (e.g. at another window size) without losing its sound.
+        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        auto first = Vst3Node::load(kInstrument, kRate, kBlock);
+        QVERIFY(first.has_value());
+        QCOMPARE((*first)->bundlePath(), kInstrument);
+        const auto saved = (*first)->saveState();
+        QVERIFY2(saved.has_value(), saved ? "" : qPrintable(saved.error().message));
+        QVERIFY(!saved->component.isEmpty());
+
+        auto second = Vst3Node::load(kInstrument, kRate, kBlock);
+        QVERIFY(second.has_value());
+        const auto restored = (*second)->restoreState(*saved);
+        QVERIFY2(restored.has_value(), restored ? "" : qPrintable(restored.error().message));
+        const auto again = (*second)->saveState();
+        QVERIFY(again.has_value());
+        QCOMPARE(again->component.size(), saved->component.size());
+    }
+
     void sidechainEffectLoads()
     {
         // FabFilter Pro-DS (has a sidechain bus) crashed during activation when

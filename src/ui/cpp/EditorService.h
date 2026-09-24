@@ -4,6 +4,7 @@
 #include "openstage/engine/IPluginEditor.h"
 
 #include <QObject>
+#include <QSize>
 #include <QString>
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
@@ -34,6 +35,10 @@ public:
     core::Result<std::unique_ptr<engine::IPluginEditor>> createForSelection();
     // Shows an editor problem to the user (it has already been logged).
     void reportFailure(const QString& message);
+    // For editors that cannot zoom: asks the engine to reload the plugin at
+    // its own window size that best fits `area` (physical pixels). When it
+    // did, the editor is opened again (targetChanged). Failures are shown.
+    void fitToArea(QSize editorSize, QSize area);
     // Why nothing is shown, for the placeholder text.
     [[nodiscard]] QString emptyReason() const;
 
