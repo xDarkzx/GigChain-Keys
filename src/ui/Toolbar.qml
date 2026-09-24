@@ -73,15 +73,20 @@ ToolBar {
             horizontalAlignment: Text.AlignHCenter
         }
 
-        Label {
-            text: qsTr("CPU %1%").arg(Math.round(bar.engineStatus.cpuLoad * 100))
-            color: bar.engineStatus.cpuLoad > 0.8 ? Theme.danger : Theme.text
+        StatBox {
+            objectName: "cpuBox"
+            label: qsTr("CPU")
+            value: Math.round(bar.engineStatus.cpuLoad * 100) + "%"
+            widest: "100%"
+            valueColor: bar.engineStatus.cpuLoad > 0.8 ? Theme.danger : Theme.text
         }
-        Label {
+        StatBox {
+            objectName: "ramBox"
             // plugin RAM matters live: sample libraries can take gigabytes
-            text: bar.engineStatus.memoryMb >= 1024 ? qsTr("RAM %1 GB").arg((bar.engineStatus.memoryMb / 1024).toFixed(1))
-                                                    : qsTr("RAM %1 MB").arg(bar.engineStatus.memoryMb)
-            color: Theme.text
+            label: qsTr("RAM")
+            value: bar.engineStatus.memoryMb >= 1024 ? (bar.engineStatus.memoryMb / 1024).toFixed(1) + " GB"
+                                                     : bar.engineStatus.memoryMb + " MB"
+            widest: "1023 MB"
         }
         Rectangle {
             width: 10

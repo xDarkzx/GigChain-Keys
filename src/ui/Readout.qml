@@ -7,6 +7,7 @@ Rectangle {
     property bool alarm: false
 
     implicitHeight: 16
+    clip: true // a long value never spills over its neighbours
     radius: 2
     color: alarm ? Theme.meterHigh : Theme.readoutBackground
     Text {

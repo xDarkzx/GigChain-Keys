@@ -106,9 +106,19 @@ Rectangle {
                         focusPolicy: Qt.NoFocus
                         onMoved: perform.engineStatus.masterVolumeDb = value
                     }
-                    Label { text: perform.engineStatus.masterVolumeDb.toFixed(1) + " dB"; color: Theme.textDim }
+                    StatBox {
+                    label: ""
+                    value: perform.engineStatus.masterVolumeDb.toFixed(1) + " dB"
+                    widest: "-60.0 dB"
+                    valueColor: Theme.textDim
+                }
                     Item { Layout.fillWidth: true }
-                    Label { text: qsTr("CPU %1%").arg(Math.round(perform.engineStatus.cpuLoad * 100)) }
+                    StatBox {
+                    label: qsTr("CPU")
+                    value: Math.round(perform.engineStatus.cpuLoad * 100) + "%"
+                    widest: "100%"
+                    valueColor: perform.engineStatus.cpuLoad > 0.8 ? Theme.danger : Theme.text
+                }
                     Rectangle {
                         width: 12
                         height: 12
