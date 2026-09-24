@@ -8,12 +8,16 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QLocale>
+#include <QLoggingCategory>
+#include <QProcess>
 #include <QSettings>
 #include <QUrl>
 #include <QVariantMap>
 
 #include <algorithm>
 #include <map>
+
+Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
 using namespace Qt::StringLiterals;
 
@@ -98,6 +102,21 @@ void PluginListModel::setFavorite(const QString& pluginId, bool favorite)
     else m_favorites.removeAll(pluginId);
     if (m_settings != nullptr) m_settings->setValue(u"plugins/favorites"_s, m_favorites);
     applyFilter(); // favourites move to the top
+}
+
+QString PluginListModel::showInFolder(const QString& pluginId) const
+{
+    const auto plugin = std::find_if(m_all.begin(), m_all.end(), [&](const auto& p) { return p.id == pluginId; });
+    if (plugin == m_all.end() || !QFileInfo::exists(pluginId)) {
+        qCWarning(lcUi).noquote() << "Show in folder: no plugin" << pluginId;
+        return tr("No installed plugin %1").arg(pluginId);
+    }
+    const QString path = QDir::toNativeSeparators(pluginId);
+    if (!QProcess::startDetached(u"explorer.exe"_s, {u"/select,"_s + path})) {
+        qCWarning(lcUi).noquote() << "Show in folder: could not start Explorer for" << path;
+        return tr("Could not open Explorer for %1").arg(path);
+    }
+    return {};
 }
 
 void PluginListModel::setRating(const QString& pluginId, int stars)

@@ -216,6 +216,14 @@ private slots:
         QCOMPARE(roleData(model, 1, "location").toString(), u"spy\\Piano.vst3"_s); // shown Windows-style
     }
 
+    void showInFolderRefusesUnknownPlugins()
+    {
+        const OfficialArtwork artwork(noArtwork());
+        PluginListModel model(*m_engine, artwork);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Show in folder: no plugin .*nope\\.vst3"_s));
+        QCOMPARE(model.showInFolder(u"C:/nope.vst3"_s), u"No installed plugin C:/nope.vst3"_s);
+    }
+
     void pluginListGroupsAndFilters()
     {
         const OfficialArtwork artwork(noArtwork());

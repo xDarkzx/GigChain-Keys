@@ -87,6 +87,9 @@ public:
     // Favourites are listed first; ratings are 0 (none) to 5. Both remembered.
     Q_INVOKABLE void setFavorite(const QString& pluginId, bool favorite);
     Q_INVOKABLE void setRating(const QString& pluginId, int stars);
+    // Opens Explorer with the plugin's file selected. Returns an empty
+    // string, or why it could not (also logged) for the caller to show.
+    Q_INVOKABLE QString showInFolder(const QString& pluginId) const;
 
     // Hide a plugin from the browser list and the pickers (remembered); showAll() undoes every hide.
     Q_INVOKABLE void hide(const QString& pluginId);

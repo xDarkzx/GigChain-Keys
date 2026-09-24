@@ -20,6 +20,18 @@ Q_IMPORT_QML_PLUGIN(GigChain_UiPlugin)
 using namespace gigchain;
 using namespace Qt::StringLiterals;
 
+// List delegates are children in the visual tree, not the QObject tree, so
+// findChild() cannot see them.
+QQuickItem* findItem(QQuickItem* item, const QString& name)
+{
+    if (item == nullptr) return nullptr;
+    if (item->objectName() == name) return item;
+    for (QQuickItem* child : item->childItems()) {
+        if (QQuickItem* found = findItem(child, name)) return found;
+    }
+    return nullptr;
+}
+
 class TestQmlSmoke : public QObject
 {
     Q_OBJECT
@@ -160,6 +172,35 @@ private slots:
         QCOMPARE(step->property("text").toString(), u"Test ready"_s);
         QCOMPARE(fill->property("fraction").toDouble(), 1.0);
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(u'\n')));
+    }
+
+    void instrumentCardShowsMakerDetailsAndFavourite()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        auto* tabs = root->findChild<QObject*>(u"sidePanelTabs"_s);
+        QVERIFY(tabs != nullptr);
+        tabs->setProperty("currentIndex", 1); // Instruments
+        settle();
+        QQuickItem* scene = window()->contentItem();
+        auto* maker = findItem(scene, u"cardMaker"_s);
+        QVERIFY(maker != nullptr);
+        QVERIFY(!maker->property("text").toString().isEmpty()); // the maker, up front
+
+        auto* details = findItem(scene, u"cardDetails"_s);
+        auto* info = findItem(scene, u"infoButton"_s);
+        QVERIFY(details != nullptr && info != nullptr);
+        QVERIFY(!details->property("visible").toBool());
+        QVERIFY(QMetaObject::invokeMethod(info, "clicked"));
+        settle();
+        QVERIFY(details->property("visible").toBool()); // ⓘ expands the card
+
+        auto* favorite = findItem(scene, u"favoriteButton"_s);
+        QVERIFY(favorite != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(favorite, "clicked"));
+        settle();
+        auto* star = findItem(scene, u"favoriteButton"_s); // the list is re-sorted
+        QVERIFY(star != nullptr);
+        QCOMPARE(star->property("glyph").toString(), u"★"_s); // a favourite is listed first
     }
 
     void spaceNavigatesButNotWhileTyping()
