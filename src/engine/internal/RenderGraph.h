@@ -23,6 +23,7 @@ struct StripSpec
     std::shared_ptr<INode> instrument; // may be null: the strip is silent
     std::vector<std::shared_ptr<INode>> effects;
     double volumeDb = 0.0;
+    double pan = 0.0;
     bool mute = false;
     bool solo = false;
 };
@@ -39,6 +40,8 @@ public:
 
     // Main thread, while audio runs.
     void setVolumeDb(double volumeDb);
+    // -1 (left) .. +1 (right), constant-power law (centre = unity on both sides).
+    void setPan(double pan);
     void setMute(bool mute) { m_mute.store(mute, std::memory_order_relaxed); }
     void setSolo(bool solo) { m_solo.store(solo, std::memory_order_relaxed); }
     [[nodiscard]] bool solo() const { return m_solo.load(std::memory_order_relaxed); }
@@ -57,6 +60,7 @@ private:
     std::vector<float> m_right;
     std::vector<MidiEvent> m_routed;
     std::atomic<float> m_gain{1.0F};
+    std::atomic<float> m_pan{0.0F};
     std::atomic<bool> m_mute{false};
     std::atomic<bool> m_solo{false};
     std::atomic<float> m_peak{0.0F};

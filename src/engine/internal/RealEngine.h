@@ -34,6 +34,7 @@ public:
     [[nodiscard]] float cpuLoad() const override { return m_cpuLoad.load(std::memory_order_relaxed); }
     [[nodiscard]] bool midiActivity() const override { return m_midiSeen.load(std::memory_order_relaxed); }
     void setChannelVolume(const core::ChannelId& id, double volumeDb) override;
+    void setChannelPan(const core::ChannelId& id, double pan) override;
     void setChannelMute(const core::ChannelId& id, bool mute) override;
     void setChannelSolo(const core::ChannelId& id, bool solo) override;
     void setMasterVolume(double volumeDb) override;

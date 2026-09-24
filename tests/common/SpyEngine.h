@@ -15,6 +15,7 @@ public:
     int applyCount = 0;
     core::Patch lastPatch;
     std::map<QString, double> volumes;
+    std::map<QString, double> pans;
     std::map<QString, bool> mutes;
     std::map<QString, bool> solos;
     double master = 0.0;
@@ -38,6 +39,7 @@ public:
     [[nodiscard]] float cpuLoad() const override { return 0.25F; }
     [[nodiscard]] bool midiActivity() const override { return true; }
     void setChannelVolume(const core::ChannelId& id, double db) override { volumes[id.value()] = db; }
+    void setChannelPan(const core::ChannelId& id, double pan) override { pans[id.value()] = pan; }
     void setChannelMute(const core::ChannelId& id, bool mute) override { mutes[id.value()] = mute; }
     void setChannelSolo(const core::ChannelId& id, bool solo) override { solos[id.value()] = solo; }
     void setMasterVolume(double db) override { master = db; }

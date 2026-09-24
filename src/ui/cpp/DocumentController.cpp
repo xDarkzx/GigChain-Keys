@@ -281,6 +281,16 @@ bool DocumentController::setChannelVolume(int channel, double volumeDb)
     return true;
 }
 
+bool DocumentController::setChannelPan(int channel, double pan)
+{
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [pan](core::Channel& c) { c.pan = pan; }); !r) {
+        return report(r.error());
+    }
+    m_engine.setChannelPan(currentPatch()->channels[static_cast<std::size_t>(channel)].id, pan);
+    commitChannelField(channel, false);
+    return true;
+}
+
 bool DocumentController::setChannelMute(int channel, bool mute)
 {
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [mute](core::Channel& c) { c.mute = mute; }); !r) {

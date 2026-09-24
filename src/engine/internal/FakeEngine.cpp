@@ -94,6 +94,11 @@ void FakeEngine::setChannelVolume(const core::ChannelId& id, double volumeDb)
     if (volume && state != nullptr) state->volumeDb = *volume;
 }
 
+void FakeEngine::setChannelPan(const core::ChannelId&, double)
+{
+    // The fake engine makes no sound; pan has nothing to move.
+}
+
 void FakeEngine::setChannelMute(const core::ChannelId& id, bool mute)
 {
     if (ChannelState* state = find(id)) state->mute = mute;

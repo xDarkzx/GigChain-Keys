@@ -160,6 +160,10 @@ private slots:
         QCOMPARE(m_engine->volumes[id], -6.0);
         QVERIFY(m_doc->setChannelMute(0, true));
         QCOMPARE(m_engine->mutes[id], true);
+        QVERIFY(m_doc->setChannelPan(0, -0.5));
+        QCOMPARE(m_engine->pans[id], -0.5);
+        QVERIFY(!m_doc->setChannelPan(0, 2.0));
+        QCOMPARE(m_doc->currentPatch()->channels[0].pan, -0.5);
 
         QVERIFY(!m_doc->setChannelKeyRange(0, 80, 20));
         QVERIFY(m_doc->lastError().contains(u"keyLow"_s));

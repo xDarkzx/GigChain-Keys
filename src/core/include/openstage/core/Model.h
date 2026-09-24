@@ -28,6 +28,7 @@ struct Channel
     std::optional<PluginSlot> instrument;
     std::vector<PluginSlot> effects;
     double volumeDb = 0.0;
+    double pan = 0.0; // -1 = hard left, 0 = centre, +1 = hard right
     bool mute = false;
     bool solo = false;
     int keyLow = 0;

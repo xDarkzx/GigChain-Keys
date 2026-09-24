@@ -18,6 +18,7 @@ public:
     [[nodiscard]] float cpuLoad() const override;
     [[nodiscard]] bool midiActivity() const override;
     void setChannelVolume(const core::ChannelId& id, double volumeDb) override;
+    void setChannelPan(const core::ChannelId& id, double pan) override;
     void setChannelMute(const core::ChannelId& id, bool mute) override;
     void setChannelSolo(const core::ChannelId& id, bool solo) override;
     void setMasterVolume(double volumeDb) override;

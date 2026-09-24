@@ -173,6 +173,25 @@ private slots:
         QVERIFY(std::abs(out.left[0] - 0.5F) < 1e-6F);
     }
 
+    void panMovesSoundAcrossTheStereoField()
+    {
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(std::make_shared<HeldNoteNode>(1.0F)));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+        const MidiEvent on[] = {noteOn(60)};
+        graph.render(on, out.block(), 1.0F); // centre: unity on both sides
+        QVERIFY(std::abs(out.left[0] - 1.0F) < 1e-5F && std::abs(out.right[0] - 1.0F) < 1e-5F);
+
+        graph.strip(0)->setPan(-1.0);
+        graph.render({}, out.block(), 1.0F);
+        QVERIFY(out.left[0] > 1.3F && std::abs(out.right[0]) < 1e-5F); // hard left, +3 dB law
+
+        graph.strip(0)->setPan(0.5);
+        graph.render({}, out.block(), 1.0F);
+        QVERIFY(out.right[0] > out.left[0] && out.left[0] > 0.0F);
+    }
+
     void effectsRunInOrder()
     {
         StripSpec spec = strip(std::make_shared<HeldNoteNode>(1.0F));

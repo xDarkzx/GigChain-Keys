@@ -75,6 +75,10 @@ private slots:
                  firstChannel(s).volumeDb = std::numeric_limits<double>::quiet_NaN();
              }}},
             {"volume too loud", {ErrorCode::OutOfRange, [](Setlist& s) { firstChannel(s).volumeDb = 12.5; }}},
+            {"pan past right", {ErrorCode::OutOfRange, [](Setlist& s) { firstChannel(s).pan = 1.5; }}},
+            {"pan NaN", {ErrorCode::OutOfRange, [](Setlist& s) {
+                 firstChannel(s).pan = std::numeric_limits<double>::quiet_NaN();
+             }}},
             {"empty song name", {ErrorCode::InvalidData, [](Setlist& s) { s.songs.front().name = QStringLiteral("  "); }}},
             {"name too long", {ErrorCode::LimitExceeded, [](Setlist& s) {
                  s.songs.front().name = QString(limits::kMaxNameLength + 1, QLatin1Char('x'));

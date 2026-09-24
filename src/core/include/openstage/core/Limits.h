@@ -23,5 +23,7 @@ inline constexpr int kMinMidiChannel = 0; // omni
 inline constexpr int kMaxMidiChannel = 16;
 inline constexpr double kMinVolumeDb = -96.0;
 inline constexpr double kMaxVolumeDb = 12.0;
+inline constexpr double kMinPan = -1.0;
+inline constexpr double kMaxPan = 1.0;
 
 } // namespace openstage::core::limits

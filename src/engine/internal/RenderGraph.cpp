@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace openstage::engine {
 namespace {
@@ -33,6 +34,7 @@ ChannelStrip::ChannelStrip(StripSpec spec, int maxBlock)
       m_routed(static_cast<std::size_t>(kMaxEventsPerBlock))
 {
     setVolumeDb(spec.volumeDb);
+    setPan(spec.pan);
     m_mute.store(spec.mute, std::memory_order_relaxed);
     m_solo.store(spec.solo, std::memory_order_relaxed);
 }
@@ -41,6 +43,12 @@ void ChannelStrip::setVolumeDb(double volumeDb)
 {
     if (!std::isfinite(volumeDb)) return;
     m_gain.store(dbToGain(volumeDb), std::memory_order_relaxed);
+}
+
+void ChannelStrip::setPan(double pan)
+{
+    if (!std::isfinite(pan)) return;
+    m_pan.store(static_cast<float>(std::clamp(pan, -1.0, 1.0)), std::memory_order_relaxed);
 }
 
 LevelReading ChannelStrip::takeLevel()
@@ -71,12 +79,16 @@ void ChannelStrip::render(std::span<const MidiEvent> events, AudioBlock mix, boo
     // Silenced strips still process so instruments and effect tails keep state.
     const bool audible = !m_mute.load(std::memory_order_relaxed) && (!anySolo || m_solo.load(std::memory_order_relaxed));
     const float gain = audible ? m_gain.load(std::memory_order_relaxed) : 0.0F;
+    // Constant-power pan, normalised so the centre is unity on both sides.
+    const double angle = (static_cast<double>(m_pan.load(std::memory_order_relaxed)) + 1.0) * std::numbers::pi / 4.0;
+    const float leftGain = gain * static_cast<float>(std::cos(angle) * std::numbers::sqrt2);
+    const float rightGain = gain * static_cast<float>(std::sin(angle) * std::numbers::sqrt2);
 
     float peak = 0.0F;
     double sumSquares = 0.0;
     for (std::size_t i = 0; i < frames; ++i) {
-        const float left = block.left[i] * gain;
-        const float right = block.right[i] * gain;
+        const float left = block.left[i] * leftGain;
+        const float right = block.right[i] * rightGain;
         mix.left[i] += left;
         mix.right[i] += right;
         peak = std::max({peak, std::abs(left), std::abs(right)});
