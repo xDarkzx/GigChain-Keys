@@ -23,6 +23,13 @@ Popup {
 
     onAboutToShow: settings.load()
 
+    Timer {
+        interval: 1500
+        repeat: true
+        running: dialog.visible
+        onTriggered: dialog.settings.refreshMidi()
+    }
+
     background: Rectangle {
         color: Theme.panel
         border.color: Theme.border
@@ -157,43 +164,72 @@ Popup {
                 }
 
                 // ------------------------------------------------ MIDI
+                // Like REAPER's MIDI devices: one row per input, Mode and Channel per row.
                 ScrollView {
                     contentWidth: availableWidth
                     ColumnLayout {
                         width: parent.width
-                        spacing: 10
+                        spacing: 8
                         SettingsSection { title: qsTr("MIDI inputs") }
-                        Label {
+
+                        // header
+                        RowLayout {
                             Layout.leftMargin: 20
-                            visible: dialog.settings.midiInputs.length === 0
-                            text: qsTr("No MIDI inputs found. Connect a keyboard and open Settings again.")
-                            color: Theme.textDim
+                            Layout.rightMargin: 20
+                            visible: dialog.settings.midiInputs.length > 0
+                            spacing: 12
+                            Label { Layout.fillWidth: true; text: qsTr("Device"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
+                            Label { Layout.preferredWidth: 140; text: qsTr("Mode"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
+                            Label { Layout.preferredWidth: 150; text: qsTr("Channel"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
                         }
                         Repeater {
                             model: dialog.settings.midiInputs
                             delegate: RowLayout {
                                 id: midiRow
                                 required property var modelData
+                                required property int index
+                                objectName: "midiRow" + index
                                 Layout.leftMargin: 20
                                 Layout.rightMargin: 20
                                 spacing: 12
-                                Switch {
-                                    checked: midiRow.modelData.enabled
-                                    onToggled: dialog.settings.setMidiInputEnabled(midiRow.modelData.name, checked)
-                                }
                                 Label {
                                     Layout.fillWidth: true
                                     text: midiRow.modelData.name
                                     color: midiRow.modelData.enabled ? Theme.text : Theme.textDim
                                     elide: Text.ElideRight
                                 }
+                                StageComboBox {
+                                    Layout.preferredWidth: 140
+                                    implicitWidth: 140
+                                    model: [qsTr("Enabled"), qsTr("Disabled")]
+                                    currentIndex: midiRow.modelData.enabled ? 0 : 1
+                                    onActivated: (i) => dialog.settings.setMidiInputEnabled(midiRow.modelData.name, i === 0)
+                                }
+                                StageComboBox {
+                                    Layout.preferredWidth: 150
+                                    implicitWidth: 150
+                                    enabled: midiRow.modelData.enabled
+                                    model: [qsTr("All channels")].concat(Array.from({ length: 16 }, (_, c) => qsTr("Channel %1").arg(c + 1)))
+                                    currentIndex: midiRow.modelData.channel
+                                    onActivated: (i) => dialog.settings.setMidiInputChannel(midiRow.modelData.name, i)
+                                }
                             }
                         }
                         Label {
                             Layout.leftMargin: 20
+                            visible: dialog.settings.midiInputs.length === 0
+                            text: qsTr("No MIDI inputs found. Plug in a keyboard — it appears here by itself.")
+                            color: Theme.textDim
+                        }
+                        Label {
+                            Layout.topMargin: 8
+                            Layout.leftMargin: 20
                             Layout.rightMargin: 20
                             Layout.fillWidth: true
-                            text: qsTr("Inputs that are on play every patch. Turn off controllers you don't want OpenStage to hear.")
+                            text: qsTr("Enable only the port your keys play on. Many keyboards show a second port "
+                                       + "for DAW control (the Impact GXP61's \"MIDIIN2\"): leave it disabled, or "
+                                       + "every note can arrive twice. OpenStage remembers your choice; inputs it "
+                                       + "has not seen before stay disabled.")
                             color: Theme.textDim
                             wrapMode: Text.Wrap
                         }

@@ -69,7 +69,9 @@ public:
     std::vector<QString> pluginEditorRequests;
 
     engine::AudioSetup setup{engine::AudioDriver::System, QStringLiteral("Spy Speakers"), 48000, 256};
-    std::vector<engine::MidiPort> midi{{QStringLiteral("Spy Keys"), true}, {QStringLiteral("Spy Pads"), true}};
+    QStringList midiPresent{QStringLiteral("Spy Keys 0"), QStringLiteral("MIDIIN2 (Spy Keys) 1")};
+    engine::MidiSetup midi;
+    int midiChanges = 0;
     int setupChanges = 0;
     QString failingDevice; // setAudioSetup fails for this device
     [[nodiscard]] std::vector<engine::AudioOutput> audioOutputs() const override
@@ -92,10 +94,15 @@ public:
         if (setup.sampleRate == 0) setup.sampleRate = 48000;
         return {};
     }
-    [[nodiscard]] std::vector<engine::MidiPort> midiInputs() const override { return midi; }
-    core::Result<void> setMidiInputsOff(const QStringList& names) override
+    [[nodiscard]] std::vector<engine::MidiPort> midiInputs() const override
     {
-        for (auto& port : midi) port.enabled = !names.contains(port.name);
+        return engine::resolveMidiInputs(midiPresent, midi);
+    }
+    [[nodiscard]] engine::MidiSetup midiSetup() const override { return midi; }
+    core::Result<void> setMidiSetup(const engine::MidiSetup& chosen) override
+    {
+        ++midiChanges;
+        midi = chosen;
         return {};
     }
 };

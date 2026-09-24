@@ -1,6 +1,7 @@
 add_library(openstage_engine STATIC
     include/openstage/engine/EngineTypes.h
     include/openstage/engine/IEngine.h
+    include/openstage/engine/MidiSetup.h
     include/openstage/engine/FakeEngineFactory.h
     internal/FakeEngine.h
     internal/FakeEngine.cpp
@@ -21,6 +22,7 @@ add_library(openstage_engine STATIC
     internal/AudioDevice.cpp
     internal/MidiInput.h
     internal/MidiInput.cpp
+    internal/MidiSetup.cpp
     internal/LoaderErrors.h
     internal/PluginCatalog.h
     internal/PluginCatalog.cpp

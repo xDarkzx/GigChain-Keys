@@ -89,16 +89,50 @@ private slots:
         QVERIFY(SettingsController::engineOptions(*m_settings).audio.device.isEmpty()); // nothing saved
     }
 
-    void midiInputsSwitchOffAndAreRemembered()
+    void onlyTheFirstMidiPortIsOnByDefault()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);
         settings.load();
-        settings.setMidiInputEnabled(u"Spy Pads"_s, false);
-        QVERIFY(m_engine->midi[1].enabled); // nothing happens before OK
+        const QVariantList inputs = settings.midiInputs();
+        QCOMPARE(inputs.size(), 2);
+        QVERIFY(inputs[0].toMap().value(u"enabled"_s).toBool());
+        QVERIFY(!inputs[1].toMap().value(u"enabled"_s).toBool()); // MIDIIN2 stays off
         QVERIFY(settings.apply());
-        QVERIFY(m_engine->midi[0].enabled);
-        QVERIFY(!m_engine->midi[1].enabled);
-        QCOMPARE(SettingsController::engineOptions(*m_settings).midiInputsOff, (QStringList{u"Spy Pads"_s}));
+        QCOMPARE(m_engine->midiChanges, 0); // untouched page: MIDI is not reopened
+    }
+
+    void midiChoicesApplyAndAreRemembered()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        settings.setMidiInputEnabled(u"Spy Keys 0"_s, false);
+        settings.setMidiInputEnabled(u"MIDIIN2 (Spy Keys) 1"_s, true);
+        settings.setMidiInputChannel(u"MIDIIN2 (Spy Keys) 1"_s, 2);
+        QCOMPARE(m_engine->midiChanges, 0); // nothing happens before OK
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->midi.enabled, (QStringList{u"MIDIIN2 (Spy Keys) 1"_s}));
+        QCOMPARE(m_engine->midi.channels.at(u"MIDIIN2 (Spy Keys) 1"_s), 2);
+
+        const auto options = SettingsController::engineOptions(*m_settings); // next start
+        QVERIFY(options.midi.configured);
+        QCOMPARE(options.midi.enabled, (QStringList{u"MIDIIN2 (Spy Keys) 1"_s}));
+        QCOMPARE(options.midi.channels.at(u"MIDIIN2 (Spy Keys) 1"_s), 2);
+    }
+
+    void pluggingInAKeyboardShowsUpWhileOpen()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        m_engine->midiPresent.clear(); // nothing plugged in yet
+        settings.load();
+        QVERIFY(settings.midiInputs().isEmpty());
+        m_engine->midiPresent = {u"Spy Keys 0"_s, u"MIDIIN2 (Spy Keys) 1"_s};
+        QSignalSpy changed(&settings, &SettingsController::changed);
+        settings.refreshMidi();
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(settings.midiInputs().size(), 2);
+        QVERIFY(settings.midiInputs()[0].toMap().value(u"enabled"_s).toBool());
+        settings.refreshMidi(); // nothing new: no churn
+        QCOMPARE(changed.count(), 1);
     }
 
     void resetGoesBackToSystemDefaults()
@@ -107,12 +141,14 @@ private slots:
         settings.load();
         settings.setDevice(u"Spy Headphones"_s);
         settings.setBufferFrames(1024);
-        settings.setMidiInputEnabled(u"Spy Keys"_s, false);
+        settings.setMidiInputEnabled(u"Spy Keys 0"_s, false);
+        settings.setMidiInputEnabled(u"MIDIIN2 (Spy Keys) 1"_s, true);
         settings.resetToDefaults();
         QCOMPARE(settings.driver(), u"system"_s);
         QCOMPARE(settings.device(), u"Spy Speakers"_s); // the Windows default output
         QCOMPARE(settings.bufferFrames(), 256);
         QCOMPARE(settings.midiInputs()[0].toMap().value(u"enabled"_s).toBool(), true);
+        QCOMPARE(settings.midiInputs()[1].toMap().value(u"enabled"_s).toBool(), false);
     }
 
 private:

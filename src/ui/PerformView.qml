@@ -11,7 +11,9 @@ Rectangle {
     required property SetlistModel setlistModel
     required property PluginListModel pluginModel
     required property EngineStatus engineStatus
+    required property ChannelModel channelModel
     required property bool sidePanelOpen
+    required property bool mixerOpen
 
     color: Theme.performBackground
 
@@ -109,6 +111,16 @@ Rectangle {
                     color: perform.engineStatus.midiActivity ? Theme.meterLow : Theme.border
                 }
             }
+        }
+
+        Mixer {
+            visible: perform.mixerOpen
+            Layout.fillHeight: true
+            Layout.preferredWidth: Math.min(implicitWidth, perform.width * 0.45)
+            doc: perform.doc
+            channelModel: perform.channelModel
+            pluginModel: perform.pluginModel
+            engineStatus: perform.engineStatus
         }
     }
 }

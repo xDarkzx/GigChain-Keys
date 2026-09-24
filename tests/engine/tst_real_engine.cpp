@@ -155,12 +155,15 @@ private slots:
         QVERIFY(created.has_value());
         IEngine& engine = **created;
         const auto inputs = engine.midiInputs();
-        if (inputs.empty()) QSKIP("No MIDI inputs on this machine");
-        QVERIFY(inputs.front().enabled);
-        QVERIFY(engine.setMidiInputsOff({inputs.front().name}).has_value());
-        QVERIFY(!engine.midiInputs().front().enabled);
-        QVERIFY(engine.setMidiInputsOff({}).has_value());
-        QVERIFY(engine.midiInputs().front().enabled);
+        if (inputs.size() < 2) QSKIP("Needs two MIDI inputs (e.g. an Impact GXP61 plugged in)");
+        QVERIFY(inputs[0].enabled);  // by default only the first port
+        QVERIFY(!inputs[1].enabled);
+        MidiSetup second;
+        second.configured = true;
+        second.enabled = {inputs[1].name};
+        QVERIFY(engine.setMidiSetup(second).has_value());
+        QVERIFY(!engine.midiInputs()[0].enabled);
+        QVERIFY(engine.midiInputs()[1].enabled);
     }
 
     void unknownPluginIsReportedNotIgnored()

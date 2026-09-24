@@ -20,7 +20,9 @@ const QString kDriverKey = u"audio/driver"_s;
 const QString kDeviceKey = u"audio/device"_s;
 const QString kRateKey = u"audio/sampleRate"_s;
 const QString kBufferKey = u"audio/bufferFrames"_s;
-const QString kMidiOffKey = u"midi/inputsOff"_s;
+const QString kMidiConfiguredKey = u"midi/configured"_s;
+const QString kMidiEnabledKey = u"midi/enabled"_s;
+const QString kMidiChannelsKey = u"midi/channels"_s;
 
 constexpr unsigned int kDefaultBuffer = 256;
 
@@ -46,7 +48,10 @@ engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
     options.audio.sampleRate = settings.value(kRateKey, 0).toUInt();
     options.audio.bufferFrames = settings.value(kBufferKey, kDefaultBuffer).toUInt();
     if (options.audio.bufferFrames == 0) options.audio.bufferFrames = kDefaultBuffer;
-    options.midiInputsOff = settings.value(kMidiOffKey).toStringList();
+    options.midi.configured = settings.value(kMidiConfiguredKey, false).toBool();
+    options.midi.enabled = settings.value(kMidiEnabledKey).toStringList();
+    const QVariantMap channels = settings.value(kMidiChannelsKey).toMap();
+    for (auto it = channels.begin(); it != channels.end(); ++it) options.midi.channels[it.key()] = it.value().toInt();
     return options;
 }
 
@@ -56,6 +61,7 @@ void SettingsController::load()
     m_loaded = m_engine.audioSetup();
     m_pending = m_loaded;
     m_midi = m_engine.midiInputs();
+    m_midiTouched = false;
     m_running = m_engine.statusText();
     m_error.clear();
     keepRateValid();
@@ -168,7 +174,9 @@ double SettingsController::latencyMs() const
 QVariantList SettingsController::midiInputs() const
 {
     QVariantList list;
-    for (const auto& port : m_midi) list << QVariantMap{{u"name"_s, port.name}, {u"enabled"_s, port.enabled}};
+    for (const auto& port : m_midi) {
+        list << QVariantMap{{u"name"_s, port.name}, {u"enabled"_s, port.enabled}, {u"channel"_s, port.channel}};
+    }
     return list;
 }
 
@@ -177,18 +185,50 @@ void SettingsController::setMidiInputEnabled(const QString& name, bool enabled)
     for (auto& port : m_midi) {
         if (port.name == name && port.enabled != enabled) {
             port.enabled = enabled;
+            m_midiTouched = true;
             emit changed();
         }
     }
 }
 
-QStringList SettingsController::midiOff() const
+void SettingsController::setMidiInputChannel(const QString& name, int channel)
 {
-    QStringList off;
-    for (const auto& port : m_midi) {
-        if (!port.enabled) off << port.name;
+    if (channel < 0 || channel > 16) return;
+    for (auto& port : m_midi) {
+        if (port.name == name && port.channel != channel) {
+            port.channel = channel;
+            m_midiTouched = true;
+            emit changed();
+        }
     }
-    return off;
+}
+
+void SettingsController::refreshMidi()
+{
+    std::vector<engine::MidiPort> present = m_engine.midiInputs();
+    for (auto& port : present) {
+        // Keep what this page already shows (and maybe changed) for known inputs.
+        const auto shown = std::find_if(m_midi.begin(), m_midi.end(),
+                                        [&](const engine::MidiPort& p) { return p.name == port.name; });
+        if (shown != m_midi.end()) port = *shown;
+    }
+    if (present == m_midi) return;
+    m_midi = std::move(present);
+    emit changed();
+}
+
+engine::MidiSetup SettingsController::pendingMidi() const
+{
+    engine::MidiSetup setup = m_engine.midiSetup();
+    setup.configured = true;
+    for (const auto& port : m_midi) {
+        // Inputs not plugged in now keep their saved choice.
+        setup.enabled.removeAll(port.name);
+        if (port.enabled) setup.enabled << port.name;
+        if (port.channel != 0) setup.channels[port.name] = port.channel;
+        else setup.channels.erase(port.name);
+    }
+    return setup;
 }
 
 void SettingsController::resetToDefaults()
@@ -201,7 +241,11 @@ void SettingsController::resetToDefaults()
     m_pending.sampleRate = 0;
     m_pending.bufferFrames = kDefaultBuffer;
     keepRateValid();
-    for (auto& port : m_midi) port.enabled = true;
+    for (std::size_t i = 0; i < m_midi.size(); ++i) {
+        m_midi[i].enabled = i == 0; // the default: only the first port
+        m_midi[i].channel = 0;
+    }
+    m_midiTouched = true;
     emit changed();
 }
 
@@ -222,16 +266,18 @@ bool SettingsController::apply()
         }
     }
 
-    const QStringList off = midiOff();
-    std::vector<engine::MidiPort> running = m_engine.midiInputs();
-    const bool midiChanged = std::any_of(running.begin(), running.end(), [&](const engine::MidiPort& port) {
-        return port.enabled == off.contains(port.name);
-    });
-    if (midiChanged) {
-        if (auto changedMidi = m_engine.setMidiInputsOff(off); !changedMidi) {
+    if (m_midiTouched) {
+        const engine::MidiSetup midi = pendingMidi();
+        if (auto changedMidi = m_engine.setMidiSetup(midi); !changedMidi) {
             problems << changedMidi.error().message; // logged by the engine
         }
-        m_settings.setValue(kMidiOffKey, off); // the switch itself took effect either way
+        // The choice itself stands even if an input failed to open (it is named above).
+        QVariantMap channels;
+        for (const auto& [name, channel] : midi.channels) channels.insert(name, channel);
+        m_settings.setValue(kMidiConfiguredKey, true);
+        m_settings.setValue(kMidiEnabledKey, midi.enabled);
+        m_settings.setValue(kMidiChannelsKey, channels);
+        m_midiTouched = false;
     }
 
     m_settings.sync();

@@ -45,7 +45,9 @@ private slots:
     {
         const QStringList ports = MidiInput::listPorts();
         MidiInput input;
-        const auto notices = input.openAll();
+        std::vector<MidiPort> all;
+        for (const QString& name : ports) all.push_back(MidiPort{name, true, 0});
+        const auto notices = input.openAll(all);
         QCOMPARE(input.openPortNames().size() + static_cast<qsizetype>(notices.size()) >= ports.size(), true);
         std::array<MidiEvent, 16> events{};
         QCOMPARE(input.drain(events), std::size_t{0});
@@ -60,7 +62,7 @@ private slots:
         const QStringList ports = MidiInput::listPorts();
         if (ports.isEmpty()) QSKIP("No MIDI inputs on this machine");
         MidiInput input;
-        (void)input.openAll({ports.first()}); // the Settings page switched this one off
+        (void)input.openAll({MidiPort{ports.first(), false, 0}}); // switched off in Settings
         QVERIFY(!input.openPortNames().contains(ports.first()));
         input.close();
     }

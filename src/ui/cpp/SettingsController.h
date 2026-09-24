@@ -41,7 +41,7 @@ class SettingsController : public QObject
     Q_PROPERTY(int bufferFrames READ bufferFrames WRITE setBufferFrames NOTIFY changed)
     Q_PROPERTY(QVariantList bufferSizes READ bufferSizes CONSTANT)
     Q_PROPERTY(double latencyMs READ latencyMs NOTIFY changed)                   // one buffer at the chosen rate
-    Q_PROPERTY(QVariantList midiInputs READ midiInputs NOTIFY changed)            // [{name, enabled}]
+    Q_PROPERTY(QVariantList midiInputs READ midiInputs NOTIFY changed)            // [{name, enabled, channel}]
     Q_PROPERTY(QString running READ running NOTIFY changed)                      // the engine's status line
     Q_PROPERTY(QString error READ error NOTIFY changed)
 
@@ -72,7 +72,12 @@ public:
     // Probes the devices (ASIO drivers can take a moment) and shows what runs now.
     Q_INVOKABLE void load();
     Q_INVOKABLE void setMidiInputEnabled(const QString& name, bool enabled);
-    // Windows default output at its own rate, 256 frames, every MIDI input on.
+    // 0 = all channels, 1-16 = only that one.
+    Q_INVOKABLE void setMidiInputChannel(const QString& name, int channel);
+    // While the window is open: picks up keyboards plugged in or pulled out,
+    // keeping the choices already made on this page.
+    Q_INVOKABLE void refreshMidi();
+    // Windows default output at its own rate, 256 frames, only the first MIDI input on.
     Q_INVOKABLE void resetToDefaults();
     // OK: true when everything took effect (and was saved).
     Q_INVOKABLE bool apply();
@@ -83,7 +88,7 @@ signals:
 private:
     [[nodiscard]] const engine::AudioOutput* chosenOutput() const;
     void keepRateValid();
-    [[nodiscard]] QStringList midiOff() const;
+    [[nodiscard]] engine::MidiSetup pendingMidi() const;
 
     engine::IEngine& m_engine;
     DocumentController& m_document;
@@ -91,7 +96,8 @@ private:
     std::vector<engine::AudioOutput> m_outputs;
     engine::AudioSetup m_pending;
     engine::AudioSetup m_loaded; // what ran when the window opened
-    std::vector<engine::MidiPort> m_midi;
+    std::vector<engine::MidiPort> m_midi; // as shown, with this page's changes
+    bool m_midiTouched = false;           // changed on this page since load()
     QString m_running;
     QString m_error;
 };

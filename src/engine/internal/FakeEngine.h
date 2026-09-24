@@ -30,7 +30,12 @@ public:
     [[nodiscard]] AudioSetup audioSetup() const override { return m_setup; }
     core::Result<void> setAudioSetup(const AudioSetup& setup) override;
     [[nodiscard]] std::vector<MidiPort> midiInputs() const override { return {}; }
-    core::Result<void> setMidiInputsOff(const QStringList& names) override;
+    [[nodiscard]] MidiSetup midiSetup() const override { return m_midiSetup; }
+    core::Result<void> setMidiSetup(const MidiSetup& setup) override
+    {
+        m_midiSetup = setup;
+        return {};
+    }
     core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) override;
 
@@ -49,6 +54,7 @@ private:
     std::vector<ChannelState> m_channels;
     double m_masterDb = 0.0;
     AudioSetup m_setup{AudioDriver::System, QStringLiteral("Demo output"), 48000, 256};
+    MidiSetup m_midiSetup;
 };
 
 } // namespace openstage::engine

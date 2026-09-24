@@ -4,6 +4,7 @@
 #include "openstage/core/Model.h"
 #include "openstage/engine/EngineTypes.h"
 #include "openstage/engine/IPluginEditor.h"
+#include "openstage/engine/MidiSetup.h"
 
 #include <QStringList>
 
@@ -72,11 +73,13 @@ public:
     // reloaded). If `setup` cannot run, the previous setup is restored and
     // the error says why (also logged).
     virtual core::Result<void> setAudioSetup(const AudioSetup& setup) = 0;
-    // Every MIDI input on the machine, with whether it is switched on.
+    // Every MIDI input plugged in now, as it plays (see resolveMidiInputs).
+    // Inputs plugged in or pulled out are picked up by poll().
     [[nodiscard]] virtual std::vector<MidiPort> midiInputs() const = 0;
-    // Switches off exactly the named inputs and on all others. An input that
-    // fails to open is an error naming it (the others still open).
-    virtual core::Result<void> setMidiInputsOff(const QStringList& names) = 0;
+    [[nodiscard]] virtual MidiSetup midiSetup() const = 0;
+    // Reopens the inputs as chosen. An input that fails to open is an error
+    // naming it (the others still open).
+    virtual core::Result<void> setMidiSetup(const MidiSetup& setup) = 0;
 
     // One line describing the audio setup, e.g. "Scarlett Solo · WASAPI · 5.3 ms".
     [[nodiscard]] virtual QString statusText() const = 0;

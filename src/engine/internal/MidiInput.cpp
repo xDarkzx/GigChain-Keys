@@ -2,6 +2,10 @@
 
 #include "EngineLog.h"
 
+#include <algorithm>
+
+#include "openstage/engine/MidiSetup.h"
+
 #include <rtmidi/RtMidi.h>
 
 #include <exception>
@@ -53,7 +57,7 @@ QStringList MidiInput::listPorts()
     return ports;
 }
 
-std::vector<QString> MidiInput::openAll(const QStringList& switchedOff)
+std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
 {
     close();
     std::vector<QString> notices;
@@ -63,13 +67,15 @@ std::vector<QString> MidiInput::openAll(const QStringList& switchedOff)
         return notices;
     }
     for (qsizetype i = 0; i < names.size(); ++i) {
-        if (switchedOff.contains(names[i])) {
-            qCInfo(lcEngine).noquote() << "MIDI input switched off in Settings:" << names[i];
+        const auto wanted = std::find_if(ports.begin(), ports.end(), [&](const MidiPort& p) { return p.name == names[i]; });
+        if (wanted == ports.end() || !wanted->enabled) {
+            qCInfo(lcEngine).noquote() << "MIDI input off:" << names[i];
             continue;
         }
         auto port = std::make_unique<Port>();
         port->owner = this;
         port->name = names[i];
+        port->channel = wanted->channel;
         try {
             port->in = std::make_unique<RtMidiIn>();
             port->in->setErrorCallback(
@@ -86,7 +92,8 @@ std::vector<QString> MidiInput::openAll(const QStringList& switchedOff)
             qCWarning(lcEngine).noquote() << notices.back();
             continue;
         }
-        qCInfo(lcEngine).noquote() << "MIDI input opened:" << names[i];
+        qCInfo(lcEngine).noquote() << "MIDI input opened:" << names[i]
+                                   << (port->channel == 0 ? u"(all channels)"_s : u"(channel %1 only)"_s.arg(port->channel));
         m_ports.push_back(std::move(port));
     }
     return notices;
@@ -127,7 +134,7 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
     auto* port = static_cast<Port*>(user);
     if (message == nullptr) return;
     const auto event = parseMidi(*message);
-    if (!event) return;
+    if (!event || !passesChannelFilter(event->status, port->channel)) return;
     if ((event->status & 0xF0) == 0x90 && event->data2 > 0) {
         port->owner->m_activity.store(true, std::memory_order_relaxed);
     }
