@@ -56,6 +56,8 @@ private slots:
         QCOMPARE(piano->name, u"Piano V2"_s);
         QVERIFY(piano->kind == PluginKind::Instrument);
         QVERIFY(!piano->vendor.isEmpty());
+        QVERIFY(piano->website.contains(u"arturia"_s, Qt::CaseInsensitive)); // for the info panel
+        QVERIFY(piano->sdkVersion.startsWith(u"VST"_s));
     }
 
     void catalogOfMissingFolderIsEmpty()

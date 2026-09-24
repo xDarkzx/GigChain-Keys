@@ -4,6 +4,10 @@
 
 #include "openstage/engine/IEngine.h"
 
+#include <QDateTime>
+#include <QDir>
+#include <QFileInfo>
+#include <QLocale>
 #include <QSettings>
 #include <QUrl>
 #include <QVariantMap>
@@ -19,7 +23,11 @@ PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialAr
                                  QObject* parent)
     : QAbstractListModel(parent), m_all(engine.availablePlugins()), m_settings(settings)
 {
-    if (m_settings != nullptr) m_hidden = m_settings->value(u"plugins/hidden"_s).toStringList();
+    if (m_settings != nullptr) {
+        m_hidden = m_settings->value(u"plugins/hidden"_s).toStringList();
+        m_favorites = m_settings->value(u"plugins/favorites"_s).toStringList();
+        m_ratings = m_settings->value(u"plugins/ratings"_s).toMap();
+    }
     std::stable_sort(m_all.begin(), m_all.end(), [](const engine::PluginInfo& a, const engine::PluginInfo& b) {
         if (a.kind != b.kind) return a.kind == engine::PluginKind::Instrument;
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
@@ -54,15 +62,56 @@ QVariant PluginListModel::data(const QModelIndex& index, int role) const
     }
     case IconRole: return iconUrl(iconFor(plugin));
     case ImageUrlRole: return m_images[at];
+    case FavoriteRole: return m_favorites.contains(plugin.id);
+    case RatingRole: return m_ratings.value(plugin.id, 0).toInt();
+    case WebsiteRole: return plugin.website;
+    case EmailRole: return plugin.email;
+    case SdkVersionRole: return plugin.sdkVersion;
+    case TagsRole: return plugin.subCategories.split(u'|', Qt::SkipEmptyParts);
+    case LocationRole: return QDir::toNativeSeparators(plugin.id);
+    case SizeRole: {
+        const QFileInfo file(plugin.id);
+        return file.isFile() ? QLocale::system().formattedDataSize(file.size()) : QString();
+    }
+    case InstalledRole: {
+        const QFileInfo file(plugin.id);
+        return file.exists() ? file.lastModified().date().toString(Qt::ISODate) : QString();
+    }
     default: return {};
     }
 }
 
 QHash<int, QByteArray> PluginListModel::roleNames() const
 {
-    return {{PluginIdRole, "pluginId"}, {NameRole, "name"},       {VendorRole, "vendor"},
-            {KindRole, "kind"},         {VersionRole, "version"}, {CategoryRole, "category"},
-            {IconRole, "icon"},         {ImageUrlRole, "imageUrl"}};
+    return {{PluginIdRole, "pluginId"},     {NameRole, "name"},         {VendorRole, "vendor"},
+            {KindRole, "kind"},             {VersionRole, "version"},   {CategoryRole, "category"},
+            {IconRole, "icon"},             {ImageUrlRole, "imageUrl"}, {FavoriteRole, "favorite"},
+            {RatingRole, "rating"},         {WebsiteRole, "website"},   {EmailRole, "email"},
+            {SdkVersionRole, "sdkVersion"}, {TagsRole, "tags"},         {LocationRole, "location"},
+            {SizeRole, "size"},             {InstalledRole, "installed"}};
+}
+
+void PluginListModel::setFavorite(const QString& pluginId, bool favorite)
+{
+    if (m_favorites.contains(pluginId) == favorite) return;
+    if (favorite) m_favorites << pluginId;
+    else m_favorites.removeAll(pluginId);
+    if (m_settings != nullptr) m_settings->setValue(u"plugins/favorites"_s, m_favorites);
+    applyFilter(); // favourites move to the top
+}
+
+void PluginListModel::setRating(const QString& pluginId, int stars)
+{
+    stars = std::clamp(stars, 0, 5);
+    if (m_ratings.value(pluginId, 0).toInt() == stars) return;
+    if (stars == 0) m_ratings.remove(pluginId);
+    else m_ratings.insert(pluginId, stars);
+    if (m_settings != nullptr) m_settings->setValue(u"plugins/ratings"_s, m_ratings);
+    for (std::size_t row = 0; row < m_visible.size(); ++row) {
+        if (m_all[m_visible[row]].id != pluginId) continue;
+        const QModelIndex at = index(static_cast<int>(row));
+        emit dataChanged(at, at, {RatingRole});
+    }
 }
 
 void PluginListModel::hide(const QString& pluginId)
@@ -199,6 +248,9 @@ void PluginListModel::applyFilter()
             m_visible.push_back(i);
         }
     }
+    // Favourites first, each group keeping its order.
+    std::stable_partition(m_visible.begin(), m_visible.end(),
+                          [this](std::size_t i) { return m_favorites.contains(m_all[i].id); });
     endResetModel();
 }
 
