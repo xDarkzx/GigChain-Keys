@@ -15,6 +15,8 @@
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
+#include "pluginterfaces/gui/iplugview.h"
+#include "pluginterfaces/gui/iplugviewcontentscalesupport.h"
 
 #include <QFileInfo>
 
@@ -358,6 +360,148 @@ QString Vst3Node::name() const
 bool Vst3Node::isInstrument() const
 {
     return m_impl->instrument;
+}
+
+// ---------------------------------------------------------------- editor
+
+namespace {
+
+// Hosts one IPlugView. Implements IPlugFrame so the plugin can ask for a
+// resize. Not reference-counted by the plugin: this object is owned by the UI
+// (unique_ptr) and clears the frame pointer before it goes away.
+class Vst3Editor final : public IPluginEditor, public IPlugFrame
+{
+public:
+    Vst3Editor(std::shared_ptr<Vst3Node> node, IPtr<IPlugView> view, QString title)
+        : m_node(std::move(node)), m_view(std::move(view)), m_title(std::move(title))
+    {
+    }
+
+    ~Vst3Editor() override { detach(); }
+
+    Vst3Editor(const Vst3Editor&) = delete;
+    Vst3Editor& operator=(const Vst3Editor&) = delete;
+    Vst3Editor(Vst3Editor&&) = delete;
+    Vst3Editor& operator=(Vst3Editor&&) = delete;
+
+    [[nodiscard]] QString title() const override { return m_title; }
+
+    [[nodiscard]] QSize preferredSize() const override
+    {
+        ViewRect rect{};
+        if (m_view->getSize(&rect) != kResultOk) return {};
+        return {rect.getWidth(), rect.getHeight()};
+    }
+
+    [[nodiscard]] bool canResize() const override { return m_view->canResize() == kResultTrue; }
+    [[nodiscard]] bool isAttached() const override { return m_attached; }
+
+    core::Result<void> attach(quintptr nativeParent) override
+    {
+        if (m_attached) return {};
+        if (nativeParent == 0) {
+            return logged(core::fail(core::ErrorCode::InvalidData, u"%1: no window to attach the editor to"_s.arg(m_title)));
+        }
+        if (m_view->isPlatformTypeSupported(kPlatformTypeHWND) != kResultTrue) {
+            return logged(core::fail(core::ErrorCode::InvalidData, u"%1's editor does not support Windows windows"_s.arg(m_title)));
+        }
+        m_view->setFrame(this);
+        if (m_view->attached(reinterpret_cast<void*>(nativeParent), kPlatformTypeHWND) != kResultOk) {
+            m_view->setFrame(nullptr);
+            return logged(core::fail(core::ErrorCode::InvalidData, u"%1's editor failed to open"_s.arg(m_title)));
+        }
+        m_attached = true;
+        qCInfo(lcEngine).noquote() << "Editor opened:" << m_title;
+        return {};
+    }
+
+    void detach() override
+    {
+        if (m_attached) {
+            if (m_view->removed() != kResultOk) {
+                qCWarning(lcEngine).noquote() << m_title << "reported an error when closing its editor";
+            }
+            m_attached = false;
+        }
+        m_view->setFrame(nullptr);
+    }
+
+    QSize setSize(QSize size) override
+    {
+        ViewRect rect{0, 0, size.width(), size.height()};
+        if (canResize() && m_view->checkSizeConstraint(&rect) != kResultTrue) {
+            qCInfo(lcEngine).noquote() << m_title << "adjusted the requested editor size";
+        }
+        if (m_view->onSize(&rect) != kResultOk) {
+            qCWarning(lcEngine).noquote() << m_title << "rejected editor size" << size;
+        }
+        return {rect.getWidth(), rect.getHeight()};
+    }
+
+    void setContentScale(double scale) override
+    {
+        FUnknownPtr<IPlugViewContentScaleSupport> scaling(m_view);
+        if (scaling && scaling->setContentScaleFactor(static_cast<float>(scale)) != kResultTrue) {
+            qCInfo(lcEngine).noquote() << m_title << "does not scale its editor; it may look small or large";
+        }
+    }
+
+    void setResizeHandler(std::function<void(QSize)> handler) override { m_onResize = std::move(handler); }
+
+    // IPlugFrame: the plugin asks the host for a new size.
+    tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* newSize) override
+    {
+        if (view == nullptr || newSize == nullptr) return kInvalidArgument;
+        if (m_inResize) return kResultTrue; // the plugin re-entered while we resize
+        m_inResize = true;
+        if (m_onResize) m_onResize(QSize(newSize->getWidth(), newSize->getHeight()));
+        const tresult result = view->onSize(newSize);
+        m_inResize = false;
+        return result == kResultOk ? kResultTrue : kResultFalse;
+    }
+
+    tresult PLUGIN_API queryInterface(const TUID requested, void** object) override
+    {
+        QUERY_INTERFACE(requested, object, FUnknown::iid, IPlugFrame)
+        QUERY_INTERFACE(requested, object, IPlugFrame::iid, IPlugFrame)
+        *object = nullptr;
+        return kNoInterface;
+    }
+    // Lifetime is managed by the owner, not by reference counting.
+    uint32 PLUGIN_API addRef() override { return 1; }
+    uint32 PLUGIN_API release() override { return 1; }
+
+private:
+    static core::Result<void> logged(core::Result<void> result)
+    {
+        if (!result) qCWarning(lcEngine).noquote() << result.error().message;
+        return result;
+    }
+
+    std::shared_ptr<Vst3Node> m_node; // keeps the plugin alive while its editor exists
+    IPtr<IPlugView> m_view;
+    QString m_title;
+    std::function<void(QSize)> m_onResize;
+    bool m_attached = false;
+    bool m_inResize = false;
+};
+
+} // namespace
+
+core::Result<std::unique_ptr<IPluginEditor>> Vst3Node::createEditor(const std::shared_ptr<Vst3Node>& node)
+{
+    if (!node) return core::fail(core::ErrorCode::InvalidData, u"No plugin to open an editor for"_s);
+    Impl& impl = *node->m_impl;
+    if (!impl.controller) {
+        qCInfo(lcEngine).noquote() << impl.name << "has no editor";
+        return std::unique_ptr<IPluginEditor>();
+    }
+    IPtr<IPlugView> view = owned(impl.controller->createView(Vst::ViewType::kEditor));
+    if (!view) {
+        qCInfo(lcEngine).noquote() << impl.name << "has no editor";
+        return std::unique_ptr<IPluginEditor>();
+    }
+    return std::unique_ptr<IPluginEditor>(std::make_unique<Vst3Editor>(node, std::move(view), impl.name));
 }
 
 } // namespace openstage::engine

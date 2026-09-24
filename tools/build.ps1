@@ -2,6 +2,7 @@
 param(
     [ValidateSet('debug', 'release', 'asan', 'spike')][string]$Preset = 'debug',
     [string]$Filter = '',
+    [string]$Target = '',
     [switch]$NoTest
 )
 $ErrorActionPreference = 'Stop'
@@ -19,7 +20,7 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 
 cmake --preset $Preset
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
-cmake --build --preset $Preset
+if ($Target) { cmake --build --preset $Preset --target $Target } else { cmake --build --preset $Preset }
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 if ($NoTest) { exit 0 }
 

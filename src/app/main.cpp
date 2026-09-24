@@ -90,7 +90,13 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    session.document().restoreLastSession();
+    // "openstage.exe <setlist>" opens that file; otherwise reopen the last one.
+    const QStringList arguments = QGuiApplication::arguments();
+    if (arguments.size() > 1) {
+        (void)session.document().open(arguments.at(1)); // a failure is shown in the banner and logged
+    } else {
+        session.document().restoreLastSession();
+    }
     const int code = QGuiApplication::exec();
     qCInfo(lcApp) << "OpenStage exiting with code" << code;
     return code;
