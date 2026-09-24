@@ -137,6 +137,12 @@ private slots:
         auto* image = splash.rootObjects().value(0)->findChild<QObject*>(u"splashImage"_s);
         QVERIFY(image != nullptr);
         QCOMPARE(image->property("status").toInt(), 1); // Image.Ready: the branding picture is built in
+        QVERIFY(splash.rootObjects().value(0)->property("flags").toInt() & Qt::WindowStaysOnTopHint); // in front
+
+        startup.finish(300); // loaded early: "Ready", the bar glides to full
+        QCOMPARE(step->property("text").toString(), u"Ready"_s);
+        QCOMPARE(startup.progress(), 1.0);
+        QCOMPARE(startup.glideMs(), 300);
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(u'\n')));
     }
 

@@ -10,18 +10,22 @@
 #include "gigchain/engine/FakeEngineFactory.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
+#include <QElapsedTimer>
 #include <QGuiApplication>
 #include <QLoggingCategory>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#include <QQuickWindow>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QTimer>
 #include <QtQml/qqmlextensionplugin.h>
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 #include <crtdbg.h>
 #endif
 
+#include <chrono>
 #include <memory>
 
 Q_IMPORT_QML_PLUGIN(GigChain_UiPlugin)
@@ -31,6 +35,10 @@ using namespace gigchain;
 using namespace Qt::StringLiterals;
 
 namespace {
+
+// The splash stays up at least this long, even when everything loads faster
+// (the plugin list usually comes from the cache in milliseconds).
+constexpr qint64 kMinimumSplashMs = 10'000;
 
 // Closes the log file last, after everything that might still log is gone.
 struct LogScope
@@ -74,6 +82,8 @@ int main(int argc, char* argv[])
     // setlist's sounds all happen before the main window appears.
     ui::StartupProgress startup;
     bool starting = true; // progress is shown only until the main window is up
+    QElapsedTimer splashShown;
+    splashShown.start();
     auto splash = std::make_unique<QQmlApplicationEngine>();
     splash->setInitialProperties({{u"startup"_s, QVariant::fromValue(&startup)}});
     splash->loadFromModule(u"GigChain.Ui"_s, u"Splash"_s);
@@ -123,14 +133,31 @@ int main(int argc, char* argv[])
     QObject::connect(&qml, &QQmlApplicationEngine::warnings, &app, [](const QList<QQmlError>& warnings) {
         for (const QQmlError& warning : warnings) qCWarning(lcApp).noquote() << warning.toString();
     });
-    qml.setInitialProperties(session.initialProperties());
+    QVariantMap properties = session.initialProperties();
+    properties.insert(u"visible"_s, false); // shown when the splash is done
+    qml.setInitialProperties(properties);
     qml.loadFromModule(u"GigChain.Ui"_s, u"Main"_s);
-    if (qml.rootObjects().isEmpty()) {
+    auto* mainWindow = qml.rootObjects().isEmpty() ? nullptr : qobject_cast<QQuickWindow*>(qml.rootObjects().first());
+    if (mainWindow == nullptr) {
         qCCritical(lcApp) << "The main window failed to load";
         return 1;
     }
     starting = false;
-    splash.reset(); // the main window is up
+
+    // Swap the splash for the main window, brought to the front.
+    const auto reveal = [&splash, mainWindow] {
+        splash.reset();
+        mainWindow->show();
+        mainWindow->raise();
+        mainWindow->requestActivate();
+    };
+    const qint64 remaining = kMinimumSplashMs - splashShown.elapsed();
+    if (remaining > 0) {
+        startup.finish(static_cast<int>(remaining));
+        QTimer::singleShot(std::chrono::milliseconds(remaining), mainWindow, reveal);
+    } else {
+        reveal();
+    }
     const int code = QGuiApplication::exec();
     qCInfo(lcApp).noquote() << branding::name() << "exiting with code" << code;
     return code;

@@ -12,7 +12,8 @@ Window {
     width: art.implicitWidth
     height: art.implicitHeight
     visible: true
-    flags: Qt.SplashScreen | Qt.FramelessWindowHint
+    // In front of every other window while it is up.
+    flags: Qt.SplashScreen | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
     color: "transparent" // the picture's rounded corners show the desktop
     title: Branding.name
 
@@ -52,6 +53,11 @@ Window {
                 color: "#4fb3d9" // the chain's blue
                 width: known ? parent.width * splash.startup.progress : parent.width * 0.25
                 x: known ? 0 : parent.width * 0.375
+                // At the end the bar glides to full while the splash stays up.
+                Behavior on width {
+                    enabled: splash.startup.glideMs > 0
+                    NumberAnimation { duration: splash.startup.glideMs; easing.type: Easing.InOutQuad }
+                }
             }
         }
         Text {
