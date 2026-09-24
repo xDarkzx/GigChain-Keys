@@ -57,6 +57,20 @@ public:
         return failed() ? 0.0 : number;
     }
 
+    // Text that may be absent (fields added after format 1 shipped).
+    QString optionalString(const QJsonObject& obj, QLatin1StringView key, const QString& path, qsizetype maxLength)
+    {
+        if (failed() || !obj.contains(key)) return {};
+        return string(obj, key, path, maxLength);
+    }
+
+    // A list that may be absent (fields added after format 1 shipped).
+    QJsonArray optionalArray(const QJsonObject& obj, QLatin1StringView key, const QString& path, qsizetype maxCount)
+    {
+        if (failed() || !obj.contains(key)) return {};
+        return array(obj, key, path, maxCount);
+    }
+
     // A number that may be absent (fields added after format 1 shipped).
     double optionalNumber(const QJsonObject& obj, QLatin1StringView key, const QString& path, double min, double max,
                           double fallback)
@@ -211,6 +225,27 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
         const QString patchPath = u"%1.patches[%2]"_s.arg(path).arg(i);
         song.patches.push_back(readPatch(r, r.object(patches.at(i), patchPath), patchPath));
     }
+    // Added in format 2; absent in format 1 files.
+    song.chart = r.optionalString(obj, "chart"_L1, path, limits::kMaxChartLength);
+    song.key = r.optionalString(obj, "key"_L1, path, limits::kMaxKeyLength);
+    song.tempo = r.optionalNumber(obj, "tempo"_L1, path, 0.0, limits::kMaxTempo, 0.0);
+    song.notes = r.optionalString(obj, "notes"_L1, path, limits::kMaxNotesLength);
+    const QJsonArray links = r.optionalArray(obj, "links"_L1, path, limits::kMaxLinksPerSong);
+    for (qsizetype i = 0; i < links.size() && !r.failed(); ++i) {
+        const QString linkPath = u"%1.links[%2]"_s.arg(path).arg(i);
+        const QJsonObject link = r.object(links.at(i), linkPath);
+        song.links.push_back(SongLink{r.string(link, "title"_L1, linkPath, limits::kMaxNameLength),
+                                      r.string(link, "url"_L1, linkPath, limits::kMaxUrlLength)});
+    }
+    const QJsonArray attachments = r.optionalArray(obj, "attachments"_L1, path, limits::kMaxAttachmentsPerSong);
+    for (qsizetype i = 0; i < attachments.size() && !r.failed(); ++i) {
+        const QString where = u"%1.attachments[%2]"_s.arg(path).arg(i);
+        if (!attachments.at(i).isString()) {
+            (void)r.string(QJsonObject{{u"x"_s, attachments.at(i)}}, "x"_L1, where, 0); // reports "must be text"
+            break;
+        }
+        song.attachments.push_back(attachments.at(i).toString());
+    }
     return song;
 }
 
@@ -260,7 +295,19 @@ QJsonObject writeSong(const Song& song)
     for (const Patch& patch : song.patches) {
         patches.append(writePatch(patch));
     }
-    return QJsonObject{{u"id"_s, song.id.value()}, {u"name"_s, song.name}, {u"patches"_s, patches}};
+    QJsonArray links;
+    for (const SongLink& link : song.links) links.append(QJsonObject{{u"title"_s, link.title}, {u"url"_s, link.url}});
+    QJsonArray attachments;
+    for (const QString& name : song.attachments) attachments.append(name);
+    return QJsonObject{{u"id"_s, song.id.value()},
+                       {u"name"_s, song.name},
+                       {u"patches"_s, patches},
+                       {u"chart"_s, song.chart},
+                       {u"key"_s, song.key},
+                       {u"tempo"_s, song.tempo},
+                       {u"notes"_s, song.notes},
+                       {u"links"_s, links},
+                       {u"attachments"_s, attachments}};
 }
 
 } // namespace
@@ -297,7 +344,7 @@ Result<Setlist> fromJson(const QByteArray& bytes)
 
     const int version = reader.integer(root, "formatVersion"_L1, rootPath, 1, std::numeric_limits<int>::max());
     if (reader.failed()) return tl::unexpected(reader.error());
-    if (version != kSetlistFormatVersion) {
+    if (version > kSetlistFormatVersion) { // older formats still open
         return fail(ErrorCode::UnsupportedVersion,
                     u"This setlist uses file format %1, but this version of %2 reads format %3"_s.arg(version).arg(branding::name())
                         .arg(kSetlistFormatVersion));

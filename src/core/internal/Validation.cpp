@@ -1,5 +1,7 @@
 #include "gigchain/core/Validation.h"
 
+#include <QUrl>
+
 #include "gigchain/core/Limits.h"
 
 #include <cmath>
@@ -87,6 +89,55 @@ Result<void> validateChannel(const Channel& channel, const QString& path)
     return checkRange(channel.midiChannel, limits::kMinMidiChannel, limits::kMaxMidiChannel, path + ".midiChannel"_L1);
 }
 
+Result<void> validateLength(const QString& text, int max, const QString& path)
+{
+    if (text.size() > max) {
+        return fail(ErrorCode::LimitExceeded, u"%1 is longer than %2 characters"_s.arg(path).arg(max));
+    }
+    return {};
+}
+
+Result<void> validateChart(const Song& song, const QString& path)
+{
+    if (auto r = validateLength(song.chart, limits::kMaxChartLength, path + ".chart"_L1); !r) return r;
+    if (auto r = validateLength(song.notes, limits::kMaxNotesLength, path + ".notes"_L1); !r) return r;
+    if (auto r = validateLength(song.key, limits::kMaxKeyLength, path + ".key"_L1); !r) return r;
+    if (!std::isfinite(song.tempo) || song.tempo < 0.0 || song.tempo > limits::kMaxTempo) {
+        return fail(ErrorCode::OutOfRange, u"%1.tempo must be between 0 and %2"_s.arg(path).arg(limits::kMaxTempo));
+    }
+    if (song.links.size() > static_cast<std::size_t>(limits::kMaxLinksPerSong)) {
+        return fail(ErrorCode::LimitExceeded, u"%1 has more than %2 links"_s.arg(path).arg(limits::kMaxLinksPerSong));
+    }
+    for (std::size_t i = 0; i < song.links.size(); ++i) {
+        const QString linkPath = u"%1.links[%2]"_s.arg(path).arg(i);
+        const SongLink& link = song.links[i];
+        if (auto r = validateLength(link.title, limits::kMaxNameLength, linkPath + ".title"_L1); !r) return r;
+        if (auto r = validateLength(link.url, limits::kMaxUrlLength, linkPath + ".url"_L1); !r) return r;
+        // Links are opened in the browser: a setlist must not be able to
+        // start programs or scripts (file:, javascript:...).
+        const QUrl url(link.url, QUrl::StrictMode);
+        if (!url.isValid() || (url.scheme() != u"https"_s && url.scheme() != u"http"_s) || url.host().isEmpty()) {
+            return fail(ErrorCode::InvalidData, u"%1.url must be a web address (http or https)"_s.arg(linkPath));
+        }
+    }
+    if (song.attachments.size() > static_cast<std::size_t>(limits::kMaxAttachmentsPerSong)) {
+        return fail(ErrorCode::LimitExceeded,
+                    u"%1 has more than %2 attachments"_s.arg(path).arg(limits::kMaxAttachmentsPerSong));
+    }
+    for (std::size_t i = 0; i < song.attachments.size(); ++i) {
+        const QString name = song.attachments[i];
+        const QString attachmentPath = u"%1.attachments[%2]"_s.arg(path).arg(i);
+        if (auto r = validateLength(name, limits::kMaxFileNameLength, attachmentPath); !r) return r;
+        // A plain file name inside the setlist's folder: no folders, drives
+        // or "..", so a setlist cannot reach other files on the computer.
+        if (name.trimmed().isEmpty() || name.contains(u'/') || name.contains(u'\\') || name.contains(u':') ||
+            name == u"."_s || name == u".."_s) {
+            return fail(ErrorCode::InvalidData, u"%1 must be a plain file name"_s.arg(attachmentPath));
+        }
+    }
+    return {};
+}
+
 Result<void> validate(const Setlist& setlist)
 {
     if (setlist.songs.size() > static_cast<std::size_t>(limits::kMaxSongs)) {
@@ -107,6 +158,7 @@ Result<void> validate(const Setlist& setlist)
         if (auto r = validateId(song.id.value(), songPath + ".id"_L1); !r) return r;
         if (auto r = unique(song.id.value(), songPath + ".id"_L1); !r) return r;
         if (auto r = validateName(song.name, songPath + ".name"_L1); !r) return r;
+        if (auto r = validateChart(song, songPath); !r) return r;
         if (song.patches.empty()) {
             return fail(ErrorCode::InvalidData, u"%1 needs at least one patch"_s.arg(songPath));
         }
