@@ -2,14 +2,14 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// The main area: current patch header, the selected channel's plugin (its own
-// editor window arrives with sub-project 3), and a playable keyboard.
+// The main area: the current patch header and, below it, the selected
+// channel's own plugin window. The plugin does the heavy lifting here.
 Rectangle {
     id: area
 
     required property DocumentController doc
-    required property SelectedChannel selectedChannel
-    required property EngineStatus engineStatus
+    required property EditorService editorService
+    property bool suspended: false
 
     color: Theme.background
 
@@ -45,7 +45,7 @@ Rectangle {
                     Layout.fillWidth: true
                 }
                 Label {
-                    text: area.doc.currentSongName
+                    text: editorHost.hasEditor ? editorHost.title : ""
                     color: Theme.textDim
                 }
             }
@@ -55,50 +55,22 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            Rectangle {
-                objectName: "pluginEditorHost"
+            // Shown only where no plugin window covers the area.
+            Label {
                 anchors.centerIn: parent
-                width: Math.min(parent.width - 48, 760)
-                height: Math.min(parent.height - 48, 400)
-                radius: Theme.radius * 2
-                color: Theme.panel
-                border.color: Theme.border
-
-                Column {
-                    anchors.centerIn: parent
-                    spacing: Theme.spacing
-                    width: parent.width - 48
-                    Label {
-                        width: parent.width
-                        horizontalAlignment: Text.AlignHCenter
-                        font.pixelSize: Theme.headerFontSize + 4
-                        font.bold: true
-                        text: area.selectedChannel.valid
-                              ? (area.selectedChannel.instrumentName || qsTr("No instrument"))
-                              : qsTr("Drag an instrument here")
-                    }
-                    Label {
-                        width: parent.width
-                        horizontalAlignment: Text.AlignHCenter
-                        color: Theme.textDim
-                        wrapMode: Text.WordWrap
-                        text: area.selectedChannel.valid
-                              ? (area.selectedChannel.effectNames.length > 0
-                                 ? qsTr("Effects: %1").arg(area.selectedChannel.effectNames.join(" → "))
-                                 : qsTr("No effects — drag one onto the channel strip"))
-                                + "\n" + qsTr("The plugin's own window will appear here.")
-                              : qsTr("Pick one from the Plugins tab on the left, or double-click it.")
-                    }
-                }
+                visible: !editorHost.hasEditor
+                text: editorHost.emptyReason
+                color: Theme.textDim
+                font.pixelSize: Theme.headerFontSize
             }
-        }
 
-        OnScreenKeyboard {
-            objectName: "onScreenKeyboard"
-            Layout.fillWidth: true
-            Layout.preferredHeight: 110
-            Layout.margins: Theme.spacing
-            engineStatus: area.engineStatus
+            PluginEditorHost {
+                id: editorHost
+                objectName: "pluginEditorHost"
+                anchors.fill: parent
+                service: area.editorService
+                suspended: area.suspended
+            }
         }
     }
 }

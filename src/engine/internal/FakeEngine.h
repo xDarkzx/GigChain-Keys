@@ -25,6 +25,7 @@ public:
     void injectNote(int midiChannel, int note, int velocity) override;
     std::vector<QString> poll() override;
     [[nodiscard]] QString statusText() const override;
+    core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) override;
 
 private:
     struct ChannelState

@@ -10,7 +10,8 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_channelModel(m_document, engine),
       m_selectedChannel(m_document),
       m_pluginModel(engine),
-      m_engineStatus(engine, m_document)
+      m_engineStatus(engine, m_document),
+      m_editorService(engine, m_document)
 {
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_channelModel, &ChannelModel::refreshLevels);
 }
@@ -24,6 +25,7 @@ QVariantMap Session::initialProperties()
         {u"selectedChannel"_s, QVariant::fromValue(&m_selectedChannel)},
         {u"pluginModel"_s, QVariant::fromValue(&m_pluginModel)},
         {u"engineStatus"_s, QVariant::fromValue(&m_engineStatus)},
+        {u"editorService"_s, QVariant::fromValue(&m_editorService)},
     };
 }
 
