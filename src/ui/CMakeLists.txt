@@ -12,6 +12,8 @@ qt_add_qml_module(openstage_ui
         cpp/PluginListModel.h cpp/PluginListModel.cpp
         cpp/EngineStatus.h cpp/EngineStatus.cpp
         cpp/Session.h cpp/Session.cpp
+        cpp/EditorService.h cpp/EditorService.cpp
+        cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
     QML_FILES
         Theme.qml
         Main.qml
@@ -20,7 +22,6 @@ qt_add_qml_module(openstage_ui
         SetlistView.qml
         DragSource.qml
         PluginBrowser.qml
-        OnScreenKeyboard.qml
         PluginArea.qml
         LevelMeter.qml
         ChannelStrip.qml

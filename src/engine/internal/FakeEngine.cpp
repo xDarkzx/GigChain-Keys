@@ -124,6 +124,11 @@ std::vector<QString> FakeEngine::poll()
     return {};
 }
 
+core::Result<std::unique_ptr<IPluginEditor>> FakeEngine::createEditor(const core::ChannelId&)
+{
+    return std::unique_ptr<IPluginEditor>(); // demo plugins have no editors
+}
+
 QString FakeEngine::statusText() const
 {
     return u"Demo engine (no audio)"_s;

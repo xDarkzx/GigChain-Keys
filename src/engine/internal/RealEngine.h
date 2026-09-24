@@ -41,6 +41,7 @@ public:
     void injectNote(int midiChannel, int note, int velocity) override;
     std::vector<QString> poll() override;
     [[nodiscard]] QString statusText() const override;
+    core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) override;
 
 private:
     RealEngine() = default;
@@ -56,6 +57,8 @@ private:
     // Main thread: every plugin instance created so far, by channel slot.
     std::map<QString, std::shared_ptr<Vst3Node>> m_nodes;
     std::vector<QString> m_pendingNotices;
+    // Main thread: the instrument each channel of the current patch plays.
+    std::map<QString, std::shared_ptr<Vst3Node>> m_currentInstruments;
 
     // Audio thread only.
     std::array<MidiEvent, kMaxEventsPerBlock> m_events{};

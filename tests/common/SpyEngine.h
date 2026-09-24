@@ -50,6 +50,12 @@ public:
         return out;
     }
     [[nodiscard]] QString statusText() const override { return QStringLiteral("Spy engine"); }
+    core::Result<std::unique_ptr<engine::IPluginEditor>> createEditor(const core::ChannelId& id) override
+    {
+        editorRequests.push_back(id.value());
+        return std::unique_ptr<engine::IPluginEditor>();
+    }
+    std::vector<QString> editorRequests;
 };
 
 } // namespace openstage::test

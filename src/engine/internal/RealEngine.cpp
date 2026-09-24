@@ -76,6 +76,7 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& cacheKey, const cor
 void RealEngine::applyPatch(const core::Patch& patch)
 {
     std::set<Vst3Node*> used;
+    m_currentInstruments.clear();
     std::vector<StripSpec> specs;
     specs.reserve(patch.channels.size());
     for (const core::Channel& channel : patch.channels) {
@@ -88,6 +89,7 @@ void RealEngine::applyPatch(const core::Patch& patch)
         if (channel.instrument) {
             auto node = nodeFor(channel.id.value() + u"|instrument"_s, *channel.instrument);
             used.insert(node.get());
+            if (node) m_currentInstruments[channel.id.value()] = node;
             spec.instrument = std::move(node);
         }
         for (std::size_t i = 0; i < channel.effects.size(); ++i) {
@@ -181,6 +183,15 @@ std::vector<QString> RealEngine::poll()
                                       << problems.oversizedBlocks;
     }
     return notices;
+}
+
+core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditor(const core::ChannelId& id)
+{
+    const auto it = m_currentInstruments.find(id.value());
+    if (it == m_currentInstruments.end()) {
+        return std::unique_ptr<IPluginEditor>(); // no instrument on this channel (a failed load was already reported)
+    }
+    return Vst3Node::createEditor(it->second);
 }
 
 QString RealEngine::statusText() const

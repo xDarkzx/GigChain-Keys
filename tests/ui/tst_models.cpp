@@ -1,5 +1,6 @@
 #include "ChannelModel.h"
 #include "DocumentController.h"
+#include "EditorService.h"
 #include "EngineStatus.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
@@ -130,6 +131,26 @@ private slots:
         const QVariantList effects = model.effects();
         QCOMPARE(effects.size(), 1);
         QCOMPARE(effects[0].toMap().value(u"name"_s).toString(), u"Spy Reverb"_s);
+    }
+
+    void editorServiceFollowsTheSelectedChannel()
+    {
+        EditorService service(*m_engine, *m_doc);
+        QSignalSpy target(&service, &EditorService::targetChanged);
+        QCOMPARE(service.emptyReason(), u"Drag an instrument here to start this patch"_s);
+
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->addChannel(u"spy/Pad.vst3"_s, u"Spy Pad"_s));
+        QVERIFY(target.count() >= 2);
+
+        m_doc->setSelectedChannel(0);
+        const auto editor = service.createForSelection();
+        QVERIFY(editor.has_value());
+        QCOMPARE(m_engine->editorRequests.back(), m_doc->currentPatch()->channels[0].id.value());
+        QCOMPARE(service.emptyReason(), u"Spy Piano has no editor to show"_s);
+
+        m_doc->setSelectedChannel(-1);
+        QCOMPARE(service.emptyReason(), u"Select a channel in the mixer"_s);
     }
 
     void engineStatusPollsAndForwardsNotices()

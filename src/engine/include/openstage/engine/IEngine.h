@@ -3,6 +3,9 @@
 #include "openstage/core/Ids.h"
 #include "openstage/core/Model.h"
 #include "openstage/engine/EngineTypes.h"
+#include "openstage/engine/IPluginEditor.h"
+
+#include <memory>
 
 #include <vector>
 
@@ -46,6 +49,11 @@ public:
     // anything the audio thread counted, device recovery. Returns messages the
     // user should see (each is also logged).
     virtual std::vector<QString> poll() = 0;
+
+    // The instrument plugin's own editor for a channel of the current patch.
+    // nullptr when the channel has no instrument or the plugin has no editor;
+    // an error when opening it failed (also logged).
+    virtual core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) = 0;
 
     // One line describing the audio setup, e.g. "Scarlett Solo · WASAPI · 5.3 ms".
     [[nodiscard]] virtual QString statusText() const = 0;

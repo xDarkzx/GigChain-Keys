@@ -59,8 +59,9 @@ void handler(QtMsgType type, const QMessageLogContext& context, const QString& m
             const QString line = u"%1 %2 %3: %4"_s.arg(
                 QDateTime::currentDateTime().toString(Qt::ISODateWithMs), QString::fromLatin1(levelName(type)),
                 QString::fromLatin1(context.category ? context.category : "default"), message);
-            // Warnings and worse are flushed at once so they survive a crash.
-            writeLine(*s.file, line, type != QtDebugMsg && type != QtInfoMsg);
+            // Every line reaches the disk at once: readable while the app runs
+            // and not lost in a crash.
+            writeLine(*s.file, line, true);
         }
     }
     if (previous) previous(type, context, message);

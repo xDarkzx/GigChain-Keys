@@ -2,6 +2,7 @@
 
 #include "ChannelModel.h"
 #include "DocumentController.h"
+#include "EditorService.h"
 #include "EngineStatus.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
@@ -41,6 +42,7 @@ private:
     SelectedChannel m_selectedChannel;
     PluginListModel m_pluginModel;
     EngineStatus m_engineStatus;
+    EditorService m_editorService;
 };
 
 } // namespace openstage::ui

@@ -12,6 +12,7 @@ ApplicationWindow {
     required property SelectedChannel selectedChannel
     required property PluginListModel pluginModel
     required property EngineStatus engineStatus
+    required property EditorService editorService
 
     property bool performMode: false
     property bool sidePanelOpen: true
@@ -221,8 +222,9 @@ ApplicationWindow {
                         SplitView.fillWidth: true
                         SplitView.minimumWidth: 320
                         doc: root.doc
-                        selectedChannel: root.selectedChannel
-                        engineStatus: root.engineStatus
+                        editorService: root.editorService
+                        // Plugin windows sit above Qt content: hide them while a dialog is up.
+                        suspended: settingsDialog.visible || unsavedDialog.visible
                     }
                     Mixer {
                         SplitView.preferredWidth: 400
@@ -234,7 +236,7 @@ ApplicationWindow {
                 }
                 Inspector {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 118
+                    Layout.preferredHeight: 150
                     visible: root.inspectorOpen
                     doc: root.doc
                     selectedChannel: root.selectedChannel
