@@ -16,7 +16,7 @@ ApplicationWindow {
 
     property bool performMode: false
     property bool sidePanelOpen: true
-    property bool inspectorOpen: true
+    property bool mixerOpen: true
     property string pendingAction: ""
     property bool closeConfirmed: false
     // Shortcuts must not fire while the user types in a text field.
@@ -158,10 +158,10 @@ ApplicationWindow {
         engineStatus: root.engineStatus
         performMode: root.performMode
         sidePanelOpen: root.sidePanelOpen
-        inspectorOpen: root.inspectorOpen
+        mixerOpen: root.mixerOpen
         onToggleMode: root.performMode = !root.performMode
         onToggleSidePanel: root.sidePanelOpen = !root.sidePanelOpen
-        onToggleInspector: root.inspectorOpen = !root.inspectorOpen
+        onToggleMixer: root.mixerOpen = !root.mixerOpen
         onNewRequested: root.guarded("new")
         onOpenRequested: root.guarded("open")
         onSaveRequested: root.save()
@@ -202,44 +202,41 @@ ApplicationWindow {
             Layout.fillHeight: true
             currentIndex: root.performMode ? 1 : 0
 
-            ColumnLayout {
-                spacing: 0
-                SplitView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    orientation: Qt.Horizontal
+            SplitView {
+                orientation: Qt.Horizontal
 
-                    SidePanel {
-                        visible: root.sidePanelOpen
-                        SplitView.preferredWidth: Theme.sidePanelWidth
-                        SplitView.minimumWidth: 200
-                        doc: root.doc
-                        setlistModel: root.setlistModel
-                        pluginModel: root.pluginModel
-                        editable: true
-                    }
+                SidePanel {
+                    visible: root.sidePanelOpen
+                    SplitView.preferredWidth: Theme.sidePanelWidth
+                    SplitView.minimumWidth: 200
+                    doc: root.doc
+                    setlistModel: root.setlistModel
+                    pluginModel: root.pluginModel
+                    editable: true
+                }
+
+                // The plugin above, the mixer below (drag the divider).
+                SplitView {
+                    SplitView.fillWidth: true
+                    orientation: Qt.Vertical
+
                     PluginArea {
-                        SplitView.fillWidth: true
-                        SplitView.minimumWidth: 320
+                        SplitView.fillHeight: true
+                        SplitView.minimumHeight: 200
                         doc: root.doc
                         editorService: root.editorService
                         // Plugin windows sit above Qt content: hide them while a dialog is up.
                         suspended: settingsDialog.visible || unsavedDialog.visible
                     }
                     Mixer {
-                        SplitView.preferredWidth: 400
-                        SplitView.minimumWidth: Theme.stripWidth + 24
+                        visible: root.mixerOpen
+                        SplitView.preferredHeight: Theme.mixerHeight
+                        SplitView.minimumHeight: 240
                         doc: root.doc
                         channelModel: root.channelModel
                         pluginModel: root.pluginModel
+                        engineStatus: root.engineStatus
                     }
-                }
-                Inspector {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 150
-                    visible: root.inspectorOpen
-                    doc: root.doc
-                    selectedChannel: root.selectedChannel
                 }
             }
 

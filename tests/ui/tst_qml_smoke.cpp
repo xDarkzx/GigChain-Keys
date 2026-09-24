@@ -105,7 +105,11 @@ private slots:
         w->requestActivate();
         QVERIFY(QTest::qWaitForWindowActive(w));
 
-        auto* field = m_qml->rootObjects().value(0)->findChild<QQuickItem*>(u"inspectorPatchName"_s);
+        auto* tabs = m_qml->rootObjects().value(0)->findChild<QObject*>(u"sidePanelTabs"_s);
+        QVERIFY(tabs != nullptr);
+        tabs->setProperty("currentIndex", 1); // Plugins tab
+        QTest::qWait(20);
+        auto* field = m_qml->rootObjects().value(0)->findChild<QQuickItem*>(u"pluginSearch"_s);
         QVERIFY(field != nullptr);
         field->forceActiveFocus();
         QTest::keyClick(w, Qt::Key_Space);

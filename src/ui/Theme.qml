@@ -17,13 +17,31 @@ QtObject {
     readonly property color meterLow: "#3fb950"
     readonly property color meterHigh: "#e5484d"
     readonly property color performBackground: "#000000"
-    readonly property color keyWhite: "#f2f2f2"
-    readonly property color keyBlack: "#1a1a1a"
+    readonly property color accentBlue: "#4a8fe7"
+    readonly property color mixerBackground: "#17191d"
+    readonly property color stripBackground: "#24272d"
+    readonly property color stripSelected: "#2c3340"
+    readonly property color stripBorder: "#34383f"
+    readonly property color slotBackground: "#31353d"
+    readonly property color slotHover: "#3b4049"
+    readonly property color readoutBackground: "#0f1113"
+    readonly property color readoutText: "#9fe0a8"
+    readonly property color knobFace: "#3a3f47"
+    readonly property color knobRing: "#1b1d21"
+    readonly property color faderGroove: "#0c0d0f"
+    readonly property color faderCapTop: "#c9ccd1"
+    readonly property color faderCapMid: "#8d9198"
+    readonly property color faderCapBottom: "#5d6167"
+    readonly property color meterBackground: "#0c0d0f"
+    readonly property color meterMid: "#e0c526"
+    readonly property color muteColor: "#4ab3e7"
+    readonly property color soloColor: "#e0c526"
 
     readonly property int spacing: 8
     readonly property int radius: 4
     readonly property int sidePanelWidth: 270
-    readonly property int stripWidth: 92
+    readonly property int stripWidth: 88
+    readonly property int mixerHeight: 360
     readonly property int fontSize: 13
     readonly property int smallFontSize: 11
     readonly property int headerFontSize: 20

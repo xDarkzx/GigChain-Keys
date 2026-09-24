@@ -19,6 +19,7 @@ Rectangle {
 
         TabBar {
             id: tabs
+            objectName: "sidePanelTabs"
             Layout.fillWidth: true
             visible: panel.editable
             TabButton { text: qsTr("Setlist"); focusPolicy: Qt.NoFocus }

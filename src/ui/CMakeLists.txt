@@ -14,6 +14,7 @@ qt_add_qml_module(openstage_ui
         cpp/Session.h cpp/Session.cpp
         cpp/EditorService.h cpp/EditorService.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
+        cpp/PluginIcons.h cpp/PluginIcons.cpp
     QML_FILES
         Theme.qml
         Main.qml
@@ -23,11 +24,30 @@ qt_add_qml_module(openstage_ui
         DragSource.qml
         PluginBrowser.qml
         PluginArea.qml
-        LevelMeter.qml
         ChannelStrip.qml
         Mixer.qml
-        Inspector.qml
+        PanKnob.qml
+        VolumeFader.qml
+        SlotButton.qml
+        Readout.qml
+        ToggleChip.qml
         PerformView.qml
+    RESOURCES
+        icons/adjustments-horizontal.svg
+        icons/bell.svg
+        icons/guitar-pick.svg
+        icons/keyboard.svg
+        icons/microphone.svg
+        icons/music.svg
+        icons/piano.svg
+        icons/plus.svg
+        icons/ripple.svg
+        icons/vinyl.svg
+        icons/volume.svg
+        icons/wave-saw-tool.svg
+        icons/wave-sine.svg
+        icons/wave-square.svg
+        icons/x.svg
 )
 target_include_directories(openstage_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 target_link_libraries(openstage_ui PUBLIC

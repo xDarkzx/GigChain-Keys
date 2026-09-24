@@ -9,11 +9,11 @@ ToolBar {
     required property EngineStatus engineStatus
     required property bool performMode
     required property bool sidePanelOpen
-    required property bool inspectorOpen
+    required property bool mixerOpen
 
     signal toggleMode()
     signal toggleSidePanel()
-    signal toggleInspector()
+    signal toggleMixer()
     signal newRequested()
     signal openRequested()
     signal saveRequested()
@@ -85,12 +85,12 @@ ToolBar {
         }
         Label { text: qsTr("MIDI"); color: Theme.textDim }
         ToolButton {
-            text: qsTr("Inspector")
+            text: qsTr("Mixer")
             visible: !bar.performMode
             checkable: true
-            checked: bar.inspectorOpen
+            checked: bar.mixerOpen
             focusPolicy: Qt.NoFocus
-            onClicked: bar.toggleInspector()
+            onClicked: bar.toggleMixer()
         }
         ToolButton {
             text: qsTr("Settings")

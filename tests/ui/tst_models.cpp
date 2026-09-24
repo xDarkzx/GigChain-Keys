@@ -85,6 +85,11 @@ private slots:
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
         QCOMPARE(model.rowCount(), 1);
         QCOMPARE(roleData(model, 0, "instrumentName").toString(), u"Spy Piano"_s);
+        QCOMPARE(roleData(model, 0, "icon").toString(), u"qrc:/qt/qml/OpenStage/Ui/icons/piano.svg"_s);
+        QVERIFY(roleData(model, 0, "color").toString().startsWith(u'#'));
+        QCOMPARE(roleData(model, 0, "pan").toDouble(), 0.0);
+        QVERIFY(m_doc->setChannelPan(0, 0.5));
+        QCOMPARE(roleData(model, 0, "pan").toDouble(), 0.5);
         QVERIFY(roleData(model, 0, "selected").toBool());
 
         QVERIFY(m_doc->addEffect(0, u"spy/Reverb.vst3"_s, u"Spy Reverb"_s));
@@ -128,6 +133,7 @@ private slots:
         model.setFilterText({});
         QCOMPARE(model.rowCount(), 3);
 
+        QCOMPARE(model.instruments().size(), 2);
         const QVariantList effects = model.effects();
         QCOMPARE(effects.size(), 1);
         QCOMPARE(effects[0].toMap().value(u"name"_s).toString(), u"Spy Reverb"_s);
@@ -151,6 +157,23 @@ private slots:
 
         m_doc->setSelectedChannel(-1);
         QCOMPARE(service.emptyReason(), u"Select a channel in the mixer"_s);
+    }
+
+    void mixerMovesDoNotRebuildTheEditor()
+    {
+        // Volume, pan, mute and solo never change which plugin is shown; the
+        // editor must not be closed and reopened while a fader moves.
+        EditorService service(*m_engine, *m_doc);
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QTest::qWait(10);
+        QSignalSpy target(&service, &EditorService::targetChanged);
+        QVERIFY(m_doc->setChannelVolume(0, -3.0));
+        QVERIFY(m_doc->setChannelPan(0, 0.3));
+        QVERIFY(m_doc->setChannelMute(0, true));
+        QVERIFY(m_doc->setChannelSolo(0, true));
+        QVERIFY(m_doc->setChannelName(0, u"Keys"_s));
+        QTest::qWait(20);
+        QCOMPARE(target.count(), 0);
     }
 
     void editorServiceSignalsOncePerChange()

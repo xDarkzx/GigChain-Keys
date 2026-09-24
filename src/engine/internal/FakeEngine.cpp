@@ -28,18 +28,18 @@ std::vector<PluginInfo> demoPlugins()
 {
     const QString vendor = u"OpenStage Demo"_s;
     return {
-        {u"fake.grand-piano"_s, u"Grand Piano"_s, vendor, PluginKind::Instrument},
-        {u"fake.electric-piano"_s, u"Electric Piano"_s, vendor, PluginKind::Instrument},
-        {u"fake.string-ensemble"_s, u"String Ensemble"_s, vendor, PluginKind::Instrument},
-        {u"fake.analog-pad"_s, u"Analog Pad"_s, vendor, PluginKind::Instrument},
-        {u"fake.tonewheel-organ"_s, u"Tonewheel Organ"_s, vendor, PluginKind::Instrument},
-        {u"fake.synth-lead"_s, u"Synth Lead"_s, vendor, PluginKind::Instrument},
-        {u"fake.channel-eq"_s, u"Channel EQ"_s, vendor, PluginKind::Effect},
-        {u"fake.compressor"_s, u"Compressor"_s, vendor, PluginKind::Effect},
-        {u"fake.reverb"_s, u"Reverb"_s, vendor, PluginKind::Effect},
-        {u"fake.delay"_s, u"Delay"_s, vendor, PluginKind::Effect},
-        {u"fake.chorus"_s, u"Chorus"_s, vendor, PluginKind::Effect},
-        {u"fake.limiter"_s, u"Limiter"_s, vendor, PluginKind::Effect},
+        {u"fake.grand-piano"_s, u"Grand Piano"_s, vendor, PluginKind::Instrument, u"Instrument|Piano"_s, u"1.0"_s},
+        {u"fake.electric-piano"_s, u"Electric Piano"_s, vendor, PluginKind::Instrument, u"Instrument|Piano"_s, u"1.0"_s},
+        {u"fake.string-ensemble"_s, u"String Ensemble"_s, vendor, PluginKind::Instrument, u"Instrument|Orchestra"_s, u"1.0"_s},
+        {u"fake.analog-pad"_s, u"Analog Pad"_s, vendor, PluginKind::Instrument, u"Instrument|Synth"_s, u"1.0"_s},
+        {u"fake.tonewheel-organ"_s, u"Tonewheel Organ"_s, vendor, PluginKind::Instrument, u"Instrument|Organ"_s, u"1.0"_s},
+        {u"fake.synth-lead"_s, u"Synth Lead"_s, vendor, PluginKind::Instrument, u"Instrument|Synth"_s, u"1.0"_s},
+        {u"fake.channel-eq"_s, u"Channel EQ"_s, vendor, PluginKind::Effect, u"Fx|EQ"_s, u"1.0"_s},
+        {u"fake.compressor"_s, u"Compressor"_s, vendor, PluginKind::Effect, u"Fx|Dynamics"_s, u"1.0"_s},
+        {u"fake.reverb"_s, u"Reverb"_s, vendor, PluginKind::Effect, u"Fx|Reverb"_s, u"1.0"_s},
+        {u"fake.delay"_s, u"Delay"_s, vendor, PluginKind::Effect, u"Fx|Delay"_s, u"1.0"_s},
+        {u"fake.chorus"_s, u"Chorus"_s, vendor, PluginKind::Effect, u"Fx|Modulation"_s, u"1.0"_s},
+        {u"fake.limiter"_s, u"Limiter"_s, vendor, PluginKind::Effect, u"Fx|Dynamics"_s, u"1.0"_s},
     };
 }
 

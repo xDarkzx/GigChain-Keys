@@ -15,9 +15,8 @@ EditorService::EditorService(engine::IEngine& engine, DocumentController& docume
     const auto schedule = [this] { m_coalesce.start(); };
     connect(&m_document, &DocumentController::channelsChanged, this, schedule);
     connect(&m_document, &DocumentController::selectedChannelChanged, this, schedule);
-    connect(&m_document, &DocumentController::channelUpdated, this, [this, schedule](int channel) {
-        if (channel == m_document.selectedChannel()) schedule(); // e.g. a key-range change re-applied the patch
-    });
+    // Not channelUpdated: volume, pan, mute, solo, name, key range and effects
+    // never change which instrument plugin (and so which editor) is shown.
 }
 
 core::Result<std::unique_ptr<engine::IPluginEditor>> EditorService::createForSelection()

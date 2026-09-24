@@ -16,6 +16,8 @@ struct PluginInfo
     QString name;
     QString vendor;
     PluginKind kind = PluginKind::Instrument;
+    QString subCategories; // VST3 sub-categories, e.g. "Instrument|Piano"
+    QString version;
 };
 
 // Linear signal level, 0 (silence) to 1 (full scale).

@@ -2,8 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// One mixer strip: instrument, effect slots ("+" to add, drop an effect here),
-// meter, fader, mute/solo and name. Click to select.
+// One Logic-style channel strip.
 Rectangle {
     id: strip
 
@@ -12,17 +11,23 @@ Rectangle {
     required property string instrumentName
     required property var effectNames
     required property double volumeDb
+    required property double pan
     required property bool mute
     required property bool solo
     required property real peak
     required property bool selected
+    required property string icon
+    required property string color
     required property DocumentController doc
     required property PluginListModel pluginModel
 
+    readonly property real peakDb: peak > 0 ? 20 * Math.log10(peak) : -200
+
     width: Theme.stripWidth
     radius: Theme.radius
-    color: selected ? Theme.selection : Theme.panelRaised
-    border.color: selected ? Theme.accent : Theme.border
+    color: selected ? Theme.stripSelected : Theme.stripBackground
+    border.color: selected ? Theme.accent : Theme.stripBorder
+    border.width: selected ? 2 : 1
 
     TapHandler { onTapped: strip.doc.selectedChannel = strip.index }
 
@@ -35,40 +40,60 @@ Rectangle {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 4
-        spacing: 4
+        spacing: 3
 
-        Button {
+        // colour tag
+        Rectangle {
             Layout.fillWidth: true
-            text: strip.instrumentName === "" ? qsTr("(none)") : strip.instrumentName
-            font.pixelSize: Theme.smallFontSize
-            focusPolicy: Qt.NoFocus
-            highlighted: true
-            onClicked: strip.doc.selectedChannel = strip.index
-            ToolTip.visible: hovered
-            ToolTip.text: text
+            Layout.preferredHeight: 3
+            radius: 1.5
+            color: strip.color
         }
 
+        // instrument icon
+        Rectangle {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: 34
+            Layout.preferredHeight: 34
+            radius: 17
+            color: Qt.darker(strip.color, 2.2)
+            border.color: strip.color
+            Image {
+                anchors.centerIn: parent
+                source: strip.icon
+                sourceSize: Qt.size(20, 20)
+            }
+        }
+
+        // instrument slot
+        SlotButton {
+            Layout.fillWidth: true
+            text: strip.instrumentName === "" ? qsTr("Instrument") : strip.instrumentName
+            accentColor: strip.color
+            primary: true
+            onClicked: strip.doc.selectedChannel = strip.index
+        }
+
+        // effect slots
         Repeater {
             model: strip.effectNames
-            delegate: Button {
+            delegate: SlotButton {
+                id: effectSlot
                 required property int index
                 required property string modelData
                 Layout.fillWidth: true
                 text: modelData
-                font.pixelSize: Theme.smallFontSize
-                focusPolicy: Qt.NoFocus
                 onClicked: effectMenu.popup()
                 Menu {
                     id: effectMenu
-                    MenuItem { text: qsTr("Remove"); onTriggered: strip.doc.removeEffect(strip.index, index) }
+                    MenuItem { text: qsTr("Remove %1").arg(effectSlot.modelData); onTriggered: strip.doc.removeEffect(strip.index, effectSlot.index) }
                 }
             }
         }
-
-        Button {
+        SlotButton {
             Layout.fillWidth: true
             text: "+"
-            focusPolicy: Qt.NoFocus
+            empty: true
             onClicked: addMenu.popup()
             Menu {
                 id: addMenu
@@ -85,60 +110,70 @@ Rectangle {
             }
         }
 
+        PanKnob {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 2
+            value: strip.pan
+            onPanMoved: (v) => strip.doc.setChannelPan(strip.index, v)
+        }
+
+        // volume and peak readouts
         RowLayout {
+            Layout.fillWidth: true
+            spacing: 2
+            Readout { Layout.fillWidth: true; text: strip.volumeDb.toFixed(1) }
+            Readout {
+                Layout.fillWidth: true
+                text: strip.peakDb < -99 ? "-∞" : strip.peakDb.toFixed(1)
+                alarm: strip.peakDb > 0
+            }
+        }
+
+        VolumeFader {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 4
-            LevelMeter {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 8
-                level: strip.peak
-            }
-            Slider {
-                Layout.fillHeight: true
-                Layout.fillWidth: true
-                orientation: Qt.Vertical
-                from: -60
-                to: 12
-                value: strip.volumeDb
-                focusPolicy: Qt.NoFocus
-                onMoved: strip.doc.setChannelVolume(strip.index, value)
-            }
-        }
-
-        Label {
-            Layout.fillWidth: true
-            horizontalAlignment: Text.AlignHCenter
-            text: strip.volumeDb.toFixed(1) + " dB"
-            font.pixelSize: Theme.smallFontSize
-            color: Theme.textDim
+            Layout.minimumHeight: 90
+            volumeDb: strip.volumeDb
+            level: strip.peak
+            onVolumeMoved: (db) => strip.doc.setChannelVolume(strip.index, db)
         }
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 4
-            Button {
+            spacing: 3
+            ToggleChip {
                 Layout.fillWidth: true
                 text: "M"
-                highlighted: strip.mute
-                focusPolicy: Qt.NoFocus
+                active: strip.mute
+                activeColor: Theme.muteColor
                 onClicked: strip.doc.setChannelMute(strip.index, !strip.mute)
             }
-            Button {
+            ToggleChip {
                 Layout.fillWidth: true
                 text: "S"
-                highlighted: strip.solo
-                focusPolicy: Qt.NoFocus
+                active: strip.solo
+                activeColor: Theme.soloColor
                 onClicked: strip.doc.setChannelSolo(strip.index, !strip.solo)
             }
         }
 
-        Label {
+        // name tag
+        Rectangle {
             Layout.fillWidth: true
-            horizontalAlignment: Text.AlignHCenter
-            text: strip.name
-            elide: Text.ElideRight
-            font.bold: true
+            Layout.preferredHeight: 22
+            radius: 3
+            color: strip.color
+            Text {
+                anchors.fill: parent
+                anchors.margins: 3
+                text: strip.name
+                color: "white"
+                font.pixelSize: Theme.smallFontSize
+                font.bold: true
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
         }
     }
 }
