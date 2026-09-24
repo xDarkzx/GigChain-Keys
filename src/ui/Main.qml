@@ -92,7 +92,11 @@ ApplicationWindow {
         if (doc.dirty && !closeConfirmed) {
             close.accepted = false
             guarded("close")
+            return
         }
+        // Closing the main window ends OpenStage even if a plugin left a
+        // window of its own open (otherwise the process would linger unseen).
+        Qt.callLater(Qt.quit)
     }
 
     FileDialog {
