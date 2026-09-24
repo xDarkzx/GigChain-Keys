@@ -18,19 +18,19 @@ be exploitable.
 
 ## Scope
 
-OpenStage runs locally: it loads plugins from your VST3 folder, reads and
+GigChain Keys runs locally: it loads plugins from your VST3 folder, reads and
 writes setlist files, and talks to your audio and MIDI devices. It has no
 server and makes no network connections. Relevant reports include:
 
-- A crafted setlist file (`.openstage.json`) that causes a crash, memory
+- A crafted setlist file (`.gigchain.json`) that causes a crash, memory
   corruption, or file access outside what the user chose
-- Memory-safety bugs in OpenStage's own code (the host side of plugin
+- Memory-safety bugs in GigChain Keys's own code (the host side of plugin
   loading, the audio and MIDI paths, file parsing)
-- Anything that makes OpenStage load or run code the user did not install
+- Anything that makes GigChain Keys load or run code the user did not install
 
 Bugs inside a third-party plugin belong with that plugin's vendor, and bugs in
 Qt, the VST3 SDK, RtAudio or RtMidi belong with those projects. Do tell us if
-OpenStage could reasonably protect against them.
+GigChain Keys could reasonably protect against them.
 
 ## Supported Versions
 

@@ -1,11 +1,17 @@
 # Changelog
 
-All notable changes to OpenStage are documented in this file.
+All notable changes to GigChain Keys are documented in this file.
 
 ## [Unreleased]
 
 ### Added
 
+- **New name: GigChain Keys** (the product was called OpenStage, a name
+  already used as a trademark). The name lives in `branding.cmake`; settings
+  from the old name carry over. New splash screen with the GigChain: Keys
+  artwork, a loading bar and each plugin's name as it is scanned.
+- **Plugin scan cache:** plugins are opened once and then read from a cache
+  until their file changes (startup scan: seconds → milliseconds).
 - **Setlists:** songs and patches with navigation (Space / arrows /
   Page Up-Down), rename, reorder, duplicate and delete; JSON setlist files,
   with the last one reopened at startup.
