@@ -13,3 +13,6 @@ openstage_add_test(tst_midi_input SOURCES tst_midi_input.cpp LIBS openstage::eng
 target_include_directories(tst_midi_input PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 openstage_add_test(tst_real_engine SOURCES tst_real_engine.cpp LIBS openstage::engine)
 target_include_directories(tst_real_engine PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+openstage_add_test(tst_vst3_editor SOURCES tst_vst3_editor.cpp LIBS openstage::engine)
+target_include_directories(tst_vst3_editor PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+target_compile_definitions(tst_vst3_editor PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)

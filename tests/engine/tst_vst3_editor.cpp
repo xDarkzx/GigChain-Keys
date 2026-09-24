@@ -1,0 +1,85 @@
+// Opens a real plugin's editor inside a hidden native window. Skips when the
+// plugin is not installed. Nothing is shown on screen.
+#include "Vst3Node.h"
+
+#include <QFileInfo>
+#include <QtTest>
+
+#include <windows.h>
+
+using namespace openstage;
+using namespace openstage::engine;
+using namespace Qt::StringLiterals;
+
+namespace {
+
+const QString kPiano = u"C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3"_s;
+
+// A hidden top-level window for the plugin to attach its view to.
+class HiddenParent
+{
+public:
+    HiddenParent()
+        : m_hwnd(CreateWindowExW(0, L"STATIC", L"OpenStage test parent", WS_POPUP, 0, 0, 800, 600, nullptr,
+                                 nullptr, GetModuleHandleW(nullptr), nullptr))
+    {
+    }
+    ~HiddenParent() { DestroyWindow(m_hwnd); }
+    HiddenParent(const HiddenParent&) = delete;
+    HiddenParent& operator=(const HiddenParent&) = delete;
+    HiddenParent(HiddenParent&&) = delete;
+    HiddenParent& operator=(HiddenParent&&) = delete;
+
+    [[nodiscard]] quintptr handle() const { return reinterpret_cast<quintptr>(m_hwnd); }
+
+private:
+    HWND m_hwnd;
+};
+
+} // namespace
+
+class TestVst3Editor : public QObject
+{
+    Q_OBJECT
+
+private slots:
+    void instrumentEditorAttachesAndDetaches()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto node = Vst3Node::load(kPiano, 48000.0, 256);
+        QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
+
+        auto editor = Vst3Node::createEditor(*node);
+        QVERIFY2(editor.has_value(), editor ? "" : qPrintable(editor.error().message));
+        QVERIFY(*editor != nullptr); // Piano V2 has an editor
+        QCOMPARE((*editor)->title(), u"Piano V2"_s);
+        const QSize size = (*editor)->preferredSize();
+        QVERIFY2(size.width() > 100 && size.height() > 100, qPrintable(u"%1x%2"_s.arg(size.width()).arg(size.height())));
+
+        HiddenParent parent;
+        const auto attached = (*editor)->attach(parent.handle());
+        QVERIFY2(attached.has_value(), attached ? "" : qPrintable(attached.error().message));
+        QVERIFY((*editor)->isAttached());
+
+        QSize requested;
+        (*editor)->setResizeHandler([&requested](QSize s) { requested = s; });
+        (*editor)->detach();
+        QVERIFY(!(*editor)->isAttached());
+    }
+
+    void attachingToNothingIsAnError()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto node = Vst3Node::load(kPiano, 48000.0, 256);
+        QVERIFY(node.has_value());
+        auto editor = Vst3Node::createEditor(*node);
+        QVERIFY(editor.has_value() && *editor != nullptr);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"no window to attach"_s));
+        const auto attached = (*editor)->attach(0);
+        QVERIFY(!attached);
+        QVERIFY(!(*editor)->isAttached());
+    }
+};
+
+QTEST_GUILESS_MAIN(TestVst3Editor)
+#include "tst_vst3_editor.moc"

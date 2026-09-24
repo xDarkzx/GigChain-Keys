@@ -27,6 +27,7 @@ add_library(openstage_engine STATIC
     internal/RealEngine.h
     internal/RealEngine.cpp
     include/openstage/engine/RealEngineFactory.h
+    include/openstage/engine/IPluginEditor.h
 )
 add_library(openstage::engine ALIAS openstage_engine)
 target_include_directories(openstage_engine

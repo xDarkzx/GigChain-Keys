@@ -3,6 +3,7 @@
 #include "INode.h"
 
 #include "openstage/core/Error.h"
+#include "openstage/engine/IPluginEditor.h"
 
 #include <QString>
 
@@ -55,6 +56,10 @@ public:
     // note this plugin is still holding. Used when the node leaves the graph
     // (patch change) so its notes do not hang when it returns.
     void releaseAllNotes();
+
+    // Main thread. The plugin's own editor, or nullptr when it has none. The
+    // editor keeps `node` alive until it is destroyed.
+    static core::Result<std::unique_ptr<IPluginEditor>> createEditor(const std::shared_ptr<Vst3Node>& node);
 
     [[nodiscard]] QString name() const;
     [[nodiscard]] bool isInstrument() const;
