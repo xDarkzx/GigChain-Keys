@@ -28,6 +28,7 @@ public:
     [[nodiscard]] QString statusText() const override;
     [[nodiscard]] std::vector<AudioOutput> audioOutputs() const override;
     [[nodiscard]] AudioSetup audioSetup() const override { return m_setup; }
+    core::Result<bool> fitEditorToArea(const core::ChannelId&, QSize, QSize) override { return false; }
     core::Result<void> setAudioSetup(const AudioSetup& setup) override;
     [[nodiscard]] std::vector<MidiPort> midiInputs() const override { return {}; }
     [[nodiscard]] MidiSetup midiSetup() const override { return m_midiSetup; }

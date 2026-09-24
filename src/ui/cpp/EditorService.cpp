@@ -31,6 +31,19 @@ core::Result<std::unique_ptr<engine::IPluginEditor>> EditorService::createForSel
     return editor;
 }
 
+void EditorService::fitToArea(QSize editorSize, QSize area)
+{
+    const core::Patch* patch = m_document.currentPatch();
+    const int index = m_document.selectedChannel();
+    if (patch == nullptr || index < 0 || static_cast<std::size_t>(index) >= patch->channels.size()) return;
+    const auto reloaded = m_engine.fitEditorToArea(patch->channels[static_cast<std::size_t>(index)].id, editorSize, area);
+    if (!reloaded) {
+        m_document.reportMessage(reloaded.error().message); // logged by the engine
+        return;
+    }
+    if (*reloaded) m_coalesce.start(); // show the new instance's editor
+}
+
 void EditorService::reportFailure(const QString& message)
 {
     m_document.reportMessage(message);
