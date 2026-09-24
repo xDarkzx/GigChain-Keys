@@ -3,6 +3,7 @@
 #include "Session.h"
 #include "SettingsController.h"
 #include "SettingsMigration.h"
+#include "StageQuips.h"
 #include "StartupProgress.h"
 
 #include "gigchain/core/Branding.h"
@@ -88,19 +89,21 @@ int main(int argc, char* argv[])
     splash->setInitialProperties({{u"startup"_s, QVariant::fromValue(&startup)}});
     splash->loadFromModule(u"GigChain.Ui"_s, u"Splash"_s);
     if (splash->rootObjects().isEmpty()) qCWarning(lcApp) << "The splash screen failed to load"; // not fatal
-    startup.report(QGuiApplication::tr("Opening audio and MIDI"));
+    // The splash speaks stage crew, not start-up steps (StageQuips).
+    ui::StageQuips quips;
+    using Quip = ui::StageQuips::Step;
+    startup.report(quips.line(Quip::Connecting)); // opening audio and MIDI
 
     engine::RealEngineOptions engineOptions = ui::SettingsController::engineOptions(settings);
     engineOptions.pluginCacheFile =
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-cache.json"_s;
-    engineOptions.progress = [&startup, &starting](const QString& what, int done, int total) {
+    engineOptions.progress = [&startup, &starting, &quips](const QString& what, int done, int total) {
         if (!starting) return;
-        if (total > 0) {
+        if (total > 0) { // scanning plugins
             startup.addPlugin(what);
-            startup.report(QGuiApplication::tr("Scanning plugins (%1 of %2)").arg(done + 1).arg(total), what,
-                           static_cast<double>(done) / total);
-        } else {
-            startup.report(QGuiApplication::tr("Loading sounds"), what);
+            startup.report(quips.line(Quip::Unpacking), what, static_cast<double>(done) / total);
+        } else { // loading a sound for the setlist
+            startup.report(quips.line(Quip::WarmingUp), what);
         }
     };
 
@@ -121,7 +124,7 @@ int main(int argc, char* argv[])
 
     // "<exe> <setlist>" opens that file; otherwise reopen the last one.
     // Its sounds load now, behind the splash, not in a frozen main window.
-    startup.report(QGuiApplication::tr("Loading your setlist"));
+    startup.report(quips.line(Quip::Setlist)); // loading the setlist
     const QStringList arguments = QGuiApplication::arguments();
     if (arguments.size() > 1) {
         (void)session.document().open(arguments.at(1)); // a failure is shown in the banner and logged
@@ -129,7 +132,7 @@ int main(int argc, char* argv[])
         session.document().restoreLastSession();
     }
 
-    startup.report(QGuiApplication::tr("Opening the window"));
+    startup.report(quips.line(Quip::SoundGuy)); // opening the main window
     QQmlApplicationEngine qml;
     QObject::connect(&qml, &QQmlApplicationEngine::warnings, &app, [](const QList<QQmlError>& warnings) {
         for (const QQmlError& warning : warnings) qCWarning(lcApp).noquote() << warning.toString();
@@ -154,7 +157,7 @@ int main(int argc, char* argv[])
     };
     const qint64 remaining = kMinimumSplashMs - splashShown.elapsed();
     if (remaining > 0) {
-        startup.finish(static_cast<int>(remaining));
+        startup.finish(static_cast<int>(remaining), quips.line(Quip::LineCheck), quips.line(Quip::Ready));
         QTimer::singleShot(std::chrono::milliseconds(remaining), mainWindow, reveal);
     } else {
         reveal();

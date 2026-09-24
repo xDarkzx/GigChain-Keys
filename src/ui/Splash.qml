@@ -54,8 +54,7 @@ Window {
         Text {
             objectName: "splashStep"
             width: parent.width
-            text: splash.listing ? qsTr("Loading plugins (%1 of %2)").arg(splash.current + 1).arg(splash.pluginCount)
-                                 : splash.startup.step
+            text: splash.listing ? splash.startup.listingStep : splash.startup.step
             color: "#c9d6e6"
             font.pixelSize: 12
             font.family: Theme.fontFamily

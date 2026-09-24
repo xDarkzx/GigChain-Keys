@@ -13,6 +13,7 @@ qt_add_qml_module(gigchain_ui
         cpp/EngineStatus.h cpp/EngineStatus.cpp
         cpp/SettingsController.h cpp/SettingsController.cpp
         cpp/StartupProgress.h cpp/StartupProgress.cpp
+        cpp/StageQuips.h cpp/StageQuips.cpp
         cpp/BrandingInfo.h
         cpp/SettingsMigration.h cpp/SettingsMigration.cpp
         cpp/Session.h cpp/Session.cpp
