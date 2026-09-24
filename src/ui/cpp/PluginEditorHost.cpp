@@ -14,14 +14,6 @@ PluginEditorHost::PluginEditorHost(QQuickItem* parent) : QQuickItem(parent)
 {
     m_followTimer.setInterval(50);
     connect(&m_followTimer, &QTimer::timeout, this, &PluginEditorHost::place);
-    m_fitTimer.setSingleShot(true);
-    m_fitTimer.setInterval(700); // the window has stopped resizing
-    connect(&m_fitTimer, &QTimer::timeout, this, [this] {
-        if (!m_editor || !m_service || !m_fixedSize || window() == nullptr) return;
-        const double dpr = window()->devicePixelRatio();
-        const QSize area(static_cast<int>(width() * dpr), static_cast<int>(height() * dpr));
-        m_service->fitToArea(m_editorSize, area);
-    });
 
 }
 
@@ -108,7 +100,6 @@ void PluginEditorHost::rebuild()
     m_scroll = {};
     m_zoom = 1.0;
     m_scalable = !m_editor->canResize() && m_editor->setContentScale(host->devicePixelRatio());
-    m_fixedSize = !m_editor->canResize() && !m_scalable;
     m_editorSize = m_editor->preferredSize();
     m_baseSize = m_editorSize;
     m_editor->setResizeHandler([this](QSize requested) {
@@ -131,8 +122,6 @@ void PluginEditorHost::rebuild()
 void PluginEditorHost::teardown()
 {
     m_followTimer.stop();
-    m_fitTimer.stop();
-    m_fixedSize = false;
     if (m_editor) {
         m_editor->detach(); // must happen before its window is destroyed
         m_editor.reset();
@@ -173,7 +162,6 @@ void PluginEditorHost::place()
     // Editors that cannot shrink to the area (e.g. Arturia, which only zooms
     // from its own menu) keep their size and scroll inside a clipping viewport.
     const QSizeF editorSize(m_editorSize.width() / dpr, m_editorSize.height() / dpr);
-    if (m_fixedSize) m_fitTimer.start(); // restarts while the area keeps changing
     m_placement = placeEditor(area, editorSize, m_scroll);
     m_viewport->setGeometry(m_placement.viewport.toAlignedRect());
     const QPointF inside = m_placement.editor.topLeft() - m_placement.viewport.topLeft();
