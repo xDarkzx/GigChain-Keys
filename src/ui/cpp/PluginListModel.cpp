@@ -20,8 +20,11 @@ PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialAr
         if (a.kind != b.kind) return a.kind == engine::PluginKind::Instrument;
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
     });
-    m_art.reserve(m_all.size());
-    for (const auto& plugin : m_all) m_art.push_back(artwork.find(plugin)); // file lookups only
+    m_images.reserve(m_all.size());
+    for (const auto& plugin : m_all) {
+        const QString banner = artwork.find(plugin).banner; // reads installed files only
+        m_images.push_back(banner.isEmpty() ? QString() : QUrl::fromLocalFile(banner).toString());
+    }
     applyFilter();
 }
 
@@ -35,8 +38,6 @@ QVariant PluginListModel::data(const QModelIndex& index, int role) const
     if (!checkIndex(index, CheckIndexOption::IndexIsValid | CheckIndexOption::ParentIsInvalid)) return {};
     const std::size_t at = m_visible[static_cast<std::size_t>(index.row())];
     const engine::PluginInfo& plugin = m_all[at];
-    const PluginArtwork& art = m_art[at];
-    const auto url = [](const QString& path) { return path.isEmpty() ? QString() : QUrl::fromLocalFile(path).toString(); };
     switch (role) {
     case PluginIdRole: return plugin.id;
     case NameRole: return plugin.name;
@@ -48,8 +49,7 @@ QVariant PluginListModel::data(const QModelIndex& index, int role) const
         return parts.size() > 1 ? parts.last() : QString();
     }
     case IconRole: return iconUrl(iconFor(plugin));
-    case ImageUrlRole: return url(art.banner);
-    case LogoUrlRole: return url(art.logo);
+    case ImageUrlRole: return m_images[at];
     default: return {};
     }
 }
@@ -58,7 +58,15 @@ QHash<int, QByteArray> PluginListModel::roleNames() const
 {
     return {{PluginIdRole, "pluginId"}, {NameRole, "name"},       {VendorRole, "vendor"},
             {KindRole, "kind"},         {VersionRole, "version"}, {CategoryRole, "category"},
-            {IconRole, "icon"},         {ImageUrlRole, "imageUrl"}, {LogoUrlRole, "logoUrl"}};
+            {IconRole, "icon"},         {ImageUrlRole, "imageUrl"}};
+}
+
+void PluginListModel::setInstrumentsOnly(bool only)
+{
+    if (only == m_instrumentsOnly) return;
+    m_instrumentsOnly = only;
+    applyFilter();
+    emit instrumentsOnlyChanged();
 }
 
 void PluginListModel::setFilterText(const QString& text)
@@ -110,6 +118,7 @@ void PluginListModel::applyFilter()
     const QString needle = m_filterText.trimmed();
     for (std::size_t i = 0; i < m_all.size(); ++i) {
         const auto& plugin = m_all[i];
+        if (m_instrumentsOnly && plugin.kind != engine::PluginKind::Instrument) continue;
         if (needle.isEmpty() || plugin.name.contains(needle, Qt::CaseInsensitive) ||
             plugin.vendor.contains(needle, Qt::CaseInsensitive)) {
             m_visible.push_back(i);

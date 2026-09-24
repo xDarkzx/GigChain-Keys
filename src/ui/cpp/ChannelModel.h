@@ -45,7 +45,7 @@ public:
         RmsRole,
         SelectedRole,
         PanRole,
-        IconRole,  // the maker's product icon (file URL), else a category icon (qrc URL)
+        IconRole,  // the maker's own icon (file URL) when installed, else a category icon (qrc URL)
         OfficialIconRole, // true when IconRole is the maker's own icon
         ColorRole, // the strip's colour tag, "#rrggbb"
     };

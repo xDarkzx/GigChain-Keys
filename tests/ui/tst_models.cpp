@@ -1,7 +1,7 @@
 #include "ChannelModel.h"
 #include "DocumentController.h"
-#include "OfficialArtwork.h"
 #include "EditorService.h"
+#include "OfficialArtwork.h"
 #include "EngineStatus.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
@@ -22,7 +22,7 @@ using namespace Qt::StringLiterals;
 
 namespace {
 
-// Artwork sources that exist nowhere, so tests never read the real machine.
+// Art sources that exist nowhere, so these tests never read the real machine.
 OfficialArtwork::Sources noArtwork()
 {
     OfficialArtwork::Sources sources;
@@ -139,7 +139,10 @@ private slots:
         QCOMPARE(roleData(model, 0, "version").toString(), u"1.0"_s);
         QCOMPARE(roleData(model, 0, "category").toString(), u"Synth"_s);
         QVERIFY(roleData(model, 0, "icon").toString().endsWith(u"wave-sine.svg"_s));
-        QVERIFY(roleData(model, 0, "imageUrl").toString().isEmpty()); // spy plugins publish no artwork
+
+        model.setInstrumentsOnly(true); // the browser list: installed instruments only
+        QCOMPARE(model.rowCount(), 2);
+        QCOMPARE(roleData(model, 1, "kind").toString(), u"instrument"_s);
     }
 
     void pluginListGroupsAndFilters()

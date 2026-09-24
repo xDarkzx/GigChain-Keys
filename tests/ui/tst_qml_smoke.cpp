@@ -94,7 +94,6 @@ private slots:
         auto* plugins = m_qml->rootObjects().value(0)->findChild<QObject*>(u"pluginList"_s);
         QVERIFY(plugins != nullptr);
         QVERIFY(plugins->property("count").toInt() > 0);
-        QVERIFY(m_qml->rootObjects().value(0)->findChild<QObject*>(u"libraryList"_s) != nullptr);
     }
 
     void spaceNavigatesButNotWhileTyping()

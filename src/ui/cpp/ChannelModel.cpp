@@ -77,7 +77,7 @@ QVariant ChannelModel::data(const QModelIndex& index, int role) const
         if (!channel->instrument) return iconUrl(u"plus"_s);
         if (const auto official = m_officialIcons.constFind(channel->instrument->pluginId);
             official != m_officialIcons.constEnd()) {
-            return *official; // the maker's own product icon
+            return *official; // the maker's own icon
         }
         // Unknown ids (plugin removed since) still get an icon from the name.
         const engine::PluginInfo plugin = m_plugins.value(

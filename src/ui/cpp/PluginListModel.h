@@ -25,6 +25,8 @@ class PluginListModel : public QAbstractListModel
     QML_ELEMENT
     QML_UNCREATABLE("Created by the application")
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
+    // Show only instruments (the browser list); effects stay available through effects().
+    Q_PROPERTY(bool instrumentsOnly READ instrumentsOnly WRITE setInstrumentsOnly NOTIFY instrumentsOnlyChanged)
 
 public:
     enum Role
@@ -36,8 +38,7 @@ public:
         VersionRole,
         CategoryRole, // the most specific VST3 sub-category, e.g. "Piano"
         IconRole,     // qrc URL
-        ImageUrlRole, // file: URL of the plugin's official banner, or empty
-        LogoUrlRole,  // file: URL of its official logo, or empty
+        ImageUrlRole, // file: URL of the plugin's own art (installed by its maker), or empty
     };
     Q_ENUM(Role)
 
@@ -49,6 +50,8 @@ public:
 
     [[nodiscard]] QString filterText() const { return m_filterText; }
     void setFilterText(const QString& text);
+    [[nodiscard]] bool instrumentsOnly() const { return m_instrumentsOnly; }
+    void setInstrumentsOnly(bool only);
 
     // Every effect as {pluginId, name}, for the mixer's "+" menu.
     Q_INVOKABLE QVariantList effects() const;
@@ -60,14 +63,16 @@ public:
 
 signals:
     void filterTextChanged();
+    void instrumentsOnlyChanged();
 
 private:
     void applyFilter();
 
     std::vector<engine::PluginInfo> m_all;
-    std::vector<PluginArtwork> m_art; // parallel to m_all
+    std::vector<QString> m_images; // parallel to m_all: file URL of the maker's art, or empty
     std::vector<std::size_t> m_visible;
     QString m_filterText;
+    bool m_instrumentsOnly = false;
 };
 
 } // namespace openstage::ui

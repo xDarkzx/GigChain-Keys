@@ -1,11 +1,10 @@
 #pragma once
 
-#include "OfficialArtwork.h"
 #include "ChannelModel.h"
+#include "OfficialArtwork.h"
 #include "DocumentController.h"
 #include "EditorService.h"
 #include "EngineStatus.h"
-#include "LibraryListModel.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
@@ -38,13 +37,12 @@ public:
     [[nodiscard]] DocumentController& document() { return m_document; }
 
 private:
-    OfficialArtwork m_artwork; // first: models below use it
+    OfficialArtwork m_artwork; // first: the models below read it
     DocumentController m_document;
     SetlistModel m_setlistModel;
     ChannelModel m_channelModel;
     SelectedChannel m_selectedChannel;
     PluginListModel m_pluginModel;
-    LibraryListModel m_libraryModel;
     EngineStatus m_engineStatus;
     EditorService m_editorService;
 };
