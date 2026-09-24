@@ -23,6 +23,8 @@ add_library(openstage_engine STATIC
     internal/MidiInput.h
     internal/MidiInput.cpp
     internal/MidiSetup.cpp
+    internal/ArturiaWindowSize.h
+    internal/ArturiaWindowSize.cpp
     internal/LoaderErrors.h
     internal/PluginCatalog.h
     internal/PluginCatalog.cpp

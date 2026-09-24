@@ -51,6 +51,7 @@ public:
     core::Result<void> setMidiSetup(const MidiSetup& setup) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) override;
+    core::Result<bool> fitEditorToArea(const core::ChannelId& id, QSize editorSize, QSize area) override;
 
 private:
     RealEngine() = default;
@@ -64,6 +65,9 @@ private:
     std::vector<QString> openMidi();
     // Every couple of seconds: notices a keyboard plugged in or pulled out.
     void watchMidiPorts(std::vector<QString>& notices);
+    // Arturia plugins write their window size back when they close; once a
+    // replaced instance is gone, the fitted size is written again.
+    void rewriteArturiaSizes();
 
     AudioDevice m_audio;
     MidiInput m_midi;
@@ -78,6 +82,17 @@ private:
     double m_preparedRate = 0.0; // what the plugins are prepared for
     int m_preparedBlock = 0;
     MidiSetup m_midiSetup;
+    // Arturia: the window size (GUI Size) each loaded instance started with,
+    // and the size fitted per plugin this session.
+    std::map<const Vst3Node*, double> m_arturiaLoadedSize;
+    std::map<QString, double> m_arturiaFitted; // bundle path -> GUI Size
+    struct PendingSizeWrite
+    {
+        std::weak_ptr<Vst3Node> old;
+        QString file;
+        double guiSize = 0.0;
+    };
+    std::vector<PendingSizeWrite> m_pendingSizeWrites;
     QStringList m_midiPorts; // what was plugged in at the last check
     std::chrono::steady_clock::time_point m_lastMidiCheck{};
     // Main thread: the instrument each channel of the current patch plays.
