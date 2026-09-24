@@ -4,6 +4,7 @@
 
 #include <algorithm>
 
+#include "gigchain/core/Branding.h"
 #include "gigchain/engine/MidiSetup.h"
 
 #include <rtmidi/RtMidi.h>
@@ -84,7 +85,7 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
                         << "MIDI input" << static_cast<Port*>(user)->name << "reported:" << QString::fromStdString(text);
                 },
                 port.get());
-            port->in->openPort(static_cast<unsigned int>(i), "OpenStage");
+            port->in->openPort(static_cast<unsigned int>(i), branding::name().toStdString());
             port->in->ignoreTypes(true, true, true); // sysex, timing, active sensing
             port->in->setCallback(&MidiInput::callback, port.get());
         } catch (const std::exception& e) {

@@ -8,7 +8,7 @@ namespace gigchain::core {
 
 // Records every Qt log message (qDebug/qInfo/qWarning/qCritical, all
 // categories) to a file, and still passes each one on to the previous handler
-// (debugger output / console / Qt Test). Errors in OpenStage are both returned
+// (debugger output / console / Qt Test). Errors are both returned
 // to the caller and logged, so this file is the record of everything that went
 // wrong, even when no UI showed it.
 //

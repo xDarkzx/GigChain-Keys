@@ -23,7 +23,7 @@ class HiddenParent
 {
 public:
     HiddenParent()
-        : m_hwnd(CreateWindowExW(0, L"STATIC", L"OpenStage test parent", WS_POPUP, 0, 0, 800, 600, nullptr,
+        : m_hwnd(CreateWindowExW(0, L"STATIC", L"Test parent window", WS_POPUP, 0, 0, 800, 600, nullptr,
                                  nullptr, GetModuleHandleW(nullptr), nullptr))
     {
     }

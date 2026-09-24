@@ -16,6 +16,19 @@ function(gigchain_add_test name)
             "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;QT_QPA_PLATFORM=set:offscreen")
 endfunction()
 
+# Renaming the product must stay a one-file change (branding.cmake): neither
+# the brand nor an earlier name may be typed into the source.
+set(_previous_names "")
+foreach(_pair IN LISTS PRODUCT_PREVIOUS_SETTINGS)
+    string(REPLACE "/" ";" _parts "${_pair}")
+    list(APPEND _previous_names ${_parts})
+endforeach()
+list(REMOVE_DUPLICATES _previous_names)
+string(REPLACE ";" "\;" _previous_names "${_previous_names}")
+add_test(NAME no_hardcoded_product_name
+         COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR} "-DBRAND=${PRODUCT_BRAND}"
+                 "-DOLD_NAMES=${_previous_names}" -P ${PROJECT_SOURCE_DIR}/tests/NoHardcodedName.cmake)
+
 add_subdirectory(core)
 add_subdirectory(engine)
 add_subdirectory(ui)

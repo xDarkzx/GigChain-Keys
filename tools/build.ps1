@@ -1,4 +1,4 @@
-# Configure, build and test OpenStage from any PowerShell prompt.
+# Configure, build and test from any PowerShell prompt.
 param(
     [ValidateSet('debug', 'release', 'asan', 'spike')][string]$Preset = 'debug',
     [string]$Filter = '',

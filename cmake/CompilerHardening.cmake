@@ -1,6 +1,6 @@
 include(Sanitizers)
 
-# Warnings-as-errors and exploit mitigations for OpenStage's own code.
+# Warnings-as-errors and exploit mitigations for our own code.
 # Third-party headers come in through imported targets, which CMake treats as
 # SYSTEM includes, so /WX never fires on Qt or tl-expected.
 function(gigchain_harden target)
@@ -16,7 +16,7 @@ function(gigchain_harden target)
     endif()
 endfunction()
 
-# Call on every OpenStage target.
+# Call on every one of our targets.
 function(gigchain_target_defaults target)
     gigchain_harden(${target})
     gigchain_sanitize(${target})

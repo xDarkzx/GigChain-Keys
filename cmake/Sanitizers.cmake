@@ -1,4 +1,4 @@
-option(GIGCHAIN_ASAN "Build OpenStage targets with AddressSanitizer" OFF)
+option(GIGCHAIN_ASAN "Build our targets with AddressSanitizer" OFF)
 
 # Adds AddressSanitizer flags to one of our own targets when GIGCHAIN_ASAN is ON.
 function(gigchain_sanitize target)

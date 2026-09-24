@@ -79,8 +79,8 @@ private slots:
         QVERIFY(m_doc->isDirty());
         QVERIFY(m_doc->saveAs(path(u"gig"_s)));
         QVERIFY(!m_doc->isDirty());
-        QCOMPARE(m_doc->displayName(), u"gig.openstage.json"_s);
-        QVERIFY(QFile::exists(path(u"gig.openstage.json"_s)));
+        QCOMPARE(m_doc->displayName(), u"gig.gigchain.json"_s);
+        QVERIFY(QFile::exists(path(u"gig.gigchain.json"_s)));
     }
 
     void saveWithoutAFileNameFails()
@@ -92,7 +92,7 @@ private slots:
     void failedSaveKeepsDirty()
     {
         QVERIFY(m_doc->addSong());
-        QVERIFY(!m_doc->saveAs(path(u"missing/folder/gig.openstage.json"_s)));
+        QVERIFY(!m_doc->saveAs(path(u"missing/folder/gig.gigchain.json"_s)));
         QVERIFY(m_doc->isDirty());
         QVERIFY(!m_doc->lastError().isEmpty());
     }
@@ -101,11 +101,11 @@ private slots:
     {
         QVERIFY(m_doc->addSong());
         {
-            QFile bad(path(u"bad.openstage.json"_s));
+            QFile bad(path(u"bad.gigchain.json"_s));
             QVERIFY(bad.open(QIODevice::WriteOnly));
             bad.write("{ not json");
         }
-        QVERIFY(!m_doc->open(path(u"bad.openstage.json"_s)));
+        QVERIFY(!m_doc->open(path(u"bad.gigchain.json"_s)));
         QVERIFY(!m_doc->lastError().isEmpty());
         QVERIFY(m_doc->isDirty());
         QCOMPARE(m_doc->setlist().songs.size(), std::size_t{2});
@@ -213,21 +213,21 @@ private slots:
     void restoreLastSessionReopensTheFile()
     {
         QVERIFY(m_doc->addSong());
-        QVERIFY(m_doc->saveAs(path(u"gig.openstage.json"_s)));
-        QVERIFY(m_doc->open(path(u"gig.openstage.json"_s))); // remembers it
+        QVERIFY(m_doc->saveAs(path(u"gig.gigchain.json"_s)));
+        QVERIFY(m_doc->open(path(u"gig.gigchain.json"_s))); // remembers it
 
         DocumentController second(*m_engine, *m_settings);
         second.restoreLastSession();
-        QCOMPARE(second.filePath(), path(u"gig.openstage.json"_s));
+        QCOMPARE(second.filePath(), path(u"gig.gigchain.json"_s));
         QCOMPARE(second.setlist().songs.size(), std::size_t{2});
     }
 
     void restoreWithMissingFileReportsIt()
     {
-        m_settings->setValue(u"session/lastFile"_s, path(u"gone.openstage.json"_s));
+        m_settings->setValue(u"session/lastFile"_s, path(u"gone.gigchain.json"_s));
         DocumentController second(*m_engine, *m_settings);
         second.restoreLastSession();
-        QVERIFY(second.lastError().contains(u"gone.openstage.json"_s));
+        QVERIFY(second.lastError().contains(u"gone.gigchain.json"_s));
         QCOMPARE(second.setlist().songs.size(), std::size_t{1});
     }
 

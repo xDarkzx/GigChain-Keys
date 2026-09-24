@@ -1,7 +1,11 @@
 #include "DocumentController.h"
 #include "SettingsController.h"
+#include "SettingsMigration.h"
+
+#include "gigchain/core/Branding.h"
 #include "SpyEngine.h"
 
+#include <QFile>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -149,6 +153,30 @@ private slots:
         QCOMPARE(settings.bufferFrames(), 256);
         QCOMPARE(settings.midiInputs()[0].toMap().value(u"enabled"_s).toBool(), true);
         QCOMPARE(settings.midiInputs()[1].toMap().value(u"enabled"_s).toBool(), false);
+    }
+
+    void previousSettingsAreCarriedOver()
+    {
+        QSettings previous(m_dir->filePath(u"previous.ini"_s), QSettings::IniFormat);
+        previous.setValue(u"audio/bufferFrames"_s, 128);
+        previous.setValue(u"plugins/favorites"_s, QStringList{u"C:/x/Piano.vst3"_s});
+        // The last setlist was renamed to the new extension (the demo was).
+        QFile renamed(m_dir->filePath(u"gig"_s + branding::setlistSuffix()));
+        QVERIFY(renamed.open(QIODevice::WriteOnly));
+        renamed.close();
+        const QString oldExtension = branding::previousFileExtensions().value(0);
+        QVERIFY(!oldExtension.isEmpty());
+        previous.setValue(u"session/lastFile"_s, m_dir->filePath(u"gig."_s + oldExtension + u".json"_s));
+
+        QVERIFY(carryOverSettings(previous, *m_settings));
+        QCOMPARE(m_settings->value(u"audio/bufferFrames"_s).toInt(), 128);
+        QCOMPARE(m_settings->value(u"plugins/favorites"_s).toStringList(), (QStringList{u"C:/x/Piano.vst3"_s}));
+        QCOMPARE(m_settings->value(u"session/lastFile"_s).toString(), renamed.fileName());
+
+        // Only ever into empty settings: never overwrites what the new name has.
+        previous.setValue(u"audio/bufferFrames"_s, 512);
+        QVERIFY(!carryOverSettings(previous, *m_settings));
+        QCOMPARE(m_settings->value(u"audio/bufferFrames"_s).toInt(), 128);
     }
 
 private:

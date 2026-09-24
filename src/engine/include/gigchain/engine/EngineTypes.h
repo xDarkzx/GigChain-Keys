@@ -58,7 +58,7 @@ struct AudioSetup
 struct MidiPort
 {
     QString name;
-    bool enabled = false; // plays into OpenStage
+    bool enabled = false; // plays into the app
     int channel = 0;      // 0 = all channels, 1-16 = only that one
 
     bool operator==(const MidiPort&) const = default;

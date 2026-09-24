@@ -1,5 +1,7 @@
 #include "DocumentController.h"
 
+#include "gigchain/core/Branding.h"
+
 #include "gigchain/core/Editing.h"
 #include "gigchain/core/SetlistFile.h"
 #include "gigchain/engine/IEngine.h"
@@ -16,7 +18,6 @@ namespace gigchain::ui {
 namespace {
 
 constexpr auto kLastFileKey = "session/lastFile"_L1;
-constexpr auto kSuffix = ".openstage.json"_L1;
 
 core::Setlist defaultSetlist()
 {
@@ -393,7 +394,7 @@ bool DocumentController::save()
 bool DocumentController::saveAs(const QString& path)
 {
     QString target = path;
-    if (!target.endsWith(u".json"_s, Qt::CaseInsensitive)) target += kSuffix;
+    if (!target.endsWith(u".json"_s, Qt::CaseInsensitive)) target += branding::setlistSuffix();
     if (auto r = core::saveSetlistFile(m_setlist, target); !r) return report(r.error());
     setFilePath(target);
     m_settings.setValue(kLastFileKey, target);

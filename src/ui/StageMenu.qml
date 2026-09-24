@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 
-// OpenStage's menu look (dark, rounded, blue highlight, like Logic's menus).
+// Our menu look (dark, rounded, blue highlight, like Logic's menus).
 // Stays inside the window: long menus scroll instead of running off screen.
 Menu {
     id: menu

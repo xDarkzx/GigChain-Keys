@@ -13,6 +13,8 @@ qt_add_qml_module(gigchain_ui
         cpp/EngineStatus.h cpp/EngineStatus.cpp
         cpp/SettingsController.h cpp/SettingsController.cpp
         cpp/StartupProgress.h cpp/StartupProgress.cpp
+        cpp/BrandingInfo.h
+        cpp/SettingsMigration.h cpp/SettingsMigration.cpp
         cpp/Session.h cpp/Session.cpp
         cpp/EditorService.h cpp/EditorService.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
@@ -74,8 +76,12 @@ gigchain_target_defaults(gigchain_ui)
 # warning C4702 "unreachable code" inside Qt headers; /external:W0 cannot
 # silence code-generation warnings. Only those generated files get /wd4702;
 # every hand-written file keeps /W4 /WX in full.
-get_target_property(_openstage_ui_sources gigchain_ui SOURCES)
-foreach(_source IN LISTS _openstage_ui_sources)
+# Branding pictures (branding.cmake), always at qrc:/branding/...
+set_source_files_properties(${PRODUCT_SPLASH_IMAGE} PROPERTIES QT_RESOURCE_ALIAS splash.png)
+qt_add_resources(gigchain_ui "branding" PREFIX "/branding" FILES ${PRODUCT_SPLASH_IMAGE})
+
+get_target_property(_gigchain_ui_sources gigchain_ui SOURCES)
+foreach(_source IN LISTS _gigchain_ui_sources)
     if(_source MATCHES "/[.]rcc/qmlcache/")
         set_source_files_properties(${_source} TARGET_DIRECTORY gigchain_ui PROPERTIES COMPILE_OPTIONS "/wd4702")
     endif()

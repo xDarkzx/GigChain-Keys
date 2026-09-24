@@ -1,5 +1,7 @@
 #include "gigchain/core/FileLog.h"
 
+#include "gigchain/core/Branding.h"
+
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -89,7 +91,7 @@ Result<void> FileLog::install(const QString& path)
     if (!file->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         return fail(ErrorCode::FileWriteFailed, u"Could not open log file %1: %2"_s.arg(path, file->errorString()));
     }
-    writeLine(*file, u"--- OpenStage log started %1"_s.arg(QDateTime::currentDateTime().toString(Qt::ISODate)), true);
+    writeLine(*file, u"--- %1 log started %2"_s.arg(branding::name(), QDateTime::currentDateTime().toString(Qt::ISODate)), true);
 
     LogState& s = state();
     {

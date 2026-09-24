@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 
-// OpenStage's drop-down: dark field, list in the menu look, stays in the window.
+// Our drop-down: dark field, list in the menu look, stays in the window.
 ComboBox {
     id: box
 
