@@ -65,6 +65,9 @@ private:
     std::unique_ptr<engine::IPluginEditor> m_editor;
     QPointer<QWindow> m_child; // owned by the main window (Qt parent)
     QSize m_editorSize;        // physical pixels, as the plugin reports
+    QSize m_baseSize;          // physical pixels at 100 % zoom (scalable editors)
+    bool m_scalable = false;   // the plugin accepts host zoom
+    double m_zoom = 1.0;       // current zoom applied to a scalable editor
     QRectF m_placedArea;       // last scene rect the editor was fitted to
     QTimer m_followTimer;      // catches moves of ancestors (splitter drags)
     bool m_suspended = false;

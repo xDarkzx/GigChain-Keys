@@ -11,7 +11,8 @@
 namespace openstage::engine {
 
 // A plugin's own editor window, embedded in a native window the UI provides.
-// Main thread only. Sizes are in physical pixels (what plugins use on
+// Main thread only, and that thread must have OLE initialised (every Qt GUI
+// app does; some plugins crash in attach() otherwise). Sizes are in physical pixels (what plugins use on
 // Windows); the UI converts with the screen's device pixel ratio.
 //
 // The editor keeps its plugin alive; detach() (or destruction) must happen
@@ -37,8 +38,9 @@ public:
 
     // Asks a resizable editor to take this size; returns the size it accepted.
     virtual QSize setSize(QSize size) = 0;
-    // Screen scaling (1.0 = 100 %), for plugins that support it.
-    virtual void setContentScale(double scale) = 0;
+    // Zoom (1.0 = 100 %, include the screen's scaling). Returns false when
+    // the plugin cannot scale its editor; preferredSize() reflects the result.
+    virtual bool setContentScale(double scale) = 0;
     // Called when the plugin itself asks for a new size (e.g. it opens a panel).
     virtual void setResizeHandler(std::function<void(QSize)> handler) = 0;
 
