@@ -40,19 +40,19 @@ Rectangle {
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.horizontal: ScrollBar {}
             delegate: ChannelStrip {
-                height: ListView.view.height
+                height: Math.min(ListView.view.height, Theme.stripHeight)
                 doc: mixer.doc
                 pluginModel: mixer.pluginModel
             }
             footer: Item {
                 width: Theme.stripWidth + 8
-                height: strips.height
+                height: Math.min(strips.height, Theme.stripHeight)
                 // Add a channel: pick an instrument (grouped by maker)
                 EffectSlot {
                     id: newChannelSlot
                     x: 4
                     width: Theme.stripWidth
-                    height: strips.height
+                    height: parent.height
                     text: ""
                     onClicked: newChannelPicker.popup(newChannelSlot, newChannelSlot.width / 2, newChannelSlot.height / 2)
                     Text {
@@ -73,7 +73,8 @@ Rectangle {
 
         // Master strip
         Rectangle {
-            Layout.fillHeight: true
+            Layout.alignment: Qt.AlignTop
+            Layout.preferredHeight: Math.min(strips.height, Theme.stripHeight)
             Layout.preferredWidth: Theme.stripWidth
             radius: Theme.radius
             color: Theme.stripBackground
