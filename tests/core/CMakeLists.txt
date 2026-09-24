@@ -6,3 +6,4 @@ gigchain_add_test(tst_setlist_file SOURCES tst_setlist_file.cpp LIBS gigchain::c
 gigchain_add_test(tst_navigation SOURCES tst_navigation.cpp LIBS gigchain::core)
 gigchain_add_test(tst_editing SOURCES tst_editing.cpp LIBS gigchain::core)
 gigchain_add_test(tst_file_log SOURCES tst_file_log.cpp LIBS gigchain::core)
+gigchain_add_test(tst_chart SOURCES tst_chart.cpp LIBS gigchain::core)
