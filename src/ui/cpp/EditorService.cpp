@@ -9,10 +9,14 @@ namespace openstage::ui {
 EditorService::EditorService(engine::IEngine& engine, DocumentController& document, QObject* parent)
     : QObject(parent), m_engine(engine), m_document(document)
 {
-    connect(&m_document, &DocumentController::channelsChanged, this, &EditorService::targetChanged);
-    connect(&m_document, &DocumentController::selectedChannelChanged, this, &EditorService::targetChanged);
-    connect(&m_document, &DocumentController::channelUpdated, this, [this](int channel) {
-        if (channel == m_document.selectedChannel()) emit targetChanged(); // e.g. a key-range change re-applied the patch
+    m_coalesce.setSingleShot(true);
+    m_coalesce.setInterval(0);
+    connect(&m_coalesce, &QTimer::timeout, this, &EditorService::targetChanged);
+    const auto schedule = [this] { m_coalesce.start(); };
+    connect(&m_document, &DocumentController::channelsChanged, this, schedule);
+    connect(&m_document, &DocumentController::selectedChannelChanged, this, schedule);
+    connect(&m_document, &DocumentController::channelUpdated, this, [this, schedule](int channel) {
+        if (channel == m_document.selectedChannel()) schedule(); // e.g. a key-range change re-applied the patch
     });
 }
 
