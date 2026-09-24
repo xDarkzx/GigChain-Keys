@@ -257,6 +257,16 @@ QString tidyChordPro(const QString& chordPro)
     bool lastBlank = true; // no blank lines at the start
     for (ChartLine& line : chart.lines) {
         if (line.kind == ChartLine::Kind::Lyrics) {
+            // A chord that sat over the space before a word goes onto that
+            // word (pasted sheets are often a column or two off).
+            for (std::size_t i = 1; i < line.segments.size(); ++i) {
+                QString& text = line.segments[i].text;
+                qsizetype spaces = 0;
+                while (spaces < text.size() && text[spaces] == u' ') ++spaces;
+                if (spaces == 0 || spaces == text.size() || line.segments[i].chord.isEmpty()) continue;
+                line.segments[i - 1].text += text.left(spaces);
+                text.remove(0, spaces);
+            }
             for (ChartSegment& segment : line.segments) {
                 static const QRegularExpression kSpaces(uR"( {2,})"_s);
                 segment.text.replace(kSpaces, u" "_s);

@@ -231,6 +231,66 @@ private slots:
         QCOMPARE(second.setlist().songs.size(), std::size_t{1});
     }
 
+    void pastedChordSheetBecomesTheSongsChart()
+    {
+        QSignalSpy chart(m_doc.get(), &DocumentController::chartChanged);
+        QVERIFY(m_doc->pasteChart(0, u"-------\nC        G\nHello my   friend\n"_s));
+        QCOMPARE(m_doc->currentChart(), u"[C]Hello my [G]friend\n"_s); // cleaned, chords over the words
+        QVERIFY(chart.count() >= 1);
+        QVERIFY(m_doc->isDirty());
+
+        QVERIFY(!m_doc->pasteChart(0, u"   \n"_s)); // nothing to paste
+        QVERIFY(m_doc->lastError().contains(u"no text"_s));
+        QCOMPARE(m_doc->currentChart(), u"[C]Hello my [G]friend\n"_s); // unchanged
+
+        QVERIFY(m_doc->setSongChart(0, u"[Am]Edited"_s)); // typed in the editor
+        QCOMPARE(m_doc->currentChart(), u"[Am]Edited"_s);
+        QVERIFY(!m_doc->setSongChart(9, u"x"_s)); // no such song
+    }
+
+    void chartFilesImport()
+    {
+        const QString file = path(u"song.txt"_s);
+        {
+            QFile out(file);
+            QVERIFY(out.open(QIODevice::WriteOnly));
+            out.write("Am      F\nGoodbye now\n"); // F above "now"
+        }
+        QVERIFY(m_doc->importChartFile(0, QUrl::fromLocalFile(file)));
+        QCOMPARE(m_doc->currentChart(), u"[Am]Goodbye [F]now\n"_s);
+
+        const QString pdf = path(u"song.pdf"_s);
+        {
+            QFile out(pdf);
+            QVERIFY(out.open(QIODevice::WriteOnly));
+            out.write("%PDF-1.7");
+        }
+        QVERIFY(!m_doc->importChartFile(0, QUrl::fromLocalFile(pdf))); // locked format
+        QVERIFY(m_doc->lastError().contains(u"PDF"_s));
+        QVERIFY(!m_doc->importChartFile(0, QUrl::fromLocalFile(path(u"missing.txt"_s))));
+    }
+
+    void chartIsSavedWithTheSetlist()
+    {
+        QVERIFY(m_doc->setSongChart(0, u"[G]Saved"_s));
+        QVERIFY(m_doc->saveAs(path(u"charts.gigchain.json"_s)));
+        DocumentController other(*m_engine, *m_settings);
+        QVERIFY(other.open(path(u"charts.gigchain.json"_s)));
+        QCOMPARE(other.currentChart(), u"[G]Saved"_s);
+    }
+
+    void chartLinesForTheView()
+    {
+        const QVariantList lines = m_doc->chartLines(u"{comment: Chorus}\n[Dm]I love [C#m7]you"_s);
+        QCOMPARE(lines.size(), 2);
+        QCOMPARE(lines[0].toMap().value(u"kind"_s).toString(), u"comment"_s);
+        QCOMPARE(lines[0].toMap().value(u"label"_s).toString(), u"Chorus"_s);
+        const QVariantList segments = lines[1].toMap().value(u"segments"_s).toList();
+        QCOMPARE(segments.size(), 2);
+        QCOMPARE(segments[1].toMap().value(u"chord"_s).toString(), u"C#m7"_s);
+        QCOMPARE(segments[1].toMap().value(u"text"_s).toString(), u"you"_s);
+    }
+
     void editingCycleDoesNotLeak()
     {
         QCOMPARE(test::leakedBlocks([this] {

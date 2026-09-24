@@ -1,6 +1,11 @@
 #include "DocumentController.h"
 
 #include "gigchain/core/Branding.h"
+#include "gigchain/core/Chart.h"
+
+#include <QStringDecoder>
+
+#include <QFile>
 
 #include "gigchain/core/Editing.h"
 #include "gigchain/core/SetlistFile.h"
@@ -32,6 +37,8 @@ DocumentController::DocumentController(engine::IEngine& engine, QSettings& setti
     : QObject(parent), m_engine(engine), m_settings(settings), m_setlist(defaultSetlist()),
       m_cursor(core::firstPatch(m_setlist))
 {
+    // A different current song (or setlist) means a different chart.
+    connect(this, &DocumentController::currentChanged, this, &DocumentController::chartChanged);
     resetSelectedChannel();
     applyCurrentPatchToEngine();
 }
@@ -135,6 +142,85 @@ bool DocumentController::renameSong(int song, const QString& name)
     if (auto r = core::renameSong(m_setlist, song, name); !r) return report(r.error());
     commitRename();
     return true;
+}
+
+QString DocumentController::currentChart() const
+{
+    const int song = songIndex();
+    return song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size()
+               ? m_setlist.songs[static_cast<std::size_t>(song)].chart
+               : QString();
+}
+
+bool DocumentController::setSongChart(int song, const QString& chordPro)
+{
+    if (auto r = core::setSongChart(m_setlist, song, chordPro); !r) return report(r.error());
+    setDirty(true);
+    emit chartChanged();
+    return true;
+}
+
+bool DocumentController::pasteChart(int song, const QString& pasted)
+{
+    if (pasted.trimmed().isEmpty()) {
+        return report(core::Error{core::ErrorCode::InvalidData, tr("There is no text to paste")});
+    }
+    return setSongChart(song, core::tidyChordSheet(pasted));
+}
+
+bool DocumentController::importChartFile(int song, const QUrl& file)
+{
+    const QString path = file.toLocalFile();
+    const QString suffix = QFileInfo(path).suffix().toLower();
+    static const QStringList kText{u"txt"_s, u"cho"_s, u"chopro"_s, u"chordpro"_s, u"crd"_s, u"pro"_s, u"onsong"_s};
+    if (suffix == u"pdf"_s) {
+        return report(core::Error{core::ErrorCode::InvalidData,
+                                  tr("%1 is a PDF, which cannot be edited. Download the song as text or "
+                                     "ChordPro instead, or copy its text and paste it.")
+                                      .arg(QFileInfo(path).fileName())});
+    }
+    if (!kText.contains(suffix)) {
+        return report(core::Error{core::ErrorCode::InvalidData,
+                                  tr("%1 is not a chart file this version can read (text or ChordPro)")
+                                      .arg(QFileInfo(path).fileName())});
+    }
+    QFile in(path);
+    if (!in.open(QIODevice::ReadOnly)) {
+        return report(core::Error{core::ErrorCode::FileReadFailed, tr("Could not open %1: %2").arg(path, in.errorString())});
+    }
+    constexpr qint64 kMaxChartFile = 1024 * 1024; // a chart is a few KB
+    if (in.size() > kMaxChartFile) {
+        return report(core::Error{core::ErrorCode::FileTooLarge, tr("%1 is too large for a chart").arg(path)});
+    }
+    const QByteArray bytes = in.readAll();
+    // UTF-8, else the Windows code page older chord files use.
+    auto utf8 = QStringDecoder(QStringDecoder::Utf8);
+    QString text = utf8.decode(bytes);
+    if (utf8.hasError()) text = QString::fromLatin1(bytes);
+    return pasteChart(song, text);
+}
+
+QVariantList DocumentController::chartLines(const QString& chordPro) const
+{
+    using Kind = core::ChartLine::Kind;
+    QVariantList lines;
+    for (const core::ChartLine& line : core::parseChordPro(chordPro).lines) {
+        QString kind;
+        switch (line.kind) {
+        case Kind::Lyrics: kind = u"lyrics"_s; break;
+        case Kind::Section: kind = u"section"_s; break;
+        case Kind::Comment: kind = u"comment"_s; break;
+        case Kind::Blank: kind = u"blank"_s; break;
+        case Kind::SectionEnd:
+        case Kind::Meta: continue; // not shown
+        }
+        QVariantList segments;
+        for (const core::ChartSegment& segment : line.segments) {
+            segments << QVariantMap{{u"chord"_s, segment.chord}, {u"text"_s, segment.text}};
+        }
+        lines << QVariantMap{{u"kind"_s, kind}, {u"label"_s, line.label}, {u"segments"_s, segments}};
+    }
+    return lines;
 }
 
 bool DocumentController::renamePatch(int song, int patch, const QString& name)
