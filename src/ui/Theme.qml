@@ -1,7 +1,7 @@
 pragma Singleton
 import QtQuick
 
-// Every colour, size and font in one place: restyling OpenStage means editing
+// Every colour, size and font in one place: restyling the app means editing
 // this file. Dark stage look for now.
 QtObject {
     readonly property color background: "#14161a"

@@ -2,6 +2,8 @@
 
 #include "EngineLog.h"
 
+#include "gigchain/core/Branding.h"
+
 #include <RtAudio.h>
 
 #include <xmmintrin.h>
@@ -122,7 +124,7 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     output.firstChannel = 0;
     RtAudio::StreamOptions options;
     options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
-    options.streamName = "OpenStage";
+    options.streamName = branding::name().toStdString(); // what Windows shows for our audio
     const unsigned int ownRate = info.preferredSampleRate != 0 ? info.preferredSampleRate : 48000;
     const unsigned int rate = sampleRate != 0 ? sampleRate : ownRate;
     if (sampleRate != 0 && sampleRate != info.preferredSampleRate &&

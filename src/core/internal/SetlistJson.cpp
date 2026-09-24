@@ -1,5 +1,7 @@
 #include "gigchain/core/SetlistJson.h"
 
+#include "gigchain/core/Branding.h"
+
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/Validation.h"
 
@@ -297,7 +299,7 @@ Result<Setlist> fromJson(const QByteArray& bytes)
     if (reader.failed()) return tl::unexpected(reader.error());
     if (version != kSetlistFormatVersion) {
         return fail(ErrorCode::UnsupportedVersion,
-                    u"This setlist uses file format %1, but this version of OpenStage reads format %2"_s.arg(version)
+                    u"This setlist uses file format %1, but this version of %2 reads format %3"_s.arg(version).arg(branding::name())
                         .arg(kSetlistFormatVersion));
     }
 

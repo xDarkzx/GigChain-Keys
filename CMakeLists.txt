@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
-project(OpenStage VERSION 0.1.0 LANGUAGES CXX)
+include(${CMAKE_CURRENT_SOURCE_DIR}/branding.cmake) # the product's name: change it there
+project(GigChain VERSION ${PRODUCT_VERSION} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

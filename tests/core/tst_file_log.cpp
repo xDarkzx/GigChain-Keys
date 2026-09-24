@@ -29,7 +29,7 @@ private slots:
     void writesWarningsWithLevelAndCategory()
     {
         QTemporaryDir dir;
-        const QString path = dir.filePath(u"logs/openstage.log"_s);
+        const QString path = dir.filePath(u"logs/app.log"_s);
         QVERIFY(FileLog::install(path).has_value());
         qCWarning(lcTest) << "plugin exploded";
         qCInfo(lcTest) << "loaded fine";
@@ -81,7 +81,7 @@ private slots:
             QFile file(blocker); // a file where the log folder should be
             QVERIFY(file.open(QIODevice::WriteOnly));
         }
-        const auto installed = FileLog::install(blocker + u"/openstage.log"_s);
+        const auto installed = FileLog::install(blocker + u"/app.log"_s);
         QVERIFY(!installed);
         QVERIFY(installed.error().code == ErrorCode::FileWriteFailed);
         QVERIFY(!installed.error().message.isEmpty());

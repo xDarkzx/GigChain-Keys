@@ -26,7 +26,7 @@ ApplicationWindow {
     width: 1440
     height: 880
     visible: true
-    title: (doc.dirty ? "● " : "") + doc.displayName + " — OpenStage"
+    title: (doc.dirty ? "● " : "") + doc.displayName + " — " + Branding.name
     color: Theme.background
     font.family: Theme.fontFamily
     font.pixelSize: Theme.fontSize
@@ -95,7 +95,7 @@ ApplicationWindow {
             guarded("close")
             return
         }
-        // Closing the main window ends OpenStage even if a plugin left a
+        // Closing the main window ends the app even if a plugin left a
         // window of its own open (otherwise the process would linger unseen).
         Qt.callLater(Qt.quit)
     }
@@ -104,7 +104,7 @@ ApplicationWindow {
         id: openDialog
         title: qsTr("Open setlist")
         fileMode: FileDialog.OpenFile
-        nameFilters: [qsTr("OpenStage setlists (*.openstage.json)"), qsTr("All files (*)")]
+        nameFilters: [qsTr("%1 setlists (*%2)").arg(Branding.name).arg(Branding.setlistSuffix), qsTr("All files (*)")]
         onAccepted: root.doc.openUrl(selectedFile)
     }
     FileDialog {
@@ -112,7 +112,7 @@ ApplicationWindow {
         title: qsTr("Save setlist")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "gigchain.json"
-        nameFilters: [qsTr("OpenStage setlists (*.openstage.json)")]
+        nameFilters: [qsTr("%1 setlists (*%2)").arg(Branding.name).arg(Branding.setlistSuffix)]
         onAccepted: {
             if (root.doc.saveAsUrl(selectedFile) && root.pendingAction !== "")
                 root.runPending()

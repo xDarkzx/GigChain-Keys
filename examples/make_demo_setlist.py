@@ -1,4 +1,4 @@
-"""Writes examples/demo.openstage.json: a two-song demo setlist that uses
+"""Writes examples/demo.gigchain.json: a two-song demo setlist that uses
 Arturia and FabFilter plugins installed in the standard VST3 folder.
 
 Run from the repo root:  python examples/make_demo_setlist.py
@@ -74,6 +74,6 @@ setlist = {
     ],
 }
 
-out = pathlib.Path(__file__).with_name("demo.openstage.json")
+out = pathlib.Path(__file__).with_name("demo.gigchain.json")
 out.write_text(json.dumps(setlist, indent=4) + "\n", encoding="utf-8")
 print("wrote", out)

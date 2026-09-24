@@ -228,8 +228,8 @@ Popup {
                             Layout.fillWidth: true
                             text: qsTr("Enable only the port your keys play on. Many keyboards show a second port "
                                        + "for DAW control (the Impact GXP61's \"MIDIIN2\"): leave it disabled, or "
-                                       + "every note can arrive twice. OpenStage remembers your choice; inputs it "
-                                       + "has not seen before stay disabled.")
+                                       + "every note can arrive twice. %1 remembers your choice; inputs it "
+                                       + "has not seen before stay disabled.").arg(Branding.name)
                             color: Theme.textDim
                             wrapMode: Text.Wrap
                         }

@@ -1,4 +1,5 @@
 gigchain_add_test(tst_error SOURCES tst_error.cpp LIBS gigchain::core)
+gigchain_add_test(tst_branding SOURCES tst_branding.cpp LIBS gigchain::core)
 gigchain_add_test(tst_validation SOURCES tst_validation.cpp LIBS gigchain::core)
 gigchain_add_test(tst_setlist_json SOURCES tst_setlist_json.cpp LIBS gigchain::core)
 gigchain_add_test(tst_setlist_file SOURCES tst_setlist_file.cpp LIBS gigchain::core)

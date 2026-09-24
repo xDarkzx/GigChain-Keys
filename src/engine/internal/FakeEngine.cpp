@@ -1,5 +1,7 @@
 #include "FakeEngine.h"
 
+#include "gigchain/core/Branding.h"
+
 #include "gigchain/core/Limits.h"
 
 #include <algorithm>
@@ -26,7 +28,7 @@ std::optional<double> sanitizeVolume(double db)
 
 std::vector<PluginInfo> demoPlugins()
 {
-    const QString vendor = u"OpenStage Demo"_s;
+    const QString vendor = branding::brand() + u" Demo"_s;
     return {
         {u"fake.grand-piano"_s, u"Grand Piano"_s, vendor, PluginKind::Instrument, u"Instrument|Piano"_s, u"1.0"_s},
         {u"fake.electric-piano"_s, u"Electric Piano"_s, vendor, PluginKind::Instrument, u"Instrument|Piano"_s, u"1.0"_s},

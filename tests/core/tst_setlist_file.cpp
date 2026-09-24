@@ -40,7 +40,7 @@ private slots:
     void savesAndLoadsRoundTrip()
     {
         QTemporaryDir dir;
-        const QString path = dir.filePath(u"gig.openstage.json"_s);
+        const QString path = dir.filePath(u"gig.gigchain.json"_s);
         const Setlist original = sample();
         QVERIFY(saveSetlistFile(original, path).has_value());
         const auto loaded = loadSetlistFile(path);
@@ -52,7 +52,7 @@ private slots:
     void missingFileIsReported()
     {
         QTemporaryDir dir;
-        const auto loaded = loadSetlistFile(dir.filePath(u"nope.openstage.json"_s));
+        const auto loaded = loadSetlistFile(dir.filePath(u"nope.gigchain.json"_s));
         QVERIFY(!loaded);
         QVERIFY(loaded.error().code == ErrorCode::FileNotFound);
     }
@@ -68,7 +68,7 @@ private slots:
     void oversizedFileIsRejected()
     {
         QTemporaryDir dir;
-        const QString path = dir.filePath(u"huge.openstage.json"_s);
+        const QString path = dir.filePath(u"huge.gigchain.json"_s);
         QVERIFY(writeAll(path, QByteArray(static_cast<qsizetype>(limits::kMaxFileBytes + 1), ' ')));
         const auto loaded = loadSetlistFile(path);
         QVERIFY(!loaded);
@@ -78,7 +78,7 @@ private slots:
     void garbageFileIsParseError()
     {
         QTemporaryDir dir;
-        const QString path = dir.filePath(u"garbage.openstage.json"_s);
+        const QString path = dir.filePath(u"garbage.gigchain.json"_s);
         QVERIFY(writeAll(path, "\x00\xff not json"));
         const auto loaded = loadSetlistFile(path);
         QVERIFY(!loaded);
@@ -88,7 +88,7 @@ private slots:
     void failedSaveLeavesExistingFileUntouched()
     {
         QTemporaryDir dir;
-        const QString path = dir.filePath(u"gig.openstage.json"_s);
+        const QString path = dir.filePath(u"gig.gigchain.json"_s);
         QVERIFY(saveSetlistFile(sample(), path).has_value());
         const QByteArray before = readAll(path);
 
@@ -103,7 +103,7 @@ private slots:
     void saveIntoMissingFolderFails()
     {
         QTemporaryDir dir;
-        const QString path = dir.filePath(u"missing/folder/gig.openstage.json"_s);
+        const QString path = dir.filePath(u"missing/folder/gig.gigchain.json"_s);
         const auto saved = saveSetlistFile(sample(), path);
         QVERIFY(!saved);
         QVERIFY(saved.error().code == ErrorCode::FileWriteFailed);

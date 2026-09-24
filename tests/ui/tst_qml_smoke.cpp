@@ -131,6 +131,12 @@ private slots:
         auto* step = splash.rootObjects().value(0)->findChild<QObject*>(u"splashStep"_s);
         QVERIFY(step != nullptr);
         QCOMPARE(step->property("text").toString(), u"Scanning plugins (3 of 63)"_s);
+        auto* detail = splash.rootObjects().value(0)->findChild<QObject*>(u"splashDetail"_s);
+        QVERIFY(detail != nullptr);
+        QCOMPARE(detail->property("text").toString(), u"Piano V2"_s); // the plugin being scanned
+        auto* image = splash.rootObjects().value(0)->findChild<QObject*>(u"splashImage"_s);
+        QVERIFY(image != nullptr);
+        QCOMPARE(image->property("status").toInt(), 1); // Image.Ready: the branding picture is built in
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(u'\n')));
     }
 

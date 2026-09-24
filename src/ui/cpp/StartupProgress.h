@@ -6,7 +6,7 @@
 
 namespace gigchain::ui {
 
-// What the splash screen shows while OpenStage starts: the current step
+// What the splash screen shows while the app starts: the current step
 // ("Scanning plugins"), a detail ("Piano V2") and progress 0-1 (or -1 when
 // the step has no measurable progress).
 class StartupProgress : public QObject
