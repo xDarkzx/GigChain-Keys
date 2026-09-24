@@ -84,6 +84,7 @@ void RealEngine::applyPatch(const core::Patch& patch)
         spec.id = channel.id;
         spec.route = RouteSettings{channel.keyLow, channel.keyHigh, channel.transpose, channel.midiChannel};
         spec.volumeDb = channel.volumeDb;
+        spec.pan = channel.pan;
         spec.mute = channel.mute;
         spec.solo = channel.solo;
         if (channel.instrument) {
@@ -123,6 +124,13 @@ void RealEngine::setChannelVolume(const core::ChannelId& id, double volumeDb)
 {
     if (RenderGraph* graph = m_exchange.current()) {
         if (ChannelStrip* strip = graph->findStrip(id)) strip->setVolumeDb(volumeDb);
+    }
+}
+
+void RealEngine::setChannelPan(const core::ChannelId& id, double pan)
+{
+    if (RenderGraph* graph = m_exchange.current()) {
+        if (ChannelStrip* strip = graph->findStrip(id)) strip->setPan(pan);
     }
 }
 

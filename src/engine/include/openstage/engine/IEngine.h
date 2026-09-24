@@ -36,6 +36,7 @@ public:
     // Fast paths for mixer moves. Unknown ids and non-finite values are ignored;
     // volumes are clamped to core::limits.
     virtual void setChannelVolume(const core::ChannelId& id, double volumeDb) = 0;
+    virtual void setChannelPan(const core::ChannelId& id, double pan) = 0;
     virtual void setChannelMute(const core::ChannelId& id, bool mute) = 0;
     virtual void setChannelSolo(const core::ChannelId& id, bool solo) = 0;
     virtual void setMasterVolume(double volumeDb) = 0;

@@ -25,6 +25,7 @@ Setlist richSetlist()
     piano.transpose = -12;
     piano.midiChannel = 3;
     piano.mute = true;
+    piano.pan = -0.25;
     Channel empty = makeChannel(QStringLiteral("Spare"));
     song.patches.front().channels = {piano, empty};
     song.patches.push_back(makePatch(QStringLiteral("Chorus")));
@@ -75,6 +76,27 @@ private slots:
     {
         const QJsonObject root = richJson();
         QCOMPARE(root.value(u"formatVersion").toInt(), kSetlistFormatVersion);
+    }
+
+    void filesWithoutPanLoadCentred()
+    {
+        QJsonObject root = richJson();
+        QJsonArray songs = root.value(u"songs").toArray();
+        QJsonObject song = songs.at(0).toObject();
+        QJsonArray patches = song.value(u"patches").toArray();
+        QJsonObject patch = patches.at(0).toObject();
+        QJsonArray channels = patch.value(u"channels").toArray();
+        QJsonObject channel = channels.at(0).toObject();
+        channel.remove(u"pan");
+        channels.replace(0, channel);
+        patch.insert(u"channels", channels);
+        patches.replace(0, patch);
+        song.insert(u"patches", patches);
+        songs.replace(0, song);
+        root.insert(u"songs", songs);
+        const auto parsed = fromJson(QJsonDocument(root).toJson());
+        QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
+        QCOMPARE(parsed->songs[0].patches[0].channels[0].pan, 0.0);
     }
 
     void rejectsNonJson()
@@ -156,6 +178,10 @@ private slots:
         const auto outOfRange = fromJson(withFirstChannelField(u"keyLow"_s, 200));
         QVERIFY(!outOfRange);
         QVERIFY(outOfRange.error().code == ErrorCode::OutOfRange);
+
+        const auto badPan = fromJson(withFirstChannelField(u"pan"_s, 3));
+        QVERIFY(!badPan);
+        QVERIFY(badPan.error().code == ErrorCode::OutOfRange);
 
         const auto hugeVolume = fromJson(withFirstChannelField(u"volumeDb"_s, 1e308));
         QVERIFY(!hugeVolume);

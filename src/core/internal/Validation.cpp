@@ -75,6 +75,9 @@ Result<void> validateChannel(const Channel& channel, const QString& path)
                                                .arg(limits::kMinVolumeDb)
                                                .arg(limits::kMaxVolumeDb));
     }
+    if (!std::isfinite(channel.pan) || channel.pan < limits::kMinPan || channel.pan > limits::kMaxPan) {
+        return fail(ErrorCode::OutOfRange, u"%1.pan must be between -1 and 1"_s.arg(path));
+    }
     if (auto r = checkRange(channel.keyLow, limits::kMinMidiNote, limits::kMaxMidiNote, path + ".keyLow"_L1); !r) return r;
     if (auto r = checkRange(channel.keyHigh, limits::kMinMidiNote, limits::kMaxMidiNote, path + ".keyHigh"_L1); !r) return r;
     if (channel.keyLow > channel.keyHigh) {

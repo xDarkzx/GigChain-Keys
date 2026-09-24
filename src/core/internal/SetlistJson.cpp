@@ -55,6 +55,14 @@ public:
         return failed() ? 0.0 : number;
     }
 
+    // A number that may be absent (fields added after format 1 shipped).
+    double optionalNumber(const QJsonObject& obj, QLatin1StringView key, const QString& path, double min, double max,
+                          double fallback)
+    {
+        if (failed() || !obj.contains(key)) return fallback;
+        return number(obj, key, path, min, max);
+    }
+
     bool boolean(const QJsonObject& obj, QLatin1StringView key, const QString& path)
     {
         const auto value = get(obj, key, path);
@@ -168,6 +176,7 @@ Channel readChannel(JsonReader& r, const QJsonObject& obj, const QString& path)
         channel.effects.push_back(readSlot(r, r.object(effects.at(i), effectPath), effectPath));
     }
     channel.volumeDb = r.number(obj, "volumeDb"_L1, path, limits::kMinVolumeDb, limits::kMaxVolumeDb);
+    channel.pan = r.optionalNumber(obj, "pan"_L1, path, limits::kMinPan, limits::kMaxPan, 0.0);
     channel.mute = r.boolean(obj, "mute"_L1, path);
     channel.solo = r.boolean(obj, "solo"_L1, path);
     channel.keyLow = r.integer(obj, "keyLow"_L1, path, limits::kMinMidiNote, limits::kMaxMidiNote);
@@ -224,6 +233,7 @@ QJsonObject writeChannel(const Channel& channel)
         {u"instrument"_s, channel.instrument ? QJsonValue(writeSlot(*channel.instrument)) : QJsonValue(QJsonValue::Null)},
         {u"effects"_s, effects},
         {u"volumeDb"_s, channel.volumeDb},
+        {u"pan"_s, channel.pan},
         {u"mute"_s, channel.mute},
         {u"solo"_s, channel.solo},
         {u"keyLow"_s, channel.keyLow},

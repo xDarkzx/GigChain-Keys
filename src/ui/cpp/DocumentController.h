@@ -94,6 +94,7 @@ public:
     Q_INVOKABLE bool setChannelTranspose(int channel, int semitones);
     Q_INVOKABLE bool setChannelMidiChannel(int channel, int midiChannel);
     Q_INVOKABLE bool setChannelVolume(int channel, double volumeDb);
+    Q_INVOKABLE bool setChannelPan(int channel, double pan);
     Q_INVOKABLE bool setChannelMute(int channel, bool mute);
     Q_INVOKABLE bool setChannelSolo(int channel, bool solo);
 
