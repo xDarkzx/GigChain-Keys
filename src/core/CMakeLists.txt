@@ -16,6 +16,8 @@ add_library(gigchain_core STATIC
     internal/SetlistFile.cpp
     internal/Navigation.cpp
     internal/Editing.cpp
+    include/gigchain/core/Chart.h
+    internal/Chart.cpp
     internal/FileLog.cpp
 )
 add_library(gigchain::core ALIAS gigchain_core)
