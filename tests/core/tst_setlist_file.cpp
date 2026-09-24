@@ -1,11 +1,11 @@
-#include "openstage/core/Limits.h"
-#include "openstage/core/SetlistFile.h"
+#include "gigchain/core/Limits.h"
+#include "gigchain/core/SetlistFile.h"
 
 #include <QFile>
 #include <QTemporaryDir>
 #include <QtTest>
 
-using namespace openstage::core;
+using namespace gigchain::core;
 using namespace Qt::StringLiterals;
 
 namespace {

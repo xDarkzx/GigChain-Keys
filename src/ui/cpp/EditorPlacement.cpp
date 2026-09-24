@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 EditorPlacement placeEditor(const QRectF& area, const QSizeF& editorSize, const QPointF& scroll)
 {
@@ -38,4 +38,4 @@ EditorPlacement placeEditor(const QRectF& area, const QSizeF& editorSize, const 
     return p;
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

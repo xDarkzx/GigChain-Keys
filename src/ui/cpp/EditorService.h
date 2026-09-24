@@ -1,7 +1,7 @@
 #pragma once
 
-#include "openstage/core/Error.h"
-#include "openstage/engine/IPluginEditor.h"
+#include "gigchain/core/Error.h"
+#include "gigchain/engine/IPluginEditor.h"
 
 #include <QObject>
 #include <QSize>
@@ -11,11 +11,11 @@
 
 #include <memory>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 class IEngine;
 }
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 class DocumentController;
 
@@ -53,4 +53,4 @@ private:
     QTimer m_coalesce; // merges the several signals one edit emits
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

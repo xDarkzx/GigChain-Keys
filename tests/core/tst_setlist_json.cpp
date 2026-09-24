@@ -1,13 +1,13 @@
 #include "LeakCheck.h"
-#include "openstage/core/Limits.h"
-#include "openstage/core/SetlistJson.h"
+#include "gigchain/core/Limits.h"
+#include "gigchain/core/SetlistJson.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QtTest>
 
-using namespace openstage::core;
+using namespace gigchain::core;
 using namespace Qt::StringLiterals;
 
 namespace {
@@ -209,7 +209,7 @@ private slots:
     {
         const QByteArray good = toJson(richSetlist());
         const QByteArray bad = withFirstChannelField(u"keyLow"_s, 500);
-        QCOMPARE(openstage::test::leakedBlocks([&] {
+        QCOMPARE(gigchain::test::leakedBlocks([&] {
                      const auto a = fromJson(good);
                      const auto b = fromJson(bad);
                      Q_UNUSED(a);

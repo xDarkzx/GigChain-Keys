@@ -2,7 +2,7 @@
 
 #include "DocumentController.h"
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 SelectedChannel::SelectedChannel(const DocumentController& document, QObject* parent)
     : QObject(parent), m_document(document)
@@ -77,4 +77,4 @@ double SelectedChannel::volumeDb() const
     return c != nullptr ? c->volumeDb : 0.0;
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

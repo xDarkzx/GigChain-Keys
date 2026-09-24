@@ -1,10 +1,10 @@
 #pragma once
 
-#include "openstage/core/Ids.h"
-#include "openstage/core/Model.h"
-#include "openstage/engine/EngineTypes.h"
-#include "openstage/engine/IPluginEditor.h"
-#include "openstage/engine/MidiSetup.h"
+#include "gigchain/core/Ids.h"
+#include "gigchain/core/Model.h"
+#include "gigchain/engine/EngineTypes.h"
+#include "gigchain/engine/IPluginEditor.h"
+#include "gigchain/engine/MidiSetup.h"
 
 #include <QSize>
 #include <QStringList>
@@ -13,7 +13,7 @@
 
 #include <vector>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // Everything the UI may ask of the audio engine. Speaks only in core types
 // and plain values: no SDK types ever appear here. The UI thread calls all of
@@ -97,4 +97,4 @@ protected:
     IEngine() = default;
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

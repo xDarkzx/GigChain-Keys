@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 class DocumentController;
 
@@ -49,4 +49,4 @@ private:
     std::vector<Row> m_rows;
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

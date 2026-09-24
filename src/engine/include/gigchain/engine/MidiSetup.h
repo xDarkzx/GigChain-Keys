@@ -1,6 +1,6 @@
 #pragma once
 
-#include "openstage/engine/EngineTypes.h"
+#include "gigchain/engine/EngineTypes.h"
 
 #include <QString>
 #include <QStringList>
@@ -9,7 +9,7 @@
 #include <map>
 #include <vector>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // The MIDI inputs the user chose in Settings (saved between runs).
 struct MidiSetup
@@ -37,4 +37,4 @@ struct MidiSetup
     return channel <= 0 || (status & 0x0F) + 1 == channel;
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

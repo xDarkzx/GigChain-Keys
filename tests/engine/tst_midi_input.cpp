@@ -5,7 +5,7 @@
 #include <array>
 #include <vector>
 
-using namespace openstage::engine;
+using namespace gigchain::engine;
 
 class TestMidiInput : public QObject
 {

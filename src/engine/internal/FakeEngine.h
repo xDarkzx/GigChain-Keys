@@ -1,11 +1,11 @@
 #pragma once
 
-#include "openstage/engine/FakeEngineFactory.h"
-#include "openstage/engine/IEngine.h"
+#include "gigchain/engine/FakeEngineFactory.h"
+#include "gigchain/engine/IEngine.h"
 
 #include <vector>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 class FakeEngine final : public IEngine
 {
@@ -58,4 +58,4 @@ private:
     MidiSetup m_midiSetup;
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

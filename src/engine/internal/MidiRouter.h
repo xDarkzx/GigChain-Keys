@@ -4,7 +4,7 @@
 
 #include <optional>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // How one channel listens to the keyboard (mirrors core::Channel).
 struct RouteSettings
@@ -21,4 +21,4 @@ struct RouteSettings
 // system messages are dropped. Real-time safe.
 std::optional<MidiEvent> routeEvent(const MidiEvent& event, const RouteSettings& route) noexcept;
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

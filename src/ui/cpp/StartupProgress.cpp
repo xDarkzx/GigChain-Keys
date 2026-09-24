@@ -2,7 +2,7 @@
 
 #include <QCoreApplication>
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 void StartupProgress::report(const QString& step, const QString& detail, double progress)
 {
@@ -15,4 +15,4 @@ void StartupProgress::report(const QString& step, const QString& detail, double 
     QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

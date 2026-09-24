@@ -1,8 +1,8 @@
-#include "openstage/core/Error.h"
+#include "gigchain/core/Error.h"
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::core {
+namespace gigchain::core {
 
 QString toString(ErrorCode code)
 {
@@ -21,4 +21,4 @@ QString toString(ErrorCode code)
     return u"Unknown error"_s;
 }
 
-} // namespace openstage::core
+} // namespace gigchain::core

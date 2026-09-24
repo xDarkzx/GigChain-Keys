@@ -1,13 +1,13 @@
 #pragma once
 
-#include "openstage/engine/EngineTypes.h"
+#include "gigchain/engine/EngineTypes.h"
 
 #include <QHash>
 #include <QString>
 
 #include <functional>
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 // Paths of a plugin's official images (empty when it has none).
 struct PluginArtwork
@@ -65,4 +65,4 @@ private:
     QHash<QString, NiProduct> m_niProducts; // by lower-case BinName
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

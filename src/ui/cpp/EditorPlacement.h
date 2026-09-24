@@ -4,7 +4,7 @@
 #include <QRectF>
 #include <QSizeF>
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 // Width of the scroll bars shown beside a plugin editor that is bigger than
 // the space it has (logical pixels).
@@ -25,4 +25,4 @@ struct EditorPlacement
 // offset by `scroll` (clamped to the editor's edges). Pure: no windows.
 EditorPlacement placeEditor(const QRectF& area, const QSizeF& editorSize, const QPointF& scroll);
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

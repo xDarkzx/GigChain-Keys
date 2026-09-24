@@ -1,8 +1,8 @@
 ﻿set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
-qt_add_library(openstage_ui STATIC)
-qt_add_qml_module(openstage_ui
-    URI OpenStage.Ui
+qt_add_library(gigchain_ui STATIC)
+qt_add_qml_module(gigchain_ui
+    URI GigChain.Ui
     VERSION 1.0
     SOURCES
         cpp/DocumentController.h cpp/DocumentController.cpp
@@ -64,19 +64,19 @@ qt_add_qml_module(openstage_ui
         icons/wave-square.svg
         icons/x.svg
 )
-target_include_directories(openstage_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
-target_link_libraries(openstage_ui PUBLIC
-    openstage::core openstage::engine Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2)
-target_link_libraries(openstage_ui PRIVATE psapi) # GetProcessMemoryInfo (RAM readout)
-openstage_target_defaults(openstage_ui)
+target_include_directories(gigchain_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
+target_link_libraries(gigchain_ui PUBLIC
+    gigchain::core gigchain::engine Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2)
+target_link_libraries(gigchain_ui PRIVATE psapi) # GetProcessMemoryInfo (RAM readout)
+gigchain_target_defaults(gigchain_ui)
 
 # Qt's generated QML-to-C++ files (qmlcachegen) trip MSVC's code-generation
 # warning C4702 "unreachable code" inside Qt headers; /external:W0 cannot
 # silence code-generation warnings. Only those generated files get /wd4702;
 # every hand-written file keeps /W4 /WX in full.
-get_target_property(_openstage_ui_sources openstage_ui SOURCES)
+get_target_property(_openstage_ui_sources gigchain_ui SOURCES)
 foreach(_source IN LISTS _openstage_ui_sources)
     if(_source MATCHES "/[.]rcc/qmlcache/")
-        set_source_files_properties(${_source} TARGET_DIRECTORY openstage_ui PROPERTIES COMPILE_OPTIONS "/wd4702")
+        set_source_files_properties(${_source} TARGET_DIRECTORY gigchain_ui PROPERTIES COMPILE_OPTIONS "/wd4702")
     endif()
 endforeach()

@@ -4,7 +4,7 @@
 #include "EngineLog.h"
 #include "PluginCatalog.h"
 
-#include "openstage/core/Limits.h"
+#include "gigchain/core/Limits.h"
 
 #include <QElapsedTimer>
 
@@ -17,7 +17,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 core::Result<std::unique_ptr<IEngine>> createRealEngine(const RealEngineOptions& options)
 {
@@ -469,4 +469,4 @@ void RealEngine::render(AudioBlock out) noexcept
     m_cpuLoad.store(previous + 0.1F * (std::min(load, 1.0F) - previous), std::memory_order_relaxed);
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-#include "openstage/engine/MidiSetup.h"
+#include "gigchain/engine/MidiSetup.h"
 
 #include <rtmidi/RtMidi.h>
 
@@ -12,7 +12,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 std::optional<MidiEvent> parseMidi(std::span<const unsigned char> bytes) noexcept
 {
@@ -141,4 +141,4 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
     if (!port->queue.push(*event)) port->owner->m_dropped.fetch_add(1, std::memory_order_relaxed);
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

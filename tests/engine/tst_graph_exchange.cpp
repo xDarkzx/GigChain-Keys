@@ -6,7 +6,7 @@
 #include <atomic>
 #include <thread>
 
-using namespace openstage::engine;
+using namespace gigchain::engine;
 
 namespace {
 

@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 enum class PluginKind
 {
@@ -71,4 +71,4 @@ struct LevelReading
     float rms = 0.0F;
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

@@ -2,7 +2,7 @@
 
 #include "OfficialArtwork.h"
 
-#include "openstage/engine/EngineTypes.h"
+#include "gigchain/engine/EngineTypes.h"
 
 #include <QAbstractListModel>
 #include <QVariantList>
@@ -13,11 +13,11 @@
 
 class QSettings;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 class IEngine;
 }
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 // The plugin browser: instruments first, then effects, each sorted by name,
 // filtered by a search text that matches name or vendor.
@@ -111,4 +111,4 @@ private:
     bool m_instrumentsOnly = false;
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

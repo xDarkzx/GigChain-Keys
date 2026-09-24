@@ -1,6 +1,6 @@
 #include "MidiRouter.h"
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 std::optional<MidiEvent> routeEvent(const MidiEvent& event, const RouteSettings& route) noexcept
 {
@@ -22,4 +22,4 @@ std::optional<MidiEvent> routeEvent(const MidiEvent& event, const RouteSettings&
     return routed;
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

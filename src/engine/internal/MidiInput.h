@@ -3,7 +3,7 @@
 #include "MidiEvent.h"
 #include "MidiQueue.h"
 
-#include "openstage/engine/EngineTypes.h"
+#include "gigchain/engine/EngineTypes.h"
 
 #include <QString>
 #include <QStringList>
@@ -17,7 +17,7 @@
 
 class RtMidiIn;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // A channel voice message from raw MIDI bytes, or nullopt for anything else
 // (system messages, truncated or malformed input). Real-time safe.
@@ -71,4 +71,4 @@ private:
     std::atomic<uint64_t> m_dropped{0};
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

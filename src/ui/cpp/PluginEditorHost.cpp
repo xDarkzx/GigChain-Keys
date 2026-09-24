@@ -15,7 +15,7 @@
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 // Windows tells a window when the user finishes dragging its edge.
 class PluginEditorHost::DragEndFilter final : public QAbstractNativeEventFilter
@@ -251,4 +251,4 @@ void PluginEditorHost::updateVisibility()
     }
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

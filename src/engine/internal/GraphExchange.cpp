@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 void GraphExchange::publish(std::shared_ptr<RenderGraph> graph)
 {
@@ -39,4 +39,4 @@ void GraphExchange::release() noexcept
     m_hazard.store(nullptr, std::memory_order_seq_cst);
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

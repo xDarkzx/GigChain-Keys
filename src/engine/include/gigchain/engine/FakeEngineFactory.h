@@ -1,11 +1,11 @@
 #pragma once
 
-#include "openstage/engine/IEngine.h"
+#include "gigchain/engine/IEngine.h"
 
 #include <functional>
 #include <memory>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // Monotonic time in seconds. Injected so tests can control the simulation.
 using Clock = std::function<double()>;
@@ -15,4 +15,4 @@ using Clock = std::function<double()>;
 std::unique_ptr<IEngine> createFakeEngine();
 std::unique_ptr<IEngine> createFakeEngine(Clock clock);
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

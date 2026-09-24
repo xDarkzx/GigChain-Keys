@@ -37,7 +37,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "OPENSTAGE_ASAN": "ON",
+        "GIGCHAIN_ASAN": "ON",
         "VCPKG_TARGET_TRIPLET": "x64-windows-asan",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets"
       }
@@ -47,7 +47,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "OPENSTAGE_BUILD_SPIKES": "ON"
+        "GIGCHAIN_BUILD_SPIKES": "ON"
       }
     }
   ],

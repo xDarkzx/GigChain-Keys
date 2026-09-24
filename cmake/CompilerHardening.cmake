@@ -3,13 +3,13 @@ include(Sanitizers)
 # Warnings-as-errors and exploit mitigations for OpenStage's own code.
 # Third-party headers come in through imported targets, which CMake treats as
 # SYSTEM includes, so /WX never fires on Qt or tl-expected.
-function(openstage_harden target)
+function(gigchain_harden target)
     if(MSVC)
         target_compile_options(${target} PRIVATE
             /W4 /WX /permissive- /sdl /utf-8 /Zc:__cplusplus /external:W0)
         target_link_options(${target} PRIVATE
             /DYNAMICBASE /NXCOMPAT /HIGHENTROPYVA /INCREMENTAL:NO)
-        if(NOT OPENSTAGE_ASAN)
+        if(NOT GIGCHAIN_ASAN)
             target_compile_options(${target} PRIVATE /guard:cf)
             target_link_options(${target} PRIVATE /guard:cf)
         endif()
@@ -17,7 +17,7 @@ function(openstage_harden target)
 endfunction()
 
 # Call on every OpenStage target.
-function(openstage_target_defaults target)
-    openstage_harden(${target})
-    openstage_sanitize(${target})
+function(gigchain_target_defaults target)
+    gigchain_harden(${target})
+    gigchain_sanitize(${target})
 endfunction()

@@ -6,7 +6,7 @@
 
 #include <utility>
 
-namespace openstage::core {
+namespace gigchain::core {
 
 enum class ErrorCode
 {
@@ -42,4 +42,4 @@ inline tl::unexpected<Error> fail(ErrorCode code, QString message)
 
 QString toString(ErrorCode code);
 
-} // namespace openstage::core
+} // namespace gigchain::core

@@ -2,8 +2,8 @@
 // installed plugins. Master volume is set to silence first, so nothing is
 // heard; the channel meters are measured before the master fader.
 #include "PluginCatalog.h"
-#include "openstage/core/Limits.h"
-#include "openstage/engine/RealEngineFactory.h"
+#include "gigchain/core/Limits.h"
+#include "gigchain/engine/RealEngineFactory.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -13,8 +13,8 @@
 #include <chrono>
 #include <thread>
 
-using namespace openstage;
-using namespace openstage::engine;
+using namespace gigchain;
+using namespace gigchain::engine;
 using namespace Qt::StringLiterals;
 
 namespace {

@@ -2,11 +2,11 @@
 
 #include "MidiEvent.h"
 
-#include "openstage/core/Error.h"
+#include "gigchain/core/Error.h"
 
 #include <span>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // A stereo block of audio. `frames` never exceeds the maxBlock a node was
 // prepared with.
@@ -40,4 +40,4 @@ protected:
     INode() = default;
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

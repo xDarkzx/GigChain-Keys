@@ -3,8 +3,8 @@
 #include "INode.h"
 #include "MidiRouter.h"
 
-#include "openstage/core/Ids.h"
-#include "openstage/engine/EngineTypes.h"
+#include "gigchain/core/Ids.h"
+#include "gigchain/engine/EngineTypes.h"
 
 #include <atomic>
 #include <cstdint>
@@ -12,7 +12,7 @@
 #include <span>
 #include <vector>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // Everything needed to build one channel strip. Nodes must already be
 // prepared for the graph's sample rate and block size.
@@ -99,4 +99,4 @@ private:
 // Linear gain for a volume in dB; the floor (-96 dB) is silence.
 float dbToGain(double volumeDb);
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

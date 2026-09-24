@@ -1,14 +1,14 @@
 #pragma once
 
-#include "openstage/core/Error.h"
-#include "openstage/core/Model.h"
-#include "openstage/core/Navigation.h"
+#include "gigchain/core/Error.h"
+#include "gigchain/core/Model.h"
+#include "gigchain/core/Navigation.h"
 
 #include <functional>
 
 // Setlist edits. Each function validates its input and leaves the setlist
 // unchanged when it returns an error. Names are trimmed.
-namespace openstage::core {
+namespace gigchain::core {
 
 Result<int> addSong(Setlist& setlist, const QString& name);
 Result<int> addPatch(Setlist& setlist, int songIndex, const QString& name);
@@ -38,4 +38,4 @@ Result<void> removeEffect(Setlist& setlist, Cursor cursor, int channelIndex, int
 Result<void> updateChannel(Setlist& setlist, Cursor cursor, int channelIndex,
                            const std::function<void(Channel&)>& edit);
 
-} // namespace openstage::core
+} // namespace gigchain::core

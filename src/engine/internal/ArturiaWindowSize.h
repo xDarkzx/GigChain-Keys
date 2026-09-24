@@ -1,13 +1,13 @@
 #pragma once
 
-#include "openstage/core/Error.h"
+#include "gigchain/core/Error.h"
 
 #include <QSizeF>
 #include <QString>
 
 #include <optional>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // Arturia plugins refuse VST3 host zoom and resize. Their window size is
 // their own "GUI Size" setting (the "Resize Window" menu), kept per plugin in
@@ -33,4 +33,4 @@ namespace openstage::engine {
 // Changes only the GUI Size value; the file is replaced atomically.
 core::Result<void> writeArturiaGuiSize(const QString& prefsFile, double guiSize);
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

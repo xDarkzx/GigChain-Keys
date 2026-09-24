@@ -2,7 +2,7 @@
 #include "LeakCheck.h"
 #include "SpyEngine.h"
 
-#include "openstage/core/SetlistFile.h"
+#include "gigchain/core/SetlistFile.h"
 
 #include <QFile>
 #include <QSettings>
@@ -12,8 +12,8 @@
 
 #include <memory>
 
-using namespace openstage;
-using namespace openstage::ui;
+using namespace gigchain;
+using namespace gigchain::ui;
 using namespace Qt::StringLiterals;
 
 class TestDocumentController : public QObject

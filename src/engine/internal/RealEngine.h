@@ -6,8 +6,8 @@
 #include "MidiQueue.h"
 #include "Vst3Node.h"
 
-#include "openstage/engine/IEngine.h"
-#include "openstage/engine/RealEngineFactory.h"
+#include "gigchain/engine/IEngine.h"
+#include "gigchain/engine/RealEngineFactory.h"
 
 #include <array>
 #include <chrono>
@@ -16,7 +16,7 @@
 #include <memory>
 #include <vector>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // The engine that makes sound. Main thread: applyPatch builds a RenderGraph
 // (plugins cached per channel so returning to a patch is instant) and
@@ -109,4 +109,4 @@ private:
     std::atomic<uint64_t> m_droppedInjected{0};
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

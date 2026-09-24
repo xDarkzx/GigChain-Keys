@@ -14,11 +14,11 @@
 
 class QSettings;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 class IEngine;
 }
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 // Everything the QML UI binds to, created in dependency order and destroyed
 // in reverse. The engine and settings must outlive the session; the QML
@@ -49,4 +49,4 @@ private:
     SettingsController m_settingsController;
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

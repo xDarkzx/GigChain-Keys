@@ -10,7 +10,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 namespace {
 
 RtAudio::Api toRtApi(AudioApi api)
@@ -264,4 +264,4 @@ void AudioDevice::onError(int type, const std::string& text)
     m_errors.push_back(QString::fromStdString(text));
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

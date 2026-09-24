@@ -3,7 +3,7 @@
 #include "EditorPlacement.h"
 #include "EditorService.h"
 
-#include "openstage/engine/IPluginEditor.h"
+#include "gigchain/engine/IPluginEditor.h"
 
 #include <QPointer>
 #include <QQuickItem>
@@ -12,7 +12,7 @@
 
 #include <memory>
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 // Shows the selected channel's plugin editor inside this item's area. The
 // plugin draws into a native child window placed exactly over the item
@@ -108,4 +108,4 @@ private:
     bool m_suspended = false;
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

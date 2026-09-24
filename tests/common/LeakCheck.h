@@ -4,10 +4,10 @@
 
 #if defined(_MSC_VER) && defined(_DEBUG) && !defined(__SANITIZE_ADDRESS__)
 #include <crtdbg.h>
-#define OPENSTAGE_LEAK_CHECK_AVAILABLE 1
+#define GIGCHAIN_LEAK_CHECK_AVAILABLE 1
 #endif
 
-namespace openstage::test {
+namespace gigchain::test {
 
 // Runs `op` once to warm up one-time caches, then `iterations` more times,
 // and returns how many more CRT heap blocks are alive afterwards than before
@@ -15,7 +15,7 @@ namespace openstage::test {
 // Debug builds (CRT debug heap); always 0 elsewhere.
 inline long long leakedBlocks(const std::function<void()>& op, int iterations = 50)
 {
-#ifdef OPENSTAGE_LEAK_CHECK_AVAILABLE
+#ifdef GIGCHAIN_LEAK_CHECK_AVAILABLE
     op();
     _CrtMemState before{};
     _CrtMemState after{};
@@ -36,11 +36,11 @@ inline long long leakedBlocks(const std::function<void()>& op, int iterations = 
 
 inline constexpr bool leakCheckAvailable()
 {
-#ifdef OPENSTAGE_LEAK_CHECK_AVAILABLE
+#ifdef GIGCHAIN_LEAK_CHECK_AVAILABLE
     return true;
 #else
     return false;
 #endif
 }
 
-} // namespace openstage::test
+} // namespace gigchain::test

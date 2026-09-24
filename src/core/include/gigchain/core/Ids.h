@@ -5,7 +5,7 @@
 
 #include <utility>
 
-namespace openstage::core {
+namespace gigchain::core {
 
 // A strongly typed, persisted identifier. Different tags cannot be mixed up
 // (a PatchId is not a ChannelId). Ids are what crosses module boundaries,
@@ -36,4 +36,4 @@ using SongId = Id<SongTag>;
 using PatchId = Id<PatchTag>;
 using ChannelId = Id<ChannelTag>;
 
-} // namespace openstage::core
+} // namespace gigchain::core

@@ -2,7 +2,7 @@
 #include "Session.h"
 #include "StartupProgress.h"
 
-#include "openstage/engine/FakeEngineFactory.h"
+#include "gigchain/engine/FakeEngineFactory.h"
 
 #include <QQmlApplicationEngine>
 #include <QQuickItem>
@@ -15,9 +15,9 @@
 
 #include <memory>
 
-Q_IMPORT_QML_PLUGIN(OpenStage_UiPlugin)
+Q_IMPORT_QML_PLUGIN(GigChain_UiPlugin)
 
-using namespace openstage;
+using namespace gigchain;
 using namespace Qt::StringLiterals;
 
 class TestQmlSmoke : public QObject
@@ -54,7 +54,7 @@ private slots:
             for (const QQmlError& w : warnings) m_warnings << w.toString();
         });
         m_qml->setInitialProperties(m_session->initialProperties());
-        m_qml->loadFromModule(u"OpenStage.Ui"_s, u"Main"_s);
+        m_qml->loadFromModule(u"GigChain.Ui"_s, u"Main"_s);
     }
 
     void cleanup()
@@ -125,7 +125,7 @@ private slots:
             for (const QQmlError& w : list) warnings << w.toString();
         });
         splash.setInitialProperties({{u"startup"_s, QVariant::fromValue(&startup)}});
-        splash.loadFromModule(u"OpenStage.Ui"_s, u"Splash"_s);
+        splash.loadFromModule(u"GigChain.Ui"_s, u"Splash"_s);
         QCOMPARE(splash.rootObjects().size(), 1);
         startup.report(u"Scanning plugins (3 of 63)"_s, u"Piano V2"_s, 2.0 / 63.0);
         auto* step = splash.rootObjects().value(0)->findChild<QObject*>(u"splashStep"_s);

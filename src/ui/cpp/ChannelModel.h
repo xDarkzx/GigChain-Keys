@@ -2,8 +2,8 @@
 
 #include "OfficialArtwork.h"
 
-#include "openstage/core/Model.h"
-#include "openstage/engine/EngineTypes.h"
+#include "gigchain/core/Model.h"
+#include "gigchain/engine/EngineTypes.h"
 
 #include <QAbstractListModel>
 #include <QtQml/qqmlregistration.h>
@@ -12,11 +12,11 @@
 
 #include <vector>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 class IEngine;
 }
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 class DocumentController;
 
@@ -75,4 +75,4 @@ private:
     QHash<QString, QString> m_officialIcons;      // by plugin id: file URL of the maker's icon
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

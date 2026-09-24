@@ -111,7 +111,7 @@ ApplicationWindow {
         id: saveDialog
         title: qsTr("Save setlist")
         fileMode: FileDialog.SaveFile
-        defaultSuffix: "openstage.json"
+        defaultSuffix: "gigchain.json"
         nameFilters: [qsTr("OpenStage setlists (*.openstage.json)")]
         onAccepted: {
             if (root.doc.saveAsUrl(selectedFile) && root.pendingAction !== "")

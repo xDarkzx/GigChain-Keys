@@ -1,6 +1,6 @@
 #pragma once
 
-#include "openstage/engine/EngineTypes.h"
+#include "gigchain/engine/EngineTypes.h"
 
 #include <QString>
 
@@ -8,7 +8,7 @@
 
 #include <vector>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // Finds VST3 plugins under a folder (the standard one is
 // C:/Program Files/Common Files/VST3) and reads each bundle's class info.
@@ -40,4 +40,4 @@ public:
                                         ScanStats* stats = nullptr, const Progress& progress = {});
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

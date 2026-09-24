@@ -1,8 +1,8 @@
-#include "openstage/core/Navigation.h"
+#include "gigchain/core/Navigation.h"
 
 #include <QtTest>
 
-using namespace openstage::core;
+using namespace gigchain::core;
 using namespace Qt::StringLiterals;
 
 namespace {

@@ -6,7 +6,7 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
-using namespace openstage::engine;
+using namespace gigchain::engine;
 using namespace Qt::StringLiterals;
 
 namespace {

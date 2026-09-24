@@ -11,7 +11,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 namespace {
 
 // <param name="GUI Size" value="0.300000"/>
@@ -96,4 +96,4 @@ core::Result<void> writeArturiaGuiSize(const QString& prefsFile, double guiSize)
     return {};
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

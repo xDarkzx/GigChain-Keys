@@ -1,8 +1,8 @@
-#include "openstage/core/Navigation.h"
+#include "gigchain/core/Navigation.h"
 
 #include <algorithm>
 
-namespace openstage::core {
+namespace gigchain::core {
 namespace {
 
 int songCount(const Setlist& setlist)
@@ -110,4 +110,4 @@ Patch* patchAt(Setlist& setlist, Cursor cursor)
     return &setlist.songs[static_cast<std::size_t>(cursor.song)].patches[static_cast<std::size_t>(cursor.patch)];
 }
 
-} // namespace openstage::core
+} // namespace gigchain::core

@@ -5,11 +5,11 @@
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 class IEngine;
 }
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 class DocumentController;
 
@@ -65,4 +65,4 @@ private:
     QString m_statusText;
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

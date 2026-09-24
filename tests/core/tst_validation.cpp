@@ -1,6 +1,6 @@
-#include "openstage/core/Limits.h"
-#include "openstage/core/Model.h"
-#include "openstage/core/Validation.h"
+#include "gigchain/core/Limits.h"
+#include "gigchain/core/Model.h"
+#include "gigchain/core/Validation.h"
 
 #include <QtTest>
 
@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-using namespace openstage::core;
+using namespace gigchain::core;
 
 namespace {
 

@@ -29,7 +29,7 @@
 using namespace Qt::StringLiterals;
 using namespace Steinberg;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 namespace {
 
 // One host context for the whole process, installed before the first plugin
@@ -595,4 +595,4 @@ core::Result<std::unique_ptr<IPluginEditor>> Vst3Node::createEditor(const std::s
     return std::unique_ptr<IPluginEditor>(std::make_unique<Vst3Editor>(node, std::move(view), impl.name));
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

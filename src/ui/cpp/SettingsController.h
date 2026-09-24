@@ -1,7 +1,7 @@
 #pragma once
 
-#include "openstage/engine/EngineTypes.h"
-#include "openstage/engine/RealEngineFactory.h"
+#include "gigchain/engine/EngineTypes.h"
+#include "gigchain/engine/RealEngineFactory.h"
 
 #include <QObject>
 #include <QString>
@@ -13,11 +13,11 @@
 
 class QSettings;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 class IEngine;
 }
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 class DocumentController;
 
@@ -102,4 +102,4 @@ private:
     QString m_error;
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

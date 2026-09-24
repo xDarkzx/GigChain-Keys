@@ -1,14 +1,14 @@
-#include "openstage/core/FileLog.h"
+#include "gigchain/core/FileLog.h"
 
 #include <QFile>
 #include <QLoggingCategory>
 #include <QTemporaryDir>
 #include <QtTest>
 
-using namespace openstage::core;
+using namespace gigchain::core;
 using namespace Qt::StringLiterals;
 
-Q_LOGGING_CATEGORY(lcTest, "openstage.test")
+Q_LOGGING_CATEGORY(lcTest, "gigchain.test")
 
 namespace {
 
@@ -36,7 +36,7 @@ private slots:
         FileLog::uninstall();
 
         const QString text = readAll(path);
-        QVERIFY2(text.contains(u"warning"_s) && text.contains(u"openstage.test"_s) &&
+        QVERIFY2(text.contains(u"warning"_s) && text.contains(u"gigchain.test"_s) &&
                      text.contains(u"plugin exploded"_s),
                  qPrintable(text));
         QVERIFY(text.contains(u"loaded fine"_s));
@@ -45,7 +45,7 @@ private slots:
     void keepsEarlierSessions()
     {
         QTemporaryDir dir;
-        const QString path = dir.filePath(u"openstage.log"_s);
+        const QString path = dir.filePath(u"gigchain.log"_s);
         QVERIFY(FileLog::install(path).has_value());
         qCWarning(lcTest) << "first session";
         FileLog::uninstall();
@@ -61,7 +61,7 @@ private slots:
     void rotatesWhenTooLarge()
     {
         QTemporaryDir dir;
-        const QString path = dir.filePath(u"openstage.log"_s);
+        const QString path = dir.filePath(u"gigchain.log"_s);
         {
             QFile big(path);
             QVERIFY(big.open(QIODevice::WriteOnly));

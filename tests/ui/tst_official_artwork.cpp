@@ -7,8 +7,8 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
-using namespace openstage;
-using namespace openstage::ui;
+using namespace gigchain;
+using namespace gigchain::ui;
 using namespace Qt::StringLiterals;
 
 namespace {

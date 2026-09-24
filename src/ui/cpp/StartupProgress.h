@@ -4,7 +4,7 @@
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 // What the splash screen shows while OpenStage starts: the current step
 // ("Scanning plugins"), a detail ("Piano V2") and progress 0-1 (or -1 when
@@ -38,4 +38,4 @@ private:
     double m_progress = -1.0;
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

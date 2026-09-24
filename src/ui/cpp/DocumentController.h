@@ -1,8 +1,8 @@
 #pragma once
 
-#include "openstage/core/Error.h"
-#include "openstage/core/Model.h"
-#include "openstage/core/Navigation.h"
+#include "gigchain/core/Error.h"
+#include "gigchain/core/Model.h"
+#include "gigchain/core/Navigation.h"
 
 #include <QObject>
 #include <QString>
@@ -13,11 +13,11 @@
 
 class QSettings;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 class IEngine;
 }
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 // Owns the open setlist, the current position in it and the file state. Every
 // edit from the UI goes through here, and the engine is kept in sync with the
@@ -152,4 +152,4 @@ private:
     QString m_lastError;
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

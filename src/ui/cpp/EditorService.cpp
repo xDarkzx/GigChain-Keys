@@ -2,9 +2,9 @@
 
 #include "DocumentController.h"
 
-#include "openstage/engine/IEngine.h"
+#include "gigchain/engine/IEngine.h"
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 EditorService::EditorService(engine::IEngine& engine, DocumentController& document, QObject* parent)
     : QObject(parent), m_engine(engine), m_document(document)
@@ -60,4 +60,4 @@ QString EditorService::emptyReason() const
     return tr("%1 has no editor to show").arg(channel.instrument->displayName);
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

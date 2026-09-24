@@ -1,10 +1,10 @@
 #pragma once
 
-#include "openstage/core/Error.h"
+#include "gigchain/core/Error.h"
 
 #include <QString>
 
-namespace openstage::core {
+namespace gigchain::core {
 
 // Records every Qt log message (qDebug/qInfo/qWarning/qCritical, all
 // categories) to a file, and still passes each one on to the previous handler
@@ -26,4 +26,4 @@ public:
     static void uninstall();
 };
 
-} // namespace openstage::core
+} // namespace gigchain::core

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "openstage/core/Error.h"
+#include "gigchain/core/Error.h"
 
 #include <QSize>
 #include <QString>
@@ -8,7 +8,7 @@
 
 #include <functional>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // A plugin's own editor window, embedded in a native window the UI provides.
 // Main thread only, and that thread must have OLE initialised (every Qt GUI
@@ -48,4 +48,4 @@ protected:
     IPluginEditor() = default;
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine
