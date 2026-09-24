@@ -77,6 +77,12 @@ ToolBar {
             text: qsTr("CPU %1%").arg(Math.round(bar.engineStatus.cpuLoad * 100))
             color: bar.engineStatus.cpuLoad > 0.8 ? Theme.danger : Theme.text
         }
+        Label {
+            // plugin RAM matters live: sample libraries can take gigabytes
+            text: bar.engineStatus.memoryMb >= 1024 ? qsTr("RAM %1 GB").arg((bar.engineStatus.memoryMb / 1024).toFixed(1))
+                                                    : qsTr("RAM %1 MB").arg(bar.engineStatus.memoryMb)
+            color: Theme.text
+        }
         Rectangle {
             width: 10
             height: 10
