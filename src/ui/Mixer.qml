@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// The Logic-style mixer on the right: one strip per channel of the current
-// patch, then the master strip. Shown in Edit and Perform mode.
+// The Logic-style mixer along the bottom: one strip per channel of the
+// current patch, then the master strip. Shown in Edit and Perform mode.
 Rectangle {
     id: mixer
 
@@ -13,7 +13,6 @@ Rectangle {
     required property EngineStatus engineStatus
 
     color: Theme.mixerBackground
-    implicitWidth: (strips.count + 2) * (Theme.stripWidth + 4) + Theme.spacing * 4
 
     DropArea {
         anchors.fill: parent
@@ -21,7 +20,7 @@ Rectangle {
         function acceptDrop(payload) { mixer.doc.addChannel(payload.pluginId, payload.name) }
     }
 
-    Rectangle { anchors.left: parent.left; width: 1; height: parent.height; color: Theme.border }
+    Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.border }
 
     RowLayout {
         anchors.fill: parent

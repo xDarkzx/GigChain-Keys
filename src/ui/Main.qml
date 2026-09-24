@@ -215,24 +215,28 @@ ApplicationWindow {
                     editable: true
                 }
 
-                PluginArea {
+                // The plugin above, the mixer below (drag the divider).
+                SplitView {
                     SplitView.fillWidth: true
-                    SplitView.minimumWidth: 300
-                    doc: root.doc
-                    editorService: root.editorService
-                    // Plugin windows sit above Qt content: hide them while a dialog is up.
-                    suspended: settingsDialog.visible || unsavedDialog.visible
-                }
-                // The mixer on the right, as wide as its channels (drag the divider).
-                Mixer {
-                    id: editMixer
-                    visible: root.mixerOpen
-                    SplitView.preferredWidth: Math.min(implicitWidth, root.width * 0.45)
-                    SplitView.minimumWidth: Theme.stripWidth * 2 + Theme.spacing * 3
-                    doc: root.doc
-                    channelModel: root.channelModel
-                    pluginModel: root.pluginModel
-                    engineStatus: root.engineStatus
+                    orientation: Qt.Vertical
+
+                    PluginArea {
+                        SplitView.fillHeight: true
+                        SplitView.minimumHeight: 200
+                        doc: root.doc
+                        editorService: root.editorService
+                        // Plugin windows sit above Qt content: hide them while a dialog is up.
+                        suspended: settingsDialog.visible || unsavedDialog.visible
+                    }
+                    Mixer {
+                        visible: root.mixerOpen
+                        SplitView.preferredHeight: Theme.mixerHeight
+                        SplitView.minimumHeight: 240
+                        doc: root.doc
+                        channelModel: root.channelModel
+                        pluginModel: root.pluginModel
+                        engineStatus: root.engineStatus
+                    }
                 }
             }
 
