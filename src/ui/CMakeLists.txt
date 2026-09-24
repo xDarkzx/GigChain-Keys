@@ -11,6 +11,7 @@ qt_add_qml_module(openstage_ui
         cpp/SelectedChannel.h cpp/SelectedChannel.cpp
         cpp/PluginListModel.h cpp/PluginListModel.cpp
         cpp/EngineStatus.h cpp/EngineStatus.cpp
+        cpp/SettingsController.h cpp/SettingsController.cpp
         cpp/Session.h cpp/Session.cpp
         cpp/EditorService.h cpp/EditorService.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
@@ -31,6 +32,10 @@ qt_add_qml_module(openstage_ui
         PanKnob.qml
         VolumeFader.qml
         StageMenu.qml
+        StageComboBox.qml
+        SettingsDialog.qml
+        SettingsSection.qml
+        SettingsRow.qml
         StageMenuItem.qml
         EffectPickerMenu.qml
         PluginGroupMenu.qml

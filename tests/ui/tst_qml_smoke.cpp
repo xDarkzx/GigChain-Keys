@@ -96,6 +96,25 @@ private slots:
         QVERIFY(plugins->property("count").toInt() > 0);
     }
 
+    void settingsOpensEveryPage()
+    {
+        auto* dialog = m_qml->rootObjects().value(0)->findChild<QObject*>(u"settingsDialog"_s);
+        QVERIFY(dialog != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "open"));
+        for (int page = 0; page < 3; ++page) {
+            QVERIFY(dialog->setProperty("page", page));
+            settle(); // no warnings from any page
+        }
+        auto* device = dialog->findChild<QObject*>(u"deviceBox"_s);
+        QVERIFY(device != nullptr);
+        QCOMPARE(device->property("currentText").toString(), u"Demo output"_s); // loaded from the engine
+        auto* ok = dialog->findChild<QObject*>(u"settingsOk"_s);
+        QVERIFY(ok != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(ok, "clicked"));
+        settle();
+        QVERIFY(!dialog->property("visible").toBool()); // nothing failed: closed
+    }
+
     void spaceNavigatesButNotWhileTyping()
     {
         QVERIFY(m_session->document().addPatch(0));

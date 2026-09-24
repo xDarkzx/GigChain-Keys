@@ -8,6 +8,7 @@
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
+#include "SettingsController.h"
 
 #include <QVariantMap>
 
@@ -45,6 +46,7 @@ private:
     PluginListModel m_pluginModel;
     EngineStatus m_engineStatus;
     EditorService m_editorService;
+    SettingsController m_settingsController;
 };
 
 } // namespace openstage::ui

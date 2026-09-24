@@ -1,6 +1,7 @@
 // OpenStage entry point and composition root: the only place that decides
 // which engine runs and wires it to the UI.
 #include "Session.h"
+#include "SettingsController.h"
 
 #include "openstage/core/FileLog.h"
 #include "openstage/engine/FakeEngineFactory.h"
@@ -66,7 +67,8 @@ int main(int argc, char* argv[])
 
     std::unique_ptr<engine::IEngine> engine;
     QString engineProblem;
-    if (auto real = engine::createRealEngine()) {
+    // The audio and MIDI setup saved by the Settings window.
+    if (auto real = engine::createRealEngine(ui::SettingsController::engineOptions(settings))) {
         engine = std::move(*real);
     } else {
         engineProblem = real.error().message;
