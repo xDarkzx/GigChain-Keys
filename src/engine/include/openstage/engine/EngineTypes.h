@@ -21,6 +21,10 @@ struct PluginInfo
     QString subCategories; // VST3 sub-categories, e.g. "Instrument|Piano"
     QString version;
     QString classId; // VST3 class id, 32 hex digits (names snapshot images)
+    // From the plugin's factory: the maker's website and support address.
+    QString website;
+    QString email;
+    QString sdkVersion; // the VST3 SDK it was built with, e.g. "VST 3.7.9"
 };
 
 enum class AudioDriver

@@ -76,7 +76,10 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder)
                                              instrument ? PluginKind::Instrument : PluginKind::Effect,
                                              QString::fromStdString(info.subCategoriesString()),
                                              QString::fromStdString(info.version()),
-                                             QString::fromStdString(info.ID().toString())});
+                                             QString::fromStdString(info.ID().toString()),
+                                             QString::fromStdString(factory.info().url()),
+                                             QString::fromStdString(factory.info().email()),
+                                             QString::fromStdString(info.sdkVersion())});
                 found = true;
                 break; // v1: one plugin per bundle (the first audio class), matching Vst3Node::load
             }

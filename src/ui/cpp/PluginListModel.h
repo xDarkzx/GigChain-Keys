@@ -44,6 +44,15 @@ public:
         CategoryRole, // the most specific VST3 sub-category, e.g. "Piano"
         IconRole,     // qrc URL
         ImageUrlRole, // file: URL of the plugin's own art (installed by its maker), or empty
+        FavoriteRole, // starred by the user: listed first
+        RatingRole,   // the user's 1-5 stars, 0 = not rated
+        WebsiteRole,  // the maker's website, from the plugin
+        EmailRole,    // the maker's support address, from the plugin
+        SdkVersionRole,
+        TagsRole,     // every VST3 sub-category, e.g. ["Instrument", "Piano"]
+        LocationRole, // the installed plugin file
+        SizeRole,     // "12.4 MB", or empty when the file cannot be read
+        InstalledRole // the file's date, "2026-03-14", or empty
     };
     Q_ENUM(Role)
 
@@ -75,6 +84,10 @@ public:
     // an empty map (e.g. to find Kontakt for a library).
     Q_INVOKABLE QVariantMap findInstrument(const QString& text) const;
 
+    // Favourites are listed first; ratings are 0 (none) to 5. Both remembered.
+    Q_INVOKABLE void setFavorite(const QString& pluginId, bool favorite);
+    Q_INVOKABLE void setRating(const QString& pluginId, int stars);
+
     // Hide a plugin from the browser list and the pickers (remembered); showAll() undoes every hide.
     Q_INVOKABLE void hide(const QString& pluginId);
     Q_INVOKABLE void showAll();
@@ -92,6 +105,8 @@ private:
     std::vector<std::size_t> m_visible;
     QSettings* m_settings = nullptr; // not owned
     QStringList m_hidden;
+    QStringList m_favorites;
+    QVariantMap m_ratings; // plugin id -> stars
     QString m_filterText;
     bool m_instrumentsOnly = false;
 };

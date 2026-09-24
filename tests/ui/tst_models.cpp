@@ -176,6 +176,46 @@ private slots:
         QCOMPARE(again.instrumentMenu().value(u"vendors"_s).toList()[0].toMap().value(u"plugins"_s).toList().size(), 2);
     }
 
+    void favouritesStayOnTopAndRatingsAreRemembered()
+    {
+        const OfficialArtwork artwork(noArtwork());
+        QSettings settings(m_dir->filePath(u"fav.ini"_s), QSettings::IniFormat);
+        {
+            PluginListModel model(*m_engine, artwork, &settings);
+            model.setInstrumentsOnly(true);
+            QCOMPARE(roleData(model, 0, "name").toString(), u"Spy Pad"_s); // by name
+            QVERIFY(!roleData(model, 0, "favorite").toBool());
+            model.setFavorite(u"spy/Piano.vst3"_s, true);
+            QCOMPARE(roleData(model, 0, "name").toString(), u"Spy Piano"_s); // favourites first
+            QVERIFY(roleData(model, 0, "favorite").toBool());
+
+            model.setRating(u"spy/Pad.vst3"_s, 4);
+            QCOMPARE(roleData(model, 1, "rating").toInt(), 4);
+            model.setRating(u"spy/Pad.vst3"_s, 9); // out of range: clamped
+            QCOMPARE(roleData(model, 1, "rating").toInt(), 5);
+        }
+        PluginListModel again(*m_engine, artwork, &settings); // next start
+        again.setInstrumentsOnly(true);
+        QCOMPARE(roleData(again, 0, "name").toString(), u"Spy Piano"_s);
+        QCOMPARE(roleData(again, 1, "rating").toInt(), 5);
+        again.setFavorite(u"spy/Piano.vst3"_s, false);
+        again.setRating(u"spy/Pad.vst3"_s, 0); // 0 = no rating
+        QCOMPARE(roleData(again, 0, "name").toString(), u"Spy Pad"_s);
+        QCOMPARE(roleData(again, 0, "rating").toInt(), 0);
+    }
+
+    void pluginDetailsForTheInfoPanel()
+    {
+        const OfficialArtwork artwork(noArtwork());
+        PluginListModel model(*m_engine, artwork);
+        model.setInstrumentsOnly(true);
+        QCOMPARE(roleData(model, 1, "website").toString(), u"https://spy.example"_s);
+        QCOMPARE(roleData(model, 1, "email").toString(), u"help@spy.example"_s);
+        QCOMPARE(roleData(model, 1, "sdkVersion").toString(), u"VST 3.8.0"_s);
+        QCOMPARE(roleData(model, 1, "tags").toStringList(), (QStringList{u"Instrument"_s, u"Piano"_s}));
+        QCOMPARE(roleData(model, 1, "location").toString(), u"spy\\Piano.vst3"_s); // shown Windows-style
+    }
+
     void pluginListGroupsAndFilters()
     {
         const OfficialArtwork artwork(noArtwork());
