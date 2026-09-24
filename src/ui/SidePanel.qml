@@ -9,6 +9,7 @@ Rectangle {
     required property DocumentController doc
     required property SetlistModel setlistModel
     required property PluginListModel pluginModel
+    required property LibraryListModel libraryModel
     property bool editable: true
 
     color: Theme.panel
@@ -24,6 +25,7 @@ Rectangle {
             visible: panel.editable
             TabButton { text: qsTr("Setlist"); focusPolicy: Qt.NoFocus }
             TabButton { text: qsTr("Plugins"); focusPolicy: Qt.NoFocus }
+            TabButton { text: qsTr("Libraries"); focusPolicy: Qt.NoFocus }
         }
 
         StackLayout {
@@ -38,6 +40,11 @@ Rectangle {
             }
             PluginBrowser {
                 doc: panel.doc
+                pluginModel: panel.pluginModel
+            }
+            LibraryBrowser {
+                doc: panel.doc
+                libraryModel: panel.libraryModel
                 pluginModel: panel.pluginModel
             }
         }

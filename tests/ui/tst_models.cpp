@@ -160,6 +160,8 @@ private slots:
         QCOMPARE(model.rowCount(), 3);
 
         QCOMPARE(model.instruments().size(), 2);
+        QCOMPARE(model.findInstrument(u"pad"_s).value(u"name"_s).toString(), u"Spy Pad"_s);
+        QVERIFY(model.findInstrument(u"Kontakt"_s).isEmpty());
         const QVariantList effects = model.effects();
         QCOMPARE(effects.size(), 1);
         QCOMPARE(effects[0].toMap().value(u"name"_s).toString(), u"Spy Reverb"_s);

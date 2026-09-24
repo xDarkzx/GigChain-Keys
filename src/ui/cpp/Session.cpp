@@ -11,6 +11,7 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_channelModel(m_document, engine, m_artwork),
       m_selectedChannel(m_document),
       m_pluginModel(engine, m_artwork),
+      m_libraryModel(settings, LibraryListModel::defaultCacheDir()),
       m_engineStatus(engine, m_document),
       m_editorService(engine, m_document)
 {
@@ -25,6 +26,7 @@ QVariantMap Session::initialProperties()
         {u"channelModel"_s, QVariant::fromValue(&m_channelModel)},
         {u"selectedChannel"_s, QVariant::fromValue(&m_selectedChannel)},
         {u"pluginModel"_s, QVariant::fromValue(&m_pluginModel)},
+        {u"libraryModel"_s, QVariant::fromValue(&m_libraryModel)},
         {u"engineStatus"_s, QVariant::fromValue(&m_engineStatus)},
         {u"editorService"_s, QVariant::fromValue(&m_editorService)},
     };

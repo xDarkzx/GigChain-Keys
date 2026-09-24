@@ -5,6 +5,7 @@
 #include "DocumentController.h"
 #include "EditorService.h"
 #include "EngineStatus.h"
+#include "LibraryListModel.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
@@ -43,6 +44,7 @@ private:
     ChannelModel m_channelModel;
     SelectedChannel m_selectedChannel;
     PluginListModel m_pluginModel;
+    LibraryListModel m_libraryModel;
     EngineStatus m_engineStatus;
     EditorService m_editorService;
 };
