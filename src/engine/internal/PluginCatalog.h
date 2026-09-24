@@ -4,6 +4,8 @@
 
 #include <QString>
 
+#include <functional>
+
 #include <vector>
 
 namespace openstage::engine {
@@ -29,9 +31,13 @@ class PluginCatalog
 {
 public:
     static QString standardFolder();
+    // Called before each plugin: its file name (no extension), how many are
+    // done, how many in all. For a splash screen.
+    using Progress = std::function<void(const QString& plugin, int done, int total)>;
+
     // No cacheFile: every plugin is opened.
     static std::vector<PluginInfo> scan(const QString& folder, const QString& cacheFile = {},
-                                        ScanStats* stats = nullptr);
+                                        ScanStats* stats = nullptr, const Progress& progress = {});
 };
 
 } // namespace openstage::engine

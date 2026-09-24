@@ -7,6 +7,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <functional>
 #include <memory>
 
 namespace openstage::engine {
@@ -19,6 +20,11 @@ struct RealEngineOptions
     MidiSetup midi;            // the inputs chosen in Settings
     QString pluginFolder;      // empty: the standard VST3 folder
     QString pluginCacheFile;   // what the plugin scan learned; empty: open every plugin
+    // Start-up progress for a splash screen: the plugin being scanned with
+    // done/total, or a plugin being loaded with total 0. Called on the
+    // calling thread while create() runs and whenever a plugin loads, so the
+    // caller decides when it stops showing it.
+    std::function<void(const QString& what, int done, int total)> progress;
 };
 
 // Opens the audio output and every MIDI input and scans plugins. Fails with

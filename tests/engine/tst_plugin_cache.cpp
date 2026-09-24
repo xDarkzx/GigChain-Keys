@@ -53,6 +53,22 @@ private slots:
         QVERIFY(cached[0].kind == scanned[0].kind);
     }
 
+    void progressIsReportedForTheSplashScreen()
+    {
+        writeFile(m_folder + u"/A.vst3"_s, "x");
+        writeFile(m_folder + u"/B.vst3"_s, "y");
+        std::vector<std::pair<int, int>> steps;
+        QStringList names;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Skipping plugin .*A\\.vst3"_s));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Skipping plugin .*B\\.vst3"_s));
+        (void)PluginCatalog::scan(m_folder, m_cache, nullptr, [&](const QString& name, int done, int total) {
+            names << name;
+            steps.emplace_back(done, total);
+        });
+        QCOMPARE(names, (QStringList{u"A"_s, u"B"_s}));
+        QCOMPARE(steps, (std::vector<std::pair<int, int>>{{0, 2}, {1, 2}}));
+    }
+
     void aChangedFileIsOpenedAgain()
     {
         const QString broken = m_folder + u"/Broken.vst3"_s;

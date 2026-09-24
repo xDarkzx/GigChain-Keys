@@ -82,6 +82,7 @@ private:
     double m_preparedRate = 0.0; // what the plugins are prepared for
     int m_preparedBlock = 0;
     MidiSetup m_midiSetup;
+    std::function<void(const QString&, int, int)> m_progress; // see RealEngineOptions::progress
     // Arturia: the window size (GUI Size) each loaded instance started with,
     // and the size fitted per plugin this session.
     std::map<const Vst3Node*, double> m_arturiaLoadedSize;
