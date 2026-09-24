@@ -23,6 +23,8 @@ class StartupProgress : public QObject
     Q_PROPERTY(int glideMs READ glideMs NOTIFY changed)
     // Every plugin found, in scan order: the splash names each one.
     Q_PROPERTY(QStringList plugins READ plugins NOTIFY changed)
+    // What the splash says while it names each plugin after loading.
+    Q_PROPERTY(QString listingStep READ listingStep NOTIFY changed)
 
 public:
     using QObject::QObject;
@@ -32,14 +34,15 @@ public:
     [[nodiscard]] double progress() const { return m_progress; }
     [[nodiscard]] int glideMs() const { return m_glideMs; }
     [[nodiscard]] QStringList plugins() const { return m_plugins; }
+    [[nodiscard]] QString listingStep() const { return m_listingStep; }
     void addPlugin(const QString& name) { m_plugins << name; }
 
     // Updates the splash and lets it repaint (startup work runs on this thread).
     void report(const QString& step, const QString& detail = {}, double progress = -1.0);
     // Everything is loaded. The splash still stays up for `remainingMs`: it
     // steps through every plugin found, the bar filling left to right, then
-    // shows "Ready".
-    void finish(int remainingMs);
+    // shows `readyStep`. `listingStep` is shown while it names them.
+    void finish(int remainingMs, const QString& listingStep, const QString& readyStep);
 
 signals:
     void changed();
@@ -50,6 +53,7 @@ private:
     double m_progress = -1.0;
     int m_glideMs = 0;
     QStringList m_plugins;
+    QString m_listingStep;
 };
 
 } // namespace gigchain::ui

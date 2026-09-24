@@ -145,19 +145,19 @@ private slots:
         // so the test does not depend on animation timing.
         startup.addPlugin(u"Test Plugin A"_s);
         startup.addPlugin(u"Test Plugin B"_s);
-        startup.finish(600);
+        startup.finish(600, u"Test line check"_s, u"Test ready"_s);
         QObject* root = splash.rootObjects().value(0);
         auto* fill = root->findChild<QObject*>(u"splashFill"_s);
         QVERIFY(fill != nullptr);
         QVERIFY(root->setProperty("playhead", 0.5));
         QCOMPARE(detail->property("text").toString(), u"Test Plugin A"_s);
-        QCOMPARE(step->property("text").toString(), u"Loading plugins (1 of 2)"_s);
+        QCOMPARE(step->property("text").toString(), u"Test line check"_s);
         QCOMPARE(fill->property("fraction").toDouble(), 0.25);
         QVERIFY(root->setProperty("playhead", 1.5));
         QCOMPARE(detail->property("text").toString(), u"Test Plugin B"_s);
         QCOMPARE(fill->property("fraction").toDouble(), 0.75);
         QVERIFY(root->setProperty("playhead", 2.0));
-        QCOMPARE(step->property("text").toString(), u"Ready"_s);
+        QCOMPARE(step->property("text").toString(), u"Test ready"_s);
         QCOMPARE(fill->property("fraction").toDouble(), 1.0);
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(u'\n')));
     }

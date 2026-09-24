@@ -15,9 +15,10 @@ void StartupProgress::report(const QString& step, const QString& detail, double 
     QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
 }
 
-void StartupProgress::finish(int remainingMs)
+void StartupProgress::finish(int remainingMs, const QString& listingStep, const QString& readyStep)
 {
-    m_step = tr("Ready");
+    m_step = readyStep;
+    m_listingStep = listingStep;
     m_detail.clear();
     m_glideMs = remainingMs > 0 ? remainingMs : 0;
     m_progress = 1.0;
