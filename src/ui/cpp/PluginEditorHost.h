@@ -60,7 +60,6 @@ private:
     void teardown();
     void place();
     void updateVisibility();
-    void captureArtworkIfMissing();
 
     QPointer<EditorService> m_service;
     std::unique_ptr<engine::IPluginEditor> m_editor;
@@ -72,8 +71,6 @@ private:
     QRectF m_placedArea;       // last scene rect the editor was fitted to
     QTimer m_followTimer;      // catches moves of ancestors (splitter drags)
     bool m_suspended = false;
-    QString m_pluginId;        // plugin whose editor is shown
-    QTimer m_captureTimer;     // waits for the plugin to draw before taking its picture
 };
 
 } // namespace openstage::ui

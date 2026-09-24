@@ -4,6 +4,7 @@
 
 #include "openstage/engine/IEngine.h"
 
+#include <QUrl>
 #include <QVariantMap>
 
 #include <algorithm>
@@ -12,20 +13,15 @@ using namespace Qt::StringLiterals;
 
 namespace openstage::ui {
 
-PluginListModel::PluginListModel(const engine::IEngine& engine, const ArtworkCache& artwork, QObject* parent)
-    : QAbstractListModel(parent), m_artwork(artwork), m_all(engine.availablePlugins())
+PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialArtwork& artwork, QObject* parent)
+    : QAbstractListModel(parent), m_all(engine.availablePlugins())
 {
-    connect(&m_artwork, &ArtworkCache::artworkChanged, this, [this](const QString& pluginId) {
-        for (std::size_t row = 0; row < m_visible.size(); ++row) {
-            if (m_all[m_visible[row]].id != pluginId) continue;
-            const QModelIndex changed = index(static_cast<int>(row));
-            emit dataChanged(changed, changed, {ImageUrlRole});
-        }
-    });
     std::stable_sort(m_all.begin(), m_all.end(), [](const engine::PluginInfo& a, const engine::PluginInfo& b) {
         if (a.kind != b.kind) return a.kind == engine::PluginKind::Instrument;
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
     });
+    m_art.reserve(m_all.size());
+    for (const auto& plugin : m_all) m_art.push_back(artwork.find(plugin)); // file lookups only
     applyFilter();
 }
 
@@ -37,7 +33,10 @@ int PluginListModel::rowCount(const QModelIndex& parent) const
 QVariant PluginListModel::data(const QModelIndex& index, int role) const
 {
     if (!checkIndex(index, CheckIndexOption::IndexIsValid | CheckIndexOption::ParentIsInvalid)) return {};
-    const engine::PluginInfo& plugin = m_all[m_visible[static_cast<std::size_t>(index.row())]];
+    const std::size_t at = m_visible[static_cast<std::size_t>(index.row())];
+    const engine::PluginInfo& plugin = m_all[at];
+    const PluginArtwork& art = m_art[at];
+    const auto url = [](const QString& path) { return path.isEmpty() ? QString() : QUrl::fromLocalFile(path).toString(); };
     switch (role) {
     case PluginIdRole: return plugin.id;
     case NameRole: return plugin.name;
@@ -49,7 +48,8 @@ QVariant PluginListModel::data(const QModelIndex& index, int role) const
         return parts.size() > 1 ? parts.last() : QString();
     }
     case IconRole: return iconUrl(iconFor(plugin));
-    case ImageUrlRole: return m_artwork.urlFor(plugin.id);
+    case ImageUrlRole: return url(art.banner);
+    case LogoUrlRole: return url(art.logo);
     default: return {};
     }
 }
@@ -58,7 +58,7 @@ QHash<int, QByteArray> PluginListModel::roleNames() const
 {
     return {{PluginIdRole, "pluginId"}, {NameRole, "name"},       {VendorRole, "vendor"},
             {KindRole, "kind"},         {VersionRole, "version"}, {CategoryRole, "category"},
-            {IconRole, "icon"},         {ImageUrlRole, "imageUrl"}};
+            {IconRole, "icon"},         {ImageUrlRole, "imageUrl"}, {LogoUrlRole, "logoUrl"}};
 }
 
 void PluginListModel::setFilterText(const QString& text)

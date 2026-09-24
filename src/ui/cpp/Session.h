@@ -1,7 +1,6 @@
 #pragma once
 
-#include "ArtworkBuilder.h"
-#include "ArtworkCache.h"
+#include "OfficialArtwork.h"
 #include "ChannelModel.h"
 #include "DocumentController.h"
 #include "EditorService.h"
@@ -38,7 +37,7 @@ public:
     [[nodiscard]] DocumentController& document() { return m_document; }
 
 private:
-    ArtworkCache m_artwork; // first: models and services below use it
+    OfficialArtwork m_artwork; // first: models below use it
     DocumentController m_document;
     SetlistModel m_setlistModel;
     ChannelModel m_channelModel;
@@ -46,7 +45,6 @@ private:
     PluginListModel m_pluginModel;
     EngineStatus m_engineStatus;
     EditorService m_editorService;
-    ArtworkBuilder m_artworkBuilder;
 };
 
 } // namespace openstage::ui

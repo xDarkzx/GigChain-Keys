@@ -5,15 +5,14 @@ using namespace Qt::StringLiterals;
 namespace openstage::ui {
 
 Session::Session(engine::IEngine& engine, QSettings& settings)
-    : m_artwork(ArtworkCache::defaultFolder()),
+    : m_artwork(OfficialArtwork::defaultSources()),
       m_document(engine, settings),
       m_setlistModel(m_document),
-      m_channelModel(m_document, engine),
+      m_channelModel(m_document, engine, m_artwork),
       m_selectedChannel(m_document),
       m_pluginModel(engine, m_artwork),
       m_engineStatus(engine, m_document),
-      m_editorService(engine, m_document, m_artwork),
-      m_artworkBuilder(engine, m_artwork)
+      m_editorService(engine, m_document)
 {
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_channelModel, &ChannelModel::refreshLevels);
 }
@@ -28,7 +27,6 @@ QVariantMap Session::initialProperties()
         {u"pluginModel"_s, QVariant::fromValue(&m_pluginModel)},
         {u"engineStatus"_s, QVariant::fromValue(&m_engineStatus)},
         {u"editorService"_s, QVariant::fromValue(&m_editorService)},
-        {u"artworkBuilder"_s, QVariant::fromValue(&m_artworkBuilder)},
     };
 }
 

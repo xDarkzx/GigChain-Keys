@@ -1,7 +1,5 @@
 #pragma once
 
-#include "ArtworkCache.h"
-
 #include "openstage/core/Error.h"
 #include "openstage/engine/IPluginEditor.h"
 
@@ -29,17 +27,13 @@ class EditorService : public QObject
     QML_UNCREATABLE("Created by the application")
 
 public:
-    EditorService(engine::IEngine& engine, DocumentController& document, ArtworkCache& artwork,
-                  QObject* parent = nullptr);
+    EditorService(engine::IEngine& engine, DocumentController& document, QObject* parent = nullptr);
 
     // nullptr when there is nothing to show. Failures are shown to the user
     // (banner) and logged, and returned.
     core::Result<std::unique_ptr<engine::IPluginEditor>> createForSelection();
     // Shows an editor problem to the user (it has already been logged).
     void reportFailure(const QString& message);
-    // Plugin id of the instrument whose editor createForSelection() shows.
-    [[nodiscard]] QString selectedPluginId() const;
-    [[nodiscard]] ArtworkCache& artwork() { return m_artwork; }
     // Why nothing is shown, for the placeholder text.
     [[nodiscard]] QString emptyReason() const;
 
@@ -51,7 +45,6 @@ signals:
 private:
     engine::IEngine& m_engine;
     DocumentController& m_document;
-    ArtworkCache& m_artwork;
     QTimer m_coalesce; // merges the several signals one edit emits
 };
 

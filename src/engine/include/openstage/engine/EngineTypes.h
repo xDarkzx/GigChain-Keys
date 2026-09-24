@@ -18,6 +18,7 @@ struct PluginInfo
     PluginKind kind = PluginKind::Instrument;
     QString subCategories; // VST3 sub-categories, e.g. "Instrument|Piano"
     QString version;
+    QString classId; // VST3 class id, 32 hex digits (names snapshot images)
 };
 
 // Linear signal level, 0 (silence) to 1 (full scale).
