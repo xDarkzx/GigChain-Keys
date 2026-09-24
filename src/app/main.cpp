@@ -20,11 +20,17 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QWindow>
 #include <QtQml/qqmlextensionplugin.h>
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 #include <crtdbg.h>
 #endif
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 
 #include <chrono>
 #include <memory>
@@ -36,6 +42,25 @@ using namespace gigchain;
 using namespace Qt::StringLiterals;
 
 namespace {
+
+// Puts `window` in front of every other window and makes it the active one.
+// Windows refuses a plain "activate" from an app that is not in front (it
+// flashes the taskbar button instead), so the window is first made
+// always-on-top for a moment, which puts it above everything, then set back.
+void bringToFront(QWindow& window)
+{
+    const auto hwnd = reinterpret_cast<HWND>(window.winId());
+    constexpr UINT kKeep = SWP_NOMOVE | SWP_NOSIZE;
+    if (!SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, kKeep | SWP_SHOWWINDOW) ||
+        !SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, kKeep | SWP_SHOWWINDOW)) {
+        qCWarning(lcApp) << "Could not bring the main window to the front: SetWindowPos failed, error" << GetLastError();
+    }
+    // Keyboard focus: granted while this app is the one the user started
+    // (the splash took the focus at launch); otherwise Windows flashes the
+    // taskbar button, which is its rule, not an error.
+    if (!SetForegroundWindow(hwnd)) qCInfo(lcApp) << "Windows kept keyboard focus where it was";
+    window.requestActivate();
+}
 
 // The splash stays up at least this long, even when everything loads faster
 // (the plugin list usually comes from the cache in milliseconds).
@@ -150,10 +175,9 @@ int main(int argc, char* argv[])
 
     // Swap the splash for the main window, brought to the front.
     const auto reveal = [&splash, mainWindow] {
-        splash.reset();
         mainWindow->show();
-        mainWindow->raise();
-        mainWindow->requestActivate();
+        bringToFront(*mainWindow);
+        splash.reset(); // after the main window is up: the app never loses the front
     };
     const qint64 remaining = kMinimumSplashMs - splashShown.elapsed();
     if (remaining > 0) {

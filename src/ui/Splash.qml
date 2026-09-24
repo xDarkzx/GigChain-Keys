@@ -16,6 +16,9 @@ Window {
     flags: Qt.SplashScreen | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
     color: "transparent" // the picture's rounded corners show the desktop
     title: Branding.name
+    // Take the focus while Windows still lets a just-started app have it, so
+    // the main window can take over from here when it opens.
+    Component.onCompleted: requestActivate()
 
     Image {
         id: art
