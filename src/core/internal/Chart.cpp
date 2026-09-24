@@ -210,4 +210,109 @@ QString chordSheetToChordPro(const QString& sheet)
     return out.join(u'\n') + u'\n';
 }
 
+namespace {
+
+// A guitar tab staff line: "e|-----0-----|", "B|--1--1--|", "|-3-5-|".
+const QRegularExpression kTabStaff(uR"(^\s*[A-Ga-g]?[#b]?\s*[|:][-0-9hpbrvx/\~|:.()\s]*-[-0-9hpbrvx/\~|:.()\s]*$)"_s);
+// A separator row: "-----", "=====", "*****", "_____", "~~~~~".
+const QRegularExpression kSeparator(uR"(^\s*([-=*_~#])\1{3,}\s*$)"_s);
+// Site header lines that mean nothing to a keys player.
+const QRegularExpression kJunk(uR"(^\s*(tuning|tabbed by|transcribed by|chords by|tab by|difficulty|author|standard tuning)\b.*$)"_s,
+                               QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression kCapo(uR"(^\s*capo\s*:?\s*(.+?)\s*$)"_s, QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression kKeyLine(uR"(^\s*key\s*:\s*(\S+)\s*$)"_s, QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression kInlineChord(uR"(\[([^\]]+)\])"_s);
+
+// Tabs to spaces (to the next multiple of 8), non-breaking spaces to spaces.
+QString normaliseSpacing(const QString& line)
+{
+    QString out;
+    for (const QChar c : line) {
+        if (c == u'\t') {
+            do { out += u' '; } while (out.size() % 8 != 0);
+        } else {
+            out += (c == QChar(0x00A0) ? QChar(u' ') : c);
+        }
+    }
+    return out;
+}
+
+// Already ChordPro: {directives} or chords in brackets inside the lines.
+bool looksLikeChordPro(const QStringList& lines)
+{
+    for (const QString& line : lines) {
+        if (kDirective.match(line.trimmed()).hasMatch()) return true;
+        for (auto it = kInlineChord.globalMatch(line); it.hasNext();) {
+            if (isChord(it.next().captured(1).trimmed()) && line.trimmed() != it.peekNext().captured(0)) return true;
+        }
+    }
+    return false;
+}
+
+// Lyric spacing collapsed, line ends trimmed, one blank line at most.
+QString tidyChordPro(const QString& chordPro)
+{
+    Chart chart = parseChordPro(chordPro);
+    QStringList out;
+    bool lastBlank = true; // no blank lines at the start
+    for (ChartLine& line : chart.lines) {
+        if (line.kind == ChartLine::Kind::Lyrics) {
+            for (ChartSegment& segment : line.segments) {
+                static const QRegularExpression kSpaces(uR"( {2,})"_s);
+                segment.text.replace(kSpaces, u" "_s);
+            }
+            if (!line.segments.empty()) {
+                // No spaces before the first word or after the last one.
+                line.segments.front().text = line.segments.front().text.trimmed().isEmpty() && !line.segments.front().chord.isEmpty()
+                    ? line.segments.front().text : QString(line.segments.front().text).remove(QRegularExpression(uR"(^\s+)"_s));
+                QString& last = line.segments.back().text;
+                while (last.endsWith(u' ')) last.chop(1);
+            }
+        } else {
+            line.source = line.source.trimmed();
+        }
+        const bool blank = line.kind == ChartLine::Kind::Blank ||
+                           (line.kind == ChartLine::Kind::Lyrics && line.chords().isEmpty() && line.lyrics().trimmed().isEmpty());
+        if (blank) {
+            if (lastBlank) continue;
+            line = ChartLine{};
+        }
+        lastBlank = blank;
+        Chart single;
+        single.lines.push_back(line);
+        out << toChordPro(single);
+    }
+    while (!out.isEmpty() && out.last().isEmpty()) out.removeLast();
+    return out.join(u'\n') + u'\n';
+}
+
+} // namespace
+
+QString tidyChordSheet(const QString& text)
+{
+    QString cleaned = text;
+    cleaned.replace(u"\r\n"_s, u"\n"_s);
+    for (const QString& tag : {u"[ch]"_s, u"[/ch]"_s, u"[tab]"_s, u"[/tab]"_s}) cleaned.remove(tag);
+
+    // Decided on what was pasted, before Capo/Key lines become {directives}.
+    const bool chordPro = looksLikeChordPro(cleaned.split(u'\n'));
+
+    QStringList lines;
+    for (const QString& raw : cleaned.split(u'\n')) {
+        const QString line = normaliseSpacing(raw);
+        if (kTabStaff.match(line).hasMatch() || kSeparator.match(line).hasMatch() || kJunk.match(line).hasMatch()) continue;
+        if (const auto capo = kCapo.match(line); capo.hasMatch() && !isChordLine(line)) {
+            lines << u"{comment: Capo "_s + capo.captured(1) + u'}';
+            continue;
+        }
+        if (const auto key = kKeyLine.match(line); key.hasMatch()) {
+            lines << u"{key: "_s + key.captured(1) + u'}';
+            continue;
+        }
+        lines << line;
+    }
+    const QString joined = lines.join(u'\n');
+    return tidyChordPro(chordPro ? joined : chordSheetToChordPro(joined));
+}
+
 } // namespace gigchain::core

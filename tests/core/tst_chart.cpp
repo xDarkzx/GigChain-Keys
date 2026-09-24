@@ -101,6 +101,54 @@ private slots:
         QVERIFY(!isChordLine(u""_s));
     }
 
+    void aMessyPastedSheetComesOutClean()
+    {
+        // Typical copy from a chord site: header junk, tab staff lines,
+        // separator rows, non-breaking spaces, tabs and too many blank lines.
+        const QString pasted = u"Hallelujah chords by Leonard Cohen\n"
+                               "Tabbed by someone\n"
+                               "Tuning: E A D G B E\n"
+                               "Capo: 2\n"
+                               "Key: C\n"
+                               "-------------------------------------\n"
+                               "\n"
+                               "\n"
+                               "[Intro]\n"
+                               "e|-----0-----0---|\n"
+                               "B|---1-----1-----|\n"
+                               "G|-0-----0-------|\n"
+                               "\n"
+                               "[Verse 1]\n"
+                               "C                     Am\n" // Am above "secret"
+                               "I heard there was   a secret chord   \n"
+                               "=====================\n"
+                               "\n\n\n"
+                               "F     G              C\n" // C past the end of the words
+                               "That David   played\n"_s;
+        QCOMPARE(tidyChordSheet(pasted), u"Hallelujah chords by Leonard Cohen\n"
+                                          "{comment: Capo 2}\n"
+                                          "{key: C}\n"
+                                          "\n"
+                                          "{comment: Intro}\n"
+                                          "\n"
+                                          "{comment: Verse 1}\n"
+                                          "[C]I heard there was a [Am]secret chord\n"
+                                          "\n"
+                                          "[F]That D[G]avid played [C]\n"_s);
+    }
+
+    void tabsCountAsColumns()
+    {
+        // A tab character moves to the next multiple of 8, as in a text editor.
+        QCOMPARE(tidyChordSheet(u"C\tG\nHello there\n"_s), u"[C]Hello th[G]ere\n"_s);
+    }
+
+    void chordProIsOnlyTidied()
+    {
+        const QString chordPro = u"{title: X}\n[G]One   [D]two   \n\n\n\nthree\n"_s;
+        QCOMPARE(tidyChordSheet(chordPro), u"{title: X}\n[G]One [D]two\n\nthree\n"_s);
+    }
+
     void writingBackGivesTheSameChart()
     {
         const QString text = u"{title: Test}\n{key: G}\n[G]One [D]two\nlyrics\n"_s;

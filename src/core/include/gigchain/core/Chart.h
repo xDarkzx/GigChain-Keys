@@ -72,4 +72,12 @@ struct Chart
 // section labels like "[Chorus]" become comments.
 [[nodiscard]] QString chordSheetToChordPro(const QString& sheet);
 
+// Anything pasted or downloaded that has chords and lyrics, to a clean
+// ChordPro chart: guitar tab staves ("e|--3--|"), separator rows ("----",
+// "===="), site headers ("Tabbed by", "Tuning:") and extra blank lines are
+// removed; "Capo" and "Key" lines are kept as a comment and a key; chords
+// written above the lyrics are placed over the right words; runs of spaces
+// in the lyrics are collapsed. Text that is already ChordPro is only tidied.
+[[nodiscard]] QString tidyChordSheet(const QString& text);
+
 } // namespace gigchain::core
