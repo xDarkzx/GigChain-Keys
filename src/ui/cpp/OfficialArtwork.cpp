@@ -1,11 +1,12 @@
 #include "OfficialArtwork.h"
 
+#include "KontaktLibraries.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QLoggingCategory>
 #include <QSettings>
-#include <QXmlStreamReader>
 
 #include <utility>
 
@@ -31,48 +32,6 @@ QString firstExisting(const QString& folder, const QStringList& names)
     return {};
 }
 
-// Reads <ProductHints><Product><Name/><Company/><RegKey/><BinName/> files.
-struct ParsedProduct
-{
-    QString name;
-    QString company;
-    QString regKey;
-    QString binName;
-};
-
-ParsedProduct parseServiceCenterXml(const QString& path)
-{
-    ParsedProduct product;
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qCWarning(lcUi).noquote() << "Cannot read" << path << ":" << file.errorString();
-        return product;
-    }
-    QXmlStreamReader xml(&file);
-    // Only the Product's own Name/Company/RegKey/BinName are read; nested
-    // blocks (FactoryLibrary, Relevance...) are skipped whole.
-    if (xml.readNextStartElement() && xml.name() == "ProductHints"_L1) {
-        while (xml.readNextStartElement()) {
-            if (xml.name() != "Product"_L1) {
-                xml.skipCurrentElement();
-                continue;
-            }
-            while (xml.readNextStartElement()) {
-                const auto element = xml.name();
-                if (element == "Name"_L1) product.name = xml.readElementText();
-                else if (element == "Company"_L1) product.company = xml.readElementText();
-                else if (element == "RegKey"_L1) product.regKey = xml.readElementText();
-                else if (element == "BinName"_L1) product.binName = xml.readElementText();
-                else xml.skipCurrentElement();
-            }
-        }
-    }
-    if (xml.hasError()) {
-        qCWarning(lcUi).noquote() << "Malformed NI product file" << path << ":" << xml.errorString();
-    }
-    return product;
-}
-
 } // namespace
 
 OfficialArtwork::Sources OfficialArtwork::defaultSources()
@@ -93,7 +52,13 @@ OfficialArtwork::OfficialArtwork(Sources sources) : m_sources(std::move(sources)
     const QDir serviceCenter(m_sources.niServiceCenter);
     if (!serviceCenter.exists()) return;
     for (const QString& file : serviceCenter.entryList({u"*.xml"_s}, QDir::Files)) {
-        const ParsedProduct product = parseServiceCenterXml(serviceCenter.filePath(file));
+        const QString path = serviceCenter.filePath(file);
+        QFile xml(path);
+        if (!xml.open(QIODevice::ReadOnly)) {
+            qCWarning(lcUi).noquote() << "Cannot read" << path << ":" << xml.errorString();
+            continue;
+        }
+        const NiProductHints product = parseProductHints(xml.readAll(), path);
         if (product.binName.isEmpty()) continue;
         m_niProducts.insert(product.binName.toLower(), NiProduct{product.name, product.company, product.regKey});
     }

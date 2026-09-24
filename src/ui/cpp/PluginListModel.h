@@ -6,6 +6,7 @@
 
 #include <QAbstractListModel>
 #include <QVariantList>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 #include <vector>
@@ -53,6 +54,9 @@ public:
     Q_INVOKABLE QVariantList effects() const;
     // Every instrument as {pluginId, name}, for the mixer's "+ Instrument" menu.
     Q_INVOKABLE QVariantList instruments() const;
+    // The first instrument whose name contains `text` as {pluginId, name}, or
+    // an empty map (e.g. to find Kontakt for a library).
+    Q_INVOKABLE QVariantMap findInstrument(const QString& text) const;
 
 signals:
     void filterTextChanged();

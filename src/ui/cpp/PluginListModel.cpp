@@ -93,6 +93,16 @@ QVariantList PluginListModel::instruments() const
     return pluginsOfKind(m_all, engine::PluginKind::Instrument);
 }
 
+QVariantMap PluginListModel::findInstrument(const QString& text) const
+{
+    for (const auto& plugin : m_all) {
+        if (plugin.kind == engine::PluginKind::Instrument && plugin.name.contains(text, Qt::CaseInsensitive)) {
+            return QVariantMap{{u"pluginId"_s, plugin.id}, {u"name"_s, plugin.name}};
+        }
+    }
+    return {};
+}
+
 void PluginListModel::applyFilter()
 {
     beginResetModel();

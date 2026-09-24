@@ -11,6 +11,7 @@ ApplicationWindow {
     required property ChannelModel channelModel
     required property SelectedChannel selectedChannel
     required property PluginListModel pluginModel
+    required property LibraryListModel libraryModel
     required property EngineStatus engineStatus
     required property EditorService editorService
 
@@ -216,7 +217,8 @@ ApplicationWindow {
                     doc: root.doc
                     setlistModel: root.setlistModel
                     pluginModel: root.pluginModel
-                        editable: true
+                    libraryModel: root.libraryModel
+                    editable: true
                 }
 
                 // The plugin above, the mixer below (drag the divider).
@@ -248,6 +250,7 @@ ApplicationWindow {
                 doc: root.doc
                 setlistModel: root.setlistModel
                 pluginModel: root.pluginModel
+                libraryModel: root.libraryModel
                 engineStatus: root.engineStatus
                 sidePanelOpen: root.sidePanelOpen
             }
