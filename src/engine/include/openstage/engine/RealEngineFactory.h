@@ -2,6 +2,7 @@
 
 #include "openstage/core/Error.h"
 #include "openstage/engine/IEngine.h"
+#include "openstage/engine/MidiSetup.h"
 
 #include <QString>
 #include <QStringList>
@@ -15,7 +16,7 @@ struct RealEngineOptions
     // Default: the Windows default output at its own rate. If the saved
     // device cannot open, system audio is used and the user is told why.
     AudioSetup audio;
-    QStringList midiInputsOff; // switched off in Settings
+    MidiSetup midi;            // the inputs chosen in Settings
     QString pluginFolder;      // empty: the standard VST3 folder
 };
 

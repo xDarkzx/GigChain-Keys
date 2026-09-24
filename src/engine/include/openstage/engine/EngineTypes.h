@@ -50,10 +50,14 @@ struct AudioSetup
     bool operator==(const AudioSetup&) const = default;
 };
 
+// A MIDI input as Settings shows it.
 struct MidiPort
 {
     QString name;
-    bool enabled = true; // false = switched off in Settings
+    bool enabled = false; // plays into OpenStage
+    int channel = 0;      // 0 = all channels, 1-16 = only that one
+
+    bool operator==(const MidiPort&) const = default;
 };
 
 // Linear signal level, 0 (silence) to 1 (full scale).

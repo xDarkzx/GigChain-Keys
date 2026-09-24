@@ -154,12 +154,6 @@ core::Result<void> FakeEngine::setAudioSetup(const AudioSetup& setup)
     return {};
 }
 
-core::Result<void> FakeEngine::setMidiInputsOff(const QStringList& names)
-{
-    if (names.isEmpty()) return {};
-    return core::fail(core::ErrorCode::InvalidData, u"The demo engine has no MIDI inputs"_s);
-}
-
 QString FakeEngine::statusText() const
 {
     return u"Demo engine (no audio)"_s;

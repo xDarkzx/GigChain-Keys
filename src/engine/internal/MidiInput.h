@@ -3,6 +3,8 @@
 #include "MidiEvent.h"
 #include "MidiQueue.h"
 
+#include "openstage/engine/EngineTypes.h"
+
 #include <QString>
 #include <QStringList>
 
@@ -36,10 +38,11 @@ public:
 
     static QStringList listPorts();
 
-    // Main thread. Opens every port except those named in `switchedOff`; a port
-    // that fails is logged and named in the returned notices while the others
-    // still open. Not while the audio thread drains (pause the stream first).
-    std::vector<QString> openAll(const QStringList& switchedOff = {});
+    // Main thread. Opens the enabled ones of `ports` (see resolveMidiInputs),
+    // each with its channel filter; a port that fails is logged and named in
+    // the returned notices while the others still open. Not while the audio
+    // thread drains (pause the stream first).
+    std::vector<QString> openAll(const std::vector<MidiPort>& ports);
     void close();
     [[nodiscard]] QStringList openPortNames() const;
 
@@ -58,6 +61,7 @@ private:
         MidiQueue queue;
         MidiInput* owner = nullptr;
         QString name;
+        int channel = 0; // 0 = all channels
     };
 
     static void callback(double timeStamp, std::vector<unsigned char>* message, void* user);

@@ -42,8 +42,8 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
 
     engine->m_preparedRate = engine->m_audio.sampleRate();
     engine->m_preparedBlock = engine->m_audio.maxBlock();
-    engine->m_midiOff = options.midiInputsOff;
-    for (const QString& notice : engine->m_midi.openAll(engine->m_midiOff)) engine->m_pendingNotices.push_back(notice);
+    engine->m_midiSetup = options.midi;
+    for (QString& notice : engine->openMidi()) engine->m_pendingNotices.push_back(std::move(notice));
     engine->m_plugins =
         PluginCatalog::scan(options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder);
     return engine;
@@ -156,24 +156,65 @@ void RealEngine::syncPluginsToDevice()
 
 std::vector<MidiPort> RealEngine::midiInputs() const
 {
-    std::vector<MidiPort> ports;
-    for (const QString& name : MidiInput::listPorts()) ports.push_back(MidiPort{name, !m_midiOff.contains(name)});
-    return ports;
+    return resolveMidiInputs(MidiInput::listPorts(), m_midiSetup);
 }
 
-core::Result<void> RealEngine::setMidiInputsOff(const QStringList& names)
+std::vector<QString> RealEngine::openMidi()
 {
+    m_midiPorts = MidiInput::listPorts();
+    m_lastMidiCheck = std::chrono::steady_clock::now();
+    const auto ports = resolveMidiInputs(m_midiPorts, m_midiSetup);
     // The audio thread drains the ports: pause it while they change.
-    if (auto paused = m_audio.pause(); !paused) return paused;
-    m_midiOff = names;
-    const std::vector<QString> problems = m_midi.openAll(m_midiOff); // each logged
-    if (auto resumed = m_audio.resume(); !resumed) return resumed;
+    const bool running = m_audio.isOpen();
+    if (running) {
+        if (auto paused = m_audio.pause(); !paused) {
+            qCWarning(lcEngine).noquote() << paused.error().message;
+            return {paused.error().message};
+        }
+    }
+    std::vector<QString> problems = m_midi.openAll(ports); // each logged
+    if (running) {
+        if (auto resumed = m_audio.resume(); !resumed) {
+            qCWarning(lcEngine).noquote() << resumed.error().message;
+            problems.push_back(resumed.error().message);
+        }
+    }
+    return problems;
+}
+
+core::Result<void> RealEngine::setMidiSetup(const MidiSetup& setup)
+{
+    m_midiSetup = setup;
+    const std::vector<QString> problems = openMidi();
     if (!problems.empty()) {
         QStringList text;
         for (const QString& problem : problems) text << problem;
         return core::fail(core::ErrorCode::DeviceUnavailable, text.join(u"; "_s));
     }
     return {};
+}
+
+void RealEngine::watchMidiPorts(std::vector<QString>& notices)
+{
+    constexpr auto kInterval = std::chrono::seconds(2);
+    const auto now = std::chrono::steady_clock::now();
+    if (now - m_lastMidiCheck < kInterval) return;
+    m_lastMidiCheck = now;
+    const QStringList present = MidiInput::listPorts();
+    if (present == m_midiPorts) return;
+
+    std::vector<QString> changes;
+    for (const QString& name : present) {
+        if (!m_midiPorts.contains(name)) changes.push_back(u"MIDI input connected: %1"_s.arg(name));
+    }
+    for (const QString& name : m_midiPorts) {
+        if (!present.contains(name)) changes.push_back(u"MIDI input disconnected: %1"_s.arg(name));
+    }
+    for (QString& change : changes) {
+        qCInfo(lcEngine).noquote() << change;
+        notices.push_back(std::move(change));
+    }
+    for (QString& problem : openMidi()) notices.push_back(std::move(problem));
 }
 
 void RealEngine::applyPatch(const core::Patch& patch)
@@ -277,6 +318,7 @@ std::vector<QString> RealEngine::poll()
     for (QString& notice : m_audio.poll()) notices.push_back(std::move(notice));
     // A lost device may have come back at another rate or block size.
     syncPluginsToDevice();
+    watchMidiPorts(notices);
     for (QString& notice : m_pendingNotices) notices.push_back(std::move(notice));
     m_pendingNotices.clear();
 

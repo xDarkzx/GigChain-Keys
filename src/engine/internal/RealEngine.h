@@ -10,6 +10,7 @@
 #include "openstage/engine/RealEngineFactory.h"
 
 #include <array>
+#include <chrono>
 #include <atomic>
 #include <map>
 #include <memory>
@@ -46,7 +47,8 @@ public:
     [[nodiscard]] AudioSetup audioSetup() const override;
     core::Result<void> setAudioSetup(const AudioSetup& setup) override;
     [[nodiscard]] std::vector<MidiPort> midiInputs() const override;
-    core::Result<void> setMidiInputsOff(const QStringList& names) override;
+    [[nodiscard]] MidiSetup midiSetup() const override { return m_midiSetup; }
+    core::Result<void> setMidiSetup(const MidiSetup& setup) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) override;
 
@@ -58,6 +60,10 @@ private:
     // After the device changed rate or block size: with audio paused, every
     // plugin is re-prepared and the patch rebuilt for the new size.
     void syncPluginsToDevice();
+    // Opens the inputs plugged in now as m_midiSetup says; problems returned (each logged).
+    std::vector<QString> openMidi();
+    // Every couple of seconds: notices a keyboard plugged in or pulled out.
+    void watchMidiPorts(std::vector<QString>& notices);
 
     AudioDevice m_audio;
     MidiInput m_midi;
@@ -71,7 +77,9 @@ private:
     core::Patch m_patch;         // the sounding patch, rebuilt after a device change
     double m_preparedRate = 0.0; // what the plugins are prepared for
     int m_preparedBlock = 0;
-    QStringList m_midiOff;
+    MidiSetup m_midiSetup;
+    QStringList m_midiPorts; // what was plugged in at the last check
+    std::chrono::steady_clock::time_point m_lastMidiCheck{};
     // Main thread: the instrument each channel of the current patch plays.
     std::map<QString, std::shared_ptr<Vst3Node>> m_currentInstruments;
 
