@@ -33,6 +33,7 @@ qt_add_qml_module(openstage_ui
         VolumeFader.qml
         StageMenu.qml
         StageComboBox.qml
+        StatBox.qml
         SettingsDialog.qml
         SettingsSection.qml
         SettingsRow.qml
