@@ -87,6 +87,8 @@ public:
     [[nodiscard]] QString currentChart() const;
     Q_INVOKABLE bool setSongChart(int song, const QString& chordPro);
     Q_INVOKABLE bool pasteChart(int song, const QString& pasted);
+    // pasteChart with whatever text is on the clipboard.
+    Q_INVOKABLE bool pasteChartFromClipboard(int song);
     // A downloaded text chart: .txt, .cho, .chopro, .chordpro, .crd, .pro, .onsong.
     Q_INVOKABLE bool importChartFile(int song, const QUrl& file);
     // For the chart view: [{kind: "lyrics"|"section"|"comment"|"blank",

@@ -207,6 +207,20 @@ private slots:
         QCOMPARE(star->property("glyph").toString(), u"★"_s); // a favourite is listed first
     }
 
+    void chartTabShowsThePastedChart()
+    {
+        QQuickItem* scene = window()->contentItem();
+        auto* empty = findItem(scene, u"chartEmpty"_s);
+        QVERIFY(empty != nullptr);
+        QVERIFY(empty->isVisible()); // no chart yet: says how to add one
+        QVERIFY(m_session->document().pasteChart(0, u"C        G\nHello my   friend\n"_s));
+        settle();
+        QVERIFY(!empty->isVisible());
+        auto* lines = findItem(scene, u"chartLines"_s);
+        QVERIFY(lines != nullptr);
+        QCOMPARE(lines->property("count").toInt(), 1);
+    }
+
     void spaceNavigatesButNotWhileTyping()
     {
         QVERIFY(m_session->document().addPatch(0));
