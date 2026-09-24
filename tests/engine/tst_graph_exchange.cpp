@@ -89,14 +89,20 @@ private slots:
                 blocks.fetch_add(1);
             }
         });
-        for (int i = 0; i < 5000; ++i) {
+        // Publish until both threads have really overlapped: at least 5000
+        // publishes AND 100 rendered blocks (a busy CI machine may not
+        // schedule the audio thread before 5000 publishes are done).
+        constexpr long kMaxPublishes = 50'000'000; // the audio thread never ran: fail, don't hang
+        long published = 0;
+        while ((published < 5000 || blocks.load() < 100) && published < kMaxPublishes) {
             exchange.publish(emptyGraph());
             exchange.collectGarbage();
+            ++published;
         }
         stop = true;
         audio.join();
         exchange.collectGarbage();
-        QVERIFY(blocks.load() > 0);
+        QVERIFY2(blocks.load() >= 100, "the audio thread never rendered while graphs were published");
         QVERIFY(exchange.retiredCount() <= 1);
     }
 
