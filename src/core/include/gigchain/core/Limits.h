@@ -14,6 +14,14 @@ inline constexpr int kMaxEffectsPerChannel = 16;
 inline constexpr int kMaxNameLength = 200;
 inline constexpr int kMaxIdLength = 64;
 inline constexpr int kMaxPluginIdLength = 512;
+inline constexpr int kMaxChartLength = 100'000; // a very long song is ~10k
+inline constexpr int kMaxNotesLength = 10'000;
+inline constexpr int kMaxKeyLength = 16;
+inline constexpr int kMaxLinksPerSong = 32;
+inline constexpr int kMaxUrlLength = 2048;
+inline constexpr int kMaxAttachmentsPerSong = 32;
+inline constexpr int kMaxFileNameLength = 255;
+inline constexpr double kMaxTempo = 400.0;
 
 inline constexpr int kMinMidiNote = 0;
 inline constexpr int kMaxMidiNote = 127;

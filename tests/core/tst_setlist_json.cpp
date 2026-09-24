@@ -29,6 +29,12 @@ Setlist richSetlist()
     Channel empty = makeChannel(QStringLiteral("Spare"));
     song.patches.front().channels = {piano, empty};
     song.patches.push_back(makePatch(QStringLiteral("Chorus")));
+    song.chart = QStringLiteral("{title: Café}\n[Dm]I love [C#m7]you so much[D/E]\n");
+    song.key = QStringLiteral("Dm");
+    song.tempo = 72.5;
+    song.notes = QStringLiteral("Capo 2 on the guitar; keys play the pad");
+    song.links.push_back(SongLink{QStringLiteral("Chords"), QStringLiteral("https://tabs.example/cafe")});
+    song.attachments.push_back(QStringLiteral("cafe-chords.pdf"));
     setlist.songs.push_back(song);
     setlist.songs.push_back(makeSong(QStringLiteral("Second")));
     return setlist;
@@ -121,10 +127,27 @@ private slots:
         QVERIFY(parsed.error().code == ErrorCode::ParseFailed);
     }
 
+    void opensVersionOneFiles()
+    {
+        // Format 1 had no song charts: such files open with empty ones.
+        QJsonObject root = richJson();
+        root.insert(u"formatVersion", 1);
+        QJsonArray songs = root.value(u"songs").toArray();
+        QJsonObject song = songs.at(0).toObject();
+        for (const char* key : {"chart", "key", "tempo", "notes", "links", "attachments"}) song.remove(QLatin1String(key));
+        songs.replace(0, song);
+        root.insert(u"songs", songs);
+        const auto parsed = fromJson(QJsonDocument(root).toJson());
+        QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
+        QVERIFY(parsed->songs[0].chart.isEmpty());
+        QCOMPARE(parsed->songs[0].tempo, 0.0);
+        QVERIFY(parsed->songs[0].links.empty());
+    }
+
     void rejectsFutureVersion()
     {
         QJsonObject root = richJson();
-        root.insert(u"formatVersion", 2);
+        root.insert(u"formatVersion", kSetlistFormatVersion + 1);
         const auto parsed = fromJson(QJsonDocument(root).toJson());
         QVERIFY(!parsed);
         QVERIFY(parsed.error().code == ErrorCode::UnsupportedVersion);

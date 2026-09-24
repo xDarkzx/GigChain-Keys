@@ -50,11 +50,32 @@ struct Patch
     friend bool operator==(const Patch&, const Patch&) = default;
 };
 
+// A web page for a song (a chord sheet, a video...). Opened in the browser.
+struct SongLink
+{
+    QString title;
+    QString url; // http or https only
+
+    friend bool operator==(const SongLink&, const SongLink&) = default;
+};
+
 struct Song
 {
     SongId id;
     QString name;
     std::vector<Patch> patches;
+
+    // What the player follows on stage. `chart` is ChordPro: lyrics with
+    // chords in brackets over the words they change on ("[Dm]I love
+    // [C#m7]you"). It may be lyrics only, chords only, or empty.
+    QString chart;
+    QString key;       // e.g. "Dm"; empty = not set
+    double tempo = 0.0; // beats per minute; 0 = not set
+    QString notes;
+    std::vector<SongLink> links;
+    // Files (PDF chord sheets, Guitar Pro, MIDI...) kept in the setlist's
+    // own folder, by file name.
+    std::vector<QString> attachments;
 
     friend bool operator==(const Song&, const Song&) = default;
 };

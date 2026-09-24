@@ -95,6 +95,24 @@ private slots:
                  s.songs.push_back(copy);
              }}},
             {"empty id", {ErrorCode::InvalidData, [](Setlist& s) { firstChannel(s).id = ChannelId(); }}},
+            // Song charts. Links open in the browser: web addresses only.
+            {"javascript link", {ErrorCode::InvalidData, [](Setlist& s) {
+                 s.songs.front().links.push_back(SongLink{QStringLiteral("x"), QStringLiteral("javascript:alert(1)")});
+             }}},
+            {"file link", {ErrorCode::InvalidData, [](Setlist& s) {
+                 s.songs.front().links.push_back(SongLink{QStringLiteral("x"), QStringLiteral("file:///C:/Windows/system32/calc.exe")});
+             }}},
+            // Attachments live in the setlist's own folder: plain file names only.
+            {"attachment escapes the folder", {ErrorCode::InvalidData, [](Setlist& s) {
+                 s.songs.front().attachments.push_back(QStringLiteral("../../secret.txt"));
+             }}},
+            {"attachment is a full path", {ErrorCode::InvalidData, [](Setlist& s) {
+                 s.songs.front().attachments.push_back(QStringLiteral("C:/Users/x/doc.pdf"));
+             }}},
+            {"tempo too fast", {ErrorCode::OutOfRange, [](Setlist& s) { s.songs.front().tempo = 1000.0; }}},
+            {"chart too long", {ErrorCode::LimitExceeded, [](Setlist& s) {
+                 s.songs.front().chart = QString(limits::kMaxChartLength + 1, QLatin1Char('x'));
+             }}},
             {"too many songs", {ErrorCode::LimitExceeded, [](Setlist& s) {
                  for (int i = 0; i < limits::kMaxSongs; ++i) {
                      s.songs.push_back(makeSong(QStringLiteral("Song")));

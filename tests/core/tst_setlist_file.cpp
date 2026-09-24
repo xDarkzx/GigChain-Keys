@@ -1,5 +1,6 @@
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/SetlistFile.h"
+#include "gigchain/core/SetlistJson.h"
 
 #include <QFile>
 #include <QTemporaryDir>
@@ -46,7 +47,7 @@ private slots:
         const auto loaded = loadSetlistFile(path);
         QVERIFY(loaded.has_value());
         QVERIFY(*loaded == original);
-        QVERIFY(readAll(path).contains("\"formatVersion\": 1"));
+        QVERIFY(readAll(path).contains(QByteArray("\"formatVersion\": ") + QByteArray::number(kSetlistFormatVersion)));
     }
 
     void missingFileIsReported()
