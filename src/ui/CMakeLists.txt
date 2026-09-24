@@ -38,6 +38,8 @@ qt_add_qml_module(gigchain_ui
         StageMenu.qml
         StageComboBox.qml
         StatBox.qml
+        CardButton.qml
+        DetailRow.qml
         Splash.qml
         SettingsDialog.qml
         SettingsSection.qml
