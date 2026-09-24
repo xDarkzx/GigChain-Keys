@@ -1,4 +1,4 @@
-#include "PluginEditorHost.h"
+﻿#include "PluginEditorHost.h"
 
 #include <QLoggingCategory>
 #include <QQuickWindow>
@@ -80,7 +80,9 @@ void PluginEditorHost::rebuild()
     child->setFlag(Qt::FramelessWindowHint);
     child->create();
     std::unique_ptr<engine::IPluginEditor> editor = std::move(*created);
-    editor->setContentScale(host->devicePixelRatio());
+    // Scale before opening too: some plugins size their window from it. Whether
+    // the plugin supports zoom is checked after attach (m_scalable).
+    (void)editor->setContentScale(host->devicePixelRatio());
     if (auto attached = editor->attach(static_cast<quintptr>(child->winId())); !attached) {
         child->deleteLater();
         m_service->reportFailure(attached.error().message); // already logged by the editor; now shown too
@@ -89,9 +91,17 @@ void PluginEditorHost::rebuild()
     }
     m_editor = std::move(editor);
     m_child = child;
+    m_zoom = 1.0;
+    m_scalable = !m_editor->canResize() && m_editor->setContentScale(host->devicePixelRatio());
     m_editorSize = m_editor->preferredSize();
+    m_baseSize = m_editorSize;
     m_editor->setResizeHandler([this](QSize requested) {
+        // The plugin changed its own size (a panel opened, or its own zoom
+        // menu): follow it, and treat it as the new 100 % for scalable ones.
         m_editorSize = requested;
+        if (m_scalable && m_zoom > 0.0) {
+            m_baseSize = QSize(static_cast<int>(requested.width() / m_zoom), static_cast<int>(requested.height() / m_zoom));
+        }
         m_placedArea = {}; // refit
         place();
     });
@@ -130,7 +140,17 @@ void PluginEditorHost::place()
         // Resizable editors fill the area (the plugin may adjust the size).
         const QSize wanted(static_cast<int>(area.width() * dpr), static_cast<int>(area.height() * dpr));
         m_editorSize = m_editor->setSize(wanted);
+    } else if (m_scalable && !m_baseSize.isEmpty()) {
+        // Scalable editors zoom to fit, within sensible limits.
+        constexpr double kMinZoom = 0.4;
+        constexpr double kMaxZoom = 1.5;
+        const double fit = std::min(area.width() * dpr / m_baseSize.width(), area.height() * dpr / m_baseSize.height());
+        const double zoom = std::clamp(fit, kMinZoom, kMaxZoom);
+        if (std::abs(zoom - m_zoom) > 0.01 && m_editor->setContentScale(dpr * zoom)) m_zoom = zoom;
+        m_editorSize = m_editor->preferredSize();
     }
+    // Fixed editors (e.g. Arturia) keep their own size and are centred;
+    // they zoom from their own menu and OpenStage follows the resize.
     const double width = std::min(area.width(), m_editorSize.width() / dpr);
     const double height = std::min(area.height(), m_editorSize.height() / dpr);
     const double x = area.x() + std::max(0.0, (area.width() - width) / 2.0);

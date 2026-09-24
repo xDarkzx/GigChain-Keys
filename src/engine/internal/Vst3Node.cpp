@@ -438,12 +438,17 @@ public:
         return {rect.getWidth(), rect.getHeight()};
     }
 
-    void setContentScale(double scale) override
+    bool setContentScale(double scale) override
     {
         FUnknownPtr<IPlugViewContentScaleSupport> scaling(m_view);
-        if (scaling && scaling->setContentScaleFactor(static_cast<float>(scale)) != kResultTrue) {
-            qCInfo(lcEngine).noquote() << m_title << "does not scale its editor; it may look small or large";
+        if (!scaling || scaling->setContentScaleFactor(static_cast<float>(scale)) != kResultTrue) {
+            if (!m_scaleWarned) {
+                qCInfo(lcEngine).noquote() << m_title << "cannot scale its editor; it keeps its own size";
+                m_scaleWarned = true;
+            }
+            return false;
         }
+        return true;
     }
 
     void setResizeHandler(std::function<void(QSize)> handler) override { m_onResize = std::move(handler); }
@@ -484,6 +489,7 @@ private:
     std::function<void(QSize)> m_onResize;
     bool m_attached = false;
     bool m_inResize = false;
+    bool m_scaleWarned = false;
 };
 
 } // namespace
