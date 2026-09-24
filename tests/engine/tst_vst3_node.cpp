@@ -107,6 +107,20 @@ private slots:
         QVERIFY(!(*node)->takeProblems().any()); // taking resets
     }
 
+    void sidechainEffectLoads()
+    {
+        // FabFilter Pro-DS (has a sidechain bus) crashed during activation when
+        // setupProcessing ran before the buses were activated.
+        const QString proDs = u"C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-DS.vst3"_s;
+        if (!QFileInfo::exists(proDs)) QSKIP("FabFilter Pro-DS not installed");
+        auto node = Vst3Node::load(proDs, kRate, kBlock);
+        QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
+        std::vector<float> left(kBlock, 0.1F);
+        std::vector<float> right(kBlock, 0.1F);
+        (*node)->process({}, AudioBlock{left.data(), right.data(), kBlock});
+        QVERIFY(!(*node)->takeProblems().any());
+    }
+
     void effectPassesAudioThrough()
     {
         if (!QFileInfo::exists(kEffect)) QSKIP("FabFilter Pro-Q 3 not installed");

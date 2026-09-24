@@ -61,6 +61,12 @@ public:
         return std::unique_ptr<engine::IPluginEditor>();
     }
     std::vector<QString> editorRequests;
+    core::Result<std::unique_ptr<engine::IPluginEditor>> createEditorForPlugin(const QString& pluginId) override
+    {
+        pluginEditorRequests.push_back(pluginId);
+        return std::unique_ptr<engine::IPluginEditor>();
+    }
+    std::vector<QString> pluginEditorRequests;
 };
 
 } // namespace openstage::test

@@ -27,6 +27,7 @@ public:
     std::vector<QString> poll() override;
     [[nodiscard]] QString statusText() const override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) override;
+    core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) override;
 
 private:
     struct ChannelState

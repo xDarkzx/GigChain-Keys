@@ -134,6 +134,11 @@ core::Result<std::unique_ptr<IPluginEditor>> FakeEngine::createEditor(const core
     return std::unique_ptr<IPluginEditor>(); // demo plugins have no editors
 }
 
+core::Result<std::unique_ptr<IPluginEditor>> FakeEngine::createEditorForPlugin(const QString&)
+{
+    return std::unique_ptr<IPluginEditor>(); // demo plugins have no editors
+}
+
 QString FakeEngine::statusText() const
 {
     return u"Demo engine (no audio)"_s;
