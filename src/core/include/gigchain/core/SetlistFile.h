@@ -1,11 +1,11 @@
 #pragma once
 
-#include "openstage/core/Error.h"
-#include "openstage/core/Model.h"
+#include "gigchain/core/Error.h"
+#include "gigchain/core/Model.h"
 
 #include <QString>
 
-namespace openstage::core {
+namespace gigchain::core {
 
 // Reads and validates a setlist file. Files over limits::kMaxFileBytes are
 // rejected before being read.
@@ -15,4 +15,4 @@ Result<Setlist> loadSetlistFile(const QString& path);
 // an existing file at `path` is left exactly as it was.
 Result<void> saveSetlistFile(const Setlist& setlist, const QString& path);
 
-} // namespace openstage::core
+} // namespace gigchain::core

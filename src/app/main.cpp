@@ -4,9 +4,9 @@
 #include "SettingsController.h"
 #include "StartupProgress.h"
 
-#include "openstage/core/FileLog.h"
-#include "openstage/engine/FakeEngineFactory.h"
-#include "openstage/engine/RealEngineFactory.h"
+#include "gigchain/core/FileLog.h"
+#include "gigchain/engine/FakeEngineFactory.h"
+#include "gigchain/engine/RealEngineFactory.h"
 
 #include <QGuiApplication>
 #include <QLoggingCategory>
@@ -22,10 +22,10 @@
 
 #include <memory>
 
-Q_IMPORT_QML_PLUGIN(OpenStage_UiPlugin)
-Q_LOGGING_CATEGORY(lcApp, "openstage.app")
+Q_IMPORT_QML_PLUGIN(GigChain_UiPlugin)
+Q_LOGGING_CATEGORY(lcApp, "gigchain.app")
 
-using namespace openstage;
+using namespace gigchain;
 using namespace Qt::StringLiterals;
 
 namespace {
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
     bool starting = true; // progress is shown only until the main window is up
     auto splash = std::make_unique<QQmlApplicationEngine>();
     splash->setInitialProperties({{u"startup"_s, QVariant::fromValue(&startup)}});
-    splash->loadFromModule(u"OpenStage.Ui"_s, u"Splash"_s);
+    splash->loadFromModule(u"GigChain.Ui"_s, u"Splash"_s);
     if (splash->rootObjects().isEmpty()) qCWarning(lcApp) << "The splash screen failed to load"; // not fatal
     startup.report(QGuiApplication::tr("Opening audio and MIDI"));
 
@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
         for (const QQmlError& warning : warnings) qCWarning(lcApp).noquote() << warning.toString();
     });
     qml.setInitialProperties(session.initialProperties());
-    qml.loadFromModule(u"OpenStage.Ui"_s, u"Main"_s);
+    qml.loadFromModule(u"GigChain.Ui"_s, u"Main"_s);
     if (qml.rootObjects().isEmpty()) {
         qCCritical(lcApp) << "The main window failed to load";
         return 1;

@@ -4,7 +4,7 @@
 
 // Hard limits for setlists. Files are untrusted input: anything outside these
 // is rejected with an Error instead of being processed.
-namespace openstage::core::limits {
+namespace gigchain::core::limits {
 
 inline constexpr qint64 kMaxFileBytes = 8LL * 1024 * 1024;
 inline constexpr int kMaxSongs = 500;
@@ -26,4 +26,4 @@ inline constexpr double kMaxVolumeDb = 12.0;
 inline constexpr double kMinPan = -1.0;
 inline constexpr double kMaxPan = 1.0;
 
-} // namespace openstage::core::limits
+} // namespace gigchain::core::limits

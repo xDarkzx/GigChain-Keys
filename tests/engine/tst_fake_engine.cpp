@@ -1,5 +1,5 @@
-#include "openstage/engine/FakeEngineFactory.h"
-#include "openstage/engine/IEngine.h"
+#include "gigchain/engine/FakeEngineFactory.h"
+#include "gigchain/engine/IEngine.h"
 
 #include <QtTest>
 
@@ -7,7 +7,7 @@
 #include <limits>
 #include <set>
 
-using namespace openstage;
+using namespace gigchain;
 using namespace Qt::StringLiterals;
 
 namespace {

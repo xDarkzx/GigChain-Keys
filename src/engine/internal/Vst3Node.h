@@ -2,8 +2,8 @@
 
 #include "INode.h"
 
-#include "openstage/core/Error.h"
-#include "openstage/engine/IPluginEditor.h"
+#include "gigchain/core/Error.h"
+#include "gigchain/engine/IPluginEditor.h"
 
 #include <QByteArray>
 #include <QString>
@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // One VST3 plugin instance as a graph node. The only unit that touches the
 // Steinberg SDK; its types stay behind the Impl pointer.
@@ -86,4 +86,4 @@ private:
     std::unique_ptr<Impl> m_impl;
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

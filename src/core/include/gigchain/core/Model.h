@@ -1,13 +1,13 @@
 #pragma once
 
-#include "openstage/core/Ids.h"
+#include "gigchain/core/Ids.h"
 
 #include <QString>
 
 #include <optional>
 #include <vector>
 
-namespace openstage::core {
+namespace gigchain::core {
 
 // A plugin placed in a channel, either as its instrument or as an effect.
 struct PluginSlot
@@ -78,4 +78,4 @@ Song withFreshIds(Song song);
 Patch withFreshIds(Patch patch);
 Channel withFreshIds(Channel channel);
 
-} // namespace openstage::core
+} // namespace gigchain::core

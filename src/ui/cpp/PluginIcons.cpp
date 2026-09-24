@@ -7,7 +7,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::ui {
+namespace gigchain::ui {
 namespace {
 
 using Rule = std::pair<QStringList, QString>; // any of these words -> icon
@@ -72,7 +72,7 @@ QString iconFor(const engine::PluginInfo& plugin)
 
 QString iconUrl(const QString& icon)
 {
-    return u"qrc:/qt/qml/OpenStage/Ui/icons/%1.svg"_s.arg(icon);
+    return u"qrc:/qt/qml/GigChain/Ui/icons/%1.svg"_s.arg(icon);
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

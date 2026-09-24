@@ -1,12 +1,12 @@
 #include "LeakCheck.h"
-#include "openstage/core/Error.h"
+#include "gigchain/core/Error.h"
 
 #include <QtTest>
 
 #include <memory>
 #include <vector>
 
-using namespace openstage::core;
+using namespace gigchain::core;
 
 class TestError : public QObject
 {
@@ -42,14 +42,14 @@ private slots:
 
     void leakCheckerDetectsLiveBlocks()
     {
-        if (!openstage::test::leakCheckAvailable()) {
+        if (!gigchain::test::leakCheckAvailable()) {
             QSKIP("CRT debug heap only available in the debug preset");
         }
         std::vector<std::unique_ptr<int>> kept;
-        const auto grown = openstage::test::leakedBlocks([&kept] { kept.push_back(std::make_unique<int>(1)); });
+        const auto grown = gigchain::test::leakedBlocks([&kept] { kept.push_back(std::make_unique<int>(1)); });
         QVERIFY(grown > 0);
         kept.clear();
-        QCOMPARE(openstage::test::leakedBlocks([] { auto temp = std::make_unique<int>(2); }), 0LL);
+        QCOMPARE(gigchain::test::leakedBlocks([] { auto temp = std::make_unique<int>(2); }), 0LL);
     }
 };
 

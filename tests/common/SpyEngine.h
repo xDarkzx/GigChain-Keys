@@ -1,12 +1,12 @@
 #pragma once
 
-#include "openstage/engine/IEngine.h"
+#include "gigchain/engine/IEngine.h"
 
 #include <array>
 #include <map>
 #include <vector>
 
-namespace openstage::test {
+namespace gigchain::test {
 
 // An IEngine that records what the UI asked of it.
 class SpyEngine final : public engine::IEngine
@@ -114,4 +114,4 @@ public:
     }
 };
 
-} // namespace openstage::test
+} // namespace gigchain::test

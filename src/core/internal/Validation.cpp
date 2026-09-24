@@ -1,13 +1,13 @@
-#include "openstage/core/Validation.h"
+#include "gigchain/core/Validation.h"
 
-#include "openstage/core/Limits.h"
+#include "gigchain/core/Limits.h"
 
 #include <cmath>
 #include <set>
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::core {
+namespace gigchain::core {
 namespace {
 
 Result<void> checkRange(int value, int min, int max, const QString& path)
@@ -134,4 +134,4 @@ Result<void> validate(const Setlist& setlist)
     return {};
 }
 
-} // namespace openstage::core
+} // namespace gigchain::core

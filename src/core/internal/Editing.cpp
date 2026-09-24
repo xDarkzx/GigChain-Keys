@@ -1,14 +1,14 @@
-#include "openstage/core/Editing.h"
+#include "gigchain/core/Editing.h"
 
-#include "openstage/core/Limits.h"
-#include "openstage/core/Validation.h"
+#include "gigchain/core/Limits.h"
+#include "gigchain/core/Validation.h"
 
 #include <algorithm>
 #include <utility>
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::core {
+namespace gigchain::core {
 namespace {
 
 constexpr auto kCopySuffix = " (copy)"_L1;
@@ -218,4 +218,4 @@ Result<void> updateChannel(Setlist& setlist, Cursor cursor, int channelIndex,
     return {};
 }
 
-} // namespace openstage::core
+} // namespace gigchain::core

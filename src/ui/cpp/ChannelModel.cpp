@@ -7,11 +7,11 @@
 
 #include <array>
 
-#include "openstage/engine/IEngine.h"
+#include "gigchain/engine/IEngine.h"
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 ChannelModel::ChannelModel(const DocumentController& document, engine::IEngine& engine,
                            const OfficialArtwork& artwork, QObject* parent)
@@ -133,4 +133,4 @@ void ChannelModel::reset()
     endResetModel();
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

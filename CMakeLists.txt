@@ -15,7 +15,7 @@ find_package(RtMidi CONFIG REQUIRED)
 # MSVC refuses to link ASan-instrumented objects with uninstrumented ones
 # that use the same STL containers, so third-party code built here (the VST3
 # SDK) is instrumented too.
-if(OPENSTAGE_ASAN AND MSVC)
+if(GIGCHAIN_ASAN AND MSVC)
     add_compile_options(/fsanitize=address)
     add_link_options(/INCREMENTAL:NO)
 endif()
@@ -31,7 +31,7 @@ add_subdirectory(src/app)
 add_subdirectory(tests)
 
 # Throwaway experiments (engine spike). Off by default; use the "spike" preset.
-option(OPENSTAGE_BUILD_SPIKES "Build throwaway spike programs" OFF)
-if(OPENSTAGE_BUILD_SPIKES)
+option(GIGCHAIN_BUILD_SPIKES "Build throwaway spike programs" OFF)
+if(GIGCHAIN_BUILD_SPIKES)
     add_subdirectory(spikes/engine_spike)
 endif()

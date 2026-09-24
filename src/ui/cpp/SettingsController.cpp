@@ -2,7 +2,7 @@
 
 #include "DocumentController.h"
 
-#include "openstage/engine/IEngine.h"
+#include "gigchain/engine/IEngine.h"
 
 #include <QLoggingCategory>
 #include <QSettings>
@@ -13,7 +13,7 @@ Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::ui {
+namespace gigchain::ui {
 namespace {
 
 const QString kDriverKey = u"audio/driver"_s;
@@ -295,4 +295,4 @@ bool SettingsController::apply()
     return problems.isEmpty();
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

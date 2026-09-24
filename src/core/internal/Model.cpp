@@ -1,10 +1,10 @@
-#include "openstage/core/Model.h"
+#include "gigchain/core/Model.h"
 
 #include <utility>
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::core {
+namespace gigchain::core {
 
 Song makeSong(const QString& name)
 {
@@ -55,4 +55,4 @@ Song withFreshIds(Song song)
     return song;
 }
 
-} // namespace openstage::core
+} // namespace gigchain::core

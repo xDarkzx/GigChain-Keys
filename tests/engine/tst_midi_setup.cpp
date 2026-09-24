@@ -1,9 +1,9 @@
 // Which MIDI inputs play: from what is plugged in and what the user chose.
-#include "openstage/engine/MidiSetup.h"
+#include "gigchain/engine/MidiSetup.h"
 
 #include <QtTest>
 
-using namespace openstage::engine;
+using namespace gigchain::engine;
 using namespace Qt::StringLiterals;
 
 namespace {

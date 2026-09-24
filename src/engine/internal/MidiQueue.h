@@ -6,7 +6,7 @@
 #include <atomic>
 #include <cstdint>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // Lock-free single-producer / single-consumer queue: one MIDI input thread
 // pushes, the audio thread pops. Use one queue per MIDI port. When full,
@@ -52,4 +52,4 @@ private:
 #pragma warning(pop)
 #endif
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

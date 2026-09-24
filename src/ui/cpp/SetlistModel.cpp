@@ -4,7 +4,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 SetlistModel::SetlistModel(const DocumentController& document, QObject* parent)
     : QAbstractListModel(parent), m_document(document)
@@ -71,4 +71,4 @@ void SetlistModel::refreshCurrent()
     emit dataChanged(index(0), index(static_cast<int>(m_rows.size()) - 1), {IsCurrentRole, IsCurrentSongRole});
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

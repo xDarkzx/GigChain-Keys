@@ -1,12 +1,12 @@
 #pragma once
 
-#include "openstage/core/Model.h"
+#include "gigchain/core/Model.h"
 
 #include <QObject>
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 class DocumentController;
 
@@ -51,4 +51,4 @@ private:
     const DocumentController& m_document;
 };
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

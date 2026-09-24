@@ -2,7 +2,7 @@
 
 #include <QtTest>
 
-using namespace openstage::ui;
+using namespace gigchain::ui;
 
 class TestEditorPlacement : public QObject
 {

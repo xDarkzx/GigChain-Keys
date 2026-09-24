@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // One raw MIDI channel message as it travels from the MIDI input to the
 // audio thread. Trivially copyable so it can sit in lock-free queues.
@@ -17,4 +17,4 @@ struct MidiEvent
 // Most events a single audio block will carry; extra events are dropped.
 inline constexpr int kMaxEventsPerBlock = 256;
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

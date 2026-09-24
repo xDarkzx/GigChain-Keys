@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // Hands render graphs from the main thread to the audio thread without locks.
 //
@@ -43,4 +43,4 @@ private:
     std::atomic<RenderGraph*> m_hazard{nullptr};
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

@@ -1,7 +1,7 @@
-#include "openstage/core/SetlistJson.h"
+#include "gigchain/core/SetlistJson.h"
 
-#include "openstage/core/Limits.h"
-#include "openstage/core/Validation.h"
+#include "gigchain/core/Limits.h"
+#include "gigchain/core/Validation.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -14,7 +14,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::core {
+namespace gigchain::core {
 namespace {
 
 // Reads typed fields from JSON and remembers only the first error. After an
@@ -313,4 +313,4 @@ Result<Setlist> fromJson(const QByteArray& bytes)
     return setlist;
 }
 
-} // namespace openstage::core
+} // namespace gigchain::core

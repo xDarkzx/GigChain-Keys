@@ -2,7 +2,7 @@
 
 #include "PluginIcons.h"
 
-#include "openstage/engine/IEngine.h"
+#include "gigchain/engine/IEngine.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -17,7 +17,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialArtwork& artwork, QSettings* settings,
                                  QObject* parent)
@@ -254,4 +254,4 @@ void PluginListModel::applyFilter()
     endResetModel();
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

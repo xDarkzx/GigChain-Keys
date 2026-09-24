@@ -13,7 +13,7 @@ Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::ui {
+namespace gigchain::ui {
 namespace {
 
 // The first existing file among `names` in `folder`, matched without regard
@@ -157,4 +157,4 @@ PluginArtwork OfficialArtwork::fromArturia(const engine::PluginInfo& plugin) con
     return art;
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

@@ -1,8 +1,8 @@
-#include "openstage/core/SetlistFile.h"
+#include "gigchain/core/SetlistFile.h"
 
-#include "openstage/core/Limits.h"
-#include "openstage/core/SetlistJson.h"
-#include "openstage/core/Validation.h"
+#include "gigchain/core/Limits.h"
+#include "gigchain/core/SetlistJson.h"
+#include "gigchain/core/Validation.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -10,7 +10,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::core {
+namespace gigchain::core {
 
 Result<Setlist> loadSetlistFile(const QString& path)
 {
@@ -58,4 +58,4 @@ Result<void> saveSetlistFile(const Setlist& setlist, const QString& path)
     return {};
 }
 
-} // namespace openstage::core
+} // namespace gigchain::core

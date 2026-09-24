@@ -1,8 +1,8 @@
 #include "DocumentController.h"
 
-#include "openstage/core/Editing.h"
-#include "openstage/core/SetlistFile.h"
-#include "openstage/engine/IEngine.h"
+#include "gigchain/core/Editing.h"
+#include "gigchain/core/SetlistFile.h"
+#include "gigchain/engine/IEngine.h"
 
 #include <QFileInfo>
 #include <QLoggingCategory>
@@ -10,9 +10,9 @@
 
 using namespace Qt::StringLiterals;
 
-Q_LOGGING_CATEGORY(lcUi, "openstage.ui")
+Q_LOGGING_CATEGORY(lcUi, "gigchain.ui")
 
-namespace openstage::ui {
+namespace gigchain::ui {
 namespace {
 
 constexpr auto kLastFileKey = "session/lastFile"_L1;
@@ -538,4 +538,4 @@ void DocumentController::setFilePath(const QString& path)
     emit filePathChanged();
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

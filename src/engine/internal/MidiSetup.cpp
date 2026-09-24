@@ -1,8 +1,8 @@
-#include "openstage/engine/MidiSetup.h"
+#include "gigchain/engine/MidiSetup.h"
 
 #include <algorithm>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSetup& setup)
 {
@@ -18,4 +18,4 @@ std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSe
     return ports;
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

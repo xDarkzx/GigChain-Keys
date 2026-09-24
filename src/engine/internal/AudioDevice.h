@@ -2,7 +2,7 @@
 
 #include "INode.h"
 
-#include "openstage/core/Error.h"
+#include "gigchain/core/Error.h"
 
 #include <QString>
 
@@ -15,7 +15,7 @@
 
 class RtAudio;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 enum class AudioApi
 {
@@ -112,4 +112,4 @@ private:
 
 QString apiName(AudioApi api);
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

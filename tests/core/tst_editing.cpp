@@ -1,11 +1,11 @@
 #include "LeakCheck.h"
-#include "openstage/core/Editing.h"
-#include "openstage/core/Limits.h"
-#include "openstage/core/Validation.h"
+#include "gigchain/core/Editing.h"
+#include "gigchain/core/Limits.h"
+#include "gigchain/core/Validation.h"
 
 #include <QtTest>
 
-using namespace openstage::core;
+using namespace gigchain::core;
 using namespace Qt::StringLiterals;
 
 namespace {
@@ -191,7 +191,7 @@ private slots:
     void editingDoesNotLeak()
     {
         Setlist s = abc();
-        QCOMPARE(openstage::test::leakedBlocks([&s] {
+        QCOMPARE(gigchain::test::leakedBlocks([&s] {
                      const auto index = addSong(s, u"Temp"_s);
                      QVERIFY(index.has_value());
                      QVERIFY(addChannel(s, Cursor{*index, 0}, kPiano).has_value());

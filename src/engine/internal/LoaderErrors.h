@@ -2,7 +2,7 @@
 
 #include <windows.h>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 // While alive, the Windows loader reports bad or missing DLLs (corrupt,
 // 32-bit, missing dependency) to the caller as errors instead of showing a
@@ -23,4 +23,4 @@ private:
     DWORD m_previous = 0;
 };
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

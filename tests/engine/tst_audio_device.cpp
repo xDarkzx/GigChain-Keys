@@ -8,8 +8,8 @@
 #include <chrono>
 #include <thread>
 
-using namespace openstage;
-using namespace openstage::engine;
+using namespace gigchain;
+using namespace gigchain::engine;
 using namespace Qt::StringLiterals;
 
 class TestAudioDevice : public QObject

@@ -1,4 +1,4 @@
-#include "openstage/core/FileLog.h"
+#include "gigchain/core/FileLog.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -10,7 +10,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::core {
+namespace gigchain::core {
 namespace {
 
 struct LogState
@@ -112,4 +112,4 @@ void FileLog::uninstall()
     s.installed = false;
 }
 
-} // namespace openstage::core
+} // namespace gigchain::core

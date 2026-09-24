@@ -2,7 +2,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 Session::Session(engine::IEngine& engine, QSettings& settings)
     : m_artwork(OfficialArtwork::defaultSources()),
@@ -32,4 +32,4 @@ QVariantMap Session::initialProperties()
     };
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

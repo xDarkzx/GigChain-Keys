@@ -1,8 +1,8 @@
 #pragma once
 
-#include "openstage/core/Error.h"
-#include "openstage/engine/IEngine.h"
-#include "openstage/engine/MidiSetup.h"
+#include "gigchain/core/Error.h"
+#include "gigchain/engine/IEngine.h"
+#include "gigchain/engine/MidiSetup.h"
 
 #include <QString>
 #include <QStringList>
@@ -10,7 +10,7 @@
 #include <functional>
 #include <memory>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 
 struct RealEngineOptions
 {
@@ -31,4 +31,4 @@ struct RealEngineOptions
 // ErrorCode::DeviceUnavailable when no audio output can be opened.
 core::Result<std::unique_ptr<IEngine>> createRealEngine(const RealEngineOptions& options = {});
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

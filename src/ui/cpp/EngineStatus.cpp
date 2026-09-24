@@ -2,7 +2,7 @@
 
 #include "DocumentController.h"
 
-#include "openstage/engine/IEngine.h"
+#include "gigchain/engine/IEngine.h"
 
 #include <QLoggingCategory>
 
@@ -13,7 +13,7 @@
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
-namespace openstage::ui {
+namespace gigchain::ui {
 
 EngineStatus::EngineStatus(engine::IEngine& engine, DocumentController& document, QObject* parent)
     : QObject(parent), m_engine(engine), m_document(document), m_statusText(engine.statusText())
@@ -75,4 +75,4 @@ void EngineStatus::poll()
     emit polled();
 }
 
-} // namespace openstage::ui
+} // namespace gigchain::ui

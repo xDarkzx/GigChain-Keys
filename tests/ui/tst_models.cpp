@@ -16,8 +16,8 @@
 
 #include <memory>
 
-using namespace openstage;
-using namespace openstage::ui;
+using namespace gigchain;
+using namespace gigchain::ui;
 using namespace Qt::StringLiterals;
 
 namespace {
@@ -98,7 +98,7 @@ private slots:
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
         QCOMPARE(model.rowCount(), 1);
         QCOMPARE(roleData(model, 0, "instrumentName").toString(), u"Spy Piano"_s);
-        QCOMPARE(roleData(model, 0, "icon").toString(), u"qrc:/qt/qml/OpenStage/Ui/icons/piano.svg"_s);
+        QCOMPARE(roleData(model, 0, "icon").toString(), u"qrc:/qt/qml/GigChain/Ui/icons/piano.svg"_s);
         QVERIFY(roleData(model, 0, "color").toString().startsWith(u'#'));
         QCOMPARE(roleData(model, 0, "pan").toDouble(), 0.0);
         QVERIFY(m_doc->setChannelPan(0, 0.5));

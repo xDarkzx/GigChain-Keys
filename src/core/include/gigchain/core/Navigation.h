@@ -1,10 +1,10 @@
 #pragma once
 
-#include "openstage/core/Model.h"
+#include "gigchain/core/Model.h"
 
 #include <optional>
 
-namespace openstage::core {
+namespace gigchain::core {
 
 // A position in a setlist. Invalid (-1, -1) when the setlist has no patches.
 struct Cursor
@@ -39,4 +39,4 @@ std::optional<Cursor> findPatch(const Setlist& setlist, const PatchId& id);
 const Patch* patchAt(const Setlist& setlist, Cursor cursor);
 Patch* patchAt(Setlist& setlist, Cursor cursor);
 
-} // namespace openstage::core
+} // namespace gigchain::core

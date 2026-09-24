@@ -1,6 +1,6 @@
 #include "FakeEngine.h"
 
-#include "openstage/core/Limits.h"
+#include "gigchain/core/Limits.h"
 
 #include <algorithm>
 #include <chrono>
@@ -10,7 +10,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 namespace {
 
 double dbToGain(double db)
@@ -179,4 +179,4 @@ std::unique_ptr<IEngine> createFakeEngine()
     });
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

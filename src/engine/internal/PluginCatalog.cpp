@@ -22,7 +22,7 @@
 
 using namespace Qt::StringLiterals;
 
-namespace openstage::engine {
+namespace gigchain::engine {
 namespace {
 
 constexpr int kMaxDepth = 8; // also stops junction loops
@@ -255,4 +255,4 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString
     return plugins;
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine

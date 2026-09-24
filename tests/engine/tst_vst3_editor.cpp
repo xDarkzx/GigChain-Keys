@@ -10,8 +10,8 @@
 
 #include <cstdlib>
 
-using namespace openstage;
-using namespace openstage::engine;
+using namespace gigchain;
+using namespace gigchain::engine;
 using namespace Qt::StringLiterals;
 
 namespace {

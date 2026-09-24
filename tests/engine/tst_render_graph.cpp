@@ -25,8 +25,8 @@ void* operator new(std::size_t size)
 void operator delete(void* p) noexcept { std::free(p); }
 void operator delete(void* p, std::size_t) noexcept { std::free(p); }
 
-using namespace openstage;
-using namespace openstage::engine;
+using namespace gigchain;
+using namespace gigchain::engine;
 using namespace Qt::StringLiterals;
 
 namespace {

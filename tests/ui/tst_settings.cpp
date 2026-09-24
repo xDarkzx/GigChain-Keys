@@ -9,8 +9,8 @@
 
 #include <memory>
 
-using namespace openstage;
-using namespace openstage::ui;
+using namespace gigchain;
+using namespace gigchain::ui;
 using namespace Qt::StringLiterals;
 
 class TestSettings : public QObject

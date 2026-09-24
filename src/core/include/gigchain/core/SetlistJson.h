@@ -1,11 +1,11 @@
 #pragma once
 
-#include "openstage/core/Error.h"
-#include "openstage/core/Model.h"
+#include "gigchain/core/Error.h"
+#include "gigchain/core/Model.h"
 
 #include <QByteArray>
 
-namespace openstage::core {
+namespace gigchain::core {
 
 inline constexpr int kSetlistFormatVersion = 1;
 
@@ -16,4 +16,4 @@ QByteArray toJson(const Setlist& setlist);
 // type-checked; sizes and counts are checked before any work is done on them.
 Result<Setlist> fromJson(const QByteArray& bytes);
 
-} // namespace openstage::core
+} // namespace gigchain::core

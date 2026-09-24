@@ -1,12 +1,12 @@
 #include "RenderGraph.h"
 
-#include "openstage/core/Limits.h"
+#include "gigchain/core/Limits.h"
 
 #include <algorithm>
 #include <cmath>
 #include <numbers>
 
-namespace openstage::engine {
+namespace gigchain::engine {
 namespace {
 
 void atomicMax(std::atomic<float>& target, float value) noexcept
@@ -140,4 +140,4 @@ ChannelStrip* RenderGraph::findStrip(const core::ChannelId& id)
     return it == m_strips.end() ? nullptr : it->get();
 }
 
-} // namespace openstage::engine
+} // namespace gigchain::engine
