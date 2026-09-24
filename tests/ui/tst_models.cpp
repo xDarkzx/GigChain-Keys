@@ -107,6 +107,9 @@ private slots:
 
         QVERIFY(m_doc->addEffect(0, u"spy/Reverb.vst3"_s, u"Spy Reverb"_s));
         QCOMPARE(roleData(model, 0, "effectNames").toStringList(), QStringList{u"Spy Reverb"_s});
+        QCOMPARE(roleData(model, 0, "effectBypassed").toList(), QVariantList{false});
+        QVERIFY(m_doc->setEffectBypass(0, 0, true));
+        QCOMPARE(roleData(model, 0, "effectBypassed").toList(), QVariantList{true});
         QVERIFY(m_doc->setChannelVolume(0, -3.0));
         QCOMPARE(roleData(model, 0, "volumeDb").toDouble(), -3.0);
 
@@ -145,6 +148,34 @@ private slots:
         QCOMPARE(roleData(model, 1, "kind").toString(), u"instrument"_s);
     }
 
+    void hiddenInstrumentsStayHidden()
+    {
+        const OfficialArtwork artwork(noArtwork());
+        QSettings settings(m_dir->filePath(u"hide.ini"_s), QSettings::IniFormat);
+        {
+            PluginListModel model(*m_engine, artwork, &settings);
+            model.setInstrumentsOnly(true);
+            QCOMPARE(model.rowCount(), 2);
+            QSignalSpy menus(&model, &PluginListModel::menusChanged);
+            model.hide(u"spy/Pad.vst3"_s);
+            QCOMPARE(model.rowCount(), 1);
+            QCOMPARE(roleData(model, 0, "name").toString(), u"Spy Piano"_s);
+            // hidden plugins leave the pickers too, and the pickers are told
+            QCOMPARE(menus.count(), 1);
+            const QVariantList vendors = model.instrumentMenu().value(u"vendors"_s).toList();
+            QCOMPARE(vendors.size(), 1);
+            const QVariantList plugins = vendors[0].toMap().value(u"plugins"_s).toList();
+            QCOMPARE(plugins.size(), 1);
+            QCOMPARE(plugins[0].toMap().value(u"name"_s).toString(), u"Spy Piano"_s);
+        }
+        PluginListModel again(*m_engine, artwork, &settings); // next start
+        again.setInstrumentsOnly(true);
+        QCOMPARE(again.rowCount(), 1);
+        again.showAll();
+        QCOMPARE(again.rowCount(), 2);
+        QCOMPARE(again.instrumentMenu().value(u"vendors"_s).toList()[0].toMap().value(u"plugins"_s).toList().size(), 2);
+    }
+
     void pluginListGroupsAndFilters()
     {
         const OfficialArtwork artwork(noArtwork());
@@ -165,6 +196,18 @@ private slots:
         QCOMPARE(model.instruments().size(), 2);
         QCOMPARE(model.findInstrument(u"pad"_s).value(u"name"_s).toString(), u"Spy Pad"_s);
         QVERIFY(model.findInstrument(u"Kontakt"_s).isEmpty());
+        const QVariantMap menu = model.effectMenu();
+        const QVariantList categories = menu.value(u"categories"_s).toList();
+        QCOMPARE(categories.size(), 1);
+        QCOMPARE(categories[0].toMap().value(u"title"_s).toString(), u"Reverb"_s);
+        QCOMPARE(categories[0].toMap().value(u"plugins"_s).toList()[0].toMap().value(u"name"_s).toString(), u"Spy Reverb"_s);
+        const QVariantList vendors = menu.value(u"vendors"_s).toList();
+        QCOMPARE(vendors.size(), 1);
+        QCOMPARE(vendors[0].toMap().value(u"title"_s).toString(), u"Other"_s);
+        const QVariantList instrumentVendors = model.instrumentMenu().value(u"vendors"_s).toList();
+        QCOMPARE(instrumentVendors.size(), 1);
+        QCOMPARE(instrumentVendors[0].toMap().value(u"title"_s).toString(), u"Spy"_s);
+        QCOMPARE(instrumentVendors[0].toMap().value(u"plugins"_s).toList().size(), 2);
         const QVariantList effects = model.effects();
         QCOMPARE(effects.size(), 1);
         QCOMPARE(effects[0].toMap().value(u"name"_s).toString(), u"Spy Reverb"_s);

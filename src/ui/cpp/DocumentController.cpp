@@ -229,6 +229,44 @@ bool DocumentController::removeEffect(int channel, int effect)
     return true;
 }
 
+bool DocumentController::setEffectBypass(int channel, int effect, bool bypass)
+{
+    if (!effectExists(channel, effect)) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That effect does not exist")});
+    }
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [effect, bypass](core::Channel& c) {
+        c.effects[static_cast<std::size_t>(effect)].bypass = bypass;
+    });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true); // the engine rebuilds the chain without (or with) it
+    return true;
+}
+
+bool DocumentController::replaceEffect(int channel, int effect, const QString& pluginId, const QString& name)
+{
+    if (!effectExists(channel, effect)) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That effect does not exist")});
+    }
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [&](core::Channel& c) {
+        c.effects[static_cast<std::size_t>(effect)] = core::PluginSlot{pluginId, name, false};
+    });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true);
+    return true;
+}
+
+bool DocumentController::setChannelInstrument(int channel, const QString& pluginId, const QString& name)
+{
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [&](core::Channel& c) {
+        // A channel still named after its old instrument takes the new name.
+        if (!c.instrument || c.name == c.instrument->displayName) c.name = name;
+        c.instrument = core::PluginSlot{pluginId, name, false};
+    });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true);
+    return true;
+}
+
 bool DocumentController::setChannelName(int channel, const QString& name)
 {
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [&name](core::Channel& c) { c.name = name; }); !r) {
@@ -477,6 +515,13 @@ void DocumentController::applyCurrentPatchToEngine()
 {
     const core::Patch* patch = currentPatch();
     m_engine.applyPatch(patch != nullptr ? *patch : core::Patch{});
+}
+
+bool DocumentController::effectExists(int channel, int effect) const
+{
+    const core::Patch* patch = currentPatch();
+    return patch != nullptr && channel >= 0 && static_cast<std::size_t>(channel) < patch->channels.size() && effect >= 0 &&
+           static_cast<std::size_t>(effect) < patch->channels[static_cast<std::size_t>(channel)].effects.size();
 }
 
 void DocumentController::setDirty(bool dirty)

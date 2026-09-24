@@ -106,17 +106,17 @@ Item {
                     }
                 }
 
-                Menu {
+                StageMenu {
                     id: contextMenu
-                    MenuItem { text: qsTr("Rename"); onTriggered: row.startRename() }
-                    MenuItem {
+                    StageMenuItem { text: qsTr("Rename"); onTriggered: row.startRename() }
+                    StageMenuItem {
                         text: qsTr("Duplicate")
                         onTriggered: row.isSong ? view.doc.duplicateSong(row.songIndex)
                                                 : view.doc.duplicatePatch(row.songIndex, row.patchIndex)
                     }
-                    MenuItem { text: qsTr("Add patch to this song"); onTriggered: view.doc.addPatch(row.songIndex) }
-                    MenuSeparator {}
-                    MenuItem {
+                    StageMenuItem { text: qsTr("Add patch to this song"); onTriggered: view.doc.addPatch(row.songIndex) }
+                    MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+                    StageMenuItem {
                         text: qsTr("Delete")
                         onTriggered: row.isSong ? view.doc.removeSong(row.songIndex)
                                                 : view.doc.removePatch(row.songIndex, row.patchIndex)

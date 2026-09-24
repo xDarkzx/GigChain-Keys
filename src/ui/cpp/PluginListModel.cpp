@@ -4,18 +4,22 @@
 
 #include "openstage/engine/IEngine.h"
 
+#include <QSettings>
 #include <QUrl>
 #include <QVariantMap>
 
 #include <algorithm>
+#include <map>
 
 using namespace Qt::StringLiterals;
 
 namespace openstage::ui {
 
-PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialArtwork& artwork, QObject* parent)
-    : QAbstractListModel(parent), m_all(engine.availablePlugins())
+PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialArtwork& artwork, QSettings* settings,
+                                 QObject* parent)
+    : QAbstractListModel(parent), m_all(engine.availablePlugins()), m_settings(settings)
 {
+    if (m_settings != nullptr) m_hidden = m_settings->value(u"plugins/hidden"_s).toStringList();
     std::stable_sort(m_all.begin(), m_all.end(), [](const engine::PluginInfo& a, const engine::PluginInfo& b) {
         if (a.kind != b.kind) return a.kind == engine::PluginKind::Instrument;
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
@@ -61,6 +65,24 @@ QHash<int, QByteArray> PluginListModel::roleNames() const
             {IconRole, "icon"},         {ImageUrlRole, "imageUrl"}};
 }
 
+void PluginListModel::hide(const QString& pluginId)
+{
+    if (m_hidden.contains(pluginId)) return;
+    m_hidden << pluginId;
+    if (m_settings != nullptr) m_settings->setValue(u"plugins/hidden"_s, m_hidden);
+    applyFilter();
+    emit menusChanged();
+}
+
+void PluginListModel::showAll()
+{
+    if (m_hidden.isEmpty()) return;
+    m_hidden.clear();
+    if (m_settings != nullptr) m_settings->remove(u"plugins/hidden"_s);
+    applyFilter();
+    emit menusChanged();
+}
+
 void PluginListModel::setInstrumentsOnly(bool only)
 {
     if (only == m_instrumentsOnly) return;
@@ -96,6 +118,58 @@ QVariantList PluginListModel::effects() const
     return pluginsOfKind(m_all, engine::PluginKind::Effect);
 }
 
+namespace {
+
+using Groups = std::map<QString, QVariantList>;
+
+// Groups as a list of {title, plugins}, sorted by title, "Other" last.
+QVariantList groupList(const Groups& groups)
+{
+    QVariantList list;
+    QVariantMap other;
+    for (const auto& [title, plugins] : groups) {
+        const QVariantMap group{{u"title"_s, title}, {u"plugins"_s, plugins}};
+        if (title == u"Other"_s) other = group;
+        else list.append(group);
+    }
+    if (!other.isEmpty()) list.append(other);
+    return list;
+}
+
+QVariantMap menuEntry(const engine::PluginInfo& plugin)
+{
+    return QVariantMap{{u"pluginId"_s, plugin.id}, {u"name"_s, plugin.name}};
+}
+
+QString vendorOf(const engine::PluginInfo& plugin)
+{
+    return plugin.vendor.isEmpty() ? u"Other"_s : plugin.vendor;
+}
+
+} // namespace
+
+QVariantMap PluginListModel::effectMenu() const
+{
+    Groups byCategory;
+    Groups byVendor;
+    for (const auto& plugin : m_all) {
+        if (plugin.kind != engine::PluginKind::Effect || m_hidden.contains(plugin.id)) continue;
+        const QStringList parts = plugin.subCategories.split(u'|', Qt::SkipEmptyParts);
+        byCategory[parts.size() > 1 ? parts.at(1) : u"Other"_s].append(menuEntry(plugin));
+        byVendor[vendorOf(plugin)].append(menuEntry(plugin));
+    }
+    return QVariantMap{{u"categories"_s, groupList(byCategory)}, {u"vendors"_s, groupList(byVendor)}};
+}
+
+QVariantMap PluginListModel::instrumentMenu() const
+{
+    Groups byVendor;
+    for (const auto& plugin : m_all) {
+        if (plugin.kind == engine::PluginKind::Instrument && !m_hidden.contains(plugin.id)) byVendor[vendorOf(plugin)].append(menuEntry(plugin));
+    }
+    return QVariantMap{{u"vendors"_s, groupList(byVendor)}};
+}
+
 QVariantList PluginListModel::instruments() const
 {
     return pluginsOfKind(m_all, engine::PluginKind::Instrument);
@@ -119,6 +193,7 @@ void PluginListModel::applyFilter()
     for (std::size_t i = 0; i < m_all.size(); ++i) {
         const auto& plugin = m_all[i];
         if (m_instrumentsOnly && plugin.kind != engine::PluginKind::Instrument) continue;
+        if (m_hidden.contains(plugin.id)) continue;
         if (needle.isEmpty() || plugin.name.contains(needle, Qt::CaseInsensitive) ||
             plugin.vendor.contains(needle, Qt::CaseInsensitive)) {
             m_visible.push_back(i);

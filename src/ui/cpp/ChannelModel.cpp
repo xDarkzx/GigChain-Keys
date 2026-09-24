@@ -62,6 +62,11 @@ QVariant ChannelModel::data(const QModelIndex& index, int role) const
         for (const auto& effect : channel->effects) names << effect.displayName;
         return names;
     }
+    case EffectBypassedRole: {
+        QVariantList bypassed;
+        for (const auto& effect : channel->effects) bypassed << effect.bypass;
+        return bypassed;
+    }
     case VolumeDbRole: return channel->volumeDb;
     case MuteRole: return channel->mute;
     case SoloRole: return channel->solo;
@@ -100,7 +105,7 @@ QHash<int, QByteArray> ChannelModel::roleNames() const
 {
     return {
         {ChannelIdRole, "channelId"}, {NameRole, "name"},          {InstrumentNameRole, "instrumentName"},
-        {EffectNamesRole, "effectNames"}, {VolumeDbRole, "volumeDb"}, {MuteRole, "mute"},
+        {EffectNamesRole, "effectNames"}, {EffectBypassedRole, "effectBypassed"}, {VolumeDbRole, "volumeDb"}, {MuteRole, "mute"},
         {SoloRole, "solo"},           {KeyLowRole, "keyLow"},      {KeyHighRole, "keyHigh"},
         {TransposeRole, "transpose"}, {MidiChannelRole, "midiChannel"}, {PeakRole, "peak"},
         {RmsRole, "rms"},             {SelectedRole, "selected"},    {PanRole, "pan"},

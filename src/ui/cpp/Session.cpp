@@ -10,7 +10,7 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_setlistModel(m_document),
       m_channelModel(m_document, engine, m_artwork),
       m_selectedChannel(m_document),
-      m_pluginModel(engine, m_artwork),
+      m_pluginModel(engine, m_artwork, &settings),
       m_engineStatus(engine, m_document),
       m_editorService(engine, m_document)
 {

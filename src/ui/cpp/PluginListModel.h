@@ -11,6 +11,8 @@
 
 #include <vector>
 
+class QSettings;
+
 namespace openstage::engine {
 class IEngine;
 }
@@ -27,6 +29,9 @@ class PluginListModel : public QAbstractListModel
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
     // Show only instruments (the browser list); effects stay available through effects().
     Q_PROPERTY(bool instrumentsOnly READ instrumentsOnly WRITE setInstrumentsOnly NOTIFY instrumentsOnlyChanged)
+    // The picker menus (see effectMenu()/instrumentMenu()); they change when plugins are hidden or shown.
+    Q_PROPERTY(QVariantMap effectMenu READ effectMenu NOTIFY menusChanged)
+    Q_PROPERTY(QVariantMap instrumentMenu READ instrumentMenu NOTIFY menusChanged)
 
 public:
     enum Role
@@ -42,7 +47,9 @@ public:
     };
     Q_ENUM(Role)
 
-    PluginListModel(const engine::IEngine& engine, const OfficialArtwork& artwork, QObject* parent = nullptr);
+    // `settings` (optional) remembers plugins the user hid from the list.
+    PluginListModel(const engine::IEngine& engine, const OfficialArtwork& artwork, QSettings* settings = nullptr,
+                    QObject* parent = nullptr);
 
     [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override;
     [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
@@ -55,15 +62,27 @@ public:
 
     // Every effect as {pluginId, name}, for the mixer's "+" menu.
     Q_INVOKABLE QVariantList effects() const;
+    // Effects grouped like Logic's plug-in menu:
+    // {categories: [{title, plugins: [{pluginId, name}]}], vendors: [...same]}.
+    // Category = the VST3 sub-category (EQ, Dynamics, Reverb...), else "Other".
+    [[nodiscard]] QVariantMap effectMenu() const;
+    // Hidden plugins are left out of both.
+    // Instruments grouped by maker: {vendors: [{title, plugins: [{pluginId, name}]}]}.
+    [[nodiscard]] QVariantMap instrumentMenu() const;
     // Every instrument as {pluginId, name}, for the mixer's "+ Instrument" menu.
     Q_INVOKABLE QVariantList instruments() const;
     // The first instrument whose name contains `text` as {pluginId, name}, or
     // an empty map (e.g. to find Kontakt for a library).
     Q_INVOKABLE QVariantMap findInstrument(const QString& text) const;
 
+    // Hide a plugin from the browser list and the pickers (remembered); showAll() undoes every hide.
+    Q_INVOKABLE void hide(const QString& pluginId);
+    Q_INVOKABLE void showAll();
+
 signals:
     void filterTextChanged();
     void instrumentsOnlyChanged();
+    void menusChanged();
 
 private:
     void applyFilter();
@@ -71,6 +90,8 @@ private:
     std::vector<engine::PluginInfo> m_all;
     std::vector<QString> m_images; // parallel to m_all: file URL of the maker's art, or empty
     std::vector<std::size_t> m_visible;
+    QSettings* m_settings = nullptr; // not owned
+    QStringList m_hidden;
     QString m_filterText;
     bool m_instrumentsOnly = false;
 };
