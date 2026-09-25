@@ -7,6 +7,7 @@
 #include <QStringDecoder>
 
 #include <QClipboard>
+#include <QDateTime>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QGuiApplication>
@@ -29,6 +30,7 @@ namespace {
 
 constexpr auto kLastFileKey = "session/lastFile"_L1;
 const QString kRecentKey = u"session/recentFiles"_s;
+const QString kRecentDetailsKey = u"session/recentDetails"_s; // path -> {songs, opened}
 constexpr int kMaxRecent = 5; // setlists in File > Recent
 
 } // namespace
@@ -228,6 +230,28 @@ QStringList DocumentController::recentFiles() const
     return m_settings.value(kRecentKey).toStringList();
 }
 
+QVariantList DocumentController::recentSetlists() const
+{
+    const QVariantMap details = m_settings.value(kRecentDetailsKey).toMap();
+    QVariantList list;
+    for (const QString& path : recentFiles()) {
+        QString name = QFileInfo(path).fileName();
+        if (name.endsWith(branding::setlistSuffix(), Qt::CaseInsensitive)) {
+            name.chop(branding::setlistSuffix().size());
+        } else if (name.endsWith(u".json"_s, Qt::CaseInsensitive)) {
+            name.chop(5);
+        }
+        const QVariantMap known = details.value(path).toMap();
+        list.append(QVariantMap{
+            {u"path"_s, path},
+            {u"name"_s, name},
+            {u"songs"_s, known.value(u"songs"_s, -1).toInt()},
+            {u"opened"_s, known.value(u"opened"_s).toDateTime()},
+        });
+    }
+    return list;
+}
+
 void DocumentController::rememberRecent(const QString& path)
 {
     QStringList recent = recentFiles();
@@ -235,6 +259,16 @@ void DocumentController::rememberRecent(const QString& path)
     recent.prepend(path);
     while (recent.size() > kMaxRecent) recent.removeLast();
     m_settings.setValue(kRecentKey, recent);
+
+    // Details for the start screen; only for files still in the list.
+    const QVariantMap stored = m_settings.value(kRecentDetailsKey).toMap();
+    QVariantMap details;
+    for (const QString& kept : recent) {
+        if (stored.contains(kept)) details.insert(kept, stored.value(kept));
+    }
+    details.insert(path, QVariantMap{{u"songs"_s, static_cast<int>(m_setlist.songs.size())},
+                                     {u"opened"_s, QDateTime::currentDateTime()}});
+    m_settings.setValue(kRecentDetailsKey, details);
     emit recentFilesChanged();
 }
 
@@ -243,6 +277,9 @@ void DocumentController::forgetRecent(const QString& path)
     QStringList recent = recentFiles();
     if (recent.removeAll(path) == 0) return;
     m_settings.setValue(kRecentKey, recent);
+    QVariantMap details = m_settings.value(kRecentDetailsKey).toMap();
+    details.remove(path);
+    m_settings.setValue(kRecentDetailsKey, details);
     emit recentFilesChanged();
 }
 
@@ -601,8 +638,14 @@ bool DocumentController::saveAsUrl(const QUrl& url)
     return saveAs(url.toLocalFile());
 }
 
+QString DocumentController::reopenLastSetlistKey()
+{
+    return u"session/reopenLastSetlist"_s;
+}
+
 void DocumentController::restoreLastSession()
 {
+    if (!m_settings.value(reopenLastSetlistKey(), false).toBool()) return; // the start screen shows
     const QString path = m_settings.value(kLastFileKey).toString();
     if (path.isEmpty()) return;
     (void)open(path); // a failure is reported through lastError and logged

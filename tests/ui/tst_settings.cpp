@@ -125,6 +125,24 @@ private slots:
         QCOMPARE(options.midi.channels.at(u"MIDIIN2 (Spy Keys) 1"_s), 2);
     }
 
+    void reopeningTheLastSetlistIsOffUntilChosen()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QVERIFY(!settings.reopenLastSetlist());
+        settings.setReopenLastSetlist(true);
+        QVERIFY(!m_settings->value(DocumentController::reopenLastSetlistKey()).toBool()); // nothing before OK
+        QVERIFY(settings.apply());
+        QVERIFY(m_settings->value(DocumentController::reopenLastSetlistKey()).toBool());
+        QCOMPARE(m_engine->setupChanges, 0); // audio untouched
+
+        SettingsController again(*m_engine, *m_doc, *m_settings);
+        again.load();
+        QVERIFY(again.reopenLastSetlist());
+        again.resetToDefaults();
+        QVERIFY(!again.reopenLastSetlist());
+    }
+
     void pluggingInAKeyboardShowsUpWhileOpen()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);

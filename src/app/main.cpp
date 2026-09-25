@@ -150,7 +150,8 @@ int main(int argc, char* argv[])
         session.document().reportMessage(QGuiApplication::tr("No audio output (%1). Running without sound.").arg(engineProblem));
     }
 
-    // "<exe> <setlist>" opens that file; otherwise reopen the last one.
+    // "<exe> <setlist>" opens that file; otherwise the last one reopens only
+    // if the user chose that in Settings > General (else: the start screen).
     // Its sounds load now, behind the splash, not in a frozen main window.
     startup.report(quips.line(Quip::Setlist)); // loading the setlist
     const QStringList arguments = QGuiApplication::arguments();

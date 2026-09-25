@@ -47,6 +47,9 @@ class DocumentController : public QObject
     Q_PROPERTY(bool hasSetlist READ hasSetlist NOTIFY hasSetlistChanged)
     // The last setlists opened or saved, newest first (at most 5).
     Q_PROPERTY(QStringList recentFiles READ recentFiles NOTIFY recentFilesChanged)
+    // The same, for the start screen: [{path, name, songs, opened}]; songs is
+    // -1 and opened invalid for a file not opened or saved since they were kept.
+    Q_PROPERTY(QVariantList recentSetlists READ recentSetlists NOTIFY recentFilesChanged)
     // The current song's chart (ChordPro).
     Q_PROPERTY(QString currentChart READ currentChart NOTIFY chartChanged)
     // The last paste can be undone: exactly what was pasted, and the old name.
@@ -93,6 +96,7 @@ public:
     [[nodiscard]] QString currentChart() const;
     [[nodiscard]] bool hasSetlist() const { return m_hasSetlist; }
     [[nodiscard]] QStringList recentFiles() const;
+    [[nodiscard]] QVariantList recentSetlists() const;
     Q_INVOKABLE bool setSongChart(int song, const QString& chordPro);
     // Pasting a chord-site page: the site's clutter is removed, a song still
     // named "Song N" takes the sheet's title, and an unset key/tempo is filled.
@@ -138,9 +142,12 @@ public:
     Q_INVOKABLE bool save();
     Q_INVOKABLE bool saveAs(const QString& path);
     Q_INVOKABLE bool saveAsUrl(const QUrl& url);
-    // Reopens the last opened file, if any. A failure is reported, and the
-    // empty setlist stays.
+    // On start: reopens the last opened file, only when the user chose that
+    // in Settings (off by default: the start screen shows). A failure is
+    // reported, and no setlist is made up in its place.
     Q_INVOKABLE void restoreLastSession();
+    // The Settings choice restoreLastSession() follows (bool, default false).
+    [[nodiscard]] static QString reopenLastSetlistKey();
 
     Q_INVOKABLE void clearError();
     // Shows a message from elsewhere (e.g. the engine) the same way as errors.
