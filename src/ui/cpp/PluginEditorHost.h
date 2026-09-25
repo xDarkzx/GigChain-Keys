@@ -101,6 +101,7 @@ private:
     // first layout after maximize / restore / full screen, and when a window
     // edge drag ends (WM_EXITSIZEMOVE). Never while a drag is in progress.
     bool m_fixedSize = false;
+    bool m_stale = false; // the editor to show changed while hidden: open it when shown
     bool m_fitOnNextArea = false;
     void fitNow();
     class DragEndFilter;

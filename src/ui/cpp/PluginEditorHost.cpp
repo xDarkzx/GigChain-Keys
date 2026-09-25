@@ -61,7 +61,8 @@ void PluginEditorHost::setSuspended(bool suspended)
     if (m_suspended == suspended) return;
     m_suspended = suspended;
     emit suspendedChanged();
-    updateVisibility();
+    if (!m_suspended && m_stale) rebuild(); // the song changed while hidden
+    else updateVisibility();
 }
 
 QString PluginEditorHost::emptyReason() const
@@ -85,7 +86,8 @@ void PluginEditorHost::itemChange(ItemChange change, const ItemChangeData& value
         // Moving to another window (or out of one): start over there.
         rebuild();
     } else if (change == ItemVisibleHasChanged) {
-        updateVisibility();
+        if (isVisible() && !m_suspended && m_stale) rebuild(); // the song changed while hidden
+        else updateVisibility();
     }
 }
 
@@ -97,6 +99,15 @@ void PluginEditorHost::rebuild()
         emit editorChanged();
         return;
     }
+    // Opening a plugin's window is slow (Arturia's take ~3 s): only open one
+    // that can be seen. Switching songs on the Chart tab opens nothing; the
+    // window opens when the Instrument tab is shown.
+    if (m_suspended || !isVisible()) {
+        m_stale = true;
+        emit editorChanged();
+        return;
+    }
+    m_stale = false;
 
     auto created = m_service->createForSelection();
     if (!created || !*created) {
@@ -148,7 +159,6 @@ void PluginEditorHost::rebuild()
     if (m_fixedSize) {
         m_dragEnd = std::make_unique<DragEndFilter>(*this);
         QCoreApplication::instance()->installNativeEventFilter(m_dragEnd.get());
-        fitNow(); // the editor just opened: fit it to the area it opened in
     }
     emit editorChanged();
 }
