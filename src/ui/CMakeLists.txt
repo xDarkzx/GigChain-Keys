@@ -1,4 +1,4 @@
-﻿set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_library(gigchain_ui STATIC)
 qt_add_qml_module(gigchain_ui
@@ -15,6 +15,7 @@ qt_add_qml_module(gigchain_ui
         cpp/StartupProgress.h cpp/StartupProgress.cpp
         cpp/StageQuips.h cpp/StageQuips.cpp
         cpp/FreezeWatchdog.h cpp/FreezeWatchdog.cpp
+        cpp/CrashReports.h cpp/CrashReports.cpp
         cpp/BrandingInfo.h
         cpp/SettingsMigration.h cpp/SettingsMigration.cpp
         cpp/Session.h cpp/Session.cpp
@@ -79,7 +80,7 @@ qt_add_qml_module(gigchain_ui
 target_include_directories(gigchain_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 target_link_libraries(gigchain_ui PUBLIC
     gigchain::core gigchain::engine Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2)
-target_link_libraries(gigchain_ui PRIVATE psapi) # GetProcessMemoryInfo (RAM readout)
+target_link_libraries(gigchain_ui PRIVATE psapi dbghelp) # RAM readout; crash dumps (MiniDumpWriteDump)
 gigchain_target_defaults(gigchain_ui)
 
 # Qt's generated QML-to-C++ files (qmlcachegen) trip MSVC's code-generation
