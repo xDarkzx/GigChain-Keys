@@ -91,13 +91,15 @@ foreach ($file in $changed) {
 }
 
 function ConvertTo-Relative([string]$path) {
+    if ([string]::IsNullOrWhiteSpace($path)) { throw 'no file name' }
     $full = [IO.Path]::GetFullPath($path)
     if (-not $full.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { return $null }
     return $full.Substring($root.Length).TrimStart('\', '/').Replace('\', '/')
 }
 
 function Test-ChangedLine([string]$path, [int]$line) {
-    $rel = ConvertTo-Relative $path
+    # A finding that cannot be placed is never waved through as an old one.
+    try { $rel = ConvertTo-Relative $path } catch { Write-Log "cannot place a finding in '$path': $_"; return $true }
     if ($null -eq $rel -or -not $changedLines.ContainsKey($rel)) { return $false }
     $lines = $changedLines[$rel]
     return ($lines -eq 'ALL') -or $lines.Contains($line)
@@ -168,9 +170,15 @@ if ($cppFiles.Count -eq 0) {
     $tidy = Invoke-Logged 'clang-tidy' $tidyExe (@('-p', 'build\debug', '--quiet') + $cppFiles)
     $new = @(); $old = 0; $broken = @()
     foreach ($line in (Get-Content $tidy.File)) {
-        if ($line -notmatch $finding -or $Matches.sev -eq 'note') { continue }
-        if ($Matches.sev -eq 'error') { $broken += $line; continue } # could not analyse: the check is void
-        if (Test-ChangedLine $Matches.file ([int]$Matches.line)) { $new += $line } else { $old++ }
+        if ($line -notmatch $finding) { continue }
+        $file = $Matches.file; $at = [int]$Matches.line; $sev = $Matches.sev; $msg = $Matches.msg # before any other -match
+        if ($sev -eq 'note') { continue }
+        # A compile error means the file could not be analysed: the check is
+        # void. Warnings the build makes errors (/WX) are findings like others.
+        if ($sev -eq 'error' -and $msg -notmatch '\[clang-diagnostic-(?!error\])[\w-]+\]$') {
+            $broken += $line; continue
+        }
+        if (Test-ChangedLine $file $at) { $new += $line } else { $old++ }
     }
     $ok = $new.Count -eq 0 -and $broken.Count -eq 0
     Add-Check 'clang-tidy' $ok ("{0} file(s); {1} finding(s) on changed lines, {2} error(s), {3} old finding(s) elsewhere{4}" -f
@@ -188,11 +196,13 @@ if ($cppFiles.Count -eq 0) {
         $check = Invoke-Logged 'cppcheck' $cppcheckExe $arguments
         $new = @(); $old = 0; $broken = @()
         foreach ($line in (Get-Content $check.File)) {
-            if ($line -notmatch $finding -or $Matches.sev -eq 'information') { continue }
-            if ($Matches.msg -match '\[(unknownMacro|syntaxError|internalAstError|cppcheckError|preprocessorErrorDirective)\]$') {
+            if ($line -notmatch $finding) { continue }
+            $file = $Matches.file; $at = [int]$Matches.line; $sev = $Matches.sev; $msg = $Matches.msg # before any other -match
+            if ($sev -eq 'information') { continue }
+            if ($msg -match '\[(unknownMacro|syntaxError|internalAstError|cppcheckError|preprocessorErrorDirective)\]$') {
                 $broken += $line; continue # could not analyse the file
             }
-            if (Test-ChangedLine $Matches.file ([int]$Matches.line)) { $new += $line } else { $old++ }
+            if (Test-ChangedLine $file $at) { $new += $line } else { $old++ }
         }
         $ok = $check.Code -eq 0 -and $new.Count -eq 0 -and $broken.Count -eq 0
         Add-Check 'cppcheck' $ok ("{0} file(s); {1} finding(s) on changed lines, {2} unanalysable, {3} old finding(s) elsewhere, exit {4}{5}" -f
@@ -206,7 +216,11 @@ if ($qmlFiles.Count -eq 0) {
     Add-Check 'qmllint' $true 'no changed QML files'
 } else {
     $qmllint = Join-Path $env:QT_ROOT_DIR 'bin\qmllint.exe'
-    $lint = Invoke-Logged 'qmllint' $qmllint (@('-I', 'build\debug\src\ui\qml', '-I', 'build\debug\src\ui') + $qmlFiles)
+    # The options Qt's build writes for the module's own qmllint target
+    # (import paths, resources), with only the changed files.
+    $rsp = Join-Path $root 'build\debug\src\ui\.rcc\qmllint\gigchain_ui.rsp'
+    $options = @(Get-Content $rsp | Where-Object { $_ -and $_ -notmatch '\.qml$' })
+    $lint = Invoke-Logged 'qmllint' $qmllint ($options + @($qmlFiles | ForEach-Object { (Join-Path $root $_).Replace('\', '/') }))
     $new = @(); $old = 0
     foreach ($line in (Get-Content $lint.File)) {
         if ($line -notmatch '^(?<sev>Warning|Error|Critical): (?<file>(?:[A-Za-z]:)?[^:]+):(?<line>\d+):(?<col>\d+): (?<msg>.*)$') { continue }

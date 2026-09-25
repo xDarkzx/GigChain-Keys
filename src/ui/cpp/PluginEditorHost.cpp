@@ -17,6 +17,7 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <cmath>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
@@ -80,17 +81,11 @@ QString PluginEditorHost::emptyReason() const
 void PluginEditorHost::geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry)
 {
     QQuickItem::geometryChange(newGeometry, oldGeometry);
-    // An editor opened before the layout gave this area a size (the setlist
-    // loads before the main window appears) is shown once it has one.
-    if (m_window && !m_window->isVisible()) {
-        updateVisibility();
-    } else if (m_editor && newGeometry.size() != oldGeometry.size()) {
-        // The room changed (maximize, restore, the mixer divider): the
-        // plugin's own size again, never bigger than the new room.
-        m_editor->updateGeometry();
-    } else {
-        place();
-    }
+    // The room changed (maximize, restore, the mixer divider, or the layout
+    // giving it its first size after the plugin opened): fitted again.
+    if (m_editor && newGeometry.size() != oldGeometry.size()) m_editor->updateGeometry();
+    if (m_window && !m_window->isVisible()) updateVisibility(); // shown once it has a size
+    else place();
 }
 
 void PluginEditorHost::itemChange(ItemChange change, const ItemChangeData& value)
@@ -190,16 +185,23 @@ void PluginEditorHost::teardown()
 
 QSize PluginEditorHost::fit(QSize wanted)
 {
-    if (!m_window || window() == nullptr) return wanted;
+    if (!m_window || window() == nullptr || wanted.isEmpty()) return {};
     const double dpr = window()->devicePixelRatio();
-    // VstView::resizeView: the wanted size without the screen's scaling, no
-    // bigger than the room: the plugin never covers anything around it.
-    const int roomWidth = std::max(1, static_cast<int>(width()));
-    const int roomHeight = std::max(1, static_cast<int>(height()));
-    m_windowSize = QSize(std::min(qRound(wanted.width() / dpr), roomWidth),
-                         std::min(qRound(wanted.height() / dpr), roomHeight));
+    if (width() < 1 || height() < 1) {
+        m_windowSize = {}; // no room yet: fitted when the layout gives it one
+        updateVisibility();
+        return {};
+    }
+    // The whole plugin, as big as the room allows, same shape, never bigger
+    // than its own size: nothing cut off, nothing around it covered. Sized in
+    // the screen's units, so the window and the plugin are the same pixels.
+    const double ownWidth = wanted.width() / dpr;
+    const double ownHeight = wanted.height() / dpr;
+    const double scale = std::min({1.0, width() / ownWidth, height() / ownHeight});
+    m_windowSize = QSize(std::max(1, static_cast<int>(std::floor(ownWidth * scale))),
+                         std::max(1, static_cast<int>(std::floor(ownHeight * scale))));
     place();
-    return QSize(qRound(m_windowSize.width() * dpr), qRound(m_windowSize.height() * dpr));
+    return {qRound(m_windowSize.width() * dpr), qRound(m_windowSize.height() * dpr)};
 }
 
 void PluginEditorHost::place()
@@ -215,7 +217,7 @@ void PluginEditorHost::place()
 void PluginEditorHost::updateVisibility()
 {
     if (!m_window) return;
-    if (isVisible() && !m_suspended && width() > 0 && height() > 0) {
+    if (isVisible() && !m_suspended && !m_windowSize.isEmpty() && width() > 0 && height() > 0) {
         place();
         m_window->show();
     } else {

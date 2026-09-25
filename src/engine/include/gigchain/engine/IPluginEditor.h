@@ -37,9 +37,10 @@ public:
 
     // Sizing, as Audacity 4's VstView (muse/framework/vst/qml/Muse/Vst/vstview.cpp).
     // The fitter is the window showing the plugin: given the size the plugin
-    // wants (physical pixels), it sizes the window, never bigger than its
-    // room, and returns the size it took. The plugin is then told that size
-    // (onSize); a plugin that cannot shrink is clipped by its window.
+    // wants (its own size, physical pixels), it sizes the window as big as
+    // its room allows with the same shape, never bigger than the plugin's
+    // own size, and returns that size; the plugin is then told it (onSize).
+    // Empty when there is no room yet: the plugin is fitted when there is.
     using Fitter = std::function<QSize(QSize wanted)>;
     virtual void setFitter(Fitter fitter) = 0;
     // The screen's scaling, given before sizing (setContentScaleFactor).

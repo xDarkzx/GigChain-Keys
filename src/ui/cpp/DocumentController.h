@@ -161,6 +161,7 @@ signals:
     void structureChanged();          // songs/patches added, removed, renamed or moved
     void channelsChanged();           // the current patch's channel list was replaced
     void channelUpdated(int channel); // one channel's fields changed
+    void channelAdded(int channel);   // an instrument was added and loaded (after channelsChanged)
     void selectedChannelChanged();
     void dirtyChanged();
     void filePathChanged();
