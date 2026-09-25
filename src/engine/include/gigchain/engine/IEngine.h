@@ -71,6 +71,9 @@ public:
     virtual void setChannelSolo(const core::ChannelId& id, bool solo) = 0;
     virtual void setMasterVolume(double volumeDb) = 0;
     [[nodiscard]] virtual double masterVolume() const = 0;
+    // Silences everything that leaves the app; the volume is kept for unmute.
+    virtual void setMasterMute(bool mute) = 0;
+    [[nodiscard]] virtual bool masterMuted() const = 0;
 
     // Plays a note as if it came from the keyboard (on-screen keyboard,
     // auditioning). velocity 0 = note off. Out-of-range values are ignored.

@@ -100,10 +100,15 @@ Rectangle {
                     spacing: Theme.spacing * 2
                     Label { text: qsTr("Master"); color: Theme.textDim }
                     Slider {
+                        id: performMaster
                         Layout.preferredWidth: 260
                         from: -60
                         to: 12
-                        value: perform.engineStatus.masterVolumeDb
+                        Binding on value { // keeps following after a drag
+                            value: perform.engineStatus.masterVolumeDb
+                            when: !performMaster.pressed
+                            restoreMode: Binding.RestoreNone
+                        }
                         focusPolicy: Qt.NoFocus
                         onMoved: perform.engineStatus.masterVolumeDb = value
                     }

@@ -238,16 +238,23 @@ Rectangle {
         }
 
         PanKnob {
+            objectName: "panKnob"
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: 2
-            value: strip.pan
+            pan: strip.pan
             onPanMoved: (v) => strip.doc.setChannelPan(strip.index, v)
         }
 
         RowLayout {
             Layout.fillWidth: true
             spacing: 2
-            Readout { Layout.fillWidth: true; text: strip.volumeDb.toFixed(1) }
+            Readout {
+                objectName: "volumeReadout"
+                Layout.fillWidth: true
+                text: strip.volumeDb.toFixed(1)
+                editable: true
+                onVolumeTyped: (db) => strip.doc.setChannelVolume(strip.index, db)
+            }
             Readout {
                 Layout.fillWidth: true
                 text: strip.peakDb < -99 ? "-∞" : strip.peakDb.toFixed(1)
@@ -256,6 +263,7 @@ Rectangle {
         }
 
         VolumeFader {
+            objectName: "channelFader"
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.minimumHeight: 90

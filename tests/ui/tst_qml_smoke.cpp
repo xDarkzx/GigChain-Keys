@@ -51,6 +51,44 @@ class TestQmlSmoke : public QObject
         QVERIFY2(m_warnings.isEmpty(), qPrintable(m_warnings.join(u'\n')));
     }
 
+    // An item inside the first channel strip (delegates are not QObject
+    // children of the window).
+    QQuickItem* stripChild(const QString& name) const
+    {
+        auto* strips = window()->findChild<QObject*>(u"mixerStrips"_s);
+        QQuickItem* strip = nullptr;
+        if (strips == nullptr
+            || !QMetaObject::invokeMethod(strips, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, strip), Q_ARG(int, 0))
+            || strip == nullptr) {
+            return nullptr;
+        }
+        return strip->findChild<QQuickItem*>(name);
+    }
+
+    QQuickItem* item(const QString& name) const
+    {
+        if (auto* found = window()->findChild<QQuickItem*>(name)) return found;
+        return stripChild(name);
+    }
+
+    void click(const QString& name)
+    {
+        QQuickItem* target = item(name);
+        QVERIFY2(target != nullptr, qPrintable(name));
+        QTest::mouseClick(window(), Qt::LeftButton, {},
+                          target->mapToScene(QPointF(target->width() / 2, target->height() / 2)).toPoint());
+        QTest::qWait(20);
+    }
+
+    // Clicks a value box, types, presses Enter.
+    void type(const QString& name, const QString& text)
+    {
+        click(name);
+        for (const QChar c : text) QTest::keyClick(window(), c.toLatin1()); // keyClicks is widgets-only
+        QTest::keyClick(window(), Qt::Key_Return);
+        QTest::qWait(20);
+    }
+
 private slots:
     void initTestCase() { QQuickStyle::setStyle(u"Basic"_s); }
 
@@ -95,6 +133,70 @@ private slots:
         QVERIFY(name != nullptr);
         QCOMPARE(name->property("text").toString(), u"Patch 1"_s);
         QVERIFY(root->setProperty("performMode", false));
+        settle();
+    }
+
+    // The master strip, used with the mouse and keyboard as a person would.
+    void masterFaderDragsTypesAndMutes()
+    {
+        window()->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        auto* fader = window()->findChild<QQuickItem*>(u"masterFader"_s);
+        QVERIFY(fader != nullptr);
+        auto* slider = fader->findChild<QQuickItem*>(u"faderSlider"_s);
+        QVERIFY(slider != nullptr);
+
+        // Drag the fader cap down: the output gets quieter.
+        const QPoint cap = slider->mapToScene(QPointF(slider->width() / 2, slider->height() * (1 - 60.0 / 72))).toPoint();
+        QTest::mousePress(window(), Qt::LeftButton, {}, cap);
+        for (int dy = 4; dy <= 40; dy += 4) QTest::mouseMove(window(), cap + QPoint(0, dy));
+        QTest::mouseRelease(window(), Qt::LeftButton, {}, cap + QPoint(0, 40));
+        QVERIFY2(m_engine->masterVolume() < -1.0, qPrintable(QString::number(m_engine->masterVolume())));
+
+        // Click the readout, type 0, Enter: back to 0 dB, and the fader follows.
+        type(u"masterVolumeReadout"_s, u"0"_s);
+        QCOMPARE(m_engine->masterVolume(), 0.0);
+        QCOMPARE(slider->property("value").toDouble(), 0.0);
+        type(u"masterVolumeReadout"_s, u"-12.5"_s);
+        QCOMPARE(m_engine->masterVolume(), -12.5);
+        QCOMPARE(slider->property("value").toDouble(), -12.5);
+        type(u"masterVolumeReadout"_s, u"loud"_s); // not a number: nothing changes
+        QCOMPARE(m_engine->masterVolume(), -12.5);
+
+        // The speaker button mutes everything, and unmutes.
+        click(u"masterMuteButton"_s);
+        QVERIFY(m_engine->masterMuted());
+        click(u"masterMuteButton"_s);
+        QVERIFY(!m_engine->masterMuted());
+        settle();
+    }
+
+    void channelVolumeTypesAndPanDragsSideways()
+    {
+        QVERIFY(m_session->document().addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        window()->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        settle();
+
+        type(u"volumeReadout"_s, u"-6"_s);
+        QCOMPARE(m_session->document().currentPatch()->channels[0].volumeDb, -6.0);
+        auto* channelSlider = stripChild(u"channelFader"_s)->findChild<QQuickItem*>(u"faderSlider"_s);
+        QCOMPARE(channelSlider->property("value").toDouble(), -6.0);
+
+        // Drag the pan knob to the right, then to the left.
+        auto* knob = stripChild(u"panKnob"_s);
+        const QPoint centre = knob->mapToScene(QPointF(knob->width() / 2, knob->height() / 2)).toPoint();
+        QTest::mousePress(window(), Qt::LeftButton, {}, centre);
+        for (int dx = 5; dx <= 40; dx += 5) QTest::mouseMove(window(), centre + QPoint(dx, 0));
+        QTest::mouseRelease(window(), Qt::LeftButton, {}, centre + QPoint(40, 0));
+        const double right = m_session->document().currentPatch()->channels[0].pan;
+        QVERIFY2(right > 0.2, qPrintable(QString::number(right)));
+        QTest::mousePress(window(), Qt::LeftButton, {}, centre);
+        for (int dx = 5; dx <= 80; dx += 5) QTest::mouseMove(window(), centre - QPoint(dx, 0));
+        QTest::mouseRelease(window(), Qt::LeftButton, {}, centre - QPoint(80, 0));
+        QVERIFY(m_session->document().currentPatch()->channels[0].pan < -0.2);
+        QTest::mouseDClick(window(), Qt::LeftButton, {}, centre); // double-click centres
+        QCOMPARE(m_session->document().currentPatch()->channels[0].pan, 0.0);
         settle();
     }
 

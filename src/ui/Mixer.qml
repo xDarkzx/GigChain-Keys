@@ -86,14 +86,45 @@ Rectangle {
                 anchors.margins: 4
                 spacing: 3
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 3; radius: 1.5; color: Theme.text }
-                Item { Layout.fillWidth: true; Layout.preferredHeight: 34
+                // Mute everything (the volume is kept for unmute).
+                Rectangle {
+                    id: masterMute
+                    objectName: "masterMuteButton"
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.preferredWidth: 34
+                    Layout.preferredHeight: 34
+                    radius: 17
+                    readonly property bool muted: mixer.engineStatus.masterMuted
+                    color: muted ? Theme.danger : (muteArea.containsMouse ? Theme.slotHover : "transparent")
                     Image {
                         anchors.centerIn: parent
                         source: "icons/volume.svg"
                         sourceSize: Qt.size(22, 22)
+                        opacity: masterMute.muted ? 1.0 : 0.85
                     }
+                    Rectangle { // the strike-through when muted
+                        visible: masterMute.muted
+                        anchors.centerIn: parent
+                        width: 26; height: 2.5; radius: 1
+                        rotation: -45
+                        color: "white"
+                    }
+                    MouseArea {
+                        id: muteArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: mixer.engineStatus.masterMuted = !mixer.engineStatus.masterMuted
+                    }
+                    ToolTip.visible: muteArea.containsMouse
+                    ToolTip.text: masterMute.muted ? qsTr("Muted: click to hear everything again") : qsTr("Mute everything")
                 }
-                Readout { Layout.fillWidth: true; text: mixer.engineStatus.masterVolumeDb.toFixed(1) }
+                Readout {
+                    objectName: "masterVolumeReadout"
+                    Layout.fillWidth: true
+                    text: mixer.engineStatus.masterVolumeDb.toFixed(1)
+                    editable: true
+                    onVolumeTyped: (db) => mixer.engineStatus.masterVolumeDb = db
+                }
                 VolumeFader {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
