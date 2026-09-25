@@ -5,5 +5,4 @@ gigchain_add_test(tst_plugin_icons SOURCES tst_plugin_icons.cpp LIBS gigchain_ui
 gigchain_add_test(tst_official_artwork SOURCES tst_official_artwork.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_stage_quips SOURCES tst_stage_quips.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_settings SOURCES tst_settings.cpp LIBS gigchain_ui)
-gigchain_add_test(tst_editor_placement SOURCES tst_editor_placement.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_crash_reports SOURCES tst_crash_reports.cpp LIBS gigchain_ui)

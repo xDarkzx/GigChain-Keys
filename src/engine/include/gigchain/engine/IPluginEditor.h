@@ -28,7 +28,6 @@ public:
 
     [[nodiscard]] virtual QString title() const = 0;
     [[nodiscard]] virtual QSize preferredSize() const = 0;
-    [[nodiscard]] virtual bool canResize() const = 0;
     [[nodiscard]] virtual bool isAttached() const = 0;
 
     // `nativeParent` is a window handle (HWND on Windows). Failures are
@@ -36,11 +35,6 @@ public:
     virtual core::Result<void> attach(quintptr nativeParent) = 0;
     virtual void detach() = 0;
 
-    // Asks a resizable editor to take this size; returns the size it accepted.
-    virtual QSize setSize(QSize size) = 0;
-    // Zoom (1.0 = 100 %, include the screen's scaling). Returns false when
-    // the plugin cannot scale its editor; preferredSize() reflects the result.
-    virtual bool setContentScale(double scale) = 0;
     // Called when the plugin itself asks for a new size (e.g. it opens a panel).
     virtual void setResizeHandler(std::function<void(QSize)> handler) = 0;
 

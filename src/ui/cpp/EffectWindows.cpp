@@ -9,7 +9,6 @@
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QLoggingCategory>
-#include <QScopeGuard>
 
 #include <algorithm>
 #include <cmath>
@@ -52,7 +51,6 @@ struct EffectWindows::Entry
     std::unique_ptr<engine::IPluginEditor> editor;
     QPointer<QWindow> window;
     double ratio = 1.0;
-    bool resizing = false; // we are resizing the window ourselves
     bool master = false;   // an effect of the master bus (channel unused)
 };
 
@@ -167,8 +165,6 @@ bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWi
     window->setTitle(title);
     window->create();
     entry->ratio = window->devicePixelRatio();
-    // Scale before opening: some plugins size their window from it.
-    (void)entry->editor->setContentScale(entry->ratio);
     if (auto attached = entry->editor->attach(static_cast<quintptr>(window->winId())); !attached) {
         delete window;
         m_document.reportMessage(attached.error().message); // logged by the editor
@@ -177,33 +173,17 @@ bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWi
     entry->window = window;
 
     Entry* raw = entry.get();
+    // The window is the plugin's size; when the plugin changes its size, the
+    // window takes it. The host never sizes the plugin.
     const auto fitWindowTo = [raw](QSize physical) {
         GC_IF_FAILED(raw->window) { return; }
         const QSize logical = toLogical(physical, raw->ratio);
-        raw->resizing = true;
-        const auto resized = qScopeGuard([raw] { raw->resizing = false; });
-        if (!raw->editor->canResize()) {
-            raw->window->setMinimumSize(logical);
-            raw->window->setMaximumSize(logical);
-        }
+        raw->window->setMinimumSize(logical);
+        raw->window->setMaximumSize(logical);
         raw->window->resize(logical);
     };
     fitWindowTo(entry->editor->preferredSize());
-    // The plugin changed its own size (a panel opened, its own zoom menu).
     entry->editor->setResizeHandler(fitWindowTo);
-    // The user drags the window edge of a plugin that can be resized.
-    const auto userResized = [raw] {
-        if (raw->resizing || !raw->editor->canResize() || !raw->window) return;
-        const QSize wanted(qRound(raw->window->width() * raw->ratio), qRound(raw->window->height() * raw->ratio));
-        const QSize accepted = raw->editor->setSize(wanted);
-        if (accepted != wanted && !accepted.isEmpty()) {
-            raw->resizing = true;
-            const auto resized = qScopeGuard([raw] { raw->resizing = false; });
-            raw->window->resize(toLogical(accepted, raw->ratio));
-        }
-    };
-    connect(window, &QWindow::widthChanged, this, userResized);
-    connect(window, &QWindow::heightChanged, this, userResized);
     window->onClose = [this, raw] {
         const auto it = std::find_if(m_open.begin(), m_open.end(), [raw](const auto& e) { return e.get() == raw; });
         if (it != m_open.end()) close(**it);
