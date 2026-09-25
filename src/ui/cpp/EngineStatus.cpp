@@ -1,6 +1,7 @@
 #include "EngineStatus.h"
 
 #include "DocumentController.h"
+#include "FreezeWatchdog.h"
 
 #include "gigchain/engine/IEngine.h"
 
@@ -12,6 +13,8 @@
 #include <psapi.h>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
+
+using namespace Qt::StringLiterals;
 
 namespace gigchain::ui {
 
@@ -47,6 +50,13 @@ void EngineStatus::setMasterMuted(bool muted)
     emit masterMutedChanged();
 }
 
+void EngineStatus::panic()
+{
+    FreezeWatchdog::mark(u"panic"_s);
+    m_engine.panic(); // logged by the engine
+    m_document.reportMessage(tr("Panic: every sound stopped"));
+}
+
 void EngineStatus::playNote(int note, bool on)
 {
     m_engine.injectNote(1, note, on ? 100 : 0);
@@ -73,6 +83,16 @@ void EngineStatus::poll()
     const auto notices = m_engine.poll();
     if (!notices.empty()) m_document.reportMessage(notices.back());
     if (m_engine.takePluginEdits()) m_document.markPluginSettingsChanged();
+    // Pedals, pads and buttons learned in Settings.
+    for (const engine::ControlAction action : m_engine.takeControlActions()) {
+        switch (action) {
+        case engine::ControlAction::NextSong: m_document.nextSong(); break;
+        case engine::ControlAction::PreviousSong: m_document.previousSong(); break;
+        case engine::ControlAction::NextPatch: m_document.nextPatch(); break;
+        case engine::ControlAction::PreviousPatch: m_document.previousPatch(); break;
+        case engine::ControlAction::Panic: panic(); break;
+        }
+    }
 
     if (const float peak = m_engine.masterLevel().peak; peak != m_masterPeak) {
         m_masterPeak = peak;

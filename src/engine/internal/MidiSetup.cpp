@@ -1,4 +1,7 @@
 #include "gigchain/engine/MidiSetup.h"
+#include "gigchain/engine/MidiControl.h"
+
+#include <QCoreApplication>
 
 #include <algorithm>
 
@@ -16,6 +19,26 @@ std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSe
     const bool anyOn = std::any_of(ports.begin(), ports.end(), [](const MidiPort& p) { return p.enabled; });
     if (!anyOn && !ports.empty()) ports.front().enabled = true;
     return ports;
+}
+
+QString MidiTrigger::describe() const
+{
+    static const char* const kNotes[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    const QString channelText = QCoreApplication::translate("MidiTrigger", "channel %1").arg(channel + 1);
+    switch (kind) {
+    case ControlChange:
+        return QCoreApplication::translate("MidiTrigger", "Pedal/CC %1 (%2)").arg(number).arg(channelText);
+    case Note:
+        return QCoreApplication::translate("MidiTrigger", "Note %1%2 (%3)")
+            .arg(QString::fromLatin1(kNotes[number % 12]))
+            .arg(number / 12 - 1)
+            .arg(channelText);
+    case ProgramChange:
+        return QCoreApplication::translate("MidiTrigger", "Program %1 (%2)").arg(number + 1).arg(channelText);
+    case None:
+        break;
+    }
+    return QCoreApplication::translate("MidiTrigger", "Not set");
 }
 
 } // namespace gigchain::engine

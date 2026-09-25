@@ -44,6 +44,7 @@ qt_add_qml_module(gigchain_ui
         StatBox.qml
         CardButton.qml
         ChartPanel.qml
+        ChartView.qml
         MainArea.qml
         StartScreen.qml
         LoadingOverlay.qml

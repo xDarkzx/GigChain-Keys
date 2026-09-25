@@ -10,6 +10,7 @@
 #include <QVariantMap>
 
 #include <algorithm>
+#include <iterator>
 #include <cmath>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
@@ -26,9 +27,20 @@ const QString kBufferKey = u"audio/bufferFrames"_s;
 const QString kMidiConfiguredKey = u"midi/configured"_s;
 const QString kMidiEnabledKey = u"midi/enabled"_s;
 const QString kMidiChannelsKey = u"midi/channels"_s;
+const QString kControlsKey = u"midi/controls"_s; // one packed trigger per action
 const QString kLimiterKey = u"master/limiter"_s;
 const QString kLimiterCeilingKey = u"master/limiterCeilingDb"_s;
 constexpr double kDefaultCeilingDb = -1.0;
+
+engine::ControlTriggers savedControls(QSettings& settings)
+{
+    engine::ControlTriggers triggers{};
+    const QVariantList saved = settings.value(kControlsKey).toList();
+    for (qsizetype i = 0; i < saved.size() && i < engine::kControlActionCount; ++i) {
+        triggers[static_cast<std::size_t>(i)] = engine::MidiTrigger::unpack(saved[i].toUInt());
+    }
+    return triggers;
+}
 
 double savedCeiling(QSettings& settings)
 {
@@ -50,6 +62,8 @@ SettingsController::SettingsController(engine::IEngine& engine, DocumentControll
                                        QObject* parent)
     : QObject(parent), m_engine(engine), m_document(document), m_settings(settings)
 {
+    // Pedals and pads work from the first song.
+    m_engine.setControlTriggers(savedControls(m_settings));
     // The limiter protects the sound desk from the first note.
     m_engine.setOutputLimiter(m_settings.value(kLimiterKey, true).toBool(), savedCeiling(m_settings));
 }
@@ -82,6 +96,8 @@ void SettingsController::load()
     m_reopenLast = m_settings.value(DocumentController::reopenLastSetlistKey(), false).toBool();
     m_limiterOn = m_settings.value(kLimiterKey, true).toBool();
     m_limiterCeilingDb = savedCeiling(m_settings);
+    m_controls = savedControls(m_settings);
+    m_learning = -1;
     keepRateValid();
     emit changed();
 }
@@ -99,6 +115,61 @@ void SettingsController::setLimiterCeilingDb(double ceilingDb)
     const double clamped = std::clamp(ceilingDb, -24.0, 0.0);
     if (m_limiterCeilingDb == clamped) return;
     m_limiterCeilingDb = clamped;
+    emit changed();
+}
+
+QVariantList SettingsController::controls() const
+{
+    static const char* const kLabels[] = {QT_TR_NOOP("Next song"), QT_TR_NOOP("Previous song"),
+                                          QT_TR_NOOP("Next part"), QT_TR_NOOP("Previous part"),
+                                          QT_TR_NOOP("Panic (stop all sound)")};
+    static_assert(std::size(kLabels) == engine::kControlActionCount);
+    QVariantList list;
+    for (int i = 0; i < engine::kControlActionCount; ++i) {
+        const engine::MidiTrigger& trigger = m_controls[static_cast<std::size_t>(i)];
+        list << QVariantMap{{u"action"_s, i},
+                            {u"label"_s, tr(kLabels[i])},
+                            {u"trigger"_s, trigger.isSet() ? trigger.describe() : QString()}};
+    }
+    return list;
+}
+
+void SettingsController::learnControl(int action)
+{
+    if (action < 0 || action >= engine::kControlActionCount) {
+        qCWarning(lcUi) << "Ignored: no control action" << action;
+        return;
+    }
+    (void)m_engine.takeLearnedTrigger(); // only a press from now on counts
+    m_learning = action;
+    emit changed();
+}
+
+void SettingsController::clearControl(int action)
+{
+    if (action < 0 || action >= engine::kControlActionCount) {
+        qCWarning(lcUi) << "Ignored: no control action" << action;
+        return;
+    }
+    m_controls[static_cast<std::size_t>(action)] = {};
+    if (m_learning == action) m_learning = -1;
+    m_controlsTouched = true;
+    emit changed();
+}
+
+void SettingsController::pollLearning()
+{
+    if (m_learning < 0) return;
+    const engine::MidiTrigger pressed = m_engine.takeLearnedTrigger();
+    if (!pressed.isSet()) return;
+    // One control, one action: taken from any other action that had it.
+    for (auto& trigger : m_controls) {
+        if (trigger == pressed) trigger = {};
+    }
+    m_controls[static_cast<std::size_t>(m_learning)] = pressed;
+    qCInfo(lcUi).noquote() << "Learned" << pressed.describe() << "for control" << m_learning;
+    m_learning = -1;
+    m_controlsTouched = true;
     emit changed();
 }
 
@@ -310,6 +381,9 @@ void SettingsController::resetToDefaults()
     m_reopenLast = false;
     m_limiterOn = true;
     m_limiterCeilingDb = kDefaultCeilingDb;
+    m_controls = {};
+    m_learning = -1;
+    m_controlsTouched = true;
     emit changed();
 }
 
@@ -346,6 +420,14 @@ bool SettingsController::apply()
 
     m_settings.setValue(DocumentController::reopenLastSetlistKey(), m_reopenLast);
     m_engine.setOutputLimiter(m_limiterOn, m_limiterCeilingDb);
+    if (m_controlsTouched) {
+        m_engine.setControlTriggers(m_controls);
+        QVariantList packed;
+        for (const auto& trigger : m_controls) packed << trigger.pack();
+        m_settings.setValue(kControlsKey, packed);
+        m_controlsTouched = false;
+    }
+    m_learning = -1;
     m_settings.setValue(kLimiterKey, m_limiterOn);
     m_settings.setValue(kLimiterCeilingKey, m_limiterCeilingDb);
 

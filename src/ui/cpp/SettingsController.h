@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gigchain/engine/EngineTypes.h"
+#include "gigchain/engine/MidiControl.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
 #include <QObject>
@@ -52,6 +53,10 @@ class SettingsController : public QObject
     Q_PROPERTY(QVariantList limiterCeilings READ limiterCeilings CONSTANT)
     // Plugins: those that crashed the app while loading, switched off: [{path, name}].
     Q_PROPERTY(QVariantList blockedPlugins READ blockedPlugins NOTIFY changed)
+    // MIDI: pedals/pads that switch songs: [{action, label, trigger ("" = not set)}].
+    Q_PROPERTY(QVariantList controls READ controls NOTIFY changed)
+    // The control waiting for a press ("Learn"), -1 when none.
+    Q_PROPERTY(int learning READ learning NOTIFY changed)
 
 public:
     SettingsController(engine::IEngine& engine, DocumentController& document, QSettings& settings,
@@ -84,6 +89,13 @@ public:
     void setLimiterCeilingDb(double ceilingDb);
     [[nodiscard]] static QVariantList limiterCeilings();
     [[nodiscard]] QVariantList blockedPlugins() const;
+    [[nodiscard]] QVariantList controls() const;
+    [[nodiscard]] int learning() const { return m_learning; }
+    // "Learn": the next pedal, pad or button pressed is taken for `action`.
+    Q_INVOKABLE void learnControl(int action);
+    Q_INVOKABLE void clearControl(int action);
+    // Called as the engine is polled: takes a press while learning.
+    void pollLearning();
     // "Try again": the plugin may load next time it is used (straight away, not on OK).
     Q_INVOKABLE void unblockPlugin(const QString& path);
 
@@ -118,6 +130,9 @@ private:
     std::vector<engine::MidiPort> m_midi; // as shown, with this page's changes
     bool m_midiTouched = false;           // changed on this page since load()
     bool m_reopenLast = false;
+    engine::ControlTriggers m_controls{};
+    int m_learning = -1;
+    bool m_controlsTouched = false; // changed on the MIDI page since load()
     bool m_limiterOn = true;
     double m_limiterCeilingDb = -1.0;
     QString m_running;

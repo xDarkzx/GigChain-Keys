@@ -132,6 +132,19 @@ private slots:
         auto* name = root->findChild<QObject*>(u"performPatchName"_s);
         QVERIFY(name != nullptr);
         QCOMPARE(name->property("text").toString(), u"Patch 1"_s);
+        // The chart, big, on stage.
+        QVERIFY(m_session->document().setSongChart(0, u"{comment: Verse}\n[C]Hello [G]world\n"_s));
+        settle();
+        auto* song = root->findChild<QObject*>(u"performSongName"_s);
+        QVERIFY(song != nullptr);
+        QCOMPARE(song->property("text").toString(), u"Song 1"_s);
+        auto* chart = root->findChild<QQuickItem*>(u"performChart"_s);
+        QVERIFY(chart != nullptr);
+        QVERIFY(chart->property("contentHeight").toDouble() > 40); // the lines are there
+        auto* panic = root->findChild<QObject*>(u"performPanic"_s);
+        QVERIFY(panic != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(panic, "clicked"));
+        QVERIFY(m_session->document().lastError().contains(u"Panic"_s));
         QVERIFY(root->setProperty("performMode", false));
         settle();
     }

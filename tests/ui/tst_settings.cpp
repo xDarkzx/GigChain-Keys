@@ -182,6 +182,45 @@ private slots:
         QCOMPARE(changed.count(), 1);
     }
 
+    void aPedalIsLearnedForNextSongAndKept()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QCOMPARE(settings.controls().size(), engine::kControlActionCount);
+        QVERIFY(settings.controls()[0].toMap().value(u"trigger"_s).toString().isEmpty()); // nothing by default
+
+        settings.learnControl(static_cast<int>(engine::ControlAction::NextSong));
+        QCOMPARE(settings.learning(), 0);
+        settings.pollLearning(); // nothing pressed yet
+        QCOMPARE(settings.learning(), 0);
+        m_engine->learned = engine::MidiTrigger{engine::MidiTrigger::ControlChange, 0, 64}; // the pedal goes down
+        settings.pollLearning();
+        QCOMPARE(settings.learning(), -1);
+        QCOMPARE(settings.controls()[0].toMap().value(u"trigger"_s).toString(), u"Pedal/CC 64 (channel 1)"_s);
+        QVERIFY(!m_engine->triggers[0].isSet()); // nothing before OK
+
+        // The same pedal learned for another action moves there.
+        settings.learnControl(static_cast<int>(engine::ControlAction::Panic));
+        m_engine->learned = engine::MidiTrigger{engine::MidiTrigger::ControlChange, 0, 64};
+        settings.pollLearning();
+        QVERIFY(settings.controls()[0].toMap().value(u"trigger"_s).toString().isEmpty());
+        settings.learnControl(static_cast<int>(engine::ControlAction::NextSong));
+        m_engine->learned = engine::MidiTrigger{engine::MidiTrigger::Note, 9, 36};
+        settings.pollLearning();
+
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->triggers[0], (engine::MidiTrigger{engine::MidiTrigger::Note, 9, 36}));
+        QCOMPARE(m_engine->triggers[4], (engine::MidiTrigger{engine::MidiTrigger::ControlChange, 0, 64}));
+
+        m_engine->triggers = {};
+        SettingsController next(*m_engine, *m_doc, *m_settings); // next start: working at once
+        QCOMPARE(m_engine->triggers[0], (engine::MidiTrigger{engine::MidiTrigger::Note, 9, 36}));
+        next.load();
+        next.clearControl(0);
+        QVERIFY(next.apply());
+        QVERIFY(!m_engine->triggers[0].isSet());
+    }
+
     void pluggingInAKeyboardShowsUpWhileOpen()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);
