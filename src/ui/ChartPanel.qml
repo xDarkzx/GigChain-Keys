@@ -81,6 +81,35 @@ Rectangle {
             }
         }
 
+        // Just pasted: the site's clutter was removed; one click brings back
+        // exactly what was pasted.
+        Rectangle {
+            objectName: "pasteUndoBar"
+            visible: panel.doc.canUndoPaste && !panel.editing
+            Layout.fillWidth: true
+            Layout.preferredHeight: 36
+            radius: Theme.radius
+            color: Theme.panelRaised
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 6
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Cleaned up: the site's extras were removed and chords placed over the words.")
+                    color: Theme.textDim
+                    elide: Text.ElideRight
+                }
+                Button {
+                    objectName: "undoPasteButton"
+                    text: qsTr("Undo")
+                    flat: true
+                    focusPolicy: Qt.NoFocus
+                    onClicked: panel.doc.undoPaste()
+                }
+            }
+        }
+
         // The chart as the player reads it.
         ScrollView {
             visible: !panel.editing
@@ -135,7 +164,9 @@ Rectangle {
                                             color: Theme.accent
                                             font.pixelSize: Theme.fontSize + 5
                                             font.bold: true
-                                            rightPadding: modelData.text === "" ? 8 : 0
+                                            // Chords with no words under them (an intro, a
+                                            // turnaround) keep a gap between them.
+                                            rightPadding: modelData.text.trim() === "" ? 18 : 0
                                         }
                                         Text {
                                             text: modelData.text !== "" ? modelData.text : " "

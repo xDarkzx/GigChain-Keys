@@ -294,6 +294,31 @@ private slots:
         QVERIFY(!m_doc->setSongChart(9, u"x"_s)); // no such song
     }
 
+    void pastingAPageNamesTheSongAndCanBeUndone()
+    {
+        const QString page = u"Hallelujah Chords by Leonard Cohen\nKey: C\nBPM: 56\nDifficulty: novice\n[Verse 1]\nC        Am\nI heard there was\nLast update: Jan 1\n"_s;
+        QCOMPARE(m_doc->currentSongName(), u"Song 1"_s); // still the placeholder name
+        QVERIFY(m_doc->pasteChart(0, page));
+        QCOMPARE(m_doc->currentSongName(), u"Hallelujah"_s); // named from the sheet
+        QCOMPARE(m_doc->setlist().songs[0].key, u"C"_s);
+        QCOMPARE(m_doc->setlist().songs[0].tempo, 56.0);
+        QVERIFY(!m_doc->currentChart().contains(u"Difficulty"_s)); // clutter gone
+        QVERIFY(!m_doc->currentChart().contains(u"Last update"_s));
+        QVERIFY(m_doc->canUndoPaste());
+
+        QVERIFY(m_doc->undoPaste()); // exactly what was pasted, and the old name
+        QCOMPARE(m_doc->currentChart(), page);
+        QCOMPARE(m_doc->currentSongName(), u"Song 1"_s);
+        QVERIFY(!m_doc->canUndoPaste());
+    }
+
+    void pastingKeepsANameTheUserChose()
+    {
+        QVERIFY(m_doc->renameSong(0, u"Opener"_s));
+        QVERIFY(m_doc->pasteChart(0, u"Hallelujah Chords by Leonard Cohen\nC        Am\nI heard there was\n"_s));
+        QCOMPARE(m_doc->currentSongName(), u"Opener"_s);
+    }
+
     void chartFilesImport()
     {
         const QString file = path(u"song.txt"_s);

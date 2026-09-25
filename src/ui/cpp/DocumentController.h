@@ -49,6 +49,8 @@ class DocumentController : public QObject
     Q_PROPERTY(QStringList recentFiles READ recentFiles NOTIFY recentFilesChanged)
     // The current song's chart (ChordPro).
     Q_PROPERTY(QString currentChart READ currentChart NOTIFY chartChanged)
+    // The last paste can be undone: exactly what was pasted, and the old name.
+    Q_PROPERTY(bool canUndoPaste READ canUndoPaste NOTIFY pasteUndoChanged)
 
 public:
     DocumentController(engine::IEngine& engine, QSettings& settings, QObject* parent = nullptr);
@@ -92,7 +94,11 @@ public:
     [[nodiscard]] bool hasSetlist() const { return m_hasSetlist; }
     [[nodiscard]] QStringList recentFiles() const;
     Q_INVOKABLE bool setSongChart(int song, const QString& chordPro);
+    // Pasting a chord-site page: the site's clutter is removed, a song still
+    // named "Song N" takes the sheet's title, and an unset key/tempo is filled.
     Q_INVOKABLE bool pasteChart(int song, const QString& pasted);
+    [[nodiscard]] bool canUndoPaste() const { return m_pasteUndo.has_value(); }
+    Q_INVOKABLE bool undoPaste();
     // pasteChart with whatever text is on the clipboard.
     Q_INVOKABLE bool pasteChartFromClipboard(int song);
     // A downloaded text chart: .txt, .cho, .chopro, .chordpro, .crd, .pro, .onsong.
@@ -151,6 +157,7 @@ signals:
     void lastErrorChanged();
     void chartChanged(); // the current song's chart, or which song is current
     void hasSetlistChanged();
+    void pasteUndoChanged();
     void recentFilesChanged();
 
 private:
@@ -175,6 +182,16 @@ private:
     QSettings& m_settings;
     core::Setlist m_setlist;
     bool m_hasSetlist = false;
+    struct PasteUndo
+    {
+        core::SongId song;
+        QString name;
+        QString key;
+        double tempo = 0.0;
+        QString pasted; // restored as the chart, exactly as pasted
+    };
+    std::optional<PasteUndo> m_pasteUndo;
+    void clearPasteUndo();
     core::Cursor m_cursor;
     int m_selectedChannel = -1;
     bool m_dirty = false;
