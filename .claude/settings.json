@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); case \"$input\" in *commit*) printf '%s' \"$input\" | powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/tools/verify-hook.ps1\" -Mode commit ;; esac",
+            "timeout": 3600,
+            "statusMessage": "Verification gate: checking before commit"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/tools/verify-hook.ps1\" -Mode stop",
+            "timeout": 3600,
+            "statusMessage": "Verification gate: build, lint, every test"
+          }
+        ]
+      }
+    ]
+  }
+}

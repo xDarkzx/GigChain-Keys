@@ -6,3 +6,5 @@ gigchain_add_test(tst_official_artwork SOURCES tst_official_artwork.cpp LIBS gig
 gigchain_add_test(tst_stage_quips SOURCES tst_stage_quips.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_settings SOURCES tst_settings.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_crash_reports SOURCES tst_crash_reports.cpp LIBS gigchain_ui)
+# A real plugin in a real (off-screen) window, measured through Windows.
+gigchain_add_test(tst_plugin_view SOURCES tst_plugin_view.cpp LIBS gigchain_ui)
