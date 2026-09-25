@@ -23,11 +23,13 @@
 
 #include <QDataStream>
 #include <QFileInfo>
+#include <QScopedValueRollback>
 #include <QtEndian>
 
 #include <algorithm>
 #include <atomic>
 #include <bitset>
+#include <cmath>
 #include <exception>
 #include <string>
 
@@ -518,6 +520,14 @@ bool sameRect(const ViewRect& a, const ViewRect& b)
     return a.left == b.left && a.top == b.top && a.right == b.right && a.bottom == b.bottom;
 }
 
+// Same width-to-height ratio, within 1% (sizes are whole pixels).
+bool sameShape(const ViewRect& a, const ViewRect& b)
+{
+    const double left = static_cast<double>(a.getWidth()) * b.getHeight();
+    const double right = static_cast<double>(b.getWidth()) * a.getHeight();
+    return left > 0 && right > 0 && std::abs(left - right) <= 0.01 * std::max(left, right);
+}
+
 // Hosts one IPlugView. Implements IPlugFrame so the plugin can ask for a
 // resize. Not reference-counted by the plugin: this object is owned by the UI
 // (unique_ptr) and clears the frame pointer before it goes away.
@@ -562,7 +572,11 @@ public:
             return logged(core::fail(core::ErrorCode::InvalidData, u"%1's editor failed to open"_s.arg(m_title)));
         }
         m_attached = true;
-        qCInfo(lcEngine).noquote() << "Editor opened:" << m_title;
+        // The plugin's own size: what it is fitted from, every time.
+        if (m_view->getSize(&m_natural) != kResultOk) {
+            qCWarning(lcEngine).noquote() << m_title << "did not give its size";
+        }
+        qCInfo(lcEngine).noquote() << "Editor opened:" << m_title << m_natural.getWidth() << "x" << m_natural.getHeight();
         return {};
     }
 
@@ -582,38 +596,56 @@ public:
     void setContentScale(double scale) override
     {
         FUnknownPtr<IPlugViewContentScaleSupport> scaling(m_view);
-        if (scaling) scaling->setContentScaleFactor(static_cast<float>(scale));
+        if (!scaling || scaling->setContentScaleFactor(static_cast<float>(scale)) != kResultOk) return;
+        // A plugin that follows the screen's scaling grows or shrinks with it.
+        if (m_attached && m_scale > 0) {
+            const double change = scale / m_scale;
+            m_natural = ViewRect(0, 0, static_cast<int32>(std::lround(m_natural.getWidth() * change)),
+                                 static_cast<int32>(std::lround(m_natural.getHeight() * change)));
+        }
+        m_scale = scale;
     }
 
-    // Tells the window the plugin's own size. The plugin is never given a
-    // size it did not ask for.
-    void updateGeometry() override
-    {
-        ViewRect size{};
-        if (m_view->getSize(&size) != kResultOk) {
-            qCWarning(lcEngine).noquote() << m_title << "did not give its size";
-            return;
-        }
-        if (m_fitter) m_fitter(QSize(size.getWidth(), size.getHeight()));
-    }
+    // Fits the plugin to its room again: after attach, when the room changes,
+    // on another screen.
+    void updateGeometry() override { fit(); }
 
     // IPlugFrame: the plugin asks for a new size (its resize handle, its size
-    // menu). The sequence of Steinberg's reference host (the VST3 SDK's
-    // editorhost, WindowController::resizeView): the window takes the size,
-    // then onSize only if the plugin has not applied it already. The plugin
-    // always gets exactly the size it asked for.
+    // menu). That becomes its own size; it is shown as big as the room allows.
+    // Without a fitter (a window of its own), the sequence of Steinberg's
+    // reference host (editorhost, WindowController::resizeView): onSize only
+    // if the plugin has not applied the size already.
     tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* newSize) override
     {
         if (view == nullptr || newSize == nullptr || view != m_view.get()) return kInvalidArgument;
-        if (m_inResize) return kResultFalse; // re-entered while resizing (editorhost's guard)
+        if (m_inResize) {
+            qCInfo(lcEngine).noquote() << m_title << "asked for" << newSize->getWidth() << "x" << newSize->getHeight()
+                                       << "while being sized: refused";
+            return kResultFalse; // re-entered while resizing (editorhost's guard)
+        }
+        qCInfo(lcEngine).noquote() << m_title << "asks for" << newSize->getWidth() << "x" << newSize->getHeight();
+        if (m_fitter) {
+            // A plugin that cannot be resized freely (canResize false) keeps
+            // its shape: a request of another shape is its reaction to our
+            // sizing (measured: Analog Lab V answers a new size with our width
+            // and its own height), not a size of its own. Fitted again.
+            if (m_view->canResize() == kResultTrue || sameShape(*newSize, m_natural)) {
+                m_natural = *newSize;
+            } else {
+                qCInfo(lcEngine).noquote() << m_title << "keeps its own size" << m_natural.getWidth() << "x"
+                                           << m_natural.getHeight() << "(it cannot be resized freely)";
+            }
+            fit();
+            return kResultTrue;
+        }
+        m_natural = *newSize;
         ViewRect current{};
         if (m_view->getSize(&current) != kResultOk) return kInternalError;
-        if (sameRect(current, *newSize)) return kResultTrue;
-        m_inResize = true;
-        if (m_fitter) m_fitter(QSize(newSize->getWidth(), newSize->getHeight()));
-        m_inResize = false;
-        if (m_view->getSize(&current) != kResultOk) return kInternalError;
-        if (!sameRect(current, *newSize)) m_view->onSize(newSize);
+        if (!sameRect(current, *newSize)) {
+            m_inResize = true;
+            m_view->onSize(newSize);
+            m_inResize = false;
+        }
         return kResultTrue;
     }
 
@@ -635,10 +667,45 @@ private:
         return result;
     }
 
+    // The plugin, whole, as big as its room allows (the fitter decides the
+    // size, from the plugin's own size). A plugin that will not take the size
+    // is shown at the size it keeps, and said so.
+    void fit()
+    {
+        if (!m_fitter || !m_attached) return;
+        // The plugin's size requests while we size it (Arturia's follow its
+        // window being resized: our width with its own height) are reactions,
+        // not a new size of its own: refused, as editorhost does.
+        const QScopedValueRollback<bool> sizing(m_inResize, true);
+        const QSize shown = m_fitter(QSize(m_natural.getWidth(), m_natural.getHeight()));
+        if (shown.isEmpty()) return; // no room yet: fitted when it gets one
+        ViewRect wanted(0, 0, shown.width(), shown.height());
+        if (m_view->canResize() == kResultTrue) m_view->checkSizeConstraint(&wanted);
+        ViewRect current{};
+        if (m_view->getSize(&current) != kResultOk) {
+            qCWarning(lcEngine).noquote() << m_title << "did not give its size";
+            return;
+        }
+        if (!sameRect(current, wanted)) {
+            if (m_view->onSize(&wanted) != kResultOk) {
+                qCWarning(lcEngine).noquote() << m_title << "refused the size" << wanted.getWidth() << "x"
+                                              << wanted.getHeight();
+            }
+            if (m_view->getSize(&current) != kResultOk) return;
+        }
+        if (current.getWidth() != shown.width() || current.getHeight() != shown.height()) {
+            qCWarning(lcEngine).noquote() << m_title << "is" << current.getWidth() << "x" << current.getHeight()
+                                          << "instead of" << shown.width() << "x" << shown.height();
+            m_fitter(QSize(current.getWidth(), current.getHeight())); // the window follows what it kept
+        }
+    }
+
     std::shared_ptr<Vst3Node> m_node; // keeps the plugin alive while its editor exists
     IPtr<IPlugView> m_view;
     QString m_title;
     Fitter m_fitter;
+    ViewRect m_natural;  // the plugin's own size (at open, or as it last asked)
+    double m_scale = 0;  // the content scale it was last given (0: none)
     bool m_attached = false;
     bool m_inResize = false;
 };

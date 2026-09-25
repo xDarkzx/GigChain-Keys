@@ -18,6 +18,12 @@ Rectangle {
 
     color: Theme.background
 
+    // A new instrument (dropped on the mixer, picked, double-clicked) is shown.
+    Connections {
+        target: area.doc
+        function onChannelAdded(channel) { tabs.currentIndex = 1 }
+    }
+
     // Nothing is open yet: start a setlist or open one.
     StartScreen {
         anchors.fill: parent

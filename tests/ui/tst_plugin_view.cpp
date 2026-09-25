@@ -17,6 +17,7 @@
 #include <windows.h>
 
 #include <array>
+#include <cmath>
 #include <memory>
 
 using namespace gigchain;
@@ -93,9 +94,43 @@ class TestPluginView : public QObject
     std::unique_ptr<ui::EditorService> m_service;
     std::unique_ptr<QQuickWindow> m_window;
     ui::PluginEditorHost* m_host = nullptr;
+    QSize m_ownSize; // the plugin's own size, asked before the view opens it
 
     // Lets the view react (Qt's events, the plugin's own window messages).
     static void settle(int ms = 300) { QTest::qWait(ms); }
+
+    // An area of the view in physical pixels (what Windows measures).
+    [[nodiscard]] QSize physical(QSize logical) const
+    {
+        const double ratio = m_window->devicePixelRatio();
+        return {qRound(logical.width() * ratio), qRound(logical.height() * ratio)};
+    }
+
+    [[nodiscard]] QString report(const Measured& m) const
+    {
+        QStringList tree;
+        dumpTree(reinterpret_cast<HWND>(m_window->winId()), 0, tree); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr)
+        return describe(m) + u"\n"_s + tree.join(u'\n');
+    }
+
+    // The whole plugin is shown, inside the area, as big as the area allows:
+    // nothing cut off, nothing covered.
+    void verifyFitsWhole(const Measured& m, QSize logicalArea) const
+    {
+        const QSize area = physical(logicalArea);
+        QVERIFY2(m.pluginVisible, qPrintable(report(m)));
+        QVERIFY2(m.window.width() <= area.width() + 1 && m.window.height() <= area.height() + 1,
+                 qPrintable(u"bigger than the area %1x%2: "_s.arg(area.width()).arg(area.height()) + report(m)));
+        QVERIFY2(m.plugin == m.window, qPrintable(u"the plugin is not exactly its window (cut off or not filling): "_s + report(m)));
+        QVERIFY2(m.window.width() >= area.width() - 2 || m.window.height() >= area.height() - 2,
+                 qPrintable(u"does not fill the area %1x%2: "_s.arg(area.width()).arg(area.height()) + report(m)));
+        // The plugin's own shape: shrunk, not squashed or cropped.
+        const double own = static_cast<double>(m_ownSize.width()) / m_ownSize.height();
+        const double shape = static_cast<double>(m.plugin.width()) / m.plugin.height();
+        QVERIFY2(std::abs(shape - own) / own < 0.01,
+                 qPrintable(u"shape %1, its own %2 (%3x%4): "_s.arg(shape).arg(own).arg(m_ownSize.width()).arg(m_ownSize.height())
+                            + report(m)));
+    }
 
 private slots:
     void initTestCase()
@@ -127,6 +162,12 @@ private slots:
         m_doc->newSetlist();
         QVERIFY(m_doc->addChannel(kAnalogLab, u"Analog Lab V"_s));
         m_service = std::make_unique<ui::EditorService>(*m_engine, *m_doc);
+        {
+            auto own = m_service->createForSelection();
+            QVERIFY(own && *own);
+            m_ownSize = (*own)->preferredSize();
+            QVERIFY2(!m_ownSize.isEmpty(), "the plugin gave no size of its own");
+        }
 
         m_window = std::make_unique<QQuickWindow>();
         m_window->setGeometry(-3000, -3000, 1400, 1000); // off screen: nothing shows on the user's
@@ -152,34 +193,29 @@ private slots:
         m_dir.reset();
     }
 
-    void thePluginOpensAtARealSizeInsideTheArea()
+    void theWholePluginFitsTheArea()
     {
         const Measured m = measure(*m_window);
-        qInfo().noquote() << "opened:" << describe(m);
-        const auto mainHandle = reinterpret_cast<HWND>(m_window->winId()); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr)
-        qInfo().noquote() << "main window: Qt visible" << m_window->isVisible() << "exposed" << m_window->isExposed()
-                          << "Windows visible" << IsWindowVisible(mainHandle) << "style" << Qt::hex
-                          << static_cast<qulonglong>(GetWindowLongPtrW(mainHandle, GWL_STYLE));
-        QStringList tree;
-        dumpTree(reinterpret_cast<HWND>(m_window->winId()), 0, tree); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr)
-        qInfo().noquote() << "window tree:\n" + tree.join(u'\n');
-        QVERIFY2(m.window.width() > 200 && m.window.height() > 150, qPrintable(describe(m)));
-        QVERIFY2(m.plugin.width() > 200 && m.plugin.height() > 150, qPrintable(describe(m)));
-        QVERIFY2(m.pluginVisible, qPrintable(describe(m)));
-        QVERIFY2(m.window.width() <= 1300 && m.window.height() <= 900, qPrintable(describe(m))); // inside the area
+        qInfo().noquote() << "area 1300x900:" << describe(m);
+        verifyFitsWhole(m, QSize(1300, 900));
     }
 
-    void aSmallerAreaNeverGetsCovered()
+    void aSmallerAreaShrinksTheWholePlugin()
     {
+        const Measured big = measure(*m_window);
         m_host->setSize(QSizeF(400, 250));
         settle();
         const Measured m = measure(*m_window);
         qInfo().noquote() << "area 400x250:" << describe(m);
-        QVERIFY2(m.window.width() <= 400 && m.window.height() <= 250, qPrintable(describe(m)));
-        QVERIFY2(m.window.width() > 100 && m.window.height() > 100, qPrintable(describe(m)));
+        verifyFitsWhole(m, QSize(400, 250));
+        // Same shape as at the bigger size: shrunk, not squashed or cropped.
+        const double bigShape = static_cast<double>(big.plugin.width()) / big.plugin.height();
+        const double shape = static_cast<double>(m.plugin.width()) / m.plugin.height();
+        QVERIFY2(std::abs(shape - bigShape) / bigShape < 0.02,
+                 qPrintable(u"shape %1 at 400x250, %2 at 1300x900"_s.arg(shape).arg(bigShape)));
     }
 
-    void theAreaGrowingBackGivesThePluginItsSizeBack()
+    void theAreaGrowingBackGrowsThePluginBack()
     {
         const Measured before = measure(*m_window);
         m_host->setSize(QSizeF(400, 250));
@@ -189,8 +225,24 @@ private slots:
         const Measured after = measure(*m_window);
         qInfo().noquote() << "back to 1300x900:" << describe(after) << "(first:" << describe(before) << ")";
         QCOMPARE(after.window, before.window);
-        QVERIFY2(after.plugin.width() >= before.plugin.width() && after.plugin.height() >= before.plugin.height(),
-                 qPrintable(describe(after)));
+        QCOMPARE(after.plugin, before.plugin);
+        verifyFitsWhole(after, QSize(1300, 900));
+    }
+
+    // As in the app: the Instrument tab opens the plugin before the layout
+    // has given the area its size.
+    void thePluginShowsWhenTheAreaGetsItsSizeAfterOpening()
+    {
+        delete m_host;
+        m_host = new ui::PluginEditorHost(m_window->contentItem());
+        m_host->setService(m_service.get());
+        QTRY_VERIFY_WITH_TIMEOUT(m_host->hasEditor(), 15000);
+        settle();
+        m_host->setSize(QSizeF(1300, 900));
+        settle();
+        const Measured m = measure(*m_window);
+        qInfo().noquote() << "sized after opening:" << describe(m);
+        verifyFitsWhole(m, QSize(1300, 900));
     }
 };
 

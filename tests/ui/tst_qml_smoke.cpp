@@ -266,6 +266,21 @@ private slots:
         QVERIFY(plugins->property("count").toInt() > 0);
     }
 
+    // Dropping an instrument on the mixer loads it and shows it.
+    void droppingAnInstrumentOnTheMixerShowsTheInstrumentTab()
+    {
+        auto* tabs = window()->findChild<QObject*>(u"mainTabs"_s);
+        auto* drop = window()->findChild<QObject*>(u"mixerDrop"_s);
+        QVERIFY(tabs != nullptr);
+        QVERIFY(drop != nullptr);
+        tabs->setProperty("currentIndex", 0); // on the chart
+        const QVariantMap payload{{u"pluginId"_s, u"fake.grand-piano"_s}, {u"name"_s, u"Grand Piano"_s}};
+        QVERIFY(QMetaObject::invokeMethod(drop, "acceptDrop", Q_ARG(QVariant, payload)));
+        settle();
+        QCOMPARE(m_session->document().currentPatch()->channels.size(), std::size_t{1});
+        QCOMPARE(tabs->property("currentIndex").toInt(), 1); // the Instrument tab
+    }
+
     void settingsOpensEveryPage()
     {
         auto* dialog = m_qml->rootObjects().value(0)->findChild<QObject*>(u"settingsDialog"_s);

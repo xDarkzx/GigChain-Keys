@@ -17,6 +17,7 @@ Rectangle {
     color: Theme.mixerBackground
 
     DropArea {
+        objectName: "mixerDrop"
         anchors.fill: parent
         keys: ["instrument"]
         function acceptDrop(payload) { mixer.doc.addChannel(payload.pluginId, payload.name) }

@@ -433,6 +433,7 @@ bool DocumentController::addChannel(const QString& pluginId, const QString& name
     const auto index = core::addChannel(m_setlist, m_cursor, core::PluginSlot{pluginId, name, false});
     if (!index) return report(index.error());
     commitChannels(*index);
+    emit channelAdded(*index);
     return true;
 }
 
