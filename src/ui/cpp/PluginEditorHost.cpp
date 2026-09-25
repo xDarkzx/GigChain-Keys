@@ -105,9 +105,6 @@ void PluginEditorHost::rebuild()
     child->setFlag(Qt::FramelessWindowHint);
     child->create();
     std::unique_ptr<engine::IPluginEditor> editor = std::move(*created);
-    // The screen's scaling, before opening: some plugins size their window
-    // from it. This is the only scaling the host applies.
-    (void)editor->setContentScale(host->devicePixelRatio());
     if (auto attached = editor->attach(static_cast<quintptr>(child->winId())); !attached) {
         viewport->deleteLater(); // deletes its child window too
         m_service->reportFailure(attached.error().message); // already logged by the editor; now shown too
@@ -119,8 +116,8 @@ void PluginEditorHost::rebuild()
     m_child = child;
     m_scroll = {};
     m_editorSize = m_editor->preferredSize();
-    // The plugin changed its own size (its resize corner, its size menu, a
-    // panel opening): follow it, as Audacity 4 and the VST3 spec do.
+    // The host never sizes the plugin: only the plugin changes its size (its
+    // resize corner, its size menu, a panel opening), and the window follows.
     m_editor->setResizeHandler([this](QSize requested) {
         qCInfo(lcUi).noquote() << m_editor->title() << "resized itself to" << requested.width() << "x"
                                << requested.height();
@@ -134,14 +131,6 @@ void PluginEditorHost::rebuild()
     qCInfo(lcUi).noquote() << "Plugin window" << m_editor->title() << ": closing the previous" << closing
                            << "ms, opening" << timer.elapsed() - closing << "ms";
     m_frameConnection = connect(host, &QQuickWindow::afterAnimating, this, &PluginEditorHost::place);
-    // Moved to a screen with other scaling: the plugin draws at that scaling.
-    m_screenConnection = connect(host, &QWindow::screenChanged, this, [this] {
-        if (!m_editor || window() == nullptr) return;
-        (void)m_editor->setContentScale(window()->devicePixelRatio());
-        m_editorSize = m_editor->preferredSize();
-        m_placedArea = {};
-        place();
-    });
     emit editorChanged();
 }
 
@@ -149,7 +138,6 @@ void PluginEditorHost::teardown()
 {
     GC_ONLY_MAIN_THREAD();
     disconnect(m_frameConnection);
-    disconnect(m_screenConnection);
     if (m_editor) {
         m_editor->detach(); // must happen before its window is destroyed
         m_editor.reset();
@@ -173,16 +161,9 @@ void PluginEditorHost::place()
     if (area == m_placedArea) return;
     m_placedArea = area;
 
+    // The editor at its own size, centred, scrolling inside a clipping
+    // viewport when it is bigger than the area.
     const double dpr = window()->devicePixelRatio();
-    if (m_editor->canResize()) {
-        // Editors that allow the host to size them fill the area (the plugin
-        // may adjust the size to its own limits).
-        const QSize wanted(static_cast<int>(area.width() * dpr), static_cast<int>(area.height() * dpr));
-        m_editorSize = m_editor->setSize(wanted);
-    }
-    // Every other editor keeps its own size (changed only from the plugin's
-    // own controls), centred, scrolling inside a clipping viewport when it
-    // is bigger than the area.
     const QSizeF editorSize(m_editorSize.width() / dpr, m_editorSize.height() / dpr);
     m_placement = placeEditor(area, editorSize, m_scroll);
     m_viewport->setGeometry(m_placement.viewport.toAlignedRect());

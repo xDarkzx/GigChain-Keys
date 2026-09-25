@@ -599,16 +599,25 @@ public:
 
     void setResizeHandler(std::function<void(QSize)> handler) override { m_onResize = std::move(handler); }
 
-    // IPlugFrame: the plugin asks the host for a new size.
+    // IPlugFrame: the plugin asks the host for a new size. The sequence of
+    // the VST3 SDK's own host (editorhost, WindowController::resizeView):
+    // resize the window, then onSize only if the plugin's size is not
+    // already the new one.
     tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* newSize) override
     {
-        if (view == nullptr || newSize == nullptr) return kInvalidArgument;
-        if (m_inResize) return kResultTrue; // the plugin re-entered while we resize
+        if (view == nullptr || newSize == nullptr || view != m_view.get()) return kInvalidArgument;
+        if (m_inResize) return kResultFalse; // re-entered while resizing
+        ViewRect current{};
+        if (m_view->getSize(&current) != kResultOk) return kInternalError;
+        if (current.getWidth() == newSize->getWidth() && current.getHeight() == newSize->getHeight()) return kResultTrue;
         m_inResize = true;
         if (m_onResize) m_onResize(QSize(newSize->getWidth(), newSize->getHeight()));
-        const tresult result = view->onSize(newSize);
         m_inResize = false;
-        return result == kResultOk ? kResultTrue : kResultFalse;
+        if (m_view->getSize(&current) != kResultOk) return kInternalError;
+        if (current.getWidth() != newSize->getWidth() || current.getHeight() != newSize->getHeight()) {
+            m_view->onSize(newSize);
+        }
+        return kResultTrue;
     }
 
     tresult PLUGIN_API queryInterface(const TUID requested, void** object) override
