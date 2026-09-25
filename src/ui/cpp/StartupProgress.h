@@ -25,6 +25,8 @@ class StartupProgress : public QObject
     Q_PROPERTY(QStringList plugins READ plugins NOTIFY changed)
     // What the splash says while it names each plugin after loading.
     Q_PROPERTY(QString listingStep READ listingStep NOTIFY changed)
+    // Something is loading right now (the loading overlay shows).
+    Q_PROPERTY(bool active READ active NOTIFY changed)
 
 public:
     using QObject::QObject;
@@ -35,6 +37,9 @@ public:
     [[nodiscard]] int glideMs() const { return m_glideMs; }
     [[nodiscard]] QStringList plugins() const { return m_plugins; }
     [[nodiscard]] QString listingStep() const { return m_listingStep; }
+    [[nodiscard]] bool active() const { return m_active; }
+    // Engine progress after start-up: shows the overlay while loading.
+    void loading(const QString& step, const QString& what, int done, int total);
     void addPlugin(const QString& name) { m_plugins << name; }
 
     // Updates the splash and lets it repaint (startup work runs on this thread).
@@ -54,6 +59,7 @@ private:
     int m_glideMs = 0;
     QStringList m_plugins;
     QString m_listingStep;
+    bool m_active = false;
 };
 
 } // namespace gigchain::ui

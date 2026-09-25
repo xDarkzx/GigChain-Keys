@@ -29,6 +29,7 @@ QVariantMap Session::initialProperties()
         {u"engineStatus"_s, QVariant::fromValue(&m_engineStatus)},
         {u"editorService"_s, QVariant::fromValue(&m_editorService)},
         {u"settings"_s, QVariant::fromValue(&m_settingsController)},
+        {u"loading"_s, QVariant::fromValue(&m_loading)},
     };
 }
 

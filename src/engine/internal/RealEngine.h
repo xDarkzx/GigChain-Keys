@@ -29,7 +29,11 @@ public:
     static core::Result<std::unique_ptr<RealEngine>> create(const RealEngineOptions& options);
     ~RealEngine() override;
 
-    void applyPatch(const core::Patch& patch) override;
+    using IEngine::applyPatch;
+    void applyPatch(const core::SongId& song, const core::Patch& patch) override;
+    void preload(const core::Setlist& setlist) override;
+    void setProgressHandler(LoadProgress handler) override { m_progress = std::move(handler); }
+    [[nodiscard]] std::size_t loadedPluginCount() const override { return m_nodes.size(); }
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override { return m_plugins; }
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
     [[nodiscard]] float cpuLoad() const override { return m_cpuLoad.load(std::memory_order_relaxed); }
@@ -56,7 +60,19 @@ public:
 private:
     RealEngine() = default;
     void render(AudioBlock out) noexcept;
-    std::shared_ptr<Vst3Node> nodeFor(const QString& cacheKey, const core::PluginSlot& slot);
+    // The plugin instance for a slot, loaded if needed (logged; a failure is
+    // reported to the user). `announce`: show the load in the progress UI.
+    std::shared_ptr<Vst3Node> nodeFor(const QString& key, const core::PluginSlot& slot, bool announce);
+    // Every plugin slot of a patch with the key of the instance it plays:
+    // song + plugin + its position among the patch's uses of that plugin.
+    struct PlannedSlot
+    {
+        QString key;
+        const core::PluginSlot* slot = nullptr;
+        int channel = 0;
+        int effect = -1; // -1 = the channel's instrument
+    };
+    static std::vector<PlannedSlot> planPatch(const core::SongId& song, const core::Patch& patch);
     core::Result<void> openAudio(const AudioSetup& setup);
     // After the device changed rate or block size: with audio paused, every
     // plugin is re-prepared and the patch rebuilt for the new size.
@@ -79,10 +95,11 @@ private:
     std::map<QString, std::shared_ptr<Vst3Node>> m_nodes;
     std::vector<QString> m_pendingNotices;
     core::Patch m_patch;         // the sounding patch, rebuilt after a device change
+    core::SongId m_song;         // the song it belongs to
     double m_preparedRate = 0.0; // what the plugins are prepared for
     int m_preparedBlock = 0;
     MidiSetup m_midiSetup;
-    std::function<void(const QString&, int, int)> m_progress; // see RealEngineOptions::progress
+    LoadProgress m_progress;
     // Arturia: the window size (GUI Size) each loaded instance started with,
     // and the size fitted per plugin this session.
     std::map<const Vst3Node*, double> m_arturiaLoadedSize;

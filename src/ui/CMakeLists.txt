@@ -42,6 +42,7 @@ qt_add_qml_module(gigchain_ui
         ChartPanel.qml
         MainArea.qml
         StartScreen.qml
+        LoadingOverlay.qml
         DetailRow.qml
         Splash.qml
         SettingsDialog.qml

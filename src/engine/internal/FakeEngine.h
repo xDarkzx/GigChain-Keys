@@ -12,7 +12,11 @@ class FakeEngine final : public IEngine
 public:
     explicit FakeEngine(Clock clock);
 
-    void applyPatch(const core::Patch& patch) override;
+    using IEngine::applyPatch;
+    void applyPatch(const core::SongId& song, const core::Patch& patch) override;
+    void preload(const core::Setlist&) override {}
+    void setProgressHandler(LoadProgress) override {}
+    [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override;
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
     [[nodiscard]] float cpuLoad() const override;

@@ -9,6 +9,7 @@
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
 #include "SettingsController.h"
+#include "StartupProgress.h"
 
 #include <QVariantMap>
 
@@ -36,6 +37,7 @@ public:
     // The required properties of Main.qml.
     [[nodiscard]] QVariantMap initialProperties();
     [[nodiscard]] DocumentController& document() { return m_document; }
+    [[nodiscard]] StartupProgress& loading() { return m_loading; }
 
 private:
     OfficialArtwork m_artwork; // first: the models below read it
@@ -47,6 +49,7 @@ private:
     EngineStatus m_engineStatus;
     EditorService m_editorService;
     SettingsController m_settingsController;
+    StartupProgress m_loading; // the loading overlay (after start-up)
 };
 
 } // namespace gigchain::ui

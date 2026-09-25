@@ -22,7 +22,12 @@ public:
     std::vector<std::array<int, 3>> notes;
     std::vector<QString> pendingNotices;
 
-    void applyPatch(const core::Patch& patch) override
+    using engine::IEngine::applyPatch;
+    int preloadCount = 0;
+    void preload(const core::Setlist&) override { ++preloadCount; }
+    void setProgressHandler(engine::LoadProgress) override {}
+    [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }
+    void applyPatch(const core::SongId&, const core::Patch& patch) override
     {
         ++applyCount;
         lastPatch = patch;

@@ -15,6 +15,12 @@ void StartupProgress::report(const QString& step, const QString& detail, double 
     QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
 }
 
+void StartupProgress::loading(const QString& step, const QString& what, int done, int total)
+{
+    m_active = done < total;
+    report(step, what, total > 0 ? static_cast<double>(done) / total : -1.0);
+}
+
 void StartupProgress::finish(int remainingMs, const QString& listingStep, const QString& readyStep)
 {
     m_step = readyStep;

@@ -47,9 +47,15 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_midiSetup = options.midi;
     for (QString& notice : engine->openMidi()) engine->m_pendingNotices.push_back(std::move(notice));
     engine->m_progress = options.progress;
+    PluginCatalog::Progress scanProgress;
+    if (options.progress) {
+        scanProgress = [&options](const QString& plugin, int done, int total) {
+            options.progress(LoadStage::ScanningPlugins, plugin, done, total);
+        };
+    }
     engine->m_plugins = PluginCatalog::scan(
         options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder, options.pluginCacheFile,
-        nullptr, options.progress);
+        nullptr, scanProgress);
     return engine;
 }
 
@@ -62,10 +68,76 @@ RealEngine::~RealEngine()
     m_exchange.collectGarbage();
 }
 
-std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& cacheKey, const core::PluginSlot& slot)
+std::vector<RealEngine::PlannedSlot> RealEngine::planPatch(const core::SongId& song, const core::Patch& patch)
 {
-    const QString key = cacheKey + u'|' + slot.pluginId;
+    std::vector<PlannedSlot> plan;
+    std::map<QString, int> uses; // plugin id -> how many times this patch used it so far
+    const auto keyFor = [&](const QString& role, const QString& pluginId) {
+        const int n = uses[role + pluginId]++;
+        return song.value() + u'|' + role + u'|' + pluginId + u'#' + QString::number(n);
+    };
+    for (std::size_t c = 0; c < patch.channels.size(); ++c) {
+        const core::Channel& channel = patch.channels[c];
+        if (channel.instrument) {
+            plan.push_back(PlannedSlot{keyFor(u"i"_s, channel.instrument->pluginId), &*channel.instrument,
+                                       static_cast<int>(c), -1});
+        }
+        for (std::size_t e = 0; e < channel.effects.size(); ++e) {
+            if (channel.effects[e].bypass) continue;
+            plan.push_back(PlannedSlot{keyFor(u"fx"_s, channel.effects[e].pluginId), &channel.effects[e],
+                                       static_cast<int>(c), static_cast<int>(e)});
+        }
+    }
+    return plan;
+}
+
+void RealEngine::preload(const core::Setlist& setlist)
+{
+    // Everything the setlist plays, each shared instance once.
+    std::map<QString, const core::PluginSlot*> wanted;
+    for (const core::Song& song : setlist.songs) {
+        for (const core::Patch& patch : song.patches) {
+            for (const PlannedSlot& planned : planPatch(song.id, patch)) wanted.emplace(planned.key, planned.slot);
+        }
+    }
+    // Unload what this setlist does not use (the sounding graph keeps its own
+    // references until it is replaced).
+    const std::size_t before = m_nodes.size();
+    std::erase_if(m_nodes, [&](const auto& entry) {
+        if (wanted.count(entry.first) != 0) return false;
+        m_arturiaLoadedSize.erase(entry.second.get());
+        return true;
+    });
+    if (m_nodes.size() != before) {
+        qCInfo(lcEngine) << "Unloaded" << before - m_nodes.size() << "plugins the setlist no longer uses";
+    }
+
+    QElapsedTimer timer;
+    timer.start();
+    const int total = static_cast<int>(wanted.size());
+    int done = 0;
+    for (const auto& [key, slot] : wanted) {
+        if (m_progress) m_progress(LoadStage::LoadingSounds, slot->displayName, done, total);
+        (void)nodeFor(key, *slot, false); // failures are reported by nodeFor
+        ++done;
+    }
+    if (m_progress) m_progress(LoadStage::LoadingSounds, {}, total, total);
+    qCInfo(lcEngine) << "Setlist ready:" << total << "plugins in memory, loaded in" << timer.elapsed() << "ms";
+}
+
+std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::PluginSlot& slot, bool announce)
+{
     if (const auto it = m_nodes.find(key); it != m_nodes.end()) return it->second;
+    if (announce && m_progress) m_progress(LoadStage::LoadingSounds, slot.displayName, 0, 1);
+    struct AnnounceDone
+    {
+        const LoadProgress& progress;
+        bool on;
+        ~AnnounceDone()
+        {
+            if (on && progress) progress(LoadStage::LoadingSounds, {}, 1, 1);
+        }
+    } announceDone{m_progress, announce};
 
     // Arturia reads its window size when it loads: use the size fitted this
     // session, and remember what this instance starts with.
@@ -80,7 +152,6 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& cacheKey, const cor
         else qCWarning(lcEngine).noquote() << size.error().message;
     }
 
-    if (m_progress) m_progress(slot.displayName, 0, 0);
     QElapsedTimer timer;
     timer.start();
     auto node = Vst3Node::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());
@@ -166,7 +237,7 @@ void RealEngine::syncPluginsToDevice()
     }
     m_preparedRate = rate;
     m_preparedBlock = block;
-    applyPatch(m_patch); // a graph sized for the new block
+    applyPatch(m_song, m_patch); // a graph sized for the new block
     if (auto resumed = m_audio.resume(); !resumed) {
         m_pendingNotices.push_back(resumed.error().message);
         qCWarning(lcEngine).noquote() << m_pendingNotices.back();
@@ -236,14 +307,19 @@ void RealEngine::watchMidiPorts(std::vector<QString>& notices)
     for (QString& problem : openMidi()) notices.push_back(std::move(problem));
 }
 
-void RealEngine::applyPatch(const core::Patch& patch)
+void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
 {
+    QElapsedTimer timer;
+    timer.start();
     if (&patch != &m_patch) m_patch = patch;
+    m_song = song;
     std::set<Vst3Node*> used;
     m_currentInstruments.clear();
+    const std::vector<PlannedSlot> plan = planPatch(song, patch);
     std::vector<StripSpec> specs;
     specs.reserve(patch.channels.size());
-    for (const core::Channel& channel : patch.channels) {
+    for (std::size_t c = 0; c < patch.channels.size(); ++c) {
+        const core::Channel& channel = patch.channels[c];
         StripSpec spec;
         spec.id = channel.id;
         spec.route = RouteSettings{channel.keyLow, channel.keyHigh, channel.transpose, channel.midiChannel};
@@ -251,17 +327,16 @@ void RealEngine::applyPatch(const core::Patch& patch)
         spec.pan = channel.pan;
         spec.mute = channel.mute;
         spec.solo = channel.solo;
-        if (channel.instrument) {
-            auto node = nodeFor(channel.id.value() + u"|instrument"_s, *channel.instrument);
+        for (const PlannedSlot& planned : plan) {
+            if (planned.channel != static_cast<int>(c)) continue;
+            // Loaded up front by preload(); a plugin just added loads here.
+            auto node = nodeFor(planned.key, *planned.slot, true);
+            if (!node) continue;
             used.insert(node.get());
-            if (node) m_currentInstruments[channel.id.value()] = node;
-            spec.instrument = std::move(node);
-        }
-        for (std::size_t i = 0; i < channel.effects.size(); ++i) {
-            const core::PluginSlot& slot = channel.effects[i];
-            if (slot.bypass) continue;
-            if (auto node = nodeFor(channel.id.value() + u"|fx"_s + QString::number(i), slot)) {
-                used.insert(node.get());
+            if (planned.effect < 0) {
+                m_currentInstruments[channel.id.value()] = node;
+                spec.instrument = std::move(node);
+            } else {
                 spec.effects.push_back(std::move(node));
             }
         }
@@ -274,7 +349,8 @@ void RealEngine::applyPatch(const core::Patch& patch)
         if (used.count(node.get()) == 0) node->releaseAllNotes();
     }
     m_exchange.publish(std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock()));
-    qCInfo(lcEngine).noquote() << "Patch applied:" << patch.name << "(" << patch.channels.size() << "channels )";
+    qCInfo(lcEngine).noquote() << "Patch applied:" << patch.name << "(" << patch.channels.size() << "channels ) in"
+                               << timer.elapsed() << "ms";
 }
 
 LevelReading RealEngine::channelLevel(const core::ChannelId& id)
@@ -410,7 +486,7 @@ core::Result<bool> RealEngine::fitEditorToArea(const core::ChannelId& id, QSize 
     m_arturiaLoadedSize[fresh->get()] = best;
     m_arturiaFitted[old->bundlePath()] = best;
     m_pendingSizeWrites.push_back(PendingSizeWrite{old, *prefs, best});
-    applyPatch(m_patch); // the graph now plays the new instance
+    applyPatch(m_song, m_patch); // the graph now plays the new instance
     qCInfo(lcEngine).noquote() << old->name() << "reloaded at" << qRound(arturiaScale(best) * 100)
                                << "% to fit the window (" << area.width() << "x" << area.height() << ")";
     return true;
