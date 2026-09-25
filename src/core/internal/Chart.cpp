@@ -15,7 +15,8 @@ const QRegularExpression kChord(
 const QRegularExpression kChordLineMark(uR"(^(?:\||\|\||/|-|%|x\d+|\(x\d+\)|\d+x|N\.?C\.?|\(|\))$)"_s);
 const QRegularExpression kDirective(uR"(^\{\s*([A-Za-z_]+)\s*(?::\s*(.*?))?\s*\}$)"_s);
 // "[Verse 1]", "[Chorus]" on its own line in chord-site sheets.
-const QRegularExpression kSectionLabel(uR"(^\[([A-Za-z][A-Za-z0-9 \-']*)\]$)"_s);
+// "[Verse 1]", "[Chorus] (play loud)": a label, maybe with a note after it.
+const QRegularExpression kSectionLabel(uR"(^\[([A-Za-z][A-Za-z0-9 \-']*)\]\s*(.*?)\s*$)"_s);
 
 bool isChord(const QString& word)
 {
@@ -166,7 +167,8 @@ QString chordSheetToChordPro(const QString& sheet)
         const QString& line = lines[i];
         const auto label = kSectionLabel.match(line.trimmed());
         if (label.hasMatch() && !isChord(label.captured(1))) {
-            out << u"{comment: "_s + label.captured(1).trimmed() + u'}';
+            const QString note = label.captured(2);
+            out << u"{comment: "_s + label.captured(1).trimmed() + (note.isEmpty() ? QString() : u' ' + note) + u'}';
             continue;
         }
         if (!isChordLine(line)) {
@@ -323,6 +325,96 @@ QString tidyChordSheet(const QString& text)
     }
     const QString joined = lines.join(u'\n');
     return tidyChordPro(chordPro ? joined : chordSheetToChordPro(joined));
+}
+
+namespace {
+
+// "Hallelujah Chords by Leonard Cohen", "Wonderwall Tab", "Let It Be Lyrics".
+const QRegularExpression kSiteTitle(uR"(^(.+?)\s+(?:guitar\s+|ukulele\s+|piano\s+)?(?:chords|tabs?|lyrics)(?:\s+by\s+(.+?))?\s*$)"_s,
+                                    QRegularExpression::CaseInsensitiveOption);
+// "Wonderwall - Oasis"
+const QRegularExpression kTitleDashArtist(uR"(^(.+?)\s+[-–]\s+(.+?)\s*$)"_s);
+const QRegularExpression kCapoFret(uR"(^\s*capo\s*:?\s*(\d+))"_s, QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression kTempoLine(uR"(^\s*(?:bpm|tempo)\s*:?\s*(\d+(?:\.\d+)?))"_s, QRegularExpression::CaseInsensitiveOption);
+// Below the song on chord sites.
+const QRegularExpression kFooter(uR"(^\s*(?:last update\b|rating\s*$|please,?\s+rate\b|\d+\s+comments?\s*$|report bad tab\b|add to playlist\b|download pdf\b))"_s,
+                                 QRegularExpression::CaseInsensitiveOption);
+
+bool isSectionLabel(const QString& line)
+{
+    const auto label = kSectionLabel.match(line.trimmed());
+    return label.hasMatch() && !isChord(label.captured(1));
+}
+
+} // namespace
+
+ImportedSheet importChordSheet(const QString& text)
+{
+    ImportedSheet sheet;
+    QString cleaned = text;
+    cleaned.replace(u"\r\n"_s, u"\n"_s);
+    for (const QString& tag : {u"[ch]"_s, u"[/ch]"_s, u"[tab]"_s, u"[/tab]"_s}) cleaned.remove(tag);
+    const QStringList lines = cleaned.split(u'\n');
+
+    if (looksLikeChordPro(lines)) {
+        const Chart chart = parseChordPro(cleaned);
+        sheet.title = chart.title;
+        sheet.artist = chart.artist;
+        sheet.key = chart.key;
+        sheet.tempo = chart.tempo;
+        sheet.chart = tidyChordSheet(cleaned);
+        return sheet;
+    }
+
+    // Where the song starts: the first section label, else the first chords.
+    qsizetype start = -1;
+    for (qsizetype i = 0; i < lines.size() && start < 0; ++i) {
+        if (isSectionLabel(lines[i])) start = i;
+    }
+    for (qsizetype i = 0; i < lines.size() && start < 0; ++i) {
+        if (isChordLine(normaliseSpacing(lines[i]))) start = i;
+    }
+    if (start < 0) start = 0;
+    // Where it ends: the first line of site clutter after it.
+    qsizetype end = lines.size();
+    for (qsizetype i = start; i < lines.size(); ++i) {
+        if (kFooter.match(lines[i]).hasMatch()) {
+            end = i;
+            break;
+        }
+    }
+
+    // The song's details from the header.
+    bool titleSeen = false;
+    for (qsizetype i = 0; i < start; ++i) {
+        const QString line = lines[i].trimmed();
+        if (line.isEmpty() || kSeparator.match(line).hasMatch() || kTabStaff.match(line).hasMatch() ||
+            kJunk.match(line).hasMatch()) {
+            continue; // never a title
+        }
+        if (const auto key = kKeyLine.match(line); key.hasMatch()) sheet.key = key.captured(1);
+        else if (const auto capo = kCapoFret.match(line); capo.hasMatch()) sheet.capo = capo.captured(1).toInt();
+        else if (const auto tempo = kTempoLine.match(line); tempo.hasMatch()) sheet.tempo = tempo.captured(1).toDouble();
+        else if (!titleSeen) {
+            titleSeen = true;
+            if (const auto site = kSiteTitle.match(line); site.hasMatch()) {
+                sheet.title = site.captured(1).trimmed();
+                sheet.artist = site.captured(2).trimmed();
+            } else if (const auto dash = kTitleDashArtist.match(line); dash.hasMatch()) {
+                sheet.title = dash.captured(1).trimmed();
+                sheet.artist = dash.captured(2).trimmed();
+            } else {
+                sheet.title = line;
+            }
+        }
+    }
+    sheet.title = sheet.title.left(120);
+    sheet.artist = sheet.artist.left(120);
+
+    QString chart = tidyChordSheet(lines.mid(start, end - start).join(u'\n'));
+    if (sheet.capo > 0) chart.prepend(u"{comment: Capo %1}\n"_s.arg(sheet.capo));
+    sheet.chart = chart;
+    return sheet;
 }
 
 } // namespace gigchain::core

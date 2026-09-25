@@ -1,6 +1,7 @@
 // Song charts: ChordPro, and plain "chords above the lyrics" sheets.
 #include "gigchain/core/Chart.h"
 
+#include <QFile>
 #include <QtTest>
 
 using namespace gigchain::core;
@@ -152,6 +153,93 @@ private slots:
     void aChordOverTheSpaceBeforeAWordGoesOnTheWord()
     {
         QCOMPARE(tidyChordSheet(u"C        G\nHello my   friend\n"_s), u"[C]Hello my [G]friend\n"_s);
+    }
+
+    void aCopiedChordPageKeepsOnlyTheSong()
+    {
+        // Laid out the way a chord site's page copies: header clutter, the
+        // song, then footer clutter.
+        const QString page = u"Hallelujah Chords by Leonard Cohen\n"
+                             "Leonard Cohen\n"
+                             "Tuning: E A D G B E\n"
+                             "Key: C\n"
+                             "Capo: 2nd fret\n"
+                             "BPM: 56\n"
+                             "Author: someone 12,345. 3 contributors total, last edit on Jan 1, 2021\n"
+                             "View official tab\n"
+                             "We have an official Hallelujah tab made by UG professional guitarists.\n"
+                             "Difficulty: novice\n"
+                             "Chords used: C Am F G\n"
+                             "Am  x02210\n"
+                             "[Intro]\n"
+                             "C  Am  C  Am\n"
+                             "\n"
+                             "[Verse 1]\n"
+                             "C                   Am\n" // Am above "secret"
+                             "I heard there was a secret chord\n"
+                             "\n"
+                             "Last update: Jan 1, 2021\n"
+                             "Rating\n"
+                             "4.9\n"
+                             "Please, rate this tab\n"
+                             "12 Comments\n"_s;
+        const ImportedSheet sheet = importChordSheet(page);
+        QCOMPARE(sheet.title, u"Hallelujah"_s);
+        QCOMPARE(sheet.artist, u"Leonard Cohen"_s);
+        QCOMPARE(sheet.key, u"C"_s);
+        QCOMPARE(sheet.capo, 2);
+        QCOMPARE(sheet.tempo, 56.0);
+        QCOMPARE(sheet.chart, u"{comment: Capo 2}\n"
+                               "{comment: Intro}\n"
+                               "[C] [Am] [C] [Am]\n"
+                               "\n"
+                               "{comment: Verse 1}\n"
+                               "[C]I heard there was a [Am]secret chord\n"_s);
+    }
+
+    void aSheetWithoutSectionsStartsAtItsFirstChords()
+    {
+        const ImportedSheet sheet = importChordSheet(u"Wonderwall - Oasis\n"
+                                                     "Some site text\n"
+                                                     "Em7        G\n"
+                                                     "Today is gonna be the day\n"_s);
+        QCOMPARE(sheet.title, u"Wonderwall"_s);
+        QCOMPARE(sheet.artist, u"Oasis"_s);
+        QCOMPARE(sheet.chart, u"[Em7]Today is go[G]nna be the day\n"_s);
+    }
+
+    void chordProKeepsItsTitle()
+    {
+        const ImportedSheet sheet = importChordSheet(u"{title: Let It Be}\n{artist: The Beatles}\n[C]When I find\n"_s);
+        QCOMPARE(sheet.title, u"Let It Be"_s);
+        QCOMPARE(sheet.artist, u"The Beatles"_s);
+        QVERIFY(sheet.chart.contains(u"[C]When I find"_s));
+    }
+
+    void realUltimateGuitarPage()
+    {
+        // Copied from ultimate-guitar.com by the user (Creep, Radiohead).
+        QFile file(QFINDTESTDATA("data/ug_creep.txt"));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const ImportedSheet sheet = importChordSheet(QString::fromUtf8(file.readAll()));
+        QCOMPARE(sheet.title, u"Creep"_s);
+        QCOMPARE(sheet.artist, u"Radiohead"_s);
+        QCOMPARE(sheet.key, u"G"_s);
+        QCOMPARE(sheet.capo, 0); // "Capo:No capo"
+        // The chart starts at [Intro]: views, difficulty, tuning, the chord
+        // list, strumming counts and chord shapes above it are gone.
+        QVERIFY2(sheet.chart.startsWith(u"{comment: Intro}\n[G] [B] [C] [Cm]\n"_s), qPrintable(sheet.chart.left(120)));
+        for (const QString& clutter : {u"views"_s, u"Difficulty"_s, u"Tuning"_s, u"Strumming"_s, u"3-5-5-4-3-3"_s,
+                                       u"contributors"_s, u"official"_s}) {
+            QVERIFY2(!sheet.chart.contains(clutter), qPrintable(clutter));
+        }
+        // Chords over the syllables the site put them on.
+        QVERIFY(sheet.chart.contains(u"When you were here be[G]fore, couldn't look you in the [B]eyes"_s));
+        // "[Chorus] (play loud)" is a heading with its note, not a chord.
+        QVERIFY(sheet.chart.contains(u"{comment: Chorus (play loud)}"_s));
+        QVERIFY(!sheet.chart.contains(u"[Chorus]"_s));
+        QVERIFY(sheet.chart.contains(u"{comment: Verse 3 (play soft until the end)}"_s));
+        QVERIFY(sheet.chart.trimmed().endsWith(u"I don't be[G]long here"_s)); // the last G sits over "long"
     }
 
     void writingBackGivesTheSameChart()

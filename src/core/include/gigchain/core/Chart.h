@@ -80,4 +80,20 @@ struct Chart
 // in the lyrics are collapsed. Text that is already ChordPro is only tidied.
 [[nodiscard]] QString tidyChordSheet(const QString& text);
 
+// A chord sheet or a whole copied chord-site page, split into the song's
+// details and a clean chart: the site's clutter above the song (title bar,
+// tuning, difficulty, "chords used", author...) and below it (last update,
+// ratings, comments...) is dropped. The chart starts at the first section
+// ("[Intro]", "[Verse 1]"...) or, without sections, at the first chords.
+struct ImportedSheet
+{
+    QString chart;  // ChordPro
+    QString title;  // e.g. "Hallelujah" from "Hallelujah Chords by Leonard Cohen"
+    QString artist;
+    QString key;
+    int capo = 0;   // fret; 0 = none (kept as a comment in the chart too)
+    double tempo = 0.0;
+};
+[[nodiscard]] ImportedSheet importChordSheet(const QString& text);
+
 } // namespace gigchain::core

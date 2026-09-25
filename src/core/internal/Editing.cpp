@@ -1,6 +1,8 @@
 #include "gigchain/core/Editing.h"
 
 #include "gigchain/core/Limits.h"
+
+#include <cmath>
 #include "gigchain/core/Validation.h"
 
 #include <algorithm>
@@ -94,6 +96,21 @@ Result<void> setSongChart(Setlist& setlist, int songIndex, const QString& chart)
                     u"The chart is longer than %1 characters"_s.arg(limits::kMaxChartLength));
     }
     setlist.songs[toIndex(songIndex)].chart = chart;
+    return {};
+}
+
+Result<void> setSongKeyAndTempo(Setlist& setlist, int songIndex, const QString& key, double tempo)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (key.size() > limits::kMaxKeyLength) {
+        return fail(ErrorCode::LimitExceeded, u"The key is longer than %1 characters"_s.arg(limits::kMaxKeyLength));
+    }
+    if (!std::isfinite(tempo) || tempo < 0.0 || tempo > limits::kMaxTempo) {
+        return fail(ErrorCode::OutOfRange, u"The tempo must be between 0 and %1"_s.arg(limits::kMaxTempo));
+    }
+    Song& song = setlist.songs[toIndex(songIndex)];
+    song.key = key.trimmed();
+    song.tempo = tempo;
     return {};
 }
 

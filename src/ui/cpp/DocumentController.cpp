@@ -28,25 +28,8 @@ namespace gigchain::ui {
 namespace {
 
 constexpr auto kLastFileKey = "session/lastFile"_L1;
-
-// A song's name from its pasted sheet: the {title}, else the first line of
-// words, without chord-site words like "chords by ...".
 const QString kRecentKey = u"session/recentFiles"_s;
-constexpr int kMaxRecent = 5;
-
-QString songNameFromChart(const QString& chordPro)
-{
-    const core::Chart chart = core::parseChordPro(chordPro);
-    QString name = chart.title;
-    for (const core::ChartLine& line : chart.lines) {
-        if (!name.isEmpty()) break;
-        if (line.kind == core::ChartLine::Kind::Lyrics && line.chords().isEmpty()) name = line.lyrics().trimmed();
-    }
-    static const QRegularExpression kSiteWords(uR"(\s+(chords|tabs?|lyrics|ukulele|guitar|piano)\b.*$)"_s,
-                                               QRegularExpression::CaseInsensitiveOption);
-    name.remove(kSiteWords);
-    return name.left(60).trimmed();
-}
+constexpr int kMaxRecent = 5; // setlists in File > Recent
 
 } // namespace
 
@@ -55,6 +38,7 @@ DocumentController::DocumentController(engine::IEngine& engine, QSettings& setti
 {
     // A different current song (or setlist) means a different chart.
     connect(this, &DocumentController::currentChanged, this, &DocumentController::chartChanged);
+    connect(this, &DocumentController::currentChanged, this, &DocumentController::clearPasteUndo);
     resetSelectedChannel();
     applyCurrentPatchToEngine();
 }
@@ -182,21 +166,62 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
     if (pasted.trimmed().isEmpty()) {
         return report(core::Error{core::ErrorCode::InvalidData, tr("There is no text to paste")});
     }
-    const QString chart = core::tidyChordSheet(pasted);
+    const core::ImportedSheet sheet = core::importChordSheet(pasted);
     if (song < 0 || static_cast<std::size_t>(song) >= m_setlist.songs.size()) {
         // No song to paste into (an empty setlist): the paste makes one.
         if (!m_hasSetlist) newSetlist();
-        QString name = songNameFromChart(chart);
-        if (name.isEmpty()) name = tr("Song %1").arg(m_setlist.songs.size() + 1);
+        const QString name = sheet.title.isEmpty() ? tr("Song %1").arg(m_setlist.songs.size() + 1) : sheet.title;
         const auto current = currentPatchId();
         const auto index = core::addSong(m_setlist, name);
         if (!index) return report(index.error());
         commitStructure(core::Cursor{*index, 0}, current);
         song = *index;
     }
-    return setSongChart(song, chart);
+    const core::Song& before = m_setlist.songs[static_cast<std::size_t>(song)];
+    PasteUndo undo{before.id, before.name, before.key, before.tempo, pasted};
+
+    if (!setSongChart(song, sheet.chart)) return false; // reported
+    // A placeholder name ("Song 3") takes the sheet's title; a name the user
+    // chose stays.
+    static const QRegularExpression kPlaceholder(uR"(^Song \d+$)"_s);
+    if (!sheet.title.isEmpty() && kPlaceholder.match(before.name).hasMatch()) {
+        if (auto r = core::renameSong(m_setlist, song, sheet.title); !r) return report(r.error());
+        commitRename();
+    }
+    const core::Song& now = m_setlist.songs[static_cast<std::size_t>(song)];
+    const QString key = now.key.isEmpty() ? sheet.key : now.key;
+    const double tempo = now.tempo > 0.0 ? now.tempo : sheet.tempo;
+    if (key != now.key || tempo != now.tempo) {
+        if (auto r = core::setSongKeyAndTempo(m_setlist, song, key, tempo); !r) return report(r.error());
+    }
+    m_pasteUndo = undo;
+    emit pasteUndoChanged();
+    return true;
 }
 
+bool DocumentController::undoPaste()
+{
+    if (!m_pasteUndo) return false;
+    const PasteUndo undo = *m_pasteUndo;
+    clearPasteUndo();
+    const auto it = std::find_if(m_setlist.songs.begin(), m_setlist.songs.end(),
+                                 [&](const core::Song& s) { return s.id == undo.song; });
+    if (it == m_setlist.songs.end()) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("The pasted song no longer exists")});
+    }
+    const int song = static_cast<int>(it - m_setlist.songs.begin());
+    if (auto r = core::renameSong(m_setlist, song, undo.name); !r) return report(r.error());
+    if (auto r = core::setSongKeyAndTempo(m_setlist, song, undo.key, undo.tempo); !r) return report(r.error());
+    commitRename();
+    return setSongChart(song, undo.pasted);
+}
+
+void DocumentController::clearPasteUndo()
+{
+    if (!m_pasteUndo) return;
+    m_pasteUndo.reset();
+    emit pasteUndoChanged();
+}
 
 QStringList DocumentController::recentFiles() const
 {
