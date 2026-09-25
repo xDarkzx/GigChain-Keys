@@ -58,6 +58,7 @@ public:
     [[nodiscard]] MidiSetup midiSetup() const override { return m_midiSetup; }
     core::Result<void> setMidiSetup(const MidiSetup& setup) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) override;
+    core::Result<std::unique_ptr<IPluginEditor>> createEffectEditor(const core::ChannelId& id, int effect) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) override;
     core::Result<bool> fitEditorToArea(const core::ChannelId& id, QSize editorSize, QSize area) override;
 
@@ -126,6 +127,8 @@ private:
     std::chrono::steady_clock::time_point m_lastMidiCheck{};
     // Main thread: the instrument each channel of the current patch plays.
     std::map<QString, std::shared_ptr<Vst3Node>> m_currentInstruments;
+    // ... and its effects, by position (nullptr: switched off or not loaded).
+    std::map<QString, std::vector<std::shared_ptr<Vst3Node>>> m_currentEffects;
 
     // Audio thread only.
     std::array<MidiEvent, kMaxEventsPerBlock> m_events{};

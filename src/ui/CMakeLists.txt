@@ -19,6 +19,7 @@ qt_add_qml_module(gigchain_ui
         cpp/SettingsMigration.h cpp/SettingsMigration.cpp
         cpp/Session.h cpp/Session.cpp
         cpp/EditorService.h cpp/EditorService.cpp
+        cpp/EffectWindows.h cpp/EffectWindows.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
         cpp/PluginIcons.h cpp/PluginIcons.cpp
         cpp/EditorPlacement.h cpp/EditorPlacement.cpp

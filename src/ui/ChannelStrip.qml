@@ -23,6 +23,8 @@ Rectangle {
     required property string color
     required property DocumentController doc
     required property PluginListModel pluginModel
+    // Clicking an effect opens its own window (floating, as in a DAW).
+    property EffectWindows effectWindows: null
 
     readonly property real peakDb: peak > 0 ? 20 * Math.log10(peak) : -200
     property int menuEffect: -1 // effect the effect menu acts on
@@ -188,17 +190,39 @@ Rectangle {
             onMenuRequested: strip.menu(channelMenuComponent).popup(instrumentSlot, 0, instrumentSlot.height)
         }
 
-        // effect slots, then one empty slot to add another
-        Repeater {
+        // effect slots, then one empty slot to add another. The list grows
+        // with each effect; past four it scrolls, so the fader keeps its room.
+        ListView {
+            id: effectList
+            objectName: "effectList"
+            readonly property int slotHeight: 20
+            readonly property int maxVisible: 4
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.min(count, maxVisible) * (slotHeight + spacing) - (count > 0 ? spacing : 0)
+            visible: count > 0
+            spacing: 3
+            clip: true
+            interactive: count > maxVisible
+            boundsBehavior: Flickable.StopAtBounds
             model: strip.effectNames
+            // A new effect is added at the end: show it.
+            onCountChanged: positionViewAtEnd()
+            ScrollBar.vertical: ScrollBar {
+                policy: effectList.count > effectList.maxVisible ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+                width: 3
+            }
             delegate: EffectSlot {
                 id: fxSlot
                 required property int index
                 required property string modelData
-                Layout.fillWidth: true
+                width: ListView.view.width - (effectList.count > effectList.maxVisible ? 4 : 0)
+                height: effectList.slotHeight
                 text: modelData
                 bypassed: strip.effectBypassed[index] === true
-                onClicked: strip.doc.selectedChannel = strip.index
+                onClicked: {
+                    strip.doc.selectedChannel = strip.index
+                    if (strip.effectWindows) strip.effectWindows.open(strip.index, index, fxSlot.Window.window)
+                }
                 onPowerToggled: strip.doc.setEffectBypass(strip.index, index, !bypassed)
                 onMenuRequested: {
                     strip.menuEffect = index

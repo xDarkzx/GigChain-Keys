@@ -14,6 +14,7 @@ Rectangle {
     required property ChannelModel channelModel
     required property bool sidePanelOpen
     required property bool mixerOpen
+    property EffectWindows effectWindows: null
 
     color: Theme.performBackground
 
@@ -138,6 +139,7 @@ Rectangle {
             channelModel: perform.channelModel
             pluginModel: perform.pluginModel
             engineStatus: perform.engineStatus
+            effectWindows: perform.effectWindows
         }
     }
 }

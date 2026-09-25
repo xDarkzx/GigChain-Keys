@@ -1,4 +1,5 @@
 #include "DocumentController.h"
+#include "EffectWindows.h"
 #include "EngineStatus.h"
 #include "LeakCheck.h"
 #include "SpyEngine.h"
@@ -339,6 +340,23 @@ private slots:
         QVERIFY(m_doc->duplicateSong(0));
         const auto& copy = m_doc->setlist().songs.at(1);
         QCOMPARE(copy.patches[0].channels[0].instrument->state, QByteArray("spy settings: spy/Piano.vst3"));
+    }
+
+    void clickingAnEffectAsksForItsWindow()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->addEffect(0, u"spy/Reverb.vst3"_s, u"Spy Reverb"_s));
+        EffectWindows windows(*m_engine, *m_doc);
+        QVERIFY(!windows.open(0, 0, nullptr)); // the spy's effects have no window
+        QCOMPARE(m_engine->effectEditorRequests.size(), std::size_t{1});
+        QCOMPARE(m_engine->effectEditorRequests[0].first, m_doc->currentPatch()->channels[0].id.value());
+        QCOMPARE(m_engine->effectEditorRequests[0].second, 0);
+        QVERIFY(m_doc->lastError().contains(u"no window"_s)); // said, not swallowed
+        QCOMPARE(windows.openCount(), 0);
+
+        QVERIFY(!windows.open(0, 5, nullptr)); // no such effect: nothing asked
+        QVERIFY(!windows.open(7, 0, nullptr)); // no such channel
+        QCOMPARE(m_engine->effectEditorRequests.size(), std::size_t{1});
     }
 
     void aPluginEditMarksTheSetlistUnsaved()

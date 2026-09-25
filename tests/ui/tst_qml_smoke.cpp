@@ -98,6 +98,23 @@ private slots:
         settle();
     }
 
+    void manyEffectsScrollInsteadOfSqueezingTheFader()
+    {
+        QVERIFY(m_session->document().addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        for (int i = 0; i < 6; ++i) QVERIFY(m_session->document().addEffect(0, u"fake.reverb"_s, u"Reverb"_s));
+        settle();
+        auto* strips = m_qml->rootObjects().value(0)->findChild<QObject*>(u"mixerStrips"_s);
+        QVERIFY(strips != nullptr);
+        QQuickItem* strip = nullptr;
+        QVERIFY(QMetaObject::invokeMethod(strips, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, strip), Q_ARG(int, 0)));
+        QVERIFY(strip != nullptr);
+        auto* list = strip->findChild<QObject*>(u"effectList"_s);
+        QVERIFY(list != nullptr);
+        QCOMPARE(list->property("count").toInt(), 6);
+        QVERIFY(list->property("height").toDouble() <= 4 * 23.0); // four shown, the rest scroll
+        QVERIFY(list->property("interactive").toBool());
+    }
+
     void addingAChannelShowsAStrip()
     {
         QVERIFY(m_session->document().addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));

@@ -45,6 +45,10 @@ public:
         return {};
     }
     core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) override;
+    core::Result<std::unique_ptr<IPluginEditor>> createEffectEditor(const core::ChannelId&, int) override
+    {
+        return std::unique_ptr<IPluginEditor>(); // demo plugins have no editors
+    }
     core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) override;
 
 private:

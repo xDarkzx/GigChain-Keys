@@ -4,6 +4,7 @@
 #include "OfficialArtwork.h"
 #include "DocumentController.h"
 #include "EditorService.h"
+#include "EffectWindows.h"
 #include "EngineStatus.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
@@ -48,6 +49,7 @@ private:
     PluginListModel m_pluginModel;
     EngineStatus m_engineStatus;
     EditorService m_editorService;
+    EffectWindows m_effectWindows;
     SettingsController m_settingsController;
     StartupProgress m_loading; // the loading overlay (after start-up)
 };

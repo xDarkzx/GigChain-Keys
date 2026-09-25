@@ -342,6 +342,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     m_song = song;
     std::set<Vst3Node*> used;
     m_currentInstruments.clear();
+    m_currentEffects.clear();
     const std::vector<PlannedSlot> plan = planPatch(song, patch);
     std::vector<StripSpec> specs;
     specs.reserve(patch.channels.size());
@@ -364,6 +365,9 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
                 m_currentInstruments[channel.id.value()] = node;
                 spec.instrument = std::move(node);
             } else {
+                auto& effects = m_currentEffects[channel.id.value()];
+                effects.resize(channel.effects.size());
+                effects[static_cast<std::size_t>(planned.effect)] = node;
                 spec.effects.push_back(std::move(node));
             }
         }
@@ -479,6 +483,27 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditor(const core
         return std::unique_ptr<IPluginEditor>(); // no instrument on this channel (a failed load was already reported)
     }
     return Vst3Node::createEditor(it->second);
+}
+
+core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(const core::ChannelId& id, int effect)
+{
+    const core::Channel* channel = nullptr;
+    for (const core::Channel& c : m_patch.channels) {
+        if (c.id == id) channel = &c;
+    }
+    if (channel == nullptr || effect < 0 || static_cast<std::size_t>(effect) >= channel->effects.size()) {
+        return core::fail(core::ErrorCode::OutOfRange, u"That effect is no longer in this patch"_s);
+    }
+    const core::PluginSlot& slot = channel->effects[static_cast<std::size_t>(effect)];
+    if (slot.bypass) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
+    }
+    const auto effects = m_currentEffects.find(id.value());
+    if (effects == m_currentEffects.end() || static_cast<std::size_t>(effect) >= effects->second.size()
+        || !effects->second[static_cast<std::size_t>(effect)]) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
+    }
+    return Vst3Node::createEditor(effects->second[static_cast<std::size_t>(effect)]);
 }
 
 core::Result<bool> RealEngine::fitEditorToArea(const core::ChannelId& id, QSize editorSize, QSize area)
