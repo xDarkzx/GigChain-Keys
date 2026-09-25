@@ -7,6 +7,7 @@
 #include "gigchain/core/Limits.h"
 
 #include <QElapsedTimer>
+#include <QFileInfo>
 
 #include <algorithm>
 #include <array>
@@ -48,6 +49,12 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_midiSetup = options.midi;
     for (QString& notice : engine->openMidi()) engine->m_pendingNotices.push_back(std::move(notice));
     engine->m_progress = options.progress;
+    engine->m_guard = PluginLoadGuard(options.pluginGuardFolder);
+    for (const QString& crashed : engine->m_guard.takeCrashed()) {
+        engine->m_pendingNotices.push_back(
+            u"%1 crashed the app while loading last time, so it is switched off (Settings > Plugins to try it again)"_s.arg(
+                QFileInfo(crashed).completeBaseName()));
+    }
     PluginCatalog::Progress scanProgress;
     if (options.progress) {
         scanProgress = [&options](const QString& plugin, int done, int total) {
@@ -56,7 +63,7 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     }
     engine->m_plugins = PluginCatalog::scan(
         options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder, options.pluginCacheFile,
-        nullptr, scanProgress);
+        nullptr, scanProgress, &engine->m_guard);
     return engine;
 }
 
@@ -176,8 +183,18 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
 
 std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& slot)
 {
+    if (m_guard.isBlocked(slot.pluginId)) {
+        const QString problem =
+            u"%1 is switched off: it crashed the app while loading before (Settings > Plugins to try it again)"_s.arg(
+                slot.displayName);
+        qCWarning(lcEngine).noquote() << problem;
+        m_pendingNotices.push_back(problem);
+        return nullptr;
+    }
     QElapsedTimer timer;
     timer.start();
+    // Until it has loaded and taken its settings: a crash here blocks it next start.
+    const auto loading = m_guard.loading(slot.pluginId);
     auto node = Vst3Node::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());
     if (!node) {
         // Already logged by Vst3Node::load; tell the user too.
@@ -549,6 +566,7 @@ core::Result<bool> RealEngine::fitEditorToArea(const core::ChannelId& id, QSize 
         qCWarning(lcEngine).noquote() << written.error().message;
         return tl::unexpected(written.error());
     }
+    const auto loading = m_guard.loading(old->bundlePath());
     auto fresh = Vst3Node::load(old->bundlePath(), m_audio.sampleRate(), m_audio.maxBlock()); // logged
     if (!fresh) return tl::unexpected(fresh.error());
     if (auto restored = (*fresh)->restoreState(*state); !restored) {
@@ -735,6 +753,10 @@ void RealEngine::rewriteArturiaSizes()
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(const QString& pluginId)
 {
     // A separate instance, not in the audio graph; the editor keeps it alive.
+    if (m_guard.isBlocked(pluginId)) {
+        return core::fail(core::ErrorCode::InvalidData, u"This plugin crashed the app while loading before, so it is switched off"_s);
+    }
+    const auto loading = m_guard.loading(pluginId);
     auto node = Vst3Node::load(pluginId, m_audio.sampleRate(), m_audio.maxBlock());
     if (!node) return tl::unexpected(node.error()); // logged by Vst3Node::load
     return Vst3Node::createEditor(*node);
@@ -743,7 +765,7 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(c
 QString RealEngine::statusText() const
 {
     const QStringList ports = m_midi.openPortNames();
-    return u"%1 · %2 · %3 kHz · %4 ms · MIDI: %5"_s.arg(m_audio.deviceName(), apiName(m_audio.api()))
+    return u"%1 Â· %2 Â· %3 kHz Â· %4 ms Â· MIDI: %5"_s.arg(m_audio.deviceName(), apiName(m_audio.api()))
         .arg(m_audio.sampleRate() / 1000.0, 0, 'f', 1)
         .arg(m_audio.latencyMs(), 0, 'f', 1)
         .arg(ports.isEmpty() ? u"none"_s : ports.join(u", "_s));

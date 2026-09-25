@@ -2,12 +2,14 @@
 // installed plugins. Master volume is set to silence first, so nothing is
 // heard; the channel meters are measured before the master fader.
 #include "PluginCatalog.h"
+#include "PluginLoadGuard.h"
 #include "gigchain/core/Limits.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
 #include <QFile>
 #include <QFileInfo>
 #include <QScopeGuard>
+#include <QTemporaryDir>
 #include <QtTest>
 
 #include <chrono>
@@ -381,6 +383,46 @@ private slots:
         (void)engine.takeLimiterActivity();
         engine.setMasterEffects({});
         QVERIFY(!engine.createMasterEffectEditor(0));
+    }
+
+    void aPluginThatCrashedTheAppIsNotLoadedAgain()
+    {
+        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        QTemporaryDir guardFolder;
+        RealEngineOptions options;
+        options.pluginGuardFolder = guardFolder.path();
+        // The last run "died" while loading it: its marker is still there.
+        PluginLoadGuard lastRun(guardFolder.path());
+        const auto loading = lastRun.loading(kSmall);
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"crashed the app while loading last time"_s));
+        auto created = createRealEngine(options);
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+        QCOMPARE(engine.blockedPlugins(), QStringList{kSmall});
+        auto notices = engine.poll();
+        QVERIFY(!notices.empty());
+        QVERIFY2(notices.back().contains(u"TDR Kotelnikov"_s), qPrintable(notices.back()));
+
+        core::Patch patch = core::makePatch(u"Verse"_s);
+        core::Channel channel = core::makeChannel(u"Keys"_s);
+        channel.instrument = core::PluginSlot{kSmall, u"Kotelnikov"_s, false};
+        patch.channels.push_back(channel);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov is switched off"_s));
+        engine.applyPatch(patch);
+        notices = engine.poll();
+        QCOMPARE(notices.size(), std::size_t{1}); // said, not silently missing
+        QVERIFY(notices[0].contains(u"switched off"_s));
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{0});
+
+        engine.unblockPlugin(kSmall); // "Try again"
+        QVERIFY(engine.blockedPlugins().isEmpty());
+        engine.applyPatch(patch);
+        QVERIFY(engine.poll().empty());
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
     }
 
     void unknownPluginIsReportedNotIgnored()

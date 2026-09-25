@@ -26,3 +26,5 @@ gigchain_add_test(tst_arturia_size SOURCES tst_arturia_size.cpp LIBS gigchain::e
 target_include_directories(tst_arturia_size PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_safety_limiter SOURCES tst_safety_limiter.cpp LIBS gigchain::engine)
 target_include_directories(tst_safety_limiter PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_test(tst_plugin_load_guard SOURCES tst_plugin_load_guard.cpp LIBS gigchain::engine)
+target_include_directories(tst_plugin_load_guard PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)

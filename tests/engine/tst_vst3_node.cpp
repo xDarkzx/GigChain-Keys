@@ -1,6 +1,7 @@
 // Integration tests against real installed plugins. Each test skips when its
 // plugin is not installed, so the suite still passes on other machines.
 #include "ComponentHandler.h"
+#include "PluginModules.h"
 #include "Vst3Node.h"
 
 #include <QFile>
@@ -180,6 +181,30 @@ private slots:
         QCOMPARE(handler.queryInterface(Steinberg::Vst::IComponentHandler2::iid, &second), Steinberg::kResultOk);
         static_cast<Steinberg::Vst::IComponentHandler2*>(second)->setDirty(true);
         QVERIFY(handler.takeEdited());
+    }
+
+    void instancesOfAPluginShareOneLibrary()
+    {
+        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        const std::size_t before = PluginModules::loadedCount();
+        {
+            auto first = Vst3Node::load(kInstrument, kRate, kBlock);
+            auto second = Vst3Node::load(kInstrument, kRate, kBlock);
+            QVERIFY(first.has_value() && second.has_value());
+            QCOMPARE(PluginModules::loadedCount(), before + 1); // one library, two instances
+
+            first->reset(); // one goes: the other still plays
+            std::vector<float> left(kBlock), right(kBlock);
+            float peak = 0.0F;
+            const MidiEvent on[] = {MidiEvent{0x90, 60, 110, 0}};
+            for (int block = 0; block < 40; ++block) {
+                (*second)->process(block == 0 ? std::span<const MidiEvent>(on) : std::span<const MidiEvent>(),
+                                   AudioBlock{left.data(), right.data(), kBlock});
+                peak = std::max(peak, blockPeak(left, right));
+            }
+            QVERIFY2(peak > 0.001F, "the remaining instance went silent");
+        }
+        QCOMPARE(PluginModules::loadedCount(), before); // the last one went: the library is unloaded
     }
 
     void sidechainEffectLoads()

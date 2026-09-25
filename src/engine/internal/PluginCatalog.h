@@ -10,6 +10,8 @@
 
 namespace gigchain::engine {
 
+class PluginLoadGuard;
+
 // Finds VST3 plugins under a folder (the standard one is
 // C:/Program Files/Common Files/VST3) and reads each bundle's class info.
 // A plugin's id is its absolute bundle path, which Vst3Node::load accepts.
@@ -35,9 +37,11 @@ public:
     // done, how many in all. For a splash screen.
     using Progress = std::function<void(const QString& plugin, int done, int total)>;
 
-    // No cacheFile: every plugin is opened.
+    // No cacheFile: every plugin is opened. `guard`: new plugins are opened
+    // under it, and plugins it blocked are not opened.
     static std::vector<PluginInfo> scan(const QString& folder, const QString& cacheFile = {},
-                                        ScanStats* stats = nullptr, const Progress& progress = {});
+                                        ScanStats* stats = nullptr, const Progress& progress = {},
+                                        PluginLoadGuard* guard = nullptr);
 };
 
 } // namespace gigchain::engine

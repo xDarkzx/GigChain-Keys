@@ -16,6 +16,8 @@ public:
     void applyPatch(const core::SongId& song, const core::Patch& patch) override;
     void preload(const core::Setlist&) override {}
     void setProgressHandler(LoadProgress) override {}
+    [[nodiscard]] QStringList blockedPlugins() const override { return {}; }
+    void unblockPlugin(const QString&) override {}
     std::vector<QString> storePluginStates(core::Setlist&) override { return {}; } // demo plugins have no settings
     bool takePluginEdits() override { return false; }
     [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }

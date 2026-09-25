@@ -4,6 +4,7 @@
 #include "GraphExchange.h"
 #include "MidiInput.h"
 #include "MidiQueue.h"
+#include "PluginLoadGuard.h"
 #include "SafetyLimiter.h"
 #include "Vst3Node.h"
 
@@ -36,6 +37,8 @@ public:
     void preload(const core::Setlist& setlist) override;
     void setProgressHandler(LoadProgress handler) override { m_progress = std::move(handler); }
     [[nodiscard]] std::size_t loadedPluginCount() const override { return m_nodes.size(); }
+    [[nodiscard]] QStringList blockedPlugins() const override { return m_guard.blocked(); }
+    void unblockPlugin(const QString& pluginId) override { m_guard.unblock(pluginId); }
     std::vector<QString> storePluginStates(core::Setlist& setlist) override;
     bool takePluginEdits() override;
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override { return m_plugins; }
@@ -110,6 +113,7 @@ private:
     MidiQueue m_injected; // main thread -> audio thread
     GraphExchange m_exchange;
     std::vector<PluginInfo> m_plugins;
+    PluginLoadGuard m_guard; // plugins that crashed the app while loading
 
     // Main thread: every plugin instance created so far, by channel slot.
     std::map<QString, std::shared_ptr<Vst3Node>> m_nodes;

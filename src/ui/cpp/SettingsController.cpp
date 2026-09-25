@@ -4,8 +4,10 @@
 
 #include "gigchain/engine/IEngine.h"
 
+#include <QFileInfo>
 #include <QLoggingCategory>
 #include <QSettings>
+#include <QVariantMap>
 
 #include <algorithm>
 #include <cmath>
@@ -97,6 +99,21 @@ void SettingsController::setLimiterCeilingDb(double ceilingDb)
     const double clamped = std::clamp(ceilingDb, -24.0, 0.0);
     if (m_limiterCeilingDb == clamped) return;
     m_limiterCeilingDb = clamped;
+    emit changed();
+}
+
+QVariantList SettingsController::blockedPlugins() const
+{
+    QVariantList list;
+    for (const QString& path : m_engine.blockedPlugins()) {
+        list << QVariantMap{{u"path"_s, path}, {u"name"_s, QFileInfo(path).completeBaseName()}};
+    }
+    return list;
+}
+
+void SettingsController::unblockPlugin(const QString& path)
+{
+    m_engine.unblockPlugin(path);
     emit changed();
 }
 

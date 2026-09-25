@@ -3,6 +3,7 @@
 #include "ComponentHandler.h"
 #include "EngineLog.h"
 #include "LoaderErrors.h"
+#include "PluginModules.h"
 
 #include "public.sdk/source/common/memorystream.h"
 #include "public.sdk/source/vst/hosting/eventlist.h"
@@ -181,7 +182,7 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
         auto impl = std::make_unique<Impl>();
 
         std::string error;
-        impl->module = VST3::Hosting::Module::create(QFileInfo(bundlePath).absoluteFilePath().toStdString(), error);
+        impl->module = PluginModules::get(bundlePath, error); // shared with its other instances
         if (!impl->module) {
             return core::fail(core::ErrorCode::InvalidData,
                               u"Not a loadable VST3 plugin: %1 (%2)"_s.arg(bundlePath, QString::fromStdString(error)));
@@ -425,6 +426,19 @@ bool Vst3Node::takeEdited()
 
 core::Result<Vst3Node::State> Vst3Node::saveState() const
 {
+    // A plugin's code may throw; that must not end the app (as Audacity 4
+    // guards its state calls).
+    try {
+        return saveStateUnguarded();
+    } catch (const std::exception& e) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 failed giving its state: %2"_s.arg(m_impl->name, QString::fromUtf8(e.what())));
+    } catch (...) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 failed giving its state"_s.arg(m_impl->name));
+    }
+}
+
+core::Result<Vst3Node::State> Vst3Node::saveStateUnguarded() const
+{
     State state;
     MemoryStream component;
     if (m_impl->component->getState(&component) != kResultOk) {
@@ -440,6 +454,17 @@ core::Result<Vst3Node::State> Vst3Node::saveState() const
 }
 
 core::Result<void> Vst3Node::restoreState(const State& state)
+{
+    try {
+        return restoreStateUnguarded(state);
+    } catch (const std::exception& e) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 failed taking its saved state: %2"_s.arg(m_impl->name, QString::fromUtf8(e.what())));
+    } catch (...) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 failed taking its saved state"_s.arg(m_impl->name));
+    }
+}
+
+core::Result<void> Vst3Node::restoreStateUnguarded(const State& state)
 {
     if (state.component.isEmpty()) return {};
     MemoryStream component(const_cast<char*>(state.component.constData()), state.component.size());
