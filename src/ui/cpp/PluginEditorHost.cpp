@@ -1,7 +1,9 @@
 ﻿#include "PluginEditorHost.h"
+#include "FreezeWatchdog.h"
 
 #include <QAbstractNativeEventFilter>
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QLoggingCategory>
 #include <QQuickWindow>
 
@@ -14,6 +16,8 @@
 #include <cmath>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
+
+using namespace Qt::StringLiterals;
 
 namespace gigchain::ui {
 
@@ -93,7 +97,10 @@ void PluginEditorHost::itemChange(ItemChange change, const ItemChangeData& value
 
 void PluginEditorHost::rebuild()
 {
+    QElapsedTimer timer;
+    timer.start();
     teardown();
+    const qint64 closing = timer.elapsed();
     QQuickWindow* host = window();
     if (!m_service || host == nullptr) {
         emit editorChanged();
@@ -109,6 +116,7 @@ void PluginEditorHost::rebuild()
     }
     m_stale = false;
 
+    FreezeWatchdog::mark(u"opening a plugin window"_s);
     auto created = m_service->createForSelection();
     if (!created || !*created) {
         emit editorChanged(); // error already shown and logged, or nothing to show
@@ -154,6 +162,8 @@ void PluginEditorHost::rebuild()
     m_placedArea = {};
     place();
     updateVisibility();
+    qCInfo(lcUi).noquote() << "Plugin window" << m_editor->title() << ": closing the previous" << closing
+                           << "ms, opening" << timer.elapsed() - closing << "ms";
     m_frameConnection = connect(host, &QQuickWindow::afterAnimating, this, &PluginEditorHost::place);
     m_stateConnection = connect(host, &QWindow::windowStateChanged, this, [this] { m_fitOnNextArea = true; });
     if (m_fixedSize) {
