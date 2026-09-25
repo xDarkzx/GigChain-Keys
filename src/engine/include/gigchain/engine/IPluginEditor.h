@@ -6,7 +6,6 @@
 #include <QString>
 #include <QtGlobal>
 
-#include <functional>
 
 namespace gigchain::engine {
 
@@ -34,9 +33,6 @@ public:
     // returned with the precise cause and logged.
     virtual core::Result<void> attach(quintptr nativeParent) = 0;
     virtual void detach() = 0;
-
-    // Called when the plugin itself asks for a new size (e.g. it opens a panel).
-    virtual void setResizeHandler(std::function<void(QSize)> handler) = 0;
 
 protected:
     IPluginEditor() = default;

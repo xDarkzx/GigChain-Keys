@@ -12,7 +12,6 @@ ApplicationWindow {
     required property SelectedChannel selectedChannel
     required property PluginListModel pluginModel
     required property EngineStatus engineStatus
-    required property EditorService editorService
     required property EffectWindows effectWindows
     required property MasterBus masterBus
     required property SettingsController settings
@@ -241,12 +240,9 @@ ApplicationWindow {
                         SplitView.fillHeight: true
                         SplitView.minimumHeight: 200
                         doc: root.doc
-                        editorService: root.editorService
                         onNewRequested: root.guarded("new")
                         onOpenRequested: root.guarded("open")
                         onOpenRecentRequested: (path) => root.openRecent(path)
-                        // Plugin windows sit above Qt content: hide them while a dialog is up.
-                        suspended: settingsDialog.visible || unsavedDialog.visible
                     }
                     Mixer {
                         visible: root.mixerOpen

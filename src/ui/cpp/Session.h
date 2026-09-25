@@ -3,7 +3,6 @@
 #include "ChannelModel.h"
 #include "OfficialArtwork.h"
 #include "DocumentController.h"
-#include "EditorService.h"
 #include "EffectWindows.h"
 #include "MasterBus.h"
 #include "EngineStatus.h"
@@ -49,7 +48,6 @@ private:
     SelectedChannel m_selectedChannel;
     PluginListModel m_pluginModel;
     EngineStatus m_engineStatus;
-    EditorService m_editorService;
     EffectWindows m_effectWindows;
     MasterBus m_masterBus; // after the windows it opens
     SettingsController m_settingsController;
