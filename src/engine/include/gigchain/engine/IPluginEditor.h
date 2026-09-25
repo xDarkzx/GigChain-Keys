@@ -35,6 +35,19 @@ public:
     virtual core::Result<void> attach(quintptr nativeParent) = 0;
     virtual void detach() = 0;
 
+    // Sizing, as Audacity 4's VstView (muse/framework/vst/qml/Muse/Vst/vstview.cpp).
+    // The fitter is the window showing the plugin: given the size the plugin
+    // wants (physical pixels), it sizes the window, never bigger than its
+    // room, and returns the size it took. The plugin is then told that size
+    // (onSize); a plugin that cannot shrink is clipped by its window.
+    using Fitter = std::function<QSize(QSize wanted)>;
+    virtual void setFitter(Fitter fitter) = 0;
+    // The screen's scaling, given before sizing (setContentScaleFactor).
+    virtual void setContentScale(double scale) = 0;
+    // The plugin's own size, through the fitter (VstView::updateViewGeometry):
+    // after attach, when the room changes, on another screen.
+    virtual void updateGeometry() = 0;
+
 protected:
     IPluginEditor() = default;
 };

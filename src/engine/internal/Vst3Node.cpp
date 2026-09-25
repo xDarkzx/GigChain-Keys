@@ -19,6 +19,7 @@
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "pluginterfaces/gui/iplugview.h"
+#include "pluginterfaces/gui/iplugviewcontentscalesupport.h"
 
 #include <QDataStream>
 #include <QFileInfo>
@@ -570,11 +571,41 @@ public:
         m_view->setFrame(nullptr);
     }
 
-    // IPlugFrame: the plugin asks the host for a new size. Refused: plugin
-    // windows keep the size they opened with.
-    tresult PLUGIN_API resizeView(IPlugView* view, ViewRect*) override
+    void setFitter(Fitter fitter) override { m_fitter = std::move(fitter); }
+
+    void setContentScale(double scale) override
     {
-        return view == m_view.get() ? kResultFalse : kInvalidArgument;
+        FUnknownPtr<IPlugViewContentScaleSupport> scaling(m_view);
+        if (scaling) scaling->setContentScaleFactor(static_cast<float>(scale));
+    }
+
+    // VstView::updateViewGeometry: the plugin's own size, through resizeView.
+    void updateGeometry() override
+    {
+        ViewRect size{};
+        if (m_view->getSize(&size) != kResultOk) {
+            qCWarning(lcEngine).noquote() << m_title << "did not give its size";
+            return;
+        }
+        resizeView(m_view.get(), &size);
+    }
+
+    // IPlugFrame, as VstView::resizeView: the plugin checks the size, the
+    // window takes it (never bigger than its room), then the plugin is told
+    // the size it got.
+    tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* requiredSize) override
+    {
+        if (view == nullptr || requiredSize == nullptr || view != m_view.get()) return kInvalidArgument;
+        if (m_inResize) return kResultTrue; // the plugin re-entered while we resize
+        m_inResize = true;
+        m_view->checkSizeConstraint(requiredSize);
+        const QSize wanted(requiredSize->getWidth(), requiredSize->getHeight());
+        const QSize got = m_fitter ? m_fitter(wanted) : wanted;
+        ViewRect size{0, 0, got.width(), got.height()};
+        // A plugin that will not size down is clipped by its window.
+        m_view->onSize(&size);
+        m_inResize = false;
+        return kResultTrue;
     }
 
     tresult PLUGIN_API queryInterface(const TUID requested, void** object) override
@@ -598,7 +629,9 @@ private:
     std::shared_ptr<Vst3Node> m_node; // keeps the plugin alive while its editor exists
     IPtr<IPlugView> m_view;
     QString m_title;
+    Fitter m_fitter;
     bool m_attached = false;
+    bool m_inResize = false;
 };
 
 } // namespace
