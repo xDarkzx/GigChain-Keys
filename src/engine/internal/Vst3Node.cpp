@@ -512,6 +512,12 @@ bool Vst3Node::isInstrument() const
 
 namespace {
 
+// The SDK has no ViewRect comparison (editorhost defines its own).
+bool sameRect(const ViewRect& a, const ViewRect& b)
+{
+    return a.left == b.left && a.top == b.top && a.right == b.right && a.bottom == b.bottom;
+}
+
 // Hosts one IPlugView. Implements IPlugFrame so the plugin can ask for a
 // resize. Not reference-counted by the plugin: this object is owned by the UI
 // (unique_ptr) and clears the frame pointer before it goes away.
@@ -579,7 +585,8 @@ public:
         if (scaling) scaling->setContentScaleFactor(static_cast<float>(scale));
     }
 
-    // VstView::updateViewGeometry: the plugin's own size, through resizeView.
+    // Tells the window the plugin's own size. The plugin is never given a
+    // size it did not ask for.
     void updateGeometry() override
     {
         ViewRect size{};
@@ -587,24 +594,26 @@ public:
             qCWarning(lcEngine).noquote() << m_title << "did not give its size";
             return;
         }
-        resizeView(m_view.get(), &size);
+        if (m_fitter) m_fitter(QSize(size.getWidth(), size.getHeight()));
     }
 
-    // IPlugFrame, as VstView::resizeView: the plugin checks the size, the
-    // window takes it (never bigger than its room), then the plugin is told
-    // the size it got.
-    tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* requiredSize) override
+    // IPlugFrame: the plugin asks for a new size (its resize handle, its size
+    // menu). The sequence of Steinberg's reference host (the VST3 SDK's
+    // editorhost, WindowController::resizeView): the window takes the size,
+    // then onSize only if the plugin has not applied it already. The plugin
+    // always gets exactly the size it asked for.
+    tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* newSize) override
     {
-        if (view == nullptr || requiredSize == nullptr || view != m_view.get()) return kInvalidArgument;
-        if (m_inResize) return kResultTrue; // the plugin re-entered while we resize
+        if (view == nullptr || newSize == nullptr || view != m_view.get()) return kInvalidArgument;
+        if (m_inResize) return kResultFalse; // re-entered while resizing (editorhost's guard)
+        ViewRect current{};
+        if (m_view->getSize(&current) != kResultOk) return kInternalError;
+        if (sameRect(current, *newSize)) return kResultTrue;
         m_inResize = true;
-        m_view->checkSizeConstraint(requiredSize);
-        const QSize wanted(requiredSize->getWidth(), requiredSize->getHeight());
-        const QSize got = m_fitter ? m_fitter(wanted) : wanted;
-        ViewRect size{0, 0, got.width(), got.height()};
-        // A plugin that will not size down is clipped by its window.
-        m_view->onSize(&size);
+        if (m_fitter) m_fitter(QSize(newSize->getWidth(), newSize->getHeight()));
         m_inResize = false;
+        if (m_view->getSize(&current) != kResultOk) return kInternalError;
+        if (!sameRect(current, *newSize)) m_view->onSize(newSize);
         return kResultTrue;
     }
 
