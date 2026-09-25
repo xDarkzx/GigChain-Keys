@@ -434,6 +434,17 @@ private slots:
         QVERIFY(!status.limiting());
     }
 
+    void clickingAnInstrumentAsksForItsWindow()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        EffectWindows windows(*m_engine, *m_doc);
+        QVERIFY(!windows.openInstrument(0, nullptr)); // the spy's plugins have no window
+        QCOMPARE(m_engine->editorRequests.back(), m_doc->currentPatch()->channels[0].id.value());
+        QVERIFY(m_doc->lastError().contains(u"no window"_s));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"channel 3 is not in the current patch"_s));
+        QVERIFY(!windows.openInstrument(3, nullptr));
+    }
+
     void aPluginEditMarksTheSetlistUnsaved()
     {
         QVERIFY(m_doc->saveAs(path(u"gig.gigchain.json"_s)));

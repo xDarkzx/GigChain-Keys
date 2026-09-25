@@ -20,8 +20,9 @@ namespace gigchain::ui {
 
 class DocumentController;
 
-// Effects' own windows, each in a floating window of its own (as DAWs do),
-// kept above the main window. Clicking an effect that is already open brings
+// Plugins' own windows (instruments and effects), each in a window of its
+// own, as Audacity 4 shows plugins (VstViewDialog): kept above the main
+// window, fixed at the size the plugin opened with, never resized. Clicking an effect that is already open brings
 // its window to the front. A window closes by itself when its effect leaves
 // the sound: removed, replaced, switched off, or another patch is chosen.
 class EffectWindows : public QObject
@@ -46,6 +47,8 @@ public:
     // the current patch, above `owner` (the main window). False when it has
     // no window; why is shown in the banner and logged.
     Q_INVOKABLE bool open(int channel, int effect, QWindow* owner);
+    // The same for the channel's instrument.
+    Q_INVOKABLE bool openInstrument(int channel, QWindow* owner);
     // The same for effect `effect` of the master bus (`masterSlots` as it is now).
     bool openMaster(int effect, const std::vector<core::PluginSlot>& masterSlots, QWindow* owner);
     // Closes master windows whose effect is no longer there as it was.

@@ -67,7 +67,14 @@ Rectangle {
     Component {
         id: channelMenuComponent
         StageMenu {
-            StageMenuItem { text: qsTr("Open %1").arg(strip.instrumentName || qsTr("instrument")); onTriggered: strip.doc.selectedChannel = strip.index }
+            StageMenuItem {
+                text: qsTr("Open %1").arg(strip.instrumentName || qsTr("instrument"))
+                enabled: strip.instrumentName !== "" && strip.effectWindows !== null
+                onTriggered: {
+                    strip.doc.selectedChannel = strip.index
+                    strip.effectWindows.openInstrument(strip.index, strip.Window.window)
+                }
+            }
             StageMenuItem { text: strip.mute ? qsTr("Unmute") : qsTr("Mute"); onTriggered: strip.doc.setChannelMute(strip.index, !strip.mute) }
             StageMenuItem { text: strip.solo ? qsTr("Unsolo") : qsTr("Solo"); onTriggered: strip.doc.setChannelSolo(strip.index, !strip.solo) }
             EffectPickerMenu {
@@ -186,6 +193,7 @@ Rectangle {
             onClicked: {
                 strip.doc.selectedChannel = strip.index
                 if (!loaded) strip.menu(instrumentPickerComponent).popup(instrumentSlot, 0, instrumentSlot.height)
+                else if (strip.effectWindows) strip.effectWindows.openInstrument(strip.index, instrumentSlot.Window.window)
             }
             onMenuRequested: strip.menu(channelMenuComponent).popup(instrumentSlot, 0, instrumentSlot.height)
         }

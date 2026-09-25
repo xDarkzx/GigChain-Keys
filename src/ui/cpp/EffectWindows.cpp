@@ -35,11 +35,6 @@ protected:
     }
 };
 
-QSize toLogical(QSize physical, double ratio)
-{
-    return QSize(static_cast<int>(std::ceil(physical.width() / ratio)),
-                 static_cast<int>(std::ceil(physical.height() / ratio)));
-}
 
 } // namespace
 
@@ -50,7 +45,6 @@ struct EffectWindows::Entry
     QString pluginId;
     std::unique_ptr<engine::IPluginEditor> editor;
     QPointer<QWindow> window;
-    double ratio = 1.0;
     bool master = false;   // an effect of the master bus (channel unused)
 };
 
@@ -121,6 +115,50 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
     return true;
 }
 
+bool EffectWindows::openInstrument(int channel, QWindow* owner)
+{
+    GC_ONLY_MAIN_THREAD();
+    const core::Patch* patch = m_document.currentPatch();
+    if (patch == nullptr || channel < 0 || static_cast<std::size_t>(channel) >= patch->channels.size()) {
+        qCWarning(lcUi) << "No instrument window: channel" << channel << "is not in the current patch";
+        return false;
+    }
+    const core::Channel& strip = patch->channels[static_cast<std::size_t>(channel)];
+    if (!strip.instrument) {
+        qCWarning(lcUi).noquote() << "No instrument window:" << strip.name << "has no instrument";
+        return false;
+    }
+    for (auto& entry : m_open) {
+        if (!entry->master && entry->channel == strip.id && entry->effect < 0 && entry->pluginId == strip.instrument->pluginId) {
+            GC_IF_FAILED(entry->window) { break; }
+            entry->window->raise();
+            entry->window->requestActivate();
+            return true;
+        }
+    }
+    QElapsedTimer timer;
+    timer.start();
+    FreezeWatchdog::mark(u"opening the window of %1"_s.arg(strip.instrument->displayName));
+    auto created = m_engine.createEditor(strip.id);
+    if (!created) {
+        m_document.reportMessage(created.error().message); // logged by the engine
+        return false;
+    }
+    if (!*created) {
+        m_document.reportMessage(tr("%1 has no window of its own").arg(strip.instrument->displayName));
+        return false;
+    }
+    auto entry = std::make_unique<Entry>();
+    entry->channel = strip.id;
+    entry->effect = -1;
+    entry->pluginId = strip.instrument->pluginId;
+    entry->editor = std::move(*created);
+    if (!show(std::move(entry), u"%1 — %2"_s.arg(strip.instrument->displayName, strip.name), owner)) return false;
+    qCInfo(lcUi).noquote() << "Instrument window" << strip.instrument->displayName << "on" << strip.name << "opened in"
+                           << timer.elapsed() << "ms";
+    return true;
+}
+
 bool EffectWindows::openMaster(int effect, const std::vector<core::PluginSlot>& masterSlots, QWindow* owner)
 {
     GC_ONLY_MAIN_THREAD();
@@ -164,7 +202,6 @@ bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWi
     if (owner != nullptr) window->setTransientParent(owner); // stays above the main window
     window->setTitle(title);
     window->create();
-    entry->ratio = window->devicePixelRatio();
     if (auto attached = entry->editor->attach(static_cast<quintptr>(window->winId())); !attached) {
         delete window;
         m_document.reportMessage(attached.error().message); // logged by the editor
@@ -173,23 +210,21 @@ bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWi
     entry->window = window;
 
     Entry* raw = entry.get();
-    // The window is the plugin's size; when the plugin changes its size, the
-    // window takes it. The host never sizes the plugin.
-    const auto fitWindowTo = [raw](QSize physical) {
-        GC_IF_FAILED(raw->window) { return; }
-        const QSize logical = toLogical(physical, raw->ratio);
-        raw->window->setMinimumSize(logical);
-        raw->window->setMaximumSize(logical);
-        raw->window->resize(logical);
-    };
-    fitWindowTo(entry->editor->preferredSize());
-    entry->editor->setResizeHandler(fitWindowTo);
+    // Fixed at the size the plugin opened with (physical pixels to the
+    // screen's units). It is never resized.
+    const double scaling = window->devicePixelRatio();
+    const QSize opened = raw->editor->preferredSize();
+    const QSize fixed(qRound(opened.width() / scaling), qRound(opened.height() / scaling));
+    window->setMinimumSize(fixed);
+    window->setMaximumSize(fixed);
+    window->resize(fixed);
     window->onClose = [this, raw] {
         const auto it = std::find_if(m_open.begin(), m_open.end(), [raw](const auto& e) { return e.get() == raw; });
         if (it != m_open.end()) close(**it);
     };
 
-    // Cascade from the middle of the main window.
+    // In the middle of the main window (VstViewDialog::moveViewToMainWindowCenter),
+    // later ones a little lower and to the right.
     if (owner != nullptr) {
         const QPoint offset(28 * static_cast<int>(m_open.size() % 8), 28 * static_cast<int>(m_open.size() % 8));
         window->setPosition(owner->geometry().center() - QPoint(window->width() / 2, window->height() / 2) + offset);
@@ -248,9 +283,14 @@ void EffectWindows::sweep()
                 if (c.id == entry->channel) channel = &c;
             }
         }
-        const bool stillThere = channel != nullptr && entry->effect < static_cast<int>(channel->effects.size())
-                                && channel->effects[static_cast<std::size_t>(entry->effect)].pluginId == entry->pluginId
-                                && !channel->effects[static_cast<std::size_t>(entry->effect)].bypass;
+        bool stillThere = false;
+        if (channel != nullptr && entry->effect < 0) {
+            stillThere = channel->instrument && channel->instrument->pluginId == entry->pluginId;
+        } else if (channel != nullptr) {
+            stillThere = entry->effect < static_cast<int>(channel->effects.size())
+                         && channel->effects[static_cast<std::size_t>(entry->effect)].pluginId == entry->pluginId
+                         && !channel->effects[static_cast<std::size_t>(entry->effect)].bypass;
+        }
         if (!stillThere) gone.push_back(entry.get());
     }
     for (Entry* entry : gone) close(*entry);

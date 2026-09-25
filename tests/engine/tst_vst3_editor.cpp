@@ -69,8 +69,6 @@ private slots:
         QVERIFY2(attached.has_value(), attached ? "" : qPrintable(attached.error().message));
         QVERIFY((*editor)->isAttached());
 
-        QSize requested;
-        (*editor)->setResizeHandler([&requested](QSize s) { requested = s; });
         (*editor)->detach();
         QVERIFY(!(*editor)->isAttached());
     }
