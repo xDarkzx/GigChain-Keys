@@ -2,6 +2,7 @@
 // runs and wires it to the UI. The product's name comes from branding.cmake.
 #include "Session.h"
 #include "SettingsController.h"
+#include "CrashReports.h"
 #include "FreezeWatchdog.h"
 #include "SettingsMigration.h"
 #include "StageQuips.h"
@@ -17,6 +18,9 @@
 #include <QLoggingCategory>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#include <QFileInfo>
+#include <QDir>
+#include <QScopeGuard>
 #include <QQuickWindow>
 #include <QSettings>
 #include <QStandardPaths>
@@ -106,6 +110,12 @@ int main(int argc, char* argv[])
 
     QQuickStyle::setStyle(u"Basic"_s); // fully themeable by Theme.qml
     QSettings settings;
+    // A crash leaves a dump and a note of what the app was doing.
+    ui::CrashReports::install(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
+                              + u"/crash-reports"_s);
+    const auto crashReportsOff = qScopeGuard([] { ui::CrashReports::uninstall(); });
+    const QStringList lastCrash = ui::CrashReports::takeNewReports();
+    for (const QString& report : lastCrash) qCWarning(lcApp).noquote() << "The last run crashed; report:" << report;
     const ui::FreezeWatchdog watchdog; // logs any moment the window stops responding
     ui::carryOverPreviousSettings(settings); // after a rename: nothing to set up again
 
@@ -148,6 +158,11 @@ int main(int argc, char* argv[])
     }
 
     ui::Session session(*engine, settings);
+    if (!lastCrash.isEmpty()) {
+        session.document().reportMessage(
+            QGuiApplication::tr("%1 closed unexpectedly last time. A crash report was saved in %2")
+                .arg(branding::name(), QDir::toNativeSeparators(QFileInfo(lastCrash.back()).path())));
+    }
     if (!engineProblem.isEmpty()) {
         session.document().reportMessage(QGuiApplication::tr("No audio output (%1). Running without sound.").arg(engineProblem));
     }

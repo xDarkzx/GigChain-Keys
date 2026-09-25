@@ -1,5 +1,7 @@
 #include "FreezeWatchdog.h"
 
+#include "CrashReports.h"
+
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QLoggingCategory>
@@ -22,6 +24,7 @@ void FreezeWatchdog::mark(const QString& action)
 {
     const std::lock_guard lock(g_markMutex);
     g_lastMark = action;
+    CrashReports::setLastAction(action);
 }
 
 FreezeWatchdog::FreezeWatchdog(QObject* parent) : QObject(parent)
