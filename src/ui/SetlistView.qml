@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Songs and their patches. Click to select, double-click to rename, drag to
-// reorder, right-click for more.
+// The setlist's songs. Click a song to play it, double-click to rename, drag
+// to reorder, right-click for more. (Songs may still hold sections; they are
+// not listed.)
 Item {
     id: view
 
@@ -38,8 +39,10 @@ Item {
                 readonly property bool isSong: kind === "song"
 
                 width: ListView.view.width
-                height: isSong ? 34 : 30
-                color: isCurrent ? Theme.accent : (isSong ? Theme.panelRaised : "transparent")
+                visible: isSong
+                height: isSong ? 40 : 0
+                color: isCurrentSong ? Theme.accent : (hoverArea.hovered ? Theme.slotHover : Theme.panelRaised)
+                HoverHandler { id: hoverArea }
 
                 function startRename() {
                     if (!view.editable) return
@@ -54,20 +57,21 @@ Item {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: row.isSong ? Theme.spacing : Theme.spacing * 3
+                    anchors.leftMargin: Theme.spacing
                     anchors.rightMargin: Theme.spacing
                     spacing: Theme.spacing
                     Label {
                         text: row.number
-                        color: row.isCurrent ? Theme.accentText : Theme.textDim
+                        color: row.isCurrentSong ? Theme.accentText : Theme.textDim
                         Layout.preferredWidth: 22
                         horizontalAlignment: Text.AlignRight
                     }
                     Label {
                         visible: !renameField.visible
                         text: row.name
-                        font.bold: row.isSong
-                        color: row.isCurrent ? Theme.accentText : Theme.text
+                        font.bold: true
+                        font.pixelSize: Theme.fontSize + 1
+                        color: row.isCurrentSong ? Theme.accentText : Theme.text
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
@@ -114,7 +118,6 @@ Item {
                         onTriggered: row.isSong ? view.doc.duplicateSong(row.songIndex)
                                                 : view.doc.duplicatePatch(row.songIndex, row.patchIndex)
                     }
-                    StageMenuItem { text: qsTr("Add patch to this song"); onTriggered: view.doc.addPatch(row.songIndex) }
                     MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
                     StageMenuItem {
                         text: qsTr("Delete")
@@ -134,13 +137,6 @@ Item {
                 focusPolicy: Qt.NoFocus
                 Layout.fillWidth: true
                 onClicked: view.doc.addSong()
-            }
-            Button {
-                text: qsTr("+ Patch")
-                focusPolicy: Qt.NoFocus
-                Layout.fillWidth: true
-                enabled: view.doc.hasPatch
-                onClicked: view.doc.addPatch(view.doc.songIndex)
             }
         }
     }
