@@ -45,33 +45,6 @@ Rectangle {
                 suspended: area.suspended
             }
 
-            // Plugins that cannot shrink (e.g. Arturia) scroll instead.
-            ScrollBar {
-                orientation: Qt.Horizontal
-                policy: ScrollBar.AlwaysOn
-                visible: editorHost.hasEditor && editorHost.scrollHorizontally
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.rightMargin: editorHost.scrollVertically ? 12 : 0
-                anchors.bottom: parent.bottom
-                height: 12
-                size: editorHost.viewportWidth / Math.max(1, editorHost.contentWidth)
-                position: editorHost.scrollX / Math.max(1, editorHost.contentWidth)
-                onPositionChanged: if (pressed) editorHost.scrollX = position * editorHost.contentWidth
-            }
-            ScrollBar {
-                orientation: Qt.Vertical
-                policy: ScrollBar.AlwaysOn
-                visible: editorHost.hasEditor && editorHost.scrollVertically
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: editorHost.scrollHorizontally ? 12 : 0
-                anchors.right: parent.right
-                width: 12
-                size: editorHost.viewportHeight / Math.max(1, editorHost.contentHeight)
-                position: editorHost.scrollY / Math.max(1, editorHost.contentHeight)
-                onPositionChanged: if (pressed) editorHost.scrollY = position * editorHost.contentHeight
-            }
         }
     }
 }

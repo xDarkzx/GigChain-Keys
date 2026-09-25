@@ -8,7 +8,6 @@
 #include <QLoggingCategory>
 #include <QQuickWindow>
 
-#include <cmath>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
@@ -52,7 +51,7 @@ void PluginEditorHost::geometryChange(const QRectF& newGeometry, const QRectF& o
     QQuickItem::geometryChange(newGeometry, oldGeometry);
     // An editor opened before the layout gave this area a size (the setlist
     // loads before the main window appears) is shown once it has one.
-    if (m_viewport && !m_viewport->isVisible()) updateVisibility();
+    if (m_window && !m_window->isVisible()) updateVisibility();
     else place();
 }
 
@@ -97,35 +96,25 @@ void PluginEditorHost::rebuild()
         return;
     }
 
-    // viewport (clips) -> child (the plugin draws here); both Qt-owned by the main window.
-    auto viewport = new QWindow(host);
-    viewport->setFlag(Qt::FramelessWindowHint);
-    viewport->create();
-    auto child = new QWindow(viewport);
-    child->setFlag(Qt::FramelessWindowHint);
-    child->create();
+    // One window, owned by the main window; the plugin draws in it.
+    auto* pluginWindow = new QWindow(host);
+    pluginWindow->setFlag(Qt::FramelessWindowHint);
+    pluginWindow->create();
     std::unique_ptr<engine::IPluginEditor> editor = std::move(*created);
-    if (auto attached = editor->attach(static_cast<quintptr>(child->winId())); !attached) {
-        viewport->deleteLater(); // deletes its child window too
+    if (auto attached = editor->attach(static_cast<quintptr>(pluginWindow->winId())); !attached) {
+        pluginWindow->deleteLater();
         m_service->reportFailure(attached.error().message); // already logged by the editor; now shown too
         emit editorChanged();
         return;
     }
     m_editor = std::move(editor);
-    m_viewport = viewport;
-    m_child = child;
-    m_scroll = {};
+    m_window = pluginWindow;
     m_editorSize = m_editor->preferredSize();
-    // The host never sizes the plugin: only the plugin changes its size (its
-    // resize corner, its size menu, a panel opening), and the window follows.
+    // The plugin changed its own size: the window takes it.
     m_editor->setResizeHandler([this](QSize requested) {
-        qCInfo(lcUi).noquote() << m_editor->title() << "resized itself to" << requested.width() << "x"
-                               << requested.height();
         m_editorSize = requested;
-        m_placedArea = {};
         place();
     });
-    m_placedArea = {};
     place();
     updateVisibility();
     qCInfo(lcUi).noquote() << "Plugin window" << m_editor->title() << ": closing the previous" << closing
@@ -142,65 +131,32 @@ void PluginEditorHost::teardown()
         m_editor->detach(); // must happen before its window is destroyed
         m_editor.reset();
     }
-    if (m_viewport) {
-        m_viewport->hide();
-        m_viewport->deleteLater(); // deletes the plugin's window with it
-        m_viewport = nullptr;
+    if (m_window) {
+        m_window->hide();
+        m_window->deleteLater();
+        m_window = nullptr;
     }
-    m_child = nullptr;
-    m_placement = {};
-    emit placementChanged();
     m_editorSize = {};
-    m_placedArea = {};
 }
 
 void PluginEditorHost::place()
 {
-    if (!m_editor || !m_child || !m_viewport || window() == nullptr) return;
-    const QRectF area = mapRectToScene(boundingRect());
-    if (area == m_placedArea) return;
-    m_placedArea = area;
-
-    // The editor at its own size, centred, scrolling inside a clipping
-    // viewport when it is bigger than the area.
+    if (!m_editor || !m_window || window() == nullptr) return;
+    const QPointF topLeft = mapToScene(QPointF(0, 0));
     const double dpr = window()->devicePixelRatio();
-    const QSizeF editorSize(m_editorSize.width() / dpr, m_editorSize.height() / dpr);
-    m_placement = placeEditor(area, editorSize, m_scroll);
-    m_viewport->setGeometry(m_placement.viewport.toAlignedRect());
-    const QPointF inside = m_placement.editor.topLeft() - m_placement.viewport.topLeft();
-    m_child->setGeometry(static_cast<int>(std::lround(inside.x())), static_cast<int>(std::lround(inside.y())),
-                         static_cast<int>(std::lround(editorSize.width())),
-                         static_cast<int>(std::lround(editorSize.height())));
-    emit placementChanged();
-}
-
-void PluginEditorHost::setScrollX(double x)
-{
-    if (std::abs(x - m_scroll.x()) < 0.5) return;
-    m_scroll.setX(x);
-    m_placedArea = {};
-    place();
-}
-
-void PluginEditorHost::setScrollY(double y)
-{
-    if (std::abs(y - m_scroll.y()) < 0.5) return;
-    m_scroll.setY(y);
-    m_placedArea = {};
-    place();
+    const QRect wanted(qRound(topLeft.x()), qRound(topLeft.y()), qRound(m_editorSize.width() / dpr),
+                       qRound(m_editorSize.height() / dpr));
+    if (m_window->geometry() != wanted) m_window->setGeometry(wanted);
 }
 
 void PluginEditorHost::updateVisibility()
 {
-    if (!m_viewport || !m_child) return;
-    const bool show = isVisible() && !m_suspended && width() > 0 && height() > 0;
-    if (show) {
-        m_placedArea = {};
+    if (!m_window) return;
+    if (isVisible() && !m_suspended && width() > 0 && height() > 0) {
         place();
-        m_child->show();
-        m_viewport->show();
+        m_window->show();
     } else {
-        m_viewport->hide();
+        m_window->hide();
     }
 }
 

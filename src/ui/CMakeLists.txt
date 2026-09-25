@@ -24,7 +24,6 @@ qt_add_qml_module(gigchain_ui
         cpp/MasterBus.h cpp/MasterBus.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
         cpp/PluginIcons.h cpp/PluginIcons.cpp
-        cpp/EditorPlacement.h cpp/EditorPlacement.cpp
         cpp/OfficialArtwork.h cpp/OfficialArtwork.cpp
     QML_FILES
         Theme.qml

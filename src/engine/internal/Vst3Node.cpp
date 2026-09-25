@@ -19,7 +19,6 @@
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "pluginterfaces/gui/iplugview.h"
-#include "pluginterfaces/gui/iplugviewcontentscalesupport.h"
 
 #include <QDataStream>
 #include <QFileInfo>
@@ -539,7 +538,6 @@ public:
         return {rect.getWidth(), rect.getHeight()};
     }
 
-    [[nodiscard]] bool canResize() const override { return m_view->canResize() == kResultTrue; }
     [[nodiscard]] bool isAttached() const override { return m_attached; }
 
     core::Result<void> attach(quintptr nativeParent) override
@@ -570,31 +568,6 @@ public:
             m_attached = false;
         }
         m_view->setFrame(nullptr);
-    }
-
-    QSize setSize(QSize size) override
-    {
-        ViewRect rect{0, 0, size.width(), size.height()};
-        if (canResize() && m_view->checkSizeConstraint(&rect) != kResultTrue) {
-            qCInfo(lcEngine).noquote() << m_title << "adjusted the requested editor size";
-        }
-        if (m_view->onSize(&rect) != kResultOk) {
-            qCWarning(lcEngine).noquote() << m_title << "rejected editor size" << size;
-        }
-        return {rect.getWidth(), rect.getHeight()};
-    }
-
-    bool setContentScale(double scale) override
-    {
-        FUnknownPtr<IPlugViewContentScaleSupport> scaling(m_view);
-        if (!scaling || scaling->setContentScaleFactor(static_cast<float>(scale)) != kResultTrue) {
-            if (!m_scaleWarned) {
-                qCInfo(lcEngine).noquote() << m_title << "cannot scale its editor; it keeps its own size";
-                m_scaleWarned = true;
-            }
-            return false;
-        }
-        return true;
     }
 
     void setResizeHandler(std::function<void(QSize)> handler) override { m_onResize = std::move(handler); }
@@ -644,7 +617,6 @@ private:
     std::function<void(QSize)> m_onResize;
     bool m_attached = false;
     bool m_inResize = false;
-    bool m_scaleWarned = false;
 };
 
 } // namespace
