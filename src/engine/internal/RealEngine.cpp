@@ -1,6 +1,5 @@
 #include "RealEngine.h"
 
-#include "ArturiaWindowSize.h"
 #include "EngineLog.h"
 #include "PluginCatalog.h"
 #include "gigchain/core/Checks.h"
@@ -124,7 +123,6 @@ void RealEngine::preload(const core::Setlist& setlist)
             if (same && m_editedNodes.count(entry.first) == 0) return false;
             ++reloads;
         }
-        m_arturiaLoadedSize.erase(entry.second.get());
         m_nodeStates.erase(entry.first);
         m_editedNodes.erase(entry.first);
         return true;
@@ -162,22 +160,8 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
         }
     } announceDone{m_progress, announce};
 
-    // Arturia reads its window size when it loads: use the size fitted this
-    // session, and remember what this instance starts with.
-    std::optional<double> arturiaSize;
-    if (const auto prefs = arturiaPrefsFile(slot.pluginId, arturiaDataRoot())) {
-        if (const auto fitted = m_arturiaFitted.find(slot.pluginId); fitted != m_arturiaFitted.end()) {
-            if (auto written = writeArturiaGuiSize(*prefs, fitted->second); !written) {
-                qCWarning(lcEngine).noquote() << written.error().message;
-            }
-        }
-        if (auto size = readArturiaGuiSize(*prefs)) arturiaSize = *size;
-        else qCWarning(lcEngine).noquote() << size.error().message;
-    }
-
     auto node = loadWithSettings(slot);
     if (!node) return nullptr;
-    if (arturiaSize) m_arturiaLoadedSize[node.get()] = *arturiaSize;
     m_nodeStates[key] = slot.state;
     m_editedNodes.erase(key);
     m_nodes.emplace(key, node);
@@ -497,7 +481,6 @@ std::vector<QString> RealEngine::poll()
     // A lost device may have come back at another rate or block size.
     syncPluginsToDevice();
     watchMidiPorts(notices);
-    rewriteArturiaSizes();
     for (QString& notice : m_pendingNotices) notices.push_back(std::move(notice));
     m_pendingNotices.clear();
 
@@ -552,54 +535,6 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(cons
         return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
     }
     return Vst3Node::createEditor(effects->second[static_cast<std::size_t>(effect)]);
-}
-
-core::Result<bool> RealEngine::fitEditorToArea(const core::ChannelId& id, QSize editorSize, QSize area)
-{
-    GC_ONLY_MAIN_THREAD();
-    const auto current = m_currentInstruments.find(id.value());
-    if (current == m_currentInstruments.end() || editorSize.isEmpty() || area.isEmpty()) return false;
-    const std::shared_ptr<Vst3Node> old = current->second;
-    const auto prefs = arturiaPrefsFile(old->bundlePath(), arturiaDataRoot());
-    const auto loaded = m_arturiaLoadedSize.find(old.get());
-    if (!prefs || loaded == m_arturiaLoadedSize.end()) return false; // not a plugin with its own size setting
-
-    const double scale = arturiaScale(loaded->second);
-    const QSizeF full(editorSize.width() / scale, editorSize.height() / scale);
-    const double best = fitArturiaGuiSize(full, QSizeF(area));
-    if (std::abs(best - loaded->second) < 0.05) return false; // already the best fit
-
-    auto state = old->saveState();
-    if (!state) {
-        qCWarning(lcEngine).noquote() << state.error().message;
-        return tl::unexpected(state.error());
-    }
-    if (auto written = writeArturiaGuiSize(*prefs, best); !written) {
-        qCWarning(lcEngine).noquote() << written.error().message;
-        return tl::unexpected(written.error());
-    }
-    const auto loading = m_guard.loading(old->bundlePath());
-    auto fresh = Vst3Node::load(old->bundlePath(), m_audio.sampleRate(), m_audio.maxBlock()); // logged
-    if (!fresh) return tl::unexpected(fresh.error());
-    if (auto restored = (*fresh)->restoreState(*state); !restored) {
-        // Keep the old instance playing rather than lose the sound.
-        qCWarning(lcEngine).noquote() << restored.error().message;
-        return tl::unexpected(restored.error());
-    }
-
-    (void)(*fresh)->takeEdited(); // restoring is not an edit
-    collectEdits();                // but changes made to the old one still count
-    for (auto& [key, node] : m_nodes) {
-        if (node == old) node = *fresh;
-    }
-    m_arturiaLoadedSize.erase(old.get());
-    m_arturiaLoadedSize[fresh->get()] = best;
-    m_arturiaFitted[old->bundlePath()] = best;
-    m_pendingSizeWrites.push_back(PendingSizeWrite{old, *prefs, best});
-    applyPatch(m_song, m_patch); // the graph now plays the new instance
-    qCInfo(lcEngine).noquote() << old->name() << "reloaded at" << qRound(arturiaScale(best) * 100)
-                               << "% to fit the window (" << area.width() << "x" << area.height() << ")";
-    return true;
 }
 
 std::vector<QString> RealEngine::masterKeys() const
@@ -758,17 +693,6 @@ std::vector<QString> RealEngine::storePluginStates(core::Setlist& setlist)
     qCInfo(lcEngine) << "Stored the settings of" << count << "plugins (" << total / 1024 << "KB ) in"
                      << timer.elapsed() << "ms";
     return problems;
-}
-
-void RealEngine::rewriteArturiaSizes()
-{
-    std::erase_if(m_pendingSizeWrites, [](const PendingSizeWrite& write) {
-        if (!write.old.expired()) return false;
-        if (auto written = writeArturiaGuiSize(write.file, write.guiSize); !written) {
-            qCWarning(lcEngine).noquote() << written.error().message;
-        }
-        return true;
-    });
 }
 
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(const QString& pluginId)

@@ -88,24 +88,14 @@ private:
     QPointF m_scroll;             // requested scroll offset
     EditorPlacement m_placement;  // last applied placement
     QSize m_editorSize;        // physical pixels, as the plugin reports
-    QSize m_baseSize;          // physical pixels at 100 % zoom (scalable editors)
-    bool m_scalable = false;   // the plugin accepts host zoom
-    double m_zoom = 1.0;       // current zoom applied to a scalable editor
     QRectF m_placedArea;       // last scene rect the editor was fitted to
     // Event-driven, no timers: every frame the scene changes (afterAnimating)
     // the editor follows its item (ancestors move it without a geometry
-    // change, e.g. splitter drags).
+    // change, e.g. splitter drags). Its size is the plugin's own (as in
+    // Audacity 4): only editors that allow it are sized to the area.
     QMetaObject::Connection m_frameConnection;
-    QMetaObject::Connection m_stateConnection;
-    // Fixed-size editors (Arturia): asked to fit when the editor opens, on the
-    // first layout after maximize / restore / full screen, and when a window
-    // edge drag ends (WM_EXITSIZEMOVE). Never while a drag is in progress.
-    bool m_fixedSize = false;
+    QMetaObject::Connection m_screenConnection; // DPI of the screen the window is on
     bool m_stale = false; // the editor to show changed while hidden: open it when shown
-    bool m_fitOnNextArea = false;
-    void fitNow();
-    class DragEndFilter;
-    std::unique_ptr<DragEndFilter> m_dragEnd;
     bool m_suspended = false;
 };
 

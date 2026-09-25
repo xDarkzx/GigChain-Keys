@@ -1,20 +1,13 @@
-﻿#include "PluginEditorHost.h"
+#include "PluginEditorHost.h"
 
-#include "gigchain/core/Checks.h"
 #include "FreezeWatchdog.h"
 
-#include <QAbstractNativeEventFilter>
-#include <QCoreApplication>
+#include "gigchain/core/Checks.h"
+
 #include <QElapsedTimer>
 #include <QLoggingCategory>
 #include <QQuickWindow>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-
-#include <algorithm>
 #include <cmath>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
@@ -22,28 +15,6 @@ Q_DECLARE_LOGGING_CATEGORY(lcUi)
 using namespace Qt::StringLiterals;
 
 namespace gigchain::ui {
-
-// Windows tells a window when the user finishes dragging its edge.
-class PluginEditorHost::DragEndFilter final : public QAbstractNativeEventFilter
-{
-public:
-    explicit DragEndFilter(PluginEditorHost& host) : m_host(host) {}
-
-    bool nativeEventFilter(const QByteArray& type, void* message, qintptr*) override
-    {
-        if (type != "windows_generic_MSG") return false;
-        const auto* msg = static_cast<const MSG*>(message);
-        QQuickWindow* window = m_host.window();
-        if (msg->message == WM_EXITSIZEMOVE && window != nullptr &&
-            msg->hwnd == reinterpret_cast<HWND>(window->winId())) {
-            m_host.fitNow();
-        }
-        return false; // Qt still handles it
-    }
-
-private:
-    PluginEditorHost& m_host;
-};
 
 PluginEditorHost::PluginEditorHost(QQuickItem* parent) : QQuickItem(parent) {}
 
@@ -134,8 +105,8 @@ void PluginEditorHost::rebuild()
     child->setFlag(Qt::FramelessWindowHint);
     child->create();
     std::unique_ptr<engine::IPluginEditor> editor = std::move(*created);
-    // Scale before opening too: some plugins size their window from it. Whether
-    // the plugin supports zoom is checked after attach (m_scalable).
+    // The screen's scaling, before opening: some plugins size their window
+    // from it. This is the only scaling the host applies.
     (void)editor->setContentScale(host->devicePixelRatio());
     if (auto attached = editor->attach(static_cast<quintptr>(child->winId())); !attached) {
         viewport->deleteLater(); // deletes its child window too
@@ -147,19 +118,14 @@ void PluginEditorHost::rebuild()
     m_viewport = viewport;
     m_child = child;
     m_scroll = {};
-    m_zoom = 1.0;
-    m_scalable = !m_editor->canResize() && m_editor->setContentScale(host->devicePixelRatio());
-    m_fixedSize = !m_editor->canResize() && !m_scalable;
     m_editorSize = m_editor->preferredSize();
-    m_baseSize = m_editorSize;
+    // The plugin changed its own size (its resize corner, its size menu, a
+    // panel opening): follow it, as Audacity 4 and the VST3 spec do.
     m_editor->setResizeHandler([this](QSize requested) {
-        // The plugin changed its own size (a panel opened, or its own zoom
-        // menu): follow it, and treat it as the new 100 % for scalable ones.
+        qCInfo(lcUi).noquote() << m_editor->title() << "resized itself to" << requested.width() << "x"
+                               << requested.height();
         m_editorSize = requested;
-        if (m_scalable && m_zoom > 0.0) {
-            m_baseSize = QSize(static_cast<int>(requested.width() / m_zoom), static_cast<int>(requested.height() / m_zoom));
-        }
-        m_placedArea = {}; // refit
+        m_placedArea = {};
         place();
     });
     m_placedArea = {};
@@ -168,11 +134,14 @@ void PluginEditorHost::rebuild()
     qCInfo(lcUi).noquote() << "Plugin window" << m_editor->title() << ": closing the previous" << closing
                            << "ms, opening" << timer.elapsed() - closing << "ms";
     m_frameConnection = connect(host, &QQuickWindow::afterAnimating, this, &PluginEditorHost::place);
-    m_stateConnection = connect(host, &QWindow::windowStateChanged, this, [this] { m_fitOnNextArea = true; });
-    if (m_fixedSize) {
-        m_dragEnd = std::make_unique<DragEndFilter>(*this);
-        QCoreApplication::instance()->installNativeEventFilter(m_dragEnd.get());
-    }
+    // Moved to a screen with other scaling: the plugin draws at that scaling.
+    m_screenConnection = connect(host, &QWindow::screenChanged, this, [this] {
+        if (!m_editor || window() == nullptr) return;
+        (void)m_editor->setContentScale(window()->devicePixelRatio());
+        m_editorSize = m_editor->preferredSize();
+        m_placedArea = {};
+        place();
+    });
     emit editorChanged();
 }
 
@@ -180,13 +149,7 @@ void PluginEditorHost::teardown()
 {
     GC_ONLY_MAIN_THREAD();
     disconnect(m_frameConnection);
-    disconnect(m_stateConnection);
-    if (m_dragEnd) {
-        QCoreApplication::instance()->removeNativeEventFilter(m_dragEnd.get());
-        m_dragEnd.reset();
-    }
-    m_fixedSize = false;
-    m_fitOnNextArea = false;
+    disconnect(m_screenConnection);
     if (m_editor) {
         m_editor->detach(); // must happen before its window is destroyed
         m_editor.reset();
@@ -212,20 +175,14 @@ void PluginEditorHost::place()
 
     const double dpr = window()->devicePixelRatio();
     if (m_editor->canResize()) {
-        // Resizable editors fill the area (the plugin may adjust the size).
+        // Editors that allow the host to size them fill the area (the plugin
+        // may adjust the size to its own limits).
         const QSize wanted(static_cast<int>(area.width() * dpr), static_cast<int>(area.height() * dpr));
         m_editorSize = m_editor->setSize(wanted);
-    } else if (m_scalable && !m_baseSize.isEmpty()) {
-        // Scalable editors zoom to fit, within sensible limits.
-        constexpr double kMinZoom = 0.4;
-        constexpr double kMaxZoom = 1.5;
-        const double fit = std::min(area.width() * dpr / m_baseSize.width(), area.height() * dpr / m_baseSize.height());
-        const double zoom = std::clamp(fit, kMinZoom, kMaxZoom);
-        if (std::abs(zoom - m_zoom) > 0.01 && m_editor->setContentScale(dpr * zoom)) m_zoom = zoom;
-        m_editorSize = m_editor->preferredSize();
     }
-    // Editors that cannot shrink to the area (e.g. Arturia, which only zooms
-    // from its own menu) keep their size and scroll inside a clipping viewport.
+    // Every other editor keeps its own size (changed only from the plugin's
+    // own controls), centred, scrolling inside a clipping viewport when it
+    // is bigger than the area.
     const QSizeF editorSize(m_editorSize.width() / dpr, m_editorSize.height() / dpr);
     m_placement = placeEditor(area, editorSize, m_scroll);
     m_viewport->setGeometry(m_placement.viewport.toAlignedRect());
@@ -234,18 +191,6 @@ void PluginEditorHost::place()
                          static_cast<int>(std::lround(editorSize.width())),
                          static_cast<int>(std::lround(editorSize.height())));
     emit placementChanged();
-    if (m_fitOnNextArea && m_fixedSize) {
-        m_fitOnNextArea = false;
-        fitNow(); // first layout after maximize / restore / full screen
-    }
-}
-
-void PluginEditorHost::fitNow()
-{
-    if (!m_editor || !m_service || !m_fixedSize || window() == nullptr) return;
-    const double dpr = window()->devicePixelRatio();
-    const QSize area(static_cast<int>(width() * dpr), static_cast<int>(height() * dpr));
-    m_service->fitToArea(m_editorSize, area);
 }
 
 void PluginEditorHost::setScrollX(double x)
