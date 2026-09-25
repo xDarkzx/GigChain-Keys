@@ -30,6 +30,8 @@ public:
     void setChannelSolo(const core::ChannelId& id, bool solo) override;
     void setMasterVolume(double volumeDb) override;
     [[nodiscard]] double masterVolume() const override;
+    void setMasterMute(bool mute) override { m_masterMuted = mute; }
+    [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
     void injectNote(int midiChannel, int note, int velocity) override;
     std::vector<QString> poll() override;
     [[nodiscard]] QString statusText() const override;
@@ -65,6 +67,7 @@ private:
     Clock m_clock;
     std::vector<ChannelState> m_channels;
     double m_masterDb = 0.0;
+    bool m_masterMuted = false;
     AudioSetup m_setup{AudioDriver::System, QStringLiteral("Demo output"), 48000, 256};
     MidiSetup m_midiSetup;
 };

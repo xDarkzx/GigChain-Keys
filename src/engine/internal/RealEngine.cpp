@@ -429,7 +429,13 @@ void RealEngine::setMasterVolume(double volumeDb)
 {
     if (!std::isfinite(volumeDb)) return;
     m_masterDb = std::clamp(volumeDb, core::limits::kMinVolumeDb, core::limits::kMaxVolumeDb);
-    m_masterGain.store(dbToGain(m_masterDb), std::memory_order_relaxed);
+    m_masterGain.store(m_masterMuted ? 0.0F : dbToGain(m_masterDb), std::memory_order_relaxed);
+}
+
+void RealEngine::setMasterMute(bool mute)
+{
+    m_masterMuted = mute;
+    m_masterGain.store(m_masterMuted ? 0.0F : dbToGain(m_masterDb), std::memory_order_relaxed);
 }
 
 void RealEngine::injectNote(int midiChannel, int note, int velocity)

@@ -73,11 +73,19 @@ Item {
 
         Slider {
             id: slider
+            objectName: "faderSlider"
             anchors.fill: parent
             orientation: Qt.Vertical
             from: fader.minDb
             to: fader.maxDb
-            value: fader.volumeDb
+            // Follows the volume whenever it is not being dragged (a plain
+            // binding would be cut by the first drag, and typed values
+            // would no longer move the cap).
+            Binding on value {
+                value: fader.volumeDb
+                when: !slider.pressed
+                restoreMode: Binding.RestoreNone
+            }
             focusPolicy: Qt.NoFocus
             padding: 0
             background: Item {}

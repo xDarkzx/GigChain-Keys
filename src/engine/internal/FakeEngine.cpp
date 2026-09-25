@@ -85,7 +85,8 @@ LevelReading FakeEngine::channelLevel(const core::ChannelId& id)
 
     const auto index = static_cast<double>(std::distance(m_channels.begin(), it));
     const double wave = 0.55 + 0.35 * std::sin(m_clock() * 4.4 + index * 1.3);
-    const double peak = std::clamp(wave * dbToGain(it->volumeDb) * dbToGain(m_masterDb), 0.0, 1.0);
+    const double master = m_masterMuted ? 0.0 : dbToGain(m_masterDb);
+    const double peak = std::clamp(wave * dbToGain(it->volumeDb) * master, 0.0, 1.0);
     return LevelReading{static_cast<float>(peak), static_cast<float>(peak * 0.7)};
 }
 

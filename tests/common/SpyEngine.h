@@ -71,6 +71,9 @@ public:
     void setChannelSolo(const core::ChannelId& id, bool solo) override { solos[id.value()] = solo; }
     void setMasterVolume(double db) override { master = db; }
     [[nodiscard]] double masterVolume() const override { return master; }
+    bool muted = false;
+    void setMasterMute(bool mute) override { muted = mute; }
+    [[nodiscard]] bool masterMuted() const override { return muted; }
     void injectNote(int channel, int note, int velocity) override { notes.push_back({channel, note, velocity}); }
     std::vector<QString> poll() override
     {

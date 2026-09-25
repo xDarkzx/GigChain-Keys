@@ -47,6 +47,8 @@ public:
     void setChannelMute(const core::ChannelId& id, bool mute) override;
     void setChannelSolo(const core::ChannelId& id, bool solo) override;
     void setMasterVolume(double volumeDb) override;
+    void setMasterMute(bool mute) override;
+    [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
     [[nodiscard]] double masterVolume() const override { return m_masterDb; }
     void injectNote(int midiChannel, int note, int velocity) override;
     std::vector<QString> poll() override;
@@ -139,6 +141,7 @@ private:
     std::atomic<float> m_masterPeak{0.0F};
     std::atomic<float> m_masterRms{0.0F};
     double m_masterDb = 0.0;
+    bool m_masterMuted = false;
     std::atomic<float> m_cpuLoad{0.0F};
     std::atomic<bool> m_midiSeen{false};
     std::atomic<uint64_t> m_droppedInjected{0};

@@ -35,6 +35,18 @@ void EngineStatus::setMasterVolumeDb(double volumeDb)
     if (m_engine.masterVolume() != before) emit masterVolumeDbChanged();
 }
 
+bool EngineStatus::masterMuted() const
+{
+    return m_engine.masterMuted();
+}
+
+void EngineStatus::setMasterMuted(bool muted)
+{
+    if (m_engine.masterMuted() == muted) return;
+    m_engine.setMasterMute(muted);
+    emit masterMutedChanged();
+}
+
 void EngineStatus::playNote(int note, bool on)
 {
     m_engine.injectNote(1, note, on ? 100 : 0);
