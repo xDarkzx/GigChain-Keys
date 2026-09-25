@@ -4,16 +4,47 @@
 
 #include "gigchain/core/Checks.h"
 
+#include <QAbstractNativeEventFilter>
+#include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QLoggingCategory>
 #include <QQuickWindow>
+#include <QScreen>
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+
+#include <algorithm>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
 using namespace Qt::StringLiterals;
 
 namespace gigchain::ui {
+
+// As VstView::nativeEventFilter: Windows is told the plugin's window (and
+// the plugin's own windows inside it) are already erased, so they do not
+// flicker while moved or sized.
+class PluginEditorHost::EraseFilter final : public QAbstractNativeEventFilter
+{
+public:
+    explicit EraseFilter(HWND window) : m_window(window) {}
+
+    bool nativeEventFilter(const QByteArray& type, void* message, qintptr* result) override
+    {
+        if (type != "windows_generic_MSG") return false;
+        const auto* msg = static_cast<const MSG*>(message);
+        if (msg->message != WM_ERASEBKGND || msg->hwnd == nullptr) return false;
+        if (msg->hwnd != m_window && IsChild(m_window, msg->hwnd) == FALSE) return false;
+        *result = 1; // "already erased"
+        return true;
+    }
+
+private:
+    HWND m_window;
+};
 
 PluginEditorHost::PluginEditorHost(QQuickItem* parent) : QQuickItem(parent) {}
 
@@ -51,8 +82,15 @@ void PluginEditorHost::geometryChange(const QRectF& newGeometry, const QRectF& o
     QQuickItem::geometryChange(newGeometry, oldGeometry);
     // An editor opened before the layout gave this area a size (the setlist
     // loads before the main window appears) is shown once it has one.
-    if (m_window && !m_window->isVisible()) updateVisibility();
-    else place();
+    if (m_window && !m_window->isVisible()) {
+        updateVisibility();
+    } else if (m_editor && newGeometry.size() != oldGeometry.size()) {
+        // The room changed (maximize, restore, the mixer divider): the
+        // plugin's own size again, never bigger than the new room.
+        m_editor->updateGeometry();
+    } else {
+        place();
+    }
 }
 
 void PluginEditorHost::itemChange(ItemChange change, const ItemChangeData& value)
@@ -101,20 +139,31 @@ void PluginEditorHost::rebuild()
     pluginWindow->setFlag(Qt::FramelessWindowHint);
     pluginWindow->create();
     std::unique_ptr<engine::IPluginEditor> editor = std::move(*created);
+    // As VstView::init: the screen's scaling, then the frame, then attach.
+    editor->setContentScale(host->devicePixelRatio());
+    editor->setFitter([this](QSize wanted) { return fit(wanted); });
+    m_window = pluginWindow;
     if (auto attached = editor->attach(static_cast<quintptr>(pluginWindow->winId())); !attached) {
+        m_window = nullptr;
         pluginWindow->deleteLater();
         m_service->reportFailure(attached.error().message); // already logged by the editor; now shown too
         emit editorChanged();
         return;
     }
     m_editor = std::move(editor);
-    m_window = pluginWindow;
-    m_editorSize = m_editor->preferredSize();
-    place();
+    m_eraseFilter = std::make_unique<EraseFilter>(reinterpret_cast<HWND>(pluginWindow->winId()));
+    QCoreApplication::instance()->installNativeEventFilter(m_eraseFilter.get());
+    m_editor->updateGeometry(); // VstView::updateViewGeometry
     updateVisibility();
     qCInfo(lcUi).noquote() << "Plugin window" << m_editor->title() << ": closing the previous" << closing
                            << "ms, opening" << timer.elapsed() - closing << "ms";
     m_frameConnection = connect(host, &QQuickWindow::afterAnimating, this, &PluginEditorHost::place);
+    // Another screen, other scaling (VstView: screenChanged).
+    m_screenConnection = connect(host, &QWindow::screenChanged, this, [this](QScreen* screen) {
+        if (!m_editor || screen == nullptr) return;
+        m_editor->setContentScale(screen->devicePixelRatio());
+        m_editor->updateGeometry();
+    });
     emit editorChanged();
 }
 
@@ -122,6 +171,11 @@ void PluginEditorHost::teardown()
 {
     GC_ONLY_MAIN_THREAD();
     disconnect(m_frameConnection);
+    disconnect(m_screenConnection);
+    if (m_eraseFilter) {
+        QCoreApplication::instance()->removeNativeEventFilter(m_eraseFilter.get());
+        m_eraseFilter.reset();
+    }
     if (m_editor) {
         m_editor->detach(); // must happen before its window is destroyed
         m_editor.reset();
@@ -131,16 +185,30 @@ void PluginEditorHost::teardown()
         m_window->deleteLater();
         m_window = nullptr;
     }
-    m_editorSize = {};
+    m_windowSize = {};
+}
+
+QSize PluginEditorHost::fit(QSize wanted)
+{
+    if (!m_window || window() == nullptr) return wanted;
+    const double dpr = window()->devicePixelRatio();
+    // VstView::resizeView: the wanted size without the screen's scaling, no
+    // bigger than the room: the plugin never covers anything around it.
+    const int roomWidth = std::max(1, static_cast<int>(width()));
+    const int roomHeight = std::max(1, static_cast<int>(height()));
+    m_windowSize = QSize(std::min(qRound(wanted.width() / dpr), roomWidth),
+                         std::min(qRound(wanted.height() / dpr), roomHeight));
+    place();
+    return QSize(qRound(m_windowSize.width() * dpr), qRound(m_windowSize.height() * dpr));
 }
 
 void PluginEditorHost::place()
 {
-    if (!m_editor || !m_window || window() == nullptr) return;
+    if (!m_window || window() == nullptr || m_windowSize.isEmpty()) return;
+    // At the top of the area, centred across it.
     const QPointF topLeft = mapToScene(QPointF(0, 0));
-    const double dpr = window()->devicePixelRatio();
-    const QRect wanted(qRound(topLeft.x()), qRound(topLeft.y()), qRound(m_editorSize.width() / dpr),
-                       qRound(m_editorSize.height() / dpr));
+    const int side = std::max(0, (static_cast<int>(width()) - m_windowSize.width()) / 2);
+    const QRect wanted(qRound(topLeft.x()) + side, qRound(topLeft.y()), m_windowSize.width(), m_windowSize.height());
     if (m_window->geometry() != wanted) m_window->setGeometry(wanted);
 }
 
