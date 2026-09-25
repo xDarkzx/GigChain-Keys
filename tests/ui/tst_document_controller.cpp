@@ -355,7 +355,9 @@ private slots:
         QVERIFY(m_doc->lastError().contains(u"no window"_s)); // said, not swallowed
         QCOMPARE(windows.openCount(), 0);
 
-        QVERIFY(!windows.open(0, 5, nullptr)); // no such effect: nothing asked
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"effect 5 is not on"_s));
+        QVERIFY(!windows.open(0, 5, nullptr)); // no such effect: nothing asked, and said
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"channel 7 is not in the current patch"_s));
         QVERIFY(!windows.open(7, 0, nullptr)); // no such channel
         QCOMPARE(m_engine->effectEditorRequests.size(), std::size_t{1});
     }
@@ -389,6 +391,7 @@ private slots:
         QVERIFY(again.replaceEffect(0, u"spy/Piano.vst3"_s, u"Spy EQ"_s));
         QVERIFY(again.removeEffect(1));
         QCOMPARE(again.effectNames(), QStringList{u"Spy EQ"_s});
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"master effect 3 does not exist"_s));
         QVERIFY(!again.removeEffect(3));
     }
 

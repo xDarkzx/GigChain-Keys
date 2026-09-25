@@ -9,6 +9,7 @@ add_library(gigchain_core STATIC
     include/gigchain/core/Navigation.h
     include/gigchain/core/Editing.h
     include/gigchain/core/FileLog.h
+    include/gigchain/core/Checks.h
     internal/Error.cpp
     internal/Model.cpp
     internal/Validation.cpp
@@ -19,6 +20,7 @@ add_library(gigchain_core STATIC
     include/gigchain/core/Chart.h
     internal/Chart.cpp
     internal/FileLog.cpp
+    internal/Checks.cpp
 )
 add_library(gigchain::core ALIAS gigchain_core)
 # gigchain/core/Branding.h, generated from branding.cmake.

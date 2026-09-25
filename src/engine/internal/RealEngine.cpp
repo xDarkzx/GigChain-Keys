@@ -3,6 +3,7 @@
 #include "ArturiaWindowSize.h"
 #include "EngineLog.h"
 #include "PluginCatalog.h"
+#include "gigchain/core/Checks.h"
 
 #include "gigchain/core/Limits.h"
 
@@ -101,6 +102,7 @@ std::vector<RealEngine::PlannedSlot> RealEngine::planPatch(const core::SongId& s
 
 void RealEngine::preload(const core::Setlist& setlist)
 {
+    GC_ONLY_MAIN_THREAD();
     // Everything the setlist plays, each shared instance once.
     std::map<QString, const core::PluginSlot*> wanted;
     for (const core::Song& song : setlist.songs) {
@@ -147,6 +149,7 @@ void RealEngine::preload(const core::Setlist& setlist)
 
 std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::PluginSlot& slot, bool announce)
 {
+    GC_ONLY_MAIN_THREAD();
     if (const auto it = m_nodes.find(key); it != m_nodes.end()) return it->second;
     if (announce && m_progress) m_progress(LoadStage::LoadingSounds, slot.displayName, 0, 1);
     struct AnnounceDone
@@ -183,6 +186,7 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
 
 std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& slot)
 {
+    GC_ONLY_MAIN_THREAD();
     if (m_guard.isBlocked(slot.pluginId)) {
         const QString problem =
             u"%1 is switched off: it crashed the app while loading before (Settings > Plugins to try it again)"_s.arg(
@@ -251,6 +255,7 @@ AudioSetup RealEngine::audioSetup() const
 
 core::Result<void> RealEngine::setAudioSetup(const AudioSetup& setup)
 {
+    GC_ONLY_MAIN_THREAD();
     const AudioSetup before = audioSetup();
     AudioSetup previous = before; // as it was asked for, so it reopens the same way
     previous.sampleRate = m_audio.requestedSampleRate();
@@ -271,6 +276,7 @@ core::Result<void> RealEngine::setAudioSetup(const AudioSetup& setup)
 
 void RealEngine::syncPluginsToDevice()
 {
+    GC_ONLY_MAIN_THREAD();
     const double rate = m_audio.sampleRate();
     const int block = m_audio.maxBlock();
     if (!m_audio.isOpen() || (rate == m_preparedRate && block == m_preparedBlock)) return;
@@ -327,6 +333,7 @@ std::vector<QString> RealEngine::openMidi()
 
 core::Result<void> RealEngine::setMidiSetup(const MidiSetup& setup)
 {
+    GC_ONLY_MAIN_THREAD();
     m_midiSetup = setup;
     const std::vector<QString> problems = openMidi();
     if (!problems.empty()) {
@@ -362,6 +369,7 @@ void RealEngine::watchMidiPorts(std::vector<QString>& notices)
 
 void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
 {
+    GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
     if (&patch != &m_patch) m_patch = patch;
@@ -480,6 +488,7 @@ void RealEngine::injectNote(int midiChannel, int note, int velocity)
 
 std::vector<QString> RealEngine::poll()
 {
+    GC_ONLY_MAIN_THREAD();
     std::vector<QString> notices;
     notices.swap(m_pendingNotices);
 
@@ -515,6 +524,7 @@ std::vector<QString> RealEngine::poll()
 
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditor(const core::ChannelId& id)
 {
+    GC_ONLY_MAIN_THREAD();
     const auto it = m_currentInstruments.find(id.value());
     if (it == m_currentInstruments.end()) {
         return std::unique_ptr<IPluginEditor>(); // no instrument on this channel (a failed load was already reported)
@@ -524,6 +534,7 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditor(const core
 
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(const core::ChannelId& id, int effect)
 {
+    GC_ONLY_MAIN_THREAD();
     const core::Channel* channel = nullptr;
     for (const core::Channel& c : m_patch.channels) {
         if (c.id == id) channel = &c;
@@ -545,6 +556,7 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(cons
 
 core::Result<bool> RealEngine::fitEditorToArea(const core::ChannelId& id, QSize editorSize, QSize area)
 {
+    GC_ONLY_MAIN_THREAD();
     const auto current = m_currentInstruments.find(id.value());
     if (current == m_currentInstruments.end() || editorSize.isEmpty() || area.isEmpty()) return false;
     const std::shared_ptr<Vst3Node> old = current->second;
@@ -607,6 +619,7 @@ std::vector<QString> RealEngine::masterKeys() const
 
 void RealEngine::setMasterEffects(const std::vector<core::PluginSlot>& effects)
 {
+    GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
     m_masterSlots = effects;
@@ -627,6 +640,7 @@ void RealEngine::setMasterEffects(const std::vector<core::PluginSlot>& effects)
 
 std::vector<QString> RealEngine::storeMasterEffectStates(std::vector<core::PluginSlot>& effects)
 {
+    GC_ONLY_MAIN_THREAD();
     std::vector<QString> problems;
     const std::vector<QString> keys = masterKeys();
     for (std::size_t i = 0; i < effects.size() && i < keys.size(); ++i) {
@@ -646,6 +660,7 @@ std::vector<QString> RealEngine::storeMasterEffectStates(std::vector<core::Plugi
 
 bool RealEngine::takeMasterEdits()
 {
+    GC_ONLY_MAIN_THREAD();
     for (const auto& [key, node] : m_masterNodes) {
         if (node->takeEdited()) m_masterEdited = true;
     }
@@ -654,6 +669,7 @@ bool RealEngine::takeMasterEdits()
 
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createMasterEffectEditor(int effect)
 {
+    GC_ONLY_MAIN_THREAD();
     const std::vector<QString> keys = masterKeys();
     if (effect < 0 || static_cast<std::size_t>(effect) >= keys.size()) {
         return core::fail(core::ErrorCode::OutOfRange, u"That master effect is no longer there"_s);
@@ -678,6 +694,7 @@ void RealEngine::setOutputLimiter(bool enabled, double ceilingDb)
 
 void RealEngine::collectEdits()
 {
+    GC_ONLY_MAIN_THREAD();
     for (const auto& [key, node] : m_nodes) {
         if (!node->takeEdited()) continue;
         m_editedNodes.insert(key);
@@ -687,12 +704,14 @@ void RealEngine::collectEdits()
 
 bool RealEngine::takePluginEdits()
 {
+    GC_ONLY_MAIN_THREAD();
     collectEdits();
     return std::exchange(m_unreportedEdit, false);
 }
 
 std::vector<QString> RealEngine::storePluginStates(core::Setlist& setlist)
 {
+    GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
     collectEdits();
@@ -718,6 +737,8 @@ std::vector<QString> RealEngine::storePluginStates(core::Setlist& setlist)
                 const auto bytes = stateOf(planned.key);
                 if (!bytes) continue;
                 core::Channel& channel = patch.channels[static_cast<std::size_t>(planned.channel)];
+                // planPatch only plans an instrument slot for a channel with one.
+                GC_IF_FAILED(planned.effect >= 0 || channel.instrument.has_value()) { continue; }
                 core::PluginSlot& slot = planned.effect < 0
                                              ? *channel.instrument
                                              : channel.effects[static_cast<std::size_t>(planned.effect)];
@@ -752,6 +773,7 @@ void RealEngine::rewriteArturiaSizes()
 
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(const QString& pluginId)
 {
+    GC_ONLY_MAIN_THREAD();
     // A separate instance, not in the audio graph; the editor keeps it alive.
     if (m_guard.isBlocked(pluginId)) {
         return core::fail(core::ErrorCode::InvalidData, u"This plugin crashed the app while loading before, so it is switched off"_s);
@@ -773,6 +795,7 @@ QString RealEngine::statusText() const
 
 void RealEngine::render(AudioBlock out) noexcept
 {
+    GC_ONLY_AUDIO_THREAD();
     const auto start = std::chrono::steady_clock::now();
 
     std::size_t count = m_midi.drain(m_events);
