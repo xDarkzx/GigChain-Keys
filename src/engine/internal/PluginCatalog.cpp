@@ -1,4 +1,6 @@
 #include "PluginCatalog.h"
+#include "PluginLoadGuard.h"
+#include "PluginModules.h"
 
 #include "EngineLog.h"
 #include "LoaderErrors.h"
@@ -174,7 +176,7 @@ CacheEntry openAndRead(const QString& bundle)
     try {
         const SilentLoaderErrors silent;
         std::string error;
-        const auto module = VST3::Hosting::Module::create(bundle.toStdString(), error);
+        const auto module = PluginModules::get(bundle, error);
         if (!module) {
             entry.error = QString::fromStdString(error);
             return entry;
@@ -200,6 +202,8 @@ CacheEntry openAndRead(const QString& bundle)
         entry.error = u"no audio processor class"_s;
     } catch (const std::exception& e) {
         entry.error = QString::fromUtf8(e.what());
+    } catch (...) {
+        entry.error = u"it failed while being read"_s;
     }
     return entry;
 }
@@ -207,7 +211,7 @@ CacheEntry openAndRead(const QString& bundle)
 } // namespace
 
 std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString& cacheFile, ScanStats* stats,
-                                            const Progress& progress)
+                                            const Progress& progress, PluginLoadGuard* guard)
 {
     ScanStats local;
     ScanStats& counts = stats != nullptr ? *stats : local;
@@ -231,7 +235,19 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString
         if (progress) progress(QFileInfo(bundle).completeBaseName(), done, total);
         const auto hit = cached.find(bundle);
         const bool unchanged = hit != cached.end() && hit->second.fingerprint == fingerprintOf(bundle);
-        CacheEntry entry = unchanged ? hit->second : openAndRead(bundle);
+        if (!unchanged && guard != nullptr && guard->isBlocked(bundle)) {
+            // It crashed the app while loading: not opened again until the user says so.
+            ++counts.failed;
+            qCWarning(lcEngine).noquote() << "Skipping plugin" << bundle << ": it crashed the app before (switched off)";
+            continue;
+        }
+        CacheEntry entry;
+        if (unchanged) {
+            entry = hit->second;
+        } else {
+            const auto loading = guard != nullptr ? guard->loading(bundle) : PluginLoadGuard().loading(bundle);
+            entry = openAndRead(bundle);
+        }
         if (unchanged) ++counts.fromCache;
         else ++counts.opened;
 

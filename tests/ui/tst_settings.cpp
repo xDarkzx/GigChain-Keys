@@ -168,6 +168,20 @@ private slots:
         QCOMPARE(next.limiterCeilingDb(), -1.0);
     }
 
+    void pluginsThatCrashedCanBeTriedAgain()
+    {
+        m_engine->blocked = {u"C:/Plugins/Test Plugin A.vst3"_s};
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QCOMPARE(settings.blockedPlugins().size(), 1);
+        QCOMPARE(settings.blockedPlugins()[0].toMap().value(u"name"_s).toString(), u"Test Plugin A"_s);
+        QSignalSpy changed(&settings, &SettingsController::changed);
+        settings.unblockPlugin(u"C:/Plugins/Test Plugin A.vst3"_s);
+        QVERIFY(m_engine->blocked.isEmpty()); // at once, not on OK
+        QVERIFY(settings.blockedPlugins().isEmpty());
+        QCOMPARE(changed.count(), 1);
+    }
+
     void pluggingInAKeyboardShowsUpWhileOpen()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);

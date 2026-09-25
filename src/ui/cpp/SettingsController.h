@@ -50,6 +50,8 @@ class SettingsController : public QObject
     Q_PROPERTY(bool limiterEnabled READ limiterEnabled WRITE setLimiterEnabled NOTIFY changed)
     Q_PROPERTY(double limiterCeilingDb READ limiterCeilingDb WRITE setLimiterCeilingDb NOTIFY changed)
     Q_PROPERTY(QVariantList limiterCeilings READ limiterCeilings CONSTANT)
+    // Plugins: those that crashed the app while loading, switched off: [{path, name}].
+    Q_PROPERTY(QVariantList blockedPlugins READ blockedPlugins NOTIFY changed)
 
 public:
     SettingsController(engine::IEngine& engine, DocumentController& document, QSettings& settings,
@@ -81,6 +83,9 @@ public:
     [[nodiscard]] double limiterCeilingDb() const { return m_limiterCeilingDb; }
     void setLimiterCeilingDb(double ceilingDb);
     [[nodiscard]] static QVariantList limiterCeilings();
+    [[nodiscard]] QVariantList blockedPlugins() const;
+    // "Try again": the plugin may load next time it is used (straight away, not on OK).
+    Q_INVOKABLE void unblockPlugin(const QString& path);
 
     // Probes the devices (ASIO drivers can take a moment) and shows what runs now.
     Q_INVOKABLE void load();

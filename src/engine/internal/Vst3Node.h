@@ -88,6 +88,8 @@ public:
     [[nodiscard]] bool isInstrument() const;
 
 private:
+    [[nodiscard]] core::Result<State> saveStateUnguarded() const;
+    core::Result<void> restoreStateUnguarded(const State& state);
     // load() = this + logging of the outcome (failures as warnings).
     static core::Result<std::shared_ptr<Vst3Node>> loadUnlogged(const QString& bundlePath, double sampleRate,
                                                                 int maxBlock);

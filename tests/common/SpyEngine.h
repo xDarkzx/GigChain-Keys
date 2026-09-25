@@ -28,6 +28,9 @@ public:
     void preload(const core::Setlist&) override { ++preloadCount; }
     void setProgressHandler(engine::LoadProgress) override {}
     [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }
+    QStringList blocked;
+    [[nodiscard]] QStringList blockedPlugins() const override { return blocked; }
+    void unblockPlugin(const QString& pluginId) override { blocked.removeAll(pluginId); }
     int storeCount = 0;
     std::vector<QString> storeProblems;
     std::vector<QString> storePluginStates(core::Setlist& setlist) override

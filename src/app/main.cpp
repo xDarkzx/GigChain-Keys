@@ -126,6 +126,8 @@ int main(int argc, char* argv[])
     engine::RealEngineOptions engineOptions = ui::SettingsController::engineOptions(settings);
     engineOptions.pluginCacheFile =
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-cache.json"_s;
+    engineOptions.pluginGuardFolder =
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-guard"_s;
     engineOptions.progress = [&startup, &quips](engine::LoadStage stage, const QString& what, int done, int total) {
         if (stage == engine::LoadStage::ScanningPlugins) {
             if (done < total) startup.addPlugin(what);

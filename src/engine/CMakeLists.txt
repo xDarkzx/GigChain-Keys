@@ -28,6 +28,12 @@ add_library(gigchain_engine STATIC
     internal/LoaderErrors.h
     internal/PluginCatalog.h
     internal/PluginCatalog.cpp
+    internal/PluginModules.h
+    internal/PluginModules.cpp
+    internal/PluginLoadGuard.h
+    internal/PluginLoadGuard.cpp
+    internal/ComponentHandler.h
+    internal/SafetyLimiter.h
     internal/RealEngine.h
     internal/RealEngine.cpp
     include/gigchain/engine/RealEngineFactory.h

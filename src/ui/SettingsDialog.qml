@@ -309,6 +309,44 @@ Popup {
                             text: qsTr("%1 plugins found (instruments and effects).").arg(dialog.pluginModel.effects().length + dialog.pluginModel.instruments().length)
                             color: Theme.textDim
                         }
+                        SettingsSection {
+                            visible: dialog.settings.blockedPlugins.length > 0
+                            title: qsTr("Switched off after a crash")
+                        }
+                        Label {
+                            visible: dialog.settings.blockedPlugins.length > 0
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            text: qsTr("These plugins crashed %1 while loading, so they are not loaded (a patch using one says so). "
+                                       + "Try again after updating the plugin.").arg(Branding.name)
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
+                        Repeater {
+                            model: dialog.settings.blockedPlugins
+                            delegate: RowLayout {
+                                id: blockedRow
+                                required property var modelData
+                                Layout.leftMargin: 20
+                                Layout.rightMargin: 20
+                                spacing: 12
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: blockedRow.modelData.name
+                                    elide: Text.ElideRight
+                                    ToolTip.visible: blockedHover.hovered
+                                    ToolTip.text: blockedRow.modelData.path
+                                    HoverHandler { id: blockedHover }
+                                }
+                                Button {
+                                    objectName: "unblockPlugin"
+                                    text: qsTr("Try again")
+                                    focusPolicy: Qt.NoFocus
+                                    onClicked: dialog.settings.unblockPlugin(blockedRow.modelData.path)
+                                }
+                            }
+                        }
                         SettingsSection { title: qsTr("Hidden instruments") }
                         RowLayout {
                             Layout.leftMargin: 20

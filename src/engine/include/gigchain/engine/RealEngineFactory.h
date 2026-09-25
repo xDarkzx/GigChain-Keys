@@ -20,6 +20,7 @@ struct RealEngineOptions
     MidiSetup midi;            // the inputs chosen in Settings
     QString pluginFolder;      // empty: the standard VST3 folder
     QString pluginCacheFile;   // what the plugin scan learned; empty: open every plugin
+    QString pluginGuardFolder; // remembers plugins that crashed the app while loading; empty: off
     // Start-up progress (plugin scan) for a splash screen; also becomes the
     // engine's progress handler (see IEngine::setProgressHandler).
     LoadProgress progress;

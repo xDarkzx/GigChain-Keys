@@ -56,6 +56,10 @@ public:
     [[nodiscard]] virtual std::size_t loadedPluginCount() const = 0;
 
     [[nodiscard]] virtual std::vector<PluginInfo> availablePlugins() const = 0;
+    // Plugins that crashed the app while loading: not loaded again (a patch
+    // using one says so) until unblocked ("Try again" in Settings).
+    [[nodiscard]] virtual QStringList blockedPlugins() const = 0;
+    virtual void unblockPlugin(const QString& pluginId) = 0;
     // Peak since the previous call for this channel (then reset) and current RMS.
     [[nodiscard]] virtual LevelReading channelLevel(const core::ChannelId& id) = 0;
     // The same for everything that leaves the app, after the master fader.
