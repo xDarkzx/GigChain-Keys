@@ -30,6 +30,9 @@ class EngineStatus : public QObject
     // The master strip's meter: the output's peak (linear, 0..1) since the last poll.
     Q_PROPERTY(float masterPeak READ masterPeak NOTIFY masterLevelChanged)
     Q_PROPERTY(bool masterMuted READ masterMuted WRITE setMasterMuted NOTIFY masterMutedChanged)
+    // The LIM light: the safety limiter caught a peak (lit for about half a
+    // second after each catch, so a short one can be seen).
+    Q_PROPERTY(bool limiting READ limiting NOTIFY limitingChanged)
 
 public:
     static constexpr int kPollIntervalMs = 33;
@@ -44,6 +47,7 @@ public:
     [[nodiscard]] double masterVolumeDb() const;
     [[nodiscard]] float masterPeak() const { return m_masterPeak; }
     [[nodiscard]] bool masterMuted() const;
+    [[nodiscard]] bool limiting() const { return m_limitingPolls > 0; }
     void setMasterMuted(bool muted);
     void setMasterVolumeDb(double volumeDb);
 
@@ -58,6 +62,7 @@ signals:
     void masterVolumeDbChanged();
     void masterLevelChanged();
     void masterMutedChanged();
+    void limitingChanged();
     void polled();
 
 private:
@@ -68,6 +73,7 @@ private:
     QTimer m_timer;
     float m_cpuLoad = 0.0F;
     float m_masterPeak = 0.0F;
+    int m_limitingPolls = 0; // polls left with the LIM light on
     double m_memoryMb = 0.0;
     bool m_memoryErrorLogged = false;
     bool m_midiActivity = false;

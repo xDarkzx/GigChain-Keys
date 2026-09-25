@@ -31,6 +31,15 @@ public:
     void setMasterVolume(double volumeDb) override;
     [[nodiscard]] double masterVolume() const override;
     void setMasterMute(bool mute) override { m_masterMuted = mute; }
+    void setMasterEffects(const std::vector<core::PluginSlot>& effects) override { m_masterEffects = effects; }
+    std::vector<QString> storeMasterEffectStates(std::vector<core::PluginSlot>&) override { return {}; }
+    bool takeMasterEdits() override { return false; }
+    core::Result<std::unique_ptr<IPluginEditor>> createMasterEffectEditor(int) override
+    {
+        return std::unique_ptr<IPluginEditor>(); // demo plugins have no editors
+    }
+    void setOutputLimiter(bool, double) override {}
+    bool takeLimiterActivity() override { return false; }
     [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
     void injectNote(int midiChannel, int note, int velocity) override;
     std::vector<QString> poll() override;
@@ -68,6 +77,7 @@ private:
     std::vector<ChannelState> m_channels;
     double m_masterDb = 0.0;
     bool m_masterMuted = false;
+    std::vector<core::PluginSlot> m_masterEffects;
     AudioSetup m_setup{AudioDriver::System, QStringLiteral("Demo output"), 48000, 256};
     MidiSetup m_midiSetup;
 };

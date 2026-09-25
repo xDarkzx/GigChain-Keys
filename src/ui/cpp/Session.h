@@ -5,6 +5,7 @@
 #include "DocumentController.h"
 #include "EditorService.h"
 #include "EffectWindows.h"
+#include "MasterBus.h"
 #include "EngineStatus.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
@@ -50,6 +51,7 @@ private:
     EngineStatus m_engineStatus;
     EditorService m_editorService;
     EffectWindows m_effectWindows;
+    MasterBus m_masterBus; // after the windows it opens
     SettingsController m_settingsController;
     StartupProgress m_loading; // the loading overlay (after start-up)
 };

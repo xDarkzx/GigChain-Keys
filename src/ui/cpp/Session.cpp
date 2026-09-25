@@ -14,9 +14,15 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_engineStatus(engine, m_document),
       m_editorService(engine, m_document),
       m_effectWindows(engine, m_document),
+      m_masterBus(engine, m_document, settings, m_effectWindows),
       m_settingsController(engine, m_document, settings)
 {
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_channelModel, &ChannelModel::refreshLevels);
+    // The rig's master effects load with the app (behind the splash).
+    m_masterBus.load();
+    QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_masterBus, [this, &engine] {
+        if (engine.takeMasterEdits()) m_masterBus.noteEdited();
+    });
 }
 
 QVariantMap Session::initialProperties()
@@ -30,6 +36,7 @@ QVariantMap Session::initialProperties()
         {u"engineStatus"_s, QVariant::fromValue(&m_engineStatus)},
         {u"editorService"_s, QVariant::fromValue(&m_editorService)},
         {u"effectWindows"_s, QVariant::fromValue(&m_effectWindows)},
+        {u"masterBus"_s, QVariant::fromValue(&m_masterBus)},
         {u"settings"_s, QVariant::fromValue(&m_settingsController)},
         {u"loading"_s, QVariant::fromValue(&m_loading)},
     };

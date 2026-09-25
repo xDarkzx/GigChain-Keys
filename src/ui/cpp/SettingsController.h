@@ -46,6 +46,10 @@ class SettingsController : public QObject
     Q_PROPERTY(QString error READ error NOTIFY changed)
     // General: open the last setlist on start instead of the start screen.
     Q_PROPERTY(bool reopenLastSetlist READ reopenLastSetlist WRITE setReopenLastSetlist NOTIFY changed)
+    // Audio: the safety limiter, last before the output.
+    Q_PROPERTY(bool limiterEnabled READ limiterEnabled WRITE setLimiterEnabled NOTIFY changed)
+    Q_PROPERTY(double limiterCeilingDb READ limiterCeilingDb WRITE setLimiterCeilingDb NOTIFY changed)
+    Q_PROPERTY(QVariantList limiterCeilings READ limiterCeilings CONSTANT)
 
 public:
     SettingsController(engine::IEngine& engine, DocumentController& document, QSettings& settings,
@@ -72,6 +76,11 @@ public:
     [[nodiscard]] QString error() const { return m_error; }
     [[nodiscard]] bool reopenLastSetlist() const { return m_reopenLast; }
     void setReopenLastSetlist(bool reopen);
+    [[nodiscard]] bool limiterEnabled() const { return m_limiterOn; }
+    void setLimiterEnabled(bool on);
+    [[nodiscard]] double limiterCeilingDb() const { return m_limiterCeilingDb; }
+    void setLimiterCeilingDb(double ceilingDb);
+    [[nodiscard]] static QVariantList limiterCeilings();
 
     // Probes the devices (ASIO drivers can take a moment) and shows what runs now.
     Q_INVOKABLE void load();
@@ -82,7 +91,7 @@ public:
     // keeping the choices already made on this page.
     Q_INVOKABLE void refreshMidi();
     // Windows default output at its own rate, 256 frames, only the first MIDI
-    // input on, the start screen on start.
+    // input on, the start screen on start, the safety limiter on at -1 dB.
     Q_INVOKABLE void resetToDefaults();
     // OK: true when everything took effect (and was saved).
     Q_INVOKABLE bool apply();
@@ -104,6 +113,8 @@ private:
     std::vector<engine::MidiPort> m_midi; // as shown, with this page's changes
     bool m_midiTouched = false;           // changed on this page since load()
     bool m_reopenLast = false;
+    bool m_limiterOn = true;
+    double m_limiterCeilingDb = -1.0;
     QString m_running;
     QString m_error;
 };

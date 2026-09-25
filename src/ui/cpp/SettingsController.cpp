@@ -8,6 +8,7 @@
 #include <QSettings>
 
 #include <algorithm>
+#include <cmath>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
@@ -23,6 +24,16 @@ const QString kBufferKey = u"audio/bufferFrames"_s;
 const QString kMidiConfiguredKey = u"midi/configured"_s;
 const QString kMidiEnabledKey = u"midi/enabled"_s;
 const QString kMidiChannelsKey = u"midi/channels"_s;
+const QString kLimiterKey = u"master/limiter"_s;
+const QString kLimiterCeilingKey = u"master/limiterCeilingDb"_s;
+constexpr double kDefaultCeilingDb = -1.0;
+
+double savedCeiling(QSettings& settings)
+{
+    bool ok = false;
+    const double ceiling = settings.value(kLimiterCeilingKey, kDefaultCeilingDb).toDouble(&ok);
+    return ok && std::isfinite(ceiling) ? std::clamp(ceiling, -24.0, 0.0) : kDefaultCeilingDb;
+}
 
 constexpr unsigned int kDefaultBuffer = 256;
 
@@ -37,6 +48,8 @@ SettingsController::SettingsController(engine::IEngine& engine, DocumentControll
                                        QObject* parent)
     : QObject(parent), m_engine(engine), m_document(document), m_settings(settings)
 {
+    // The limiter protects the sound desk from the first note.
+    m_engine.setOutputLimiter(m_settings.value(kLimiterKey, true).toBool(), savedCeiling(m_settings));
 }
 
 engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
@@ -65,8 +78,31 @@ void SettingsController::load()
     m_running = m_engine.statusText();
     m_error.clear();
     m_reopenLast = m_settings.value(DocumentController::reopenLastSetlistKey(), false).toBool();
+    m_limiterOn = m_settings.value(kLimiterKey, true).toBool();
+    m_limiterCeilingDb = savedCeiling(m_settings);
     keepRateValid();
     emit changed();
+}
+
+void SettingsController::setLimiterEnabled(bool on)
+{
+    if (m_limiterOn == on) return;
+    m_limiterOn = on;
+    emit changed();
+}
+
+void SettingsController::setLimiterCeilingDb(double ceilingDb)
+{
+    if (!std::isfinite(ceilingDb)) return;
+    const double clamped = std::clamp(ceilingDb, -24.0, 0.0);
+    if (m_limiterCeilingDb == clamped) return;
+    m_limiterCeilingDb = clamped;
+    emit changed();
+}
+
+QVariantList SettingsController::limiterCeilings()
+{
+    return {-0.1, -0.3, -0.5, -1.0, -2.0, -3.0, -6.0};
 }
 
 void SettingsController::setReopenLastSetlist(bool reopen)
@@ -255,6 +291,8 @@ void SettingsController::resetToDefaults()
     }
     m_midiTouched = true;
     m_reopenLast = false;
+    m_limiterOn = true;
+    m_limiterCeilingDb = kDefaultCeilingDb;
     emit changed();
 }
 
@@ -290,6 +328,9 @@ bool SettingsController::apply()
     }
 
     m_settings.setValue(DocumentController::reopenLastSetlistKey(), m_reopenLast);
+    m_engine.setOutputLimiter(m_limiterOn, m_limiterCeilingDb);
+    m_settings.setValue(kLimiterKey, m_limiterOn);
+    m_settings.setValue(kLimiterCeilingKey, m_limiterCeilingDb);
 
     m_settings.sync();
     if (m_settings.status() != QSettings::NoError) {

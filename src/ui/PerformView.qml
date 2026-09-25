@@ -15,6 +15,7 @@ Rectangle {
     required property bool sidePanelOpen
     required property bool mixerOpen
     property EffectWindows effectWindows: null
+    property MasterBus masterBus: null
 
     color: Theme.performBackground
 
@@ -145,6 +146,7 @@ Rectangle {
             pluginModel: perform.pluginModel
             engineStatus: perform.engineStatus
             effectWindows: perform.effectWindows
+            masterBus: perform.masterBus
         }
     }
 }

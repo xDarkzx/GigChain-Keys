@@ -1,6 +1,7 @@
 #include "DocumentController.h"
 #include "EffectWindows.h"
 #include "EngineStatus.h"
+#include "MasterBus.h"
 #include "LeakCheck.h"
 #include "SpyEngine.h"
 
@@ -357,6 +358,65 @@ private slots:
         QVERIFY(!windows.open(0, 5, nullptr)); // no such effect: nothing asked
         QVERIFY(!windows.open(7, 0, nullptr)); // no such channel
         QCOMPARE(m_engine->effectEditorRequests.size(), std::size_t{1});
+    }
+
+    void masterEffectsBelongToTheRigNotTheSetlist()
+    {
+        EffectWindows windows(*m_engine, *m_doc);
+        {
+            MasterBus master(*m_engine, *m_doc, *m_settings, windows);
+            master.load();
+            QVERIFY(master.effects().empty()); // nothing by default
+            QVERIFY(master.addEffect(u"spy/Reverb.vst3"_s, u"Spy Reverb"_s));
+            QVERIFY(master.addEffect(u"spy/Pad.vst3"_s, u"Spy Limiter"_s));
+            QCOMPARE(m_engine->masterEffects.size(), std::size_t{2}); // playing
+            QCOMPARE(master.effectNames(), (QStringList{u"Spy Reverb"_s, u"Spy Limiter"_s}));
+            QVERIFY(master.setEffectBypass(1, true));
+            QVERIFY(m_engine->masterEffects[1].bypass);
+            QVERIFY(!master.openEffect(0, nullptr)); // the spy's effects have no window
+            QCOMPARE(m_engine->masterEditorRequests, std::vector<int>{0});
+            QVERIFY(m_doc->lastError().contains(u"no window"_s));
+        }
+        // Next start: the same effects, with their settings, whatever setlist opens.
+        m_doc->newSetlist();
+        MasterBus again(*m_engine, *m_doc, *m_settings, windows);
+        again.load();
+        QCOMPARE(again.effectNames(), (QStringList{u"Spy Reverb"_s, u"Spy Limiter"_s}));
+        QCOMPARE(again.effects()[0].state, QByteArray("spy master settings: spy/Reverb.vst3"));
+        QVERIFY(again.effects()[1].bypass);
+        QCOMPARE(m_engine->masterEffects.size(), std::size_t{2});
+
+        QVERIFY(again.replaceEffect(0, u"spy/Piano.vst3"_s, u"Spy EQ"_s));
+        QVERIFY(again.removeEffect(1));
+        QCOMPARE(again.effectNames(), QStringList{u"Spy EQ"_s});
+        QVERIFY(!again.removeEffect(3));
+    }
+
+    void anEditedMasterEffectIsSavedWhenTheAppQuits()
+    {
+        EffectWindows windows(*m_engine, *m_doc);
+        {
+            MasterBus master(*m_engine, *m_doc, *m_settings, windows);
+            QVERIFY(master.addEffect(u"spy/Reverb.vst3"_s, u"Spy Reverb"_s));
+            m_settings->remove(u"master/effects"_s); // pretend only the edit is unsaved
+            master.noteEdited();
+        } // quitting
+        MasterBus again(*m_engine, *m_doc, *m_settings, windows);
+        again.load();
+        QCOMPARE(again.effectNames(), QStringList{u"Spy Reverb"_s});
+    }
+
+    void theLimiterLightStaysOnLongEnoughToSee()
+    {
+        EngineStatus status(*m_engine, *m_doc);
+        QVERIFY(!status.limiting());
+        m_engine->limiterActivity = true;
+        status.poll();
+        QVERIFY(status.limiting());
+        for (int i = 0; i < 5; ++i) status.poll();
+        QVERIFY(status.limiting()); // still lit ~165 ms later
+        for (int i = 0; i < 20; ++i) status.poll();
+        QVERIFY(!status.limiting());
     }
 
     void aPluginEditMarksTheSetlistUnsaved()

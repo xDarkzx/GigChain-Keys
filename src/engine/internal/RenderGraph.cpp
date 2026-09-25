@@ -99,8 +99,9 @@ void ChannelStrip::render(std::span<const MidiEvent> events, AudioBlock mix, boo
                 std::memory_order_relaxed);
 }
 
-RenderGraph::RenderGraph(std::vector<StripSpec> specs, double sampleRate, int maxBlock)
-    : m_sampleRate(sampleRate), m_maxBlock(maxBlock)
+RenderGraph::RenderGraph(std::vector<StripSpec> specs, double sampleRate, int maxBlock,
+                         std::vector<std::shared_ptr<INode>> masterEffects)
+    : m_masterEffects(std::move(masterEffects)), m_sampleRate(sampleRate), m_maxBlock(maxBlock)
 {
     m_strips.reserve(specs.size());
     for (StripSpec& spec : specs) {
@@ -122,6 +123,9 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
     const bool anySolo = std::any_of(m_strips.begin(), m_strips.end(), [](const auto& s) { return s->solo(); });
     for (const auto& strip : m_strips) {
         strip->render(events, out, anySolo);
+    }
+    for (const auto& effect : m_masterEffects) {
+        effect->process({}, out);
     }
     for (std::size_t i = 0; i < frames; ++i) {
         out.left[i] *= masterGain;

@@ -74,7 +74,9 @@ private:
 class RenderGraph
 {
 public:
-    RenderGraph(std::vector<StripSpec> specs, double sampleRate, int maxBlock);
+    // `masterEffects` process the mix, in order, before the master gain.
+    RenderGraph(std::vector<StripSpec> specs, double sampleRate, int maxBlock,
+                std::vector<std::shared_ptr<INode>> masterEffects = {});
 
     // Audio thread. Overwrites `out`.
     void render(std::span<const MidiEvent> events, AudioBlock out, float masterGain) noexcept;
@@ -91,6 +93,7 @@ public:
 
 private:
     std::vector<std::unique_ptr<ChannelStrip>> m_strips;
+    std::vector<std::shared_ptr<INode>> m_masterEffects;
     double m_sampleRate;
     int m_maxBlock;
     std::atomic<uint64_t> m_oversizedBlocks{0};

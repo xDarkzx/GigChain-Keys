@@ -143,6 +143,31 @@ private slots:
         QVERIFY(!again.reopenLastSetlist());
     }
 
+    void safetyLimiterIsOnAtMinusOneUntilChanged()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        QVERIFY(m_engine->limiterOn); // on from the start
+        QCOMPARE(m_engine->limiterCeiling, -1.0);
+        settings.load();
+        QVERIFY(settings.limiterEnabled());
+        QCOMPARE(settings.limiterCeilingDb(), -1.0);
+
+        settings.setLimiterCeilingDb(-3.0);
+        settings.setLimiterEnabled(false);
+        QCOMPARE(m_engine->limiterCeiling, -1.0); // nothing before OK
+        QVERIFY(settings.apply());
+        QVERIFY(!m_engine->limiterOn);
+        QCOMPARE(m_engine->limiterCeiling, -3.0);
+
+        SettingsController next(*m_engine, *m_doc, *m_settings); // next start
+        QVERIFY(!m_engine->limiterOn);
+        QCOMPARE(m_engine->limiterCeiling, -3.0);
+        next.load();
+        next.resetToDefaults();
+        QVERIFY(next.limiterEnabled());
+        QCOMPARE(next.limiterCeilingDb(), -1.0);
+    }
+
     void pluggingInAKeyboardShowsUpWhileOpen()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);

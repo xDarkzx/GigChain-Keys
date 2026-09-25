@@ -51,6 +51,7 @@ struct EffectWindows::Entry
     QPointer<QWindow> window;
     double ratio = 1.0;
     bool resizing = false; // we are resizing the window ourselves
+    bool master = false;   // an effect of the master bus (channel unused)
 };
 
 EffectWindows::EffectWindows(engine::IEngine& engine, DocumentController& document, QObject* parent)
@@ -104,11 +105,47 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
     entry->effect = effect;
     entry->pluginId = slot.pluginId;
     entry->editor = std::move(*created);
+    if (!show(std::move(entry), u"%1 — %2"_s.arg(slot.displayName, strip.name), owner)) return false;
+    qCInfo(lcUi).noquote() << "Effect window" << slot.displayName << "on" << strip.name << "opened in" << timer.elapsed()
+                           << "ms";
+    return true;
+}
 
+bool EffectWindows::openMaster(int effect, const std::vector<core::PluginSlot>& masterSlots, QWindow* owner)
+{
+    if (effect < 0 || static_cast<std::size_t>(effect) >= masterSlots.size()) return false;
+    const core::PluginSlot& slot = masterSlots[static_cast<std::size_t>(effect)];
+    for (auto& entry : m_open) {
+        if (entry->master && entry->effect == effect && entry->pluginId == slot.pluginId) {
+            entry->window->raise();
+            entry->window->requestActivate();
+            return true;
+        }
+    }
+    FreezeWatchdog::mark(u"opening the window of %1 (master)"_s.arg(slot.displayName));
+    auto created = m_engine.createMasterEffectEditor(effect);
+    if (!created) {
+        m_document.reportMessage(created.error().message);
+        return false;
+    }
+    if (!*created) {
+        m_document.reportMessage(tr("%1 has no window of its own").arg(slot.displayName));
+        return false;
+    }
+    auto entry = std::make_unique<Entry>();
+    entry->master = true;
+    entry->effect = effect;
+    entry->pluginId = slot.pluginId;
+    entry->editor = std::move(*created);
+    return show(std::move(entry), tr("%1 — Master").arg(slot.displayName), owner);
+}
+
+bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWindow* owner)
+{
     auto* window = new FloatingWindow;
     window->setFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowSystemMenuHint | Qt::WindowCloseButtonHint);
     if (owner != nullptr) window->setTransientParent(owner); // stays above the main window
-    window->setTitle(u"%1 — %2"_s.arg(slot.displayName, strip.name));
+    window->setTitle(title);
     window->create();
     entry->ratio = window->devicePixelRatio();
     // Scale before opening: some plugins size their window from it.
@@ -159,8 +196,6 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
     }
     window->show();
     window->requestActivate();
-    qCInfo(lcUi).noquote() << "Effect window" << slot.displayName << "on" << strip.name << "opened in" << timer.elapsed()
-                           << "ms";
     m_open.push_back(std::move(entry));
     emit openCountChanged();
     return true;
@@ -173,6 +208,7 @@ void EffectWindows::closeAll()
 
 void EffectWindows::close(Entry& entry)
 {
+    const bool master = entry.master;
     entry.editor->detach(); // before its window goes
     entry.editor.reset();
     if (entry.window) {
@@ -181,6 +217,20 @@ void EffectWindows::close(Entry& entry)
     }
     std::erase_if(m_open, [&entry](const auto& e) { return e.get() == &entry; });
     emit openCountChanged();
+    if (master) emit masterWindowClosed();
+}
+
+void EffectWindows::sweepMaster(const std::vector<core::PluginSlot>& masterSlots)
+{
+    std::vector<Entry*> gone;
+    for (auto& entry : m_open) {
+        if (!entry->master) continue;
+        const bool stillThere = entry->effect < static_cast<int>(masterSlots.size())
+                                && masterSlots[static_cast<std::size_t>(entry->effect)].pluginId == entry->pluginId
+                                && !masterSlots[static_cast<std::size_t>(entry->effect)].bypass;
+        if (!stillThere) gone.push_back(entry.get());
+    }
+    for (Entry* entry : gone) close(*entry);
 }
 
 void EffectWindows::sweep()
@@ -188,6 +238,7 @@ void EffectWindows::sweep()
     const core::Patch* patch = m_document.currentPatch();
     std::vector<Entry*> gone;
     for (auto& entry : m_open) {
+        if (entry->master) continue; // the master bus is not in the setlist
         const core::Channel* channel = nullptr;
         if (patch != nullptr) {
             for (const core::Channel& c : patch->channels) {
