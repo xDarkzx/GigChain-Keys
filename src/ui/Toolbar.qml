@@ -16,6 +16,7 @@ ToolBar {
     signal toggleMixer()
     signal newRequested()
     signal openRequested()
+    signal openRecentRequested(string path)
     signal saveRequested()
     signal saveAsRequested()
     signal settingsRequested()
@@ -44,6 +45,23 @@ ToolBar {
                 id: fileMenu
                 StageMenuItem { text: qsTr("New"); onTriggered: bar.newRequested() }
                 StageMenuItem { text: qsTr("Open…"); onTriggered: bar.openRequested() }
+                StageMenu {
+                    id: recentMenu
+                    title: qsTr("Recent setlists")
+                    enabled: bar.doc.recentFiles.length > 0
+                    Instantiator {
+                        model: bar.doc.recentFiles
+                        delegate: StageMenuItem {
+                            required property string modelData
+                            text: modelData.split(/[\\/]/).pop()
+                            ToolTip.visible: hovered
+                            ToolTip.text: modelData
+                            onTriggered: bar.openRecentRequested(modelData)
+                        }
+                        onObjectAdded: (index, object) => recentMenu.insertItem(index, object)
+                        onObjectRemoved: (index, object) => recentMenu.removeItem(object)
+                    }
+                }
                 StageMenuItem { text: qsTr("Save"); onTriggered: bar.saveRequested() }
                 StageMenuItem { text: qsTr("Save As…"); onTriggered: bar.saveAsRequested() }
             }

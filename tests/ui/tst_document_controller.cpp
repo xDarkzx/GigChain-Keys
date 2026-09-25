@@ -34,6 +34,34 @@ private slots:
         m_settings = std::make_unique<QSettings>(m_dir->filePath(u"settings.ini"_s), QSettings::IniFormat);
         m_engine = std::make_unique<test::SpyEngine>();
         m_doc = std::make_unique<DocumentController>(*m_engine, *m_settings);
+        // Nothing exists until the user makes it: most tests start from a
+        // new setlist with one song.
+        m_doc->newSetlist();
+        QVERIFY(m_doc->addSong());
+    }
+
+    void startsWithNoSetlistAndNothingInIt()
+    {
+        DocumentController fresh(*m_engine, *m_settings);
+        QVERIFY(!fresh.hasSetlist());
+        QVERIFY(!fresh.hasPatch());
+        QCOMPARE(fresh.setlist().songs.size(), std::size_t{0});
+
+        fresh.newSetlist();
+        QVERIFY(fresh.hasSetlist());
+        QCOMPARE(fresh.setlist().songs.size(), std::size_t{0}); // empty: no "Song 1"
+        QVERIFY(!fresh.isDirty());
+    }
+
+    void pastingIntoAnEmptySetlistCreatesTheSong()
+    {
+        DocumentController fresh(*m_engine, *m_settings);
+        fresh.newSetlist();
+        QVERIFY(fresh.pasteChart(-1, u"Hallelujah chords by Leonard Cohen\nC        Am\nI heard there was\n"_s));
+        QCOMPARE(fresh.setlist().songs.size(), std::size_t{1});
+        QCOMPARE(fresh.currentSongName(), u"Hallelujah"_s); // named from the sheet
+        QVERIFY(fresh.currentChart().contains(u"[C]I heard"_s));
+        QVERIFY(fresh.hasPatch());
     }
 
     void cleanup()
@@ -44,13 +72,13 @@ private slots:
         m_dir.reset();
     }
 
-    void startsWithOneSongAndAppliesIt()
+    void aNewSongIsCurrentAndReachesTheEngine()
     {
         QVERIFY(m_doc->hasPatch());
         QCOMPARE(m_doc->currentSongName(), u"Song 1"_s);
         QCOMPARE(m_doc->currentPatchName(), u"Patch 1"_s);
-        QCOMPARE(m_engine->applyCount, 1);
-        QVERIFY(!m_doc->isDirty());
+        QCOMPARE(m_engine->lastPatch.name, u"Patch 1"_s); // the engine plays it
+        QVERIFY(m_doc->isDirty()); // a new song is an unsaved change
         QCOMPARE(m_doc->displayName(), u"Untitled"_s);
     }
 
@@ -228,7 +256,25 @@ private slots:
         DocumentController second(*m_engine, *m_settings);
         second.restoreLastSession();
         QVERIFY(second.lastError().contains(u"gone.gigchain.json"_s));
-        QCOMPARE(second.setlist().songs.size(), std::size_t{1});
+        QVERIFY(!second.hasSetlist()); // nothing is made up in its place
+    }
+
+    void recentSetlistsKeepTheLastFive()
+    {
+        for (int i = 1; i <= 6; ++i) QVERIFY(m_doc->saveAs(path(u"set%1.gigchain.json"_s.arg(i))));
+        QVERIFY(m_doc->open(path(u"set3.gigchain.json"_s))); // opened again: moves to the top
+        const QStringList recent = m_doc->recentFiles();
+        QCOMPARE(recent.size(), 5);
+        QCOMPARE(recent.first(), path(u"set3.gigchain.json"_s));
+        QCOMPARE(recent.count(path(u"set3.gigchain.json"_s)), 1); // no duplicates
+        QVERIFY(!recent.contains(path(u"set1.gigchain.json"_s)));  // the oldest dropped off
+
+        DocumentController next(*m_engine, *m_settings); // next start
+        QCOMPARE(next.recentFiles(), recent);
+
+        QVERIFY(QFile::remove(path(u"set6.gigchain.json"_s)));
+        QVERIFY(!next.open(path(u"set6.gigchain.json"_s))); // moved or deleted
+        QVERIFY(!next.recentFiles().contains(path(u"set6.gigchain.json"_s)));
     }
 
     void pastedChordSheetBecomesTheSongsChart()

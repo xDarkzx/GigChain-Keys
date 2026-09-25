@@ -8,6 +8,7 @@
 #include <QClipboard>
 #include <QFile>
 #include <QGuiApplication>
+#include <QRegularExpression>
 
 #include "gigchain/core/Editing.h"
 #include "gigchain/core/SetlistFile.h"
@@ -26,18 +27,29 @@ namespace {
 
 constexpr auto kLastFileKey = "session/lastFile"_L1;
 
-core::Setlist defaultSetlist()
+// A song's name from its pasted sheet: the {title}, else the first line of
+// words, without chord-site words like "chords by ...".
+const QString kRecentKey = u"session/recentFiles"_s;
+constexpr int kMaxRecent = 5;
+
+QString songNameFromChart(const QString& chordPro)
 {
-    core::Setlist setlist;
-    setlist.songs.push_back(core::makeSong(u"Song 1"_s));
-    return setlist;
+    const core::Chart chart = core::parseChordPro(chordPro);
+    QString name = chart.title;
+    for (const core::ChartLine& line : chart.lines) {
+        if (!name.isEmpty()) break;
+        if (line.kind == core::ChartLine::Kind::Lyrics && line.chords().isEmpty()) name = line.lyrics().trimmed();
+    }
+    static const QRegularExpression kSiteWords(uR"(\s+(chords|tabs?|lyrics|ukulele|guitar|piano)\b.*$)"_s,
+                                               QRegularExpression::CaseInsensitiveOption);
+    name.remove(kSiteWords);
+    return name.left(60).trimmed();
 }
 
 } // namespace
 
 DocumentController::DocumentController(engine::IEngine& engine, QSettings& settings, QObject* parent)
-    : QObject(parent), m_engine(engine), m_settings(settings), m_setlist(defaultSetlist()),
-      m_cursor(core::firstPatch(m_setlist))
+    : QObject(parent), m_engine(engine), m_settings(settings), m_cursor(core::firstPatch(m_setlist))
 {
     // A different current song (or setlist) means a different chart.
     connect(this, &DocumentController::currentChanged, this, &DocumentController::chartChanged);
@@ -121,6 +133,7 @@ bool DocumentController::selectPatch(int song, int patch)
 
 bool DocumentController::addSong()
 {
+    if (!m_hasSetlist) newSetlist();
     const auto current = currentPatchId();
     const auto index = core::addSong(m_setlist, tr("Song %1").arg(m_setlist.songs.size() + 1));
     if (!index) return report(index.error());
@@ -167,7 +180,50 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
     if (pasted.trimmed().isEmpty()) {
         return report(core::Error{core::ErrorCode::InvalidData, tr("There is no text to paste")});
     }
-    return setSongChart(song, core::tidyChordSheet(pasted));
+    const QString chart = core::tidyChordSheet(pasted);
+    if (song < 0 || static_cast<std::size_t>(song) >= m_setlist.songs.size()) {
+        // No song to paste into (an empty setlist): the paste makes one.
+        if (!m_hasSetlist) newSetlist();
+        QString name = songNameFromChart(chart);
+        if (name.isEmpty()) name = tr("Song %1").arg(m_setlist.songs.size() + 1);
+        const auto current = currentPatchId();
+        const auto index = core::addSong(m_setlist, name);
+        if (!index) return report(index.error());
+        commitStructure(core::Cursor{*index, 0}, current);
+        song = *index;
+    }
+    return setSongChart(song, chart);
+}
+
+
+QStringList DocumentController::recentFiles() const
+{
+    return m_settings.value(kRecentKey).toStringList();
+}
+
+void DocumentController::rememberRecent(const QString& path)
+{
+    QStringList recent = recentFiles();
+    recent.removeAll(path);
+    recent.prepend(path);
+    while (recent.size() > kMaxRecent) recent.removeLast();
+    m_settings.setValue(kRecentKey, recent);
+    emit recentFilesChanged();
+}
+
+void DocumentController::forgetRecent(const QString& path)
+{
+    QStringList recent = recentFiles();
+    if (recent.removeAll(path) == 0) return;
+    m_settings.setValue(kRecentKey, recent);
+    emit recentFilesChanged();
+}
+
+void DocumentController::setHasSetlist(bool has)
+{
+    if (m_hasSetlist == has) return;
+    m_hasSetlist = has;
+    emit hasSetlistChanged();
 }
 
 bool DocumentController::pasteChartFromClipboard(int song)
@@ -450,7 +506,8 @@ bool DocumentController::setChannelSolo(int channel, bool solo)
 
 void DocumentController::newSetlist()
 {
-    m_setlist = defaultSetlist();
+    m_setlist = {}; // empty: the user adds (or pastes) songs
+    setHasSetlist(true);
     setFilePath({});
     setDirty(false);
     emit structureChanged();
@@ -460,10 +517,15 @@ void DocumentController::newSetlist()
 bool DocumentController::open(const QString& path)
 {
     auto loaded = core::loadSetlistFile(path);
-    if (!loaded) return report(loaded.error());
+    if (!loaded) {
+        if (loaded.error().code == core::ErrorCode::FileNotFound) forgetRecent(path); // moved or deleted
+        return report(loaded.error());
+    }
     m_setlist = std::move(*loaded);
+    setHasSetlist(true);
     setFilePath(path);
     m_settings.setValue(kLastFileKey, path);
+    rememberRecent(path);
     setDirty(false);
     emit structureChanged();
     setCursor(core::firstPatch(m_setlist), true);
@@ -493,6 +555,7 @@ bool DocumentController::saveAs(const QString& path)
     if (!target.endsWith(u".json"_s, Qt::CaseInsensitive)) target += branding::setlistSuffix();
     if (auto r = core::saveSetlistFile(m_setlist, target); !r) return report(r.error());
     setFilePath(target);
+    rememberRecent(target);
     m_settings.setValue(kLastFileKey, target);
     setDirty(false);
     qCInfo(lcUi).noquote() << "Saved setlist" << target;

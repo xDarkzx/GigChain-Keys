@@ -19,6 +19,7 @@ ApplicationWindow {
     property bool sidePanelOpen: true
     property bool mixerOpen: true
     property string pendingAction: ""
+    property string pendingPath: "" // a recent setlist waiting to be opened
     property bool closeConfirmed: false
     // Shortcuts must not fire while the user types in a text field.
     readonly property bool typing: activeFocusItem instanceof TextInput
@@ -66,7 +67,13 @@ ApplicationWindow {
             doc.newSetlist()
         } else if (action === "open") {
             openDialog.open()
+        } else if (action === "openRecent") {
+            doc.open(pendingPath)
         }
+    }
+    function openRecent(path) {
+        pendingPath = path
+        guarded("openRecent")
     }
     function guarded(action) {
         pendingAction = action
@@ -164,6 +171,7 @@ ApplicationWindow {
         onToggleMixer: root.mixerOpen = !root.mixerOpen
         onNewRequested: root.guarded("new")
         onOpenRequested: root.guarded("open")
+        onOpenRecentRequested: (path) => root.openRecent(path)
         onSaveRequested: root.save()
         onSaveAsRequested: saveDialog.open()
         onSettingsRequested: settingsDialog.open()
@@ -225,6 +233,9 @@ ApplicationWindow {
                         SplitView.minimumHeight: 200
                         doc: root.doc
                         editorService: root.editorService
+                        onNewRequested: root.guarded("new")
+                        onOpenRequested: root.guarded("open")
+                        onOpenRecentRequested: (path) => root.openRecent(path)
                         // Plugin windows sit above Qt content: hide them while a dialog is up.
                         suspended: settingsDialog.visible || unsavedDialog.visible
                     }

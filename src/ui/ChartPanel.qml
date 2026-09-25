@@ -100,9 +100,12 @@ Rectangle {
                     topPadding: 40
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
-                    text: qsTr("No chart for this song yet.\n\nCopy the chords and lyrics from any chord site or file and "
-                               + "press Ctrl+V (or Paste chords), or drop a downloaded text file here. "
-                               + "Spacing and tab lines are cleaned up for you.")
+                    text: panel.doc.songIndex < 0
+                          ? qsTr("This setlist has no songs yet.\n\nCopy a song's chords and lyrics from any chord site or file "
+                                 + "and press Ctrl+V (or Paste chords): it becomes your first song, named from the sheet.")
+                          : qsTr("No chart for this song yet.\n\nCopy the chords and lyrics from any chord site or file and "
+                                 + "press Ctrl+V (or Paste chords), or drop a downloaded text file here. "
+                                 + "Spacing and tab lines are cleaned up for you.")
                     color: Theme.textDim
                     font.pixelSize: Theme.fontSize + 2
                 }

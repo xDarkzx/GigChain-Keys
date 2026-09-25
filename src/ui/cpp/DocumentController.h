@@ -43,6 +43,10 @@ class DocumentController : public QObject
     Q_PROPERTY(QString filePath READ filePath NOTIFY filePathChanged)
     Q_PROPERTY(QString displayName READ displayName NOTIFY filePathChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+    // False until a setlist is created or opened: nothing exists by default.
+    Q_PROPERTY(bool hasSetlist READ hasSetlist NOTIFY hasSetlistChanged)
+    // The last setlists opened or saved, newest first (at most 5).
+    Q_PROPERTY(QStringList recentFiles READ recentFiles NOTIFY recentFilesChanged)
     // The current song's chart (ChordPro).
     Q_PROPERTY(QString currentChart READ currentChart NOTIFY chartChanged)
 
@@ -85,6 +89,8 @@ public:
     // pasteChart takes anything with chords and lyrics (a chord site, a text
     // file's contents) and cleans it (core::tidyChordSheet) first.
     [[nodiscard]] QString currentChart() const;
+    [[nodiscard]] bool hasSetlist() const { return m_hasSetlist; }
+    [[nodiscard]] QStringList recentFiles() const;
     Q_INVOKABLE bool setSongChart(int song, const QString& chordPro);
     Q_INVOKABLE bool pasteChart(int song, const QString& pasted);
     // pasteChart with whatever text is on the clipboard.
@@ -144,6 +150,8 @@ signals:
     void filePathChanged();
     void lastErrorChanged();
     void chartChanged(); // the current song's chart, or which song is current
+    void hasSetlistChanged();
+    void recentFilesChanged();
 
 private:
     bool report(const core::Error& error);
@@ -156,6 +164,9 @@ private:
     [[nodiscard]] core::Cursor follow(const std::optional<core::PatchId>& id, core::Cursor fallback) const;
     void resetSelectedChannel();
     void applyCurrentPatchToEngine();
+    void setHasSetlist(bool has);
+    void rememberRecent(const QString& path);
+    void forgetRecent(const QString& path);
     void setDirty(bool dirty);
     [[nodiscard]] bool effectExists(int channel, int effect) const;
     void setFilePath(const QString& path);
@@ -163,6 +174,7 @@ private:
     engine::IEngine& m_engine;
     QSettings& m_settings;
     core::Setlist m_setlist;
+    bool m_hasSetlist = false;
     core::Cursor m_cursor;
     int m_selectedChannel = -1;
     bool m_dirty = false;
