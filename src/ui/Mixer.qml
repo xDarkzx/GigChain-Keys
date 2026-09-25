@@ -11,6 +11,7 @@ Rectangle {
     required property ChannelModel channelModel
     required property PluginListModel pluginModel
     required property EngineStatus engineStatus
+    property EffectWindows effectWindows: null
 
     color: Theme.mixerBackground
 
@@ -42,6 +43,7 @@ Rectangle {
                 height: Math.min(ListView.view.height, Theme.stripHeight)
                 doc: mixer.doc
                 pluginModel: mixer.pluginModel
+                effectWindows: mixer.effectWindows
             }
             footer: Item {
                 width: Theme.stripWidth + 8

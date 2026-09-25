@@ -85,6 +85,12 @@ public:
         return std::unique_ptr<engine::IPluginEditor>();
     }
     std::vector<QString> editorRequests;
+    std::vector<std::pair<QString, int>> effectEditorRequests;
+    core::Result<std::unique_ptr<engine::IPluginEditor>> createEffectEditor(const core::ChannelId& id, int effect) override
+    {
+        effectEditorRequests.emplace_back(id.value(), effect);
+        return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Spy effects have no window"));
+    }
     core::Result<std::unique_ptr<engine::IPluginEditor>> createEditorForPlugin(const QString& pluginId) override
     {
         pluginEditorRequests.push_back(pluginId);

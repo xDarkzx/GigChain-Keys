@@ -320,6 +320,34 @@ private slots:
         QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
     }
 
+    void anEffectsWindowOpensWhileItIsOn()
+    {
+        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+
+        core::Patch patch = core::makePatch(u"Verse"_s);
+        core::Channel channel = core::makeChannel(u"Keys"_s);
+        channel.effects = {core::PluginSlot{kSmall, u"Kotelnikov"_s, false}, core::PluginSlot{kSmall, u"Kotelnikov"_s, true}};
+        patch.channels.push_back(channel);
+        engine.applyPatch(patch);
+
+        auto editor = engine.createEffectEditor(channel.id, 0);
+        QVERIFY2(editor.has_value(), editor ? "" : qPrintable(editor.error().message));
+        QVERIFY(*editor != nullptr);
+        QVERIFY(!(*editor)->preferredSize().isEmpty());
+
+        const auto off = engine.createEffectEditor(channel.id, 1); // switched off: not loaded
+        QVERIFY(!off);
+        QVERIFY2(off.error().message.contains(u"switched off"_s), qPrintable(off.error().message));
+        QVERIFY(!engine.createEffectEditor(channel.id, 2));                     // no such effect
+        QVERIFY(!engine.createEffectEditor(core::ChannelId(u"gone"_s), 0)); // no such channel
+    }
+
     void unknownPluginIsReportedNotIgnored()
     {
         auto created = createRealEngine();

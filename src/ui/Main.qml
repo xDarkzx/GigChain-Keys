@@ -13,6 +13,7 @@ ApplicationWindow {
     required property PluginListModel pluginModel
     required property EngineStatus engineStatus
     required property EditorService editorService
+    required property EffectWindows effectWindows
     required property SettingsController settings
     required property StartupProgress loading
 
@@ -254,6 +255,7 @@ ApplicationWindow {
                         channelModel: root.channelModel
                         pluginModel: root.pluginModel
                         engineStatus: root.engineStatus
+                        effectWindows: root.effectWindows
                     }
                 }
             }
@@ -266,6 +268,7 @@ ApplicationWindow {
                 pluginModel: root.pluginModel
                 engineStatus: root.engineStatus
                 sidePanelOpen: root.sidePanelOpen
+                effectWindows: root.effectWindows
             }
         }
 

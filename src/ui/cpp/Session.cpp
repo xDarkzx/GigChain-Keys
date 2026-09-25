@@ -13,6 +13,7 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_pluginModel(engine, m_artwork, &settings),
       m_engineStatus(engine, m_document),
       m_editorService(engine, m_document),
+      m_effectWindows(engine, m_document),
       m_settingsController(engine, m_document, settings)
 {
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_channelModel, &ChannelModel::refreshLevels);
@@ -28,6 +29,7 @@ QVariantMap Session::initialProperties()
         {u"pluginModel"_s, QVariant::fromValue(&m_pluginModel)},
         {u"engineStatus"_s, QVariant::fromValue(&m_engineStatus)},
         {u"editorService"_s, QVariant::fromValue(&m_editorService)},
+        {u"effectWindows"_s, QVariant::fromValue(&m_effectWindows)},
         {u"settings"_s, QVariant::fromValue(&m_settingsController)},
         {u"loading"_s, QVariant::fromValue(&m_loading)},
     };

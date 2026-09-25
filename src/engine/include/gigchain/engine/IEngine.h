@@ -85,6 +85,10 @@ public:
     // nullptr when the channel has no instrument or the plugin has no editor;
     // an error when opening it failed (also logged).
     virtual core::Result<std::unique_ptr<IPluginEditor>> createEditor(const core::ChannelId& id) = 0;
+    // The same for effect `effect` (its position in the channel's effect
+    // list) of a channel of the current patch. A switched-off effect is not
+    // loaded, so it has no editor: that is an error saying so.
+    virtual core::Result<std::unique_ptr<IPluginEditor>> createEffectEditor(const core::ChannelId& id, int effect) = 0;
 
     // For an editor that refuses host zoom and resize (every Arturia plugin):
     // if the plugin's own window size setting has a step that fits `area`
