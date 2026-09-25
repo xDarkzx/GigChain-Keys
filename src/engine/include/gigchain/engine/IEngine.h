@@ -116,14 +116,6 @@ public:
     // loaded, so it has no editor: that is an error saying so.
     virtual core::Result<std::unique_ptr<IPluginEditor>> createEffectEditor(const core::ChannelId& id, int effect) = 0;
 
-    // For an editor that refuses host zoom and resize (every Arturia plugin):
-    // if the plugin's own window size setting has a step that fits `area`
-    // better than `editorSize` (both in physical pixels), the channel's
-    // instrument is reloaded at that size with its sound and settings kept,
-    // and true is returned (open the editor again). false = nothing to do.
-    // An error means the instrument kept playing as it was.
-    virtual core::Result<bool> fitEditorToArea(const core::ChannelId& id, QSize editorSize, QSize area) = 0;
-
     // The editor of any installed plugin, loaded on its own (not playing).
     // Used to take pictures of plugins. nullptr when it has no editor.
     virtual core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) = 0;

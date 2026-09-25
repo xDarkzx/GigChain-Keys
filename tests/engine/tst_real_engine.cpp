@@ -178,57 +178,6 @@ private slots:
         QVERIFY(engine.midiInputs()[1].enabled);
     }
 
-    void arturiaReloadsAtTheSizeThatFits()
-    {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        const QString prefs = u"C:/ProgramData/Arturia/Piano V2/tmp/plugin.pref.xml"_s;
-        QFile original(prefs);
-        if (!original.open(QIODevice::ReadOnly)) QSKIP("Piano V2 has no settings file yet");
-        const QByteArray saved = original.readAll();
-        original.close();
-        // Put the user's own Arturia setting back whatever happens.
-        const auto restore = qScopeGuard([&] {
-            QFile back(prefs);
-            if (back.open(QIODevice::WriteOnly | QIODevice::Truncate)) back.write(saved);
-        });
-
-        auto created = createRealEngine();
-        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
-        QVERIFY(created.has_value());
-        IEngine& engine = **created;
-        engine.setMasterVolume(core::limits::kMinVolumeDb); // silent test
-        const core::Patch patch = pianoPatch();
-        engine.applyPatch(patch);
-        QVERIFY(engine.poll().empty());
-
-        // Piano V2 at 80 % is 1280x1006; a 1700x1300 area fits 100 % (1600x1258).
-        const QSize at80(1280, 1006);
-        const QSize area(1700, 1300);
-        {
-            QFile check(prefs);
-            QVERIFY(check.open(QIODevice::ReadOnly));
-            if (!check.readAll().contains(R"(name="GUI Size" value="0.300000")")) QSKIP("Piano V2 is not at 80 % here");
-        }
-        const auto reloaded = engine.fitEditorToArea(patch.channels[0].id, at80, area);
-        QVERIFY2(reloaded.has_value(), reloaded ? "" : qPrintable(reloaded.error().message));
-        QVERIFY(*reloaded);
-        auto editor = engine.createEditor(patch.channels[0].id);
-        QVERIFY(editor.has_value() && *editor != nullptr); // the new instance has an editor
-
-        // Already the best fit: nothing more happens.
-        const auto again = engine.fitEditorToArea(patch.channels[0].id, QSize(1600, 1258), area);
-        QVERIFY(again.has_value());
-        QVERIFY(!*again);
-
-        // The reloaded piano still plays.
-        engine.injectNote(1, 60, 110);
-        pump(engine, 400);
-        const float peak = engine.channelLevel(patch.channels[0].id).peak;
-        engine.injectNote(1, 60, 0);
-        pump(engine, 50);
-        QVERIFY2(peak > 0.001F, "piano went silent after the reload");
-    }
-
     void aSongsPatchesShareTheirPluginsAndPreloadPrunes()
     {
         // A small plugin keeps this quick; any plugin behaves the same.
