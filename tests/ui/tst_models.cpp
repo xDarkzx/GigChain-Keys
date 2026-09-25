@@ -326,6 +326,7 @@ private slots:
         QVERIFY(status.memoryMb() > 1.0); // this process's working set
         QVERIFY(status.midiActivity());
         QCOMPARE(status.statusText(), u"Spy engine"_s);
+        QCOMPARE(status.masterPeak(), 0.4F); // the master strip's meter
         QCOMPARE(m_doc->lastError(), u"Audio device restarted"_s);
 
         status.setMasterVolumeDb(-6.0);

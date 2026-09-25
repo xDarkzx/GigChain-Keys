@@ -58,6 +58,8 @@ public:
     [[nodiscard]] virtual std::vector<PluginInfo> availablePlugins() const = 0;
     // Peak since the previous call for this channel (then reset) and current RMS.
     [[nodiscard]] virtual LevelReading channelLevel(const core::ChannelId& id) = 0;
+    // The same for everything that leaves the app, after the master fader.
+    [[nodiscard]] virtual LevelReading masterLevel() = 0;
     [[nodiscard]] virtual float cpuLoad() const = 0;
     [[nodiscard]] virtual bool midiActivity() const = 0;
 

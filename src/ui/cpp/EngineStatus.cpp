@@ -62,6 +62,11 @@ void EngineStatus::poll()
     if (!notices.empty()) m_document.reportMessage(notices.back());
     if (m_engine.takePluginEdits()) m_document.markPluginSettingsChanged();
 
+    if (const float peak = m_engine.masterLevel().peak; peak != m_masterPeak) {
+        m_masterPeak = peak;
+        emit masterLevelChanged();
+    }
+
     const float cpu = m_engine.cpuLoad();
     const bool midi = m_engine.midiActivity();
     const QString status = m_engine.statusText();

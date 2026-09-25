@@ -27,6 +27,8 @@ class EngineStatus : public QObject
     Q_PROPERTY(bool midiActivity READ midiActivity NOTIFY statusChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusChanged)
     Q_PROPERTY(double masterVolumeDb READ masterVolumeDb WRITE setMasterVolumeDb NOTIFY masterVolumeDbChanged)
+    // The master strip's meter: the output's peak (linear, 0..1) since the last poll.
+    Q_PROPERTY(float masterPeak READ masterPeak NOTIFY masterLevelChanged)
 
 public:
     static constexpr int kPollIntervalMs = 33;
@@ -39,6 +41,7 @@ public:
     [[nodiscard]] bool midiActivity() const { return m_midiActivity; }
     [[nodiscard]] QString statusText() const { return m_statusText; }
     [[nodiscard]] double masterVolumeDb() const;
+    [[nodiscard]] float masterPeak() const { return m_masterPeak; }
     void setMasterVolumeDb(double volumeDb);
 
     // On-screen keyboard: note on (velocity 100) or off, on MIDI channel 1.
@@ -50,6 +53,7 @@ public slots:
 signals:
     void statusChanged();
     void masterVolumeDbChanged();
+    void masterLevelChanged();
     void polled();
 
 private:
@@ -59,6 +63,7 @@ private:
     DocumentController& m_document;
     QTimer m_timer;
     float m_cpuLoad = 0.0F;
+    float m_masterPeak = 0.0F;
     double m_memoryMb = 0.0;
     bool m_memoryErrorLogged = false;
     bool m_midiActivity = false;
