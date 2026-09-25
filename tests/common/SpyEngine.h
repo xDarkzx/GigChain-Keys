@@ -31,6 +31,14 @@ public:
     QStringList blocked;
     [[nodiscard]] QStringList blockedPlugins() const override { return blocked; }
     void unblockPlugin(const QString& pluginId) override { blocked.removeAll(pluginId); }
+    engine::ControlTriggers triggers{};
+    void setControlTriggers(const engine::ControlTriggers& chosen) override { triggers = chosen; }
+    std::vector<engine::ControlAction> pendingActions;
+    std::vector<engine::ControlAction> takeControlActions() override { return std::exchange(pendingActions, {}); }
+    engine::MidiTrigger learned;
+    engine::MidiTrigger takeLearnedTrigger() override { return std::exchange(learned, {}); }
+    int panics = 0;
+    void panic() override { ++panics; }
     int storeCount = 0;
     std::vector<QString> storeProblems;
     std::vector<QString> storePluginStates(core::Setlist& setlist) override

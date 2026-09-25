@@ -51,6 +51,9 @@ public:
     void setMasterMuted(bool muted);
     void setMasterVolumeDb(double volumeDb);
 
+    // Stops every sound now (every plugin reset, held notes released).
+    Q_INVOKABLE void panic();
+
     // On-screen keyboard: note on (velocity 100) or off, on MIDI channel 1.
     Q_INVOKABLE void playNote(int note, bool on);
 

@@ -374,6 +374,76 @@ private slots:
         QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
     }
 
+    void aLearnedPadSwitchesSongsAndIsNotPlayed()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+        const core::Patch patch = pianoPatch();
+        engine.applyPatch(patch);
+        QVERIFY(engine.poll().empty());
+
+        // "Learn": the next press is remembered.
+        (void)engine.takeLearnedTrigger();
+        engine.injectNote(1, 36, 100);
+        engine.injectNote(1, 36, 0);
+        pump(engine, 100);
+        const MidiTrigger learned = engine.takeLearnedTrigger();
+        QCOMPARE(learned, (MidiTrigger{MidiTrigger::Note, 0, 36}));
+
+        ControlTriggers triggers{};
+        triggers[static_cast<std::size_t>(ControlAction::NextSong)] = learned;
+        engine.setControlTriggers(triggers);
+        // The learned hit played (learning takes nothing away): silence its tail.
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Panic: every sound stopped"_s));
+        engine.panic();
+        pump(engine, 200);
+        (void)engine.channelLevel(patch.channels[0].id);
+        engine.injectNote(1, 36, 100); // the pad
+        pump(engine, 300);
+        const auto actions = engine.takeControlActions();
+        QCOMPARE(actions, std::vector<ControlAction>{ControlAction::NextSong});
+        QVERIFY(engine.takeControlActions().empty()); // once
+        QCOMPARE(engine.channelLevel(patch.channels[0].id).peak, 0.0F); // the piano never heard it
+        engine.injectNote(1, 36, 0);
+
+        engine.injectNote(1, 60, 110); // any other key still plays
+        pump(engine, 300);
+        QVERIFY(engine.channelLevel(patch.channels[0].id).peak > 0.001F);
+        engine.injectNote(1, 60, 0);
+    }
+
+    void panicStopsTheSoundAndPlaysOnAfter()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+        const core::Patch patch = pianoPatch();
+        engine.applyPatch(patch);
+        engine.injectNote(1, 60, 110); // held: never released by the "player"
+        pump(engine, 300);
+        QVERIFY(engine.channelLevel(patch.channels[0].id).peak > 0.001F);
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Panic: every sound stopped"_s));
+        engine.panic();
+        pump(engine, 300);
+        (void)engine.channelLevel(patch.channels[0].id);
+        pump(engine, 200);
+        QVERIFY2(engine.channelLevel(patch.channels[0].id).peak < 0.0005F, "still sounding after panic");
+        QVERIFY(engine.poll().empty());
+
+        engine.injectNote(1, 64, 110); // and it plays again straight away
+        pump(engine, 300);
+        QVERIFY(engine.channelLevel(patch.channels[0].id).peak > 0.001F);
+        engine.injectNote(1, 64, 0);
+    }
+
     void unknownPluginIsReportedNotIgnored()
     {
         auto created = createRealEngine();

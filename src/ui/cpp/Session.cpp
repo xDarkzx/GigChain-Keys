@@ -18,6 +18,7 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_settingsController(engine, m_document, settings)
 {
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_channelModel, &ChannelModel::refreshLevels);
+    QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_settingsController, &SettingsController::pollLearning);
     // The rig's master effects load with the app (behind the splash).
     m_masterBus.load();
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_masterBus, [this, &engine] {

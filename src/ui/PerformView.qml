@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// On stage: huge current patch, what comes next, big previous/next buttons.
-// Nothing here edits the setlist.
+// On stage: the song's chart, big enough to read from the keys; where we
+// are and what comes next; song buttons and Panic. Pedals and pads learned
+// in Settings switch songs too. Nothing here edits the setlist.
 Rectangle {
     id: perform
 
@@ -44,55 +45,99 @@ Rectangle {
                 Layout.margins: Theme.spacing * 5
                 spacing: Theme.spacing * 2
 
-                Label {
+                // Where we are, and what comes next.
+                RowLayout {
                     Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    text: perform.doc.currentSongName
-                    color: Theme.textDim
-                    font.pixelSize: Theme.performSubtitleSize
-                    elide: Text.ElideRight
-                }
-                Label {
-                    objectName: "performPatchName"
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    text: perform.doc.hasPatch ? perform.doc.currentPatchName : qsTr("No patch")
-                    color: Theme.accent
-                    font.pixelSize: Theme.performTitleSize
-                    font.bold: true
-                    fontSizeMode: Text.HorizontalFit
-                    minimumPixelSize: 24
-                }
-                Label {
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    text: perform.doc.nextPatchLabel === "" ? qsTr("End of set")
-                                                             : qsTr("Next: %1").arg(perform.doc.nextPatchLabel)
-                    font.pixelSize: Theme.performSubtitleSize
-                    elide: Text.ElideRight
+                    spacing: Theme.spacing * 2
+                    Label {
+                        objectName: "performSongName"
+                        Layout.fillWidth: true
+                        text: perform.doc.currentSongName !== "" ? perform.doc.currentSongName : qsTr("No song")
+                        color: Theme.accent
+                        font.pixelSize: Theme.performSubtitleSize + 10
+                        font.bold: true
+                        elide: Text.ElideRight
+                    }
+                    Label {
+                        objectName: "performPatchName"
+                        text: perform.doc.hasPatch ? perform.doc.currentPatchName : qsTr("No patch")
+                        color: Theme.textDim
+                        font.pixelSize: Theme.performSubtitleSize - 6
+                    }
+                    Label {
+                        Layout.maximumWidth: perform.width / 3
+                        horizontalAlignment: Text.AlignRight
+                        text: perform.doc.nextPatchLabel === "" ? qsTr("End of set")
+                                                                 : qsTr("Next: %1").arg(perform.doc.nextPatchLabel)
+                        color: Theme.textDim
+                        font.pixelSize: Theme.performSubtitleSize - 6
+                        elide: Text.ElideRight
+                    }
                 }
 
-                Item { Layout.fillHeight: true }
+                // The whole song, big enough to read from the keys.
+                Flickable {
+                    id: performChart
+                    objectName: "performChart"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    contentWidth: width
+                    contentHeight: stageChart.height
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar {}
+                    // A new song starts at its top.
+                    Connections {
+                        target: perform.doc
+                        function onChartChanged() { performChart.contentY = 0 }
+                    }
+                    ChartView {
+                        id: stageChart
+                        width: performChart.width - 16
+                        size: 1.7
+                        lines: perform.doc.chartLines(perform.doc.currentChart)
+                    }
+                    Label {
+                        visible: perform.doc.currentChart.trim() === ""
+                        anchors.centerIn: parent
+                        text: qsTr("No chart for this song")
+                        color: Theme.textDim
+                        font.pixelSize: Theme.performSubtitleSize
+                    }
+                }
 
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Theme.spacing * 2
                     Button {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 110
-                        text: qsTr("◀  Previous")
-                        font.pixelSize: Theme.performSubtitleSize
+                        Layout.preferredHeight: 72
+                        text: qsTr("◀  Previous song")
+                        font.pixelSize: Theme.performSubtitleSize - 6
                         focusPolicy: Qt.NoFocus
-                        onClicked: perform.doc.previousPatch()
+                        onClicked: perform.doc.previousSong()
+                    }
+                    Button {
+                        objectName: "performPanic"
+                        Layout.preferredWidth: 160
+                        Layout.preferredHeight: 72
+                        text: qsTr("Panic")
+                        font.pixelSize: Theme.performSubtitleSize - 6
+                        focusPolicy: Qt.NoFocus
+                        palette.button: Theme.danger
+                        palette.buttonText: "white"
+                        onClicked: perform.engineStatus.panic()
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Stop every sound now (stuck notes, runaway effects)")
                     }
                     Button {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 110
-                        text: qsTr("Next  ▶")
-                        font.pixelSize: Theme.performSubtitleSize
+                        Layout.preferredHeight: 72
+                        text: qsTr("Next song  ▶")
+                        font.pixelSize: Theme.performSubtitleSize - 6
                         highlighted: true
                         focusPolicy: Qt.NoFocus
-                        onClicked: perform.doc.nextPatch()
+                        onClicked: perform.doc.nextSong()
                     }
                 }
 

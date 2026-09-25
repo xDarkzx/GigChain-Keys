@@ -627,6 +627,87 @@ void RealEngine::setOutputLimiter(bool enabled, double ceilingDb)
     qCInfo(lcEngine) << "Safety limiter" << (enabled ? "on at" : "off (ceiling") << ceilingDb << "dB";
 }
 
+std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
+{
+    std::array<MidiTrigger, kControlActionCount> triggers;
+    bool any = false;
+    for (int i = 0; i < kControlActionCount; ++i) {
+        triggers[static_cast<std::size_t>(i)] = MidiTrigger::unpack(m_triggers[static_cast<std::size_t>(i)].load(std::memory_order_relaxed));
+        any = any || triggers[static_cast<std::size_t>(i)].isSet();
+    }
+    std::size_t kept = 0;
+    for (std::size_t e = 0; e < count; ++e) {
+        const MidiEvent& event = m_events[e];
+        if (const MidiTrigger press = learnable(event.status, event.data1, event.data2); press.isSet()) {
+            m_learned.store(press.pack(), std::memory_order_relaxed);
+        }
+        bool consumed = false;
+        if (any) {
+            for (int i = 0; i < kControlActionCount; ++i) {
+                const TriggerMatch match =
+                    matchTrigger(triggers[static_cast<std::size_t>(i)], event.status, event.data1, event.data2);
+                if (!match.belongs) continue;
+                consumed = true; // the instruments never hear a control
+                if (match.pressed) m_pressedActions.fetch_or(1U << i, std::memory_order_relaxed);
+            }
+        }
+        if (!consumed) m_events[kept++] = event;
+    }
+    return kept;
+}
+
+void RealEngine::setControlTriggers(const ControlTriggers& triggers)
+{
+    GC_ONLY_MAIN_THREAD();
+    for (std::size_t i = 0; i < triggers.size(); ++i) m_triggers[i].store(triggers[i].pack(), std::memory_order_relaxed);
+}
+
+std::vector<ControlAction> RealEngine::takeControlActions()
+{
+    GC_ONLY_MAIN_THREAD();
+    const uint32_t pressed = m_pressedActions.exchange(0, std::memory_order_relaxed);
+    std::vector<ControlAction> actions;
+    for (int i = 0; i < kControlActionCount; ++i) {
+        if ((pressed & (1U << i)) != 0) actions.push_back(static_cast<ControlAction>(i));
+    }
+    return actions;
+}
+
+MidiTrigger RealEngine::takeLearnedTrigger()
+{
+    GC_ONLY_MAIN_THREAD();
+    return MidiTrigger::unpack(m_learned.exchange(0, std::memory_order_relaxed));
+}
+
+void RealEngine::panic()
+{
+    GC_ONLY_MAIN_THREAD();
+    QElapsedTimer timer;
+    timer.start();
+    // No render callback may touch a plugin while it is reset.
+    if (auto paused = m_audio.pause(); !paused) {
+        m_pendingNotices.push_back(paused.error().message);
+        qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+    }
+    const double rate = m_audio.sampleRate();
+    const int block = m_audio.maxBlock();
+    for (const auto* nodes : {&m_nodes, &m_masterNodes}) {
+        for (const auto& [key, node] : *nodes) {
+            node->releaseAllNotes();
+            // Deactivate + activate: VST3's reset, clearing voices and tails.
+            if (auto prepared = node->prepare(rate, block); !prepared) m_pendingNotices.push_back(prepared.error().message);
+        }
+    }
+    if (m_audio.isOpen()) {
+        if (auto resumed = m_audio.resume(); !resumed) {
+            m_pendingNotices.push_back(resumed.error().message);
+            qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+        }
+    }
+    qCWarning(lcEngine) << "Panic: every sound stopped (" << m_nodes.size() + m_masterNodes.size() << "plugins reset in"
+                        << timer.elapsed() << "ms )";
+}
+
 void RealEngine::collectEdits()
 {
     GC_ONLY_MAIN_THREAD();
@@ -725,6 +806,7 @@ void RealEngine::render(AudioBlock out) noexcept
     std::size_t count = m_midi.drain(m_events);
     MidiEvent injected;
     while (count < m_events.size() && m_injected.pop(injected)) m_events[count++] = injected;
+    count = takeControlMessages(count);
 
     RenderGraph* graph = m_exchange.acquire();
     if (graph != nullptr) {

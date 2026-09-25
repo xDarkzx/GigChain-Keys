@@ -52,6 +52,10 @@ public:
     void setChannelSolo(const core::ChannelId& id, bool solo) override;
     void setMasterVolume(double volumeDb) override;
     void setMasterMute(bool mute) override;
+    void setControlTriggers(const ControlTriggers& triggers) override;
+    std::vector<ControlAction> takeControlActions() override;
+    MidiTrigger takeLearnedTrigger() override;
+    void panic() override;
     void setMasterEffects(const std::vector<core::PluginSlot>& effects) override;
     std::vector<QString> storeMasterEffectStates(std::vector<core::PluginSlot>& effects) override;
     bool takeMasterEdits() override;
@@ -154,6 +158,14 @@ private:
     std::atomic<float> m_cpuLoad{0.0F};
     std::atomic<bool> m_midiSeen{false};
     std::atomic<uint64_t> m_droppedInjected{0};
+    // Control triggers (packed MidiTrigger per ControlAction), actions pressed
+    // (one bit each) and the last learnable press. Audio thread reads/sets,
+    // main thread writes/takes.
+    std::array<std::atomic<uint32_t>, kControlActionCount> m_triggers{};
+    std::atomic<uint32_t> m_pressedActions{0};
+    std::atomic<uint32_t> m_learned{0};
+    // Audio thread: takes control messages out of `count` events (in place).
+    std::size_t takeControlMessages(std::size_t count) noexcept;
 };
 
 } // namespace gigchain::engine

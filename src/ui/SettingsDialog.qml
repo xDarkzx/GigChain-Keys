@@ -289,6 +289,54 @@ Popup {
                             color: Theme.textDim
                             wrapMode: Text.Wrap
                         }
+
+                        SettingsSection { title: qsTr("Pedals and pads") }
+                        Label {
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            text: qsTr("Change songs with your feet or a pad. Click Learn, then press the pedal, pad or "
+                                       + "button. What you choose here only switches: your instruments never hear it.")
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
+                        Repeater {
+                            model: dialog.settings.controls
+                            delegate: RowLayout {
+                                id: controlRow
+                                required property var modelData
+                                readonly property bool learning: dialog.settings.learning === modelData.action
+                                objectName: "controlRow" + modelData.action
+                                Layout.leftMargin: 20
+                                Layout.rightMargin: 20
+                                spacing: 12
+                                Label {
+                                    Layout.preferredWidth: 180
+                                    text: controlRow.modelData.label
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: controlRow.learning ? qsTr("Press it now…")
+                                        : (controlRow.modelData.trigger !== "" ? controlRow.modelData.trigger : qsTr("Not set"))
+                                    color: controlRow.learning ? Theme.accent
+                                         : (controlRow.modelData.trigger !== "" ? Theme.text : Theme.textDim)
+                                    font.bold: controlRow.learning
+                                }
+                                Button {
+                                    objectName: "learnControl"
+                                    text: controlRow.learning ? qsTr("Waiting…") : qsTr("Learn")
+                                    highlighted: controlRow.learning
+                                    focusPolicy: Qt.NoFocus
+                                    onClicked: dialog.settings.learnControl(controlRow.modelData.action)
+                                }
+                                Button {
+                                    text: qsTr("Clear")
+                                    enabled: controlRow.modelData.trigger !== ""
+                                    focusPolicy: Qt.NoFocus
+                                    onClicked: dialog.settings.clearControl(controlRow.modelData.action)
+                                }
+                            }
+                        }
                     }
                 }
 

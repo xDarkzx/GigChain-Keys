@@ -139,69 +139,9 @@ Rectangle {
                     font.pixelSize: Theme.fontSize + 2
                 }
 
-                Repeater {
-                    objectName: "chartLines"
-                    model: panel.doc.chartLines(panel.doc.currentChart)
-                    delegate: Loader {
-                        id: lineLoader
-                        required property var modelData
-                        width: parent ? parent.width : 0
-                        sourceComponent: modelData.kind === "lyrics" ? lyricLine
-                                       : modelData.kind === "section" ? sectionLine
-                                       : modelData.kind === "comment" ? commentLine
-                                       : blankLine
-                        Component {
-                            id: lyricLine
-                            // Each segment: its chord above its words.
-                            Flow {
-                                width: lineLoader.width
-                                Repeater {
-                                    model: lineLoader.modelData.segments
-                                    delegate: Column {
-                                        required property var modelData
-                                        Text {
-                                            text: modelData.chord !== "" ? modelData.chord : " "
-                                            color: Theme.accent
-                                            font.pixelSize: Theme.fontSize + 5
-                                            font.bold: true
-                                            // Chords with no words under them (an intro, a
-                                            // turnaround) keep a gap between them.
-                                            rightPadding: modelData.text.trim() === "" ? 18 : 0
-                                        }
-                                        Text {
-                                            text: modelData.text !== "" ? modelData.text : " "
-                                            color: Theme.text
-                                            font.pixelSize: Theme.fontSize + 7
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Component {
-                            id: sectionLine
-                            Text {
-                                topPadding: 10
-                                text: lineLoader.modelData.label
-                                color: Theme.accentBlue
-                                font.pixelSize: Theme.fontSize + 3
-                                font.bold: true
-                            }
-                        }
-                        Component {
-                            id: commentLine
-                            Text {
-                                topPadding: 8
-                                text: lineLoader.modelData.label
-                                color: Theme.accentBlue
-                                font.pixelSize: Theme.fontSize + 3
-                                font.bold: true
-                            }
-                        }
-                        Component {
-                            id: blankLine
-                            Item { height: 14 }
-                        }
-                    }
+                ChartView {
+                    width: parent.width
+                    lines: panel.doc.chartLines(panel.doc.currentChart)
                 }
             }
         }

@@ -83,6 +83,17 @@ ToolBar {
             onClicked: if (!bar.performMode) bar.toggleMode()
         }
 
+        Button {
+            objectName: "panicButton"
+            text: qsTr("Panic")
+            focusPolicy: Qt.NoFocus
+            palette.button: Theme.danger
+            palette.buttonText: "white"
+            onClicked: bar.engineStatus.panic()
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Stop every sound now (stuck notes, runaway effects)")
+        }
+
         Label {
             text: bar.doc.hasPatch ? bar.doc.currentSongName + "  ·  " + bar.doc.currentPatchName : ""
             color: Theme.textDim

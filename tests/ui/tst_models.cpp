@@ -329,6 +329,18 @@ private slots:
         QCOMPARE(status.masterPeak(), 0.4F); // the master strip's meter
         QCOMPARE(m_doc->lastError(), u"Audio device restarted"_s);
 
+        // A learned pedal and pad switch songs; the panic button stops the sound.
+        QVERIFY(m_doc->addSong());
+        const int song = m_doc->songIndex();
+        m_engine->pendingActions = {engine::ControlAction::PreviousSong};
+        status.poll();
+        QCOMPARE(m_doc->songIndex(), song - 1);
+        m_engine->pendingActions = {engine::ControlAction::NextSong, engine::ControlAction::Panic};
+        status.poll();
+        QCOMPARE(m_doc->songIndex(), song);
+        QCOMPARE(m_engine->panics, 1);
+        QVERIFY(m_doc->lastError().contains(u"Panic"_s));
+
         status.setMasterVolumeDb(-6.0);
         QCOMPARE(m_engine->master, -6.0);
         status.playNote(60, true);

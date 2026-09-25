@@ -4,6 +4,7 @@
 #include "gigchain/core/Model.h"
 #include "gigchain/engine/EngineTypes.h"
 #include "gigchain/engine/IPluginEditor.h"
+#include "gigchain/engine/MidiControl.h"
 #include "gigchain/engine/MidiSetup.h"
 
 #include <QSize>
@@ -137,6 +138,19 @@ public:
     // Reopens the inputs as chosen. An input that fails to open is an error
     // naming it (the others still open).
     virtual core::Result<void> setMidiSetup(const MidiSetup& setup) = 0;
+
+    // Pedals, pads and buttons that switch songs and patches or stop all
+    // sound (learned in Settings). Their messages are taken out of what the
+    // instruments hear (a sustain pedal used for "next song" never also
+    // sustains); a press is an action, returned once by takeControlActions().
+    virtual void setControlTriggers(const ControlTriggers& triggers) = 0;
+    virtual std::vector<ControlAction> takeControlActions() = 0;
+    // For "Learn": the last control pressed (a pedal down, a pad or key hit,
+    // a program change) since the previous call; unset when none.
+    virtual MidiTrigger takeLearnedTrigger() = 0;
+    // Stops every sound now: every plugin is reset (its voices and tails
+    // cleared) and held notes are released. Instruments play again at once.
+    virtual void panic() = 0;
 
     // One line describing the audio setup, e.g. "Scarlett Solo · WASAPI · 5.3 ms".
     [[nodiscard]] virtual QString statusText() const = 0;
