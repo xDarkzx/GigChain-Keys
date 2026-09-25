@@ -2,6 +2,7 @@
 
 #include "gigchain/core/Ids.h"
 
+#include <QByteArray>
 #include <QString>
 
 #include <optional>
@@ -15,6 +16,10 @@ struct PluginSlot
     QString pluginId;
     QString displayName;
     bool bypass = false;
+    // The plugin's own settings (its preset, knobs, loaded sounds) as the
+    // engine stored them when the setlist was saved; opaque here. Empty: the
+    // plugin's defaults.
+    QByteArray state;
 
     friend bool operator==(const PluginSlot&, const PluginSlot&) = default;
 };

@@ -79,6 +79,29 @@ public:
         return number(obj, key, path, min, max);
     }
 
+    // Binary data stored as base64 text, absent when empty (added in format 2).
+    QByteArray optionalBytes(const QJsonObject& obj, QLatin1StringView key, const QString& path, qsizetype maxBytes)
+    {
+        if (failed() || !obj.contains(key)) return {};
+        const QString where = path + u'.' + key;
+        const QJsonValue value = obj.value(key);
+        if (!value.isString()) {
+            setError(ErrorCode::InvalidData, u"%1 must be text"_s.arg(where));
+            return {};
+        }
+        const QString text = value.toString();
+        if (text.size() > (maxBytes / 3 + 1) * 4) {
+            setError(ErrorCode::LimitExceeded, u"%1 is larger than %2 bytes"_s.arg(where).arg(maxBytes));
+            return {};
+        }
+        auto decoded = QByteArray::fromBase64Encoding(text.toLatin1(), QByteArray::AbortOnBase64DecodingErrors);
+        if (!decoded) {
+            setError(ErrorCode::InvalidData, u"%1 is damaged (not base64)"_s.arg(where));
+            return {};
+        }
+        return decoded.decoded;
+    }
+
     bool boolean(const QJsonObject& obj, QLatin1StringView key, const QString& path)
     {
         const auto value = get(obj, key, path);
@@ -175,6 +198,7 @@ PluginSlot readSlot(JsonReader& r, const QJsonObject& obj, const QString& path)
     slot.pluginId = r.string(obj, "pluginId"_L1, path, limits::kMaxPluginIdLength);
     slot.displayName = r.string(obj, "displayName"_L1, path, limits::kMaxNameLength);
     slot.bypass = r.boolean(obj, "bypass"_L1, path);
+    slot.state = r.optionalBytes(obj, "state"_L1, path, limits::kMaxPluginStateBytes);
     return slot;
 }
 
@@ -251,11 +275,13 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
 
 QJsonObject writeSlot(const PluginSlot& slot)
 {
-    return QJsonObject{
+    QJsonObject obj{
         {u"pluginId"_s, slot.pluginId},
         {u"displayName"_s, slot.displayName},
         {u"bypass"_s, slot.bypass},
     };
+    if (!slot.state.isEmpty()) obj.insert(u"state"_s, QString::fromLatin1(slot.state.toBase64()));
+    return obj;
 }
 
 QJsonObject writeChannel(const Channel& channel)

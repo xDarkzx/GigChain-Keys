@@ -16,6 +16,8 @@ public:
     void applyPatch(const core::SongId& song, const core::Patch& patch) override;
     void preload(const core::Setlist&) override {}
     void setProgressHandler(LoadProgress) override {}
+    std::vector<QString> storePluginStates(core::Setlist&) override { return {}; } // demo plugins have no settings
+    bool takePluginEdits() override { return false; }
     [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override;
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;

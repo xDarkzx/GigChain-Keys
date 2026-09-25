@@ -1,5 +1,6 @@
 // Integration tests against real installed plugins. Each test skips when its
 // plugin is not installed, so the suite still passes on other machines.
+#include "ComponentHandler.h"
 #include "Vst3Node.h"
 
 #include <QFile>
@@ -125,6 +126,60 @@ private slots:
         const auto again = (*second)->saveState();
         QVERIFY(again.has_value());
         QCOMPARE(again->component.size(), saved->component.size());
+    }
+
+    void stateIsStoredCompactly()
+    {
+        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        auto node = Vst3Node::load(kInstrument, kRate, kBlock);
+        QVERIFY(node.has_value());
+        const auto saved = (*node)->saveState();
+        QVERIFY(saved.has_value());
+        const QByteArray bytes = saved->encode();
+        QVERIFY(bytes.size() < saved->component.size()); // compressed; Arturia's two identical copies stored once
+        const auto decoded = Vst3Node::State::decode(bytes);
+        QVERIFY2(decoded.has_value(), decoded ? "" : qPrintable(decoded.error().message));
+        QCOMPARE(decoded->component, saved->component);
+        QCOMPARE(decoded->controller, saved->controller);
+    }
+
+    void differentControllerStateSurvivesEncoding()
+    {
+        const Vst3Node::State state{QByteArray("component bytes"), QByteArray("controller bytes")};
+        const auto decoded = Vst3Node::State::decode(state.encode());
+        QVERIFY(decoded.has_value());
+        QCOMPARE(decoded->component, state.component);
+        QCOMPARE(decoded->controller, state.controller);
+    }
+
+    void brokenStateIsAnError()
+    {
+        for (const QByteArray& junk : {QByteArray(), QByteArray("junk"), QByteArray("GCS1 not compressed")}) {
+            const auto decoded = Vst3Node::State::decode(junk);
+            QVERIFY(!decoded);
+            QVERIFY(decoded.error().code == core::ErrorCode::InvalidData);
+        }
+    }
+
+    void pluginEditsAreNoticed()
+    {
+        ComponentHandler handler;
+        QVERIFY(!handler.takeEdited());
+        handler.beginEdit(1);
+        handler.performEdit(1, 0.5); // a knob turned in the plugin's window
+        handler.endEdit(1);
+        QVERIFY(handler.takeEdited());
+        QVERIFY(!handler.takeEdited()); // reported once
+
+        handler.restartComponent(Steinberg::Vst::kLatencyChanged); // not a settings change
+        QVERIFY(!handler.takeEdited());
+        handler.restartComponent(Steinberg::Vst::kParamValuesChanged); // a preset chosen in the plugin
+        QVERIFY(handler.takeEdited());
+
+        void* second = nullptr;
+        QCOMPARE(handler.queryInterface(Steinberg::Vst::IComponentHandler2::iid, &second), Steinberg::kResultOk);
+        static_cast<Steinberg::Vst::IComponentHandler2*>(second)->setDirty(true);
+        QVERIFY(handler.takeEdited());
     }
 
     void sidechainEffectLoads()

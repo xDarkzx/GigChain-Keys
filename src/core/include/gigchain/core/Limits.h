@@ -6,7 +6,10 @@
 // is rejected with an Error instead of being processed.
 namespace gigchain::core::limits {
 
-inline constexpr qint64 kMaxFileBytes = 8LL * 1024 * 1024;
+// Plugin settings make files bigger: measured, most plugins store under 15 KB
+// once compressed (Arturia's Synclavier V: 628 KB raw, 14 KB stored).
+inline constexpr qint64 kMaxFileBytes = 64LL * 1024 * 1024;
+inline constexpr qsizetype kMaxPluginStateBytes = 16LL * 1024 * 1024; // one plugin's stored settings
 inline constexpr int kMaxSongs = 500;
 inline constexpr int kMaxPatchesPerSong = 64;
 inline constexpr int kMaxChannelsPerPatch = 32;

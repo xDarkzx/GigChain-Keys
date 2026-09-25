@@ -1,4 +1,5 @@
 #include "DocumentController.h"
+#include "EngineStatus.h"
 #include "LeakCheck.h"
 #include "SpyEngine.h"
 
@@ -320,6 +321,35 @@ private slots:
         QCOMPARE(entry.value(u"name"_s).toString(), u"old"_s);
         QCOMPARE(entry.value(u"songs"_s).toInt(), -1); // unknown until opened
         QVERIFY(!entry.value(u"opened"_s).toDateTime().isValid());
+    }
+
+    void savingKeepsEachPluginsSettings()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->saveAs(path(u"gig.gigchain.json"_s)));
+        QCOMPARE(m_engine->storeCount, 1); // asked for the plugins' settings when saving
+        const auto saved = core::loadSetlistFile(path(u"gig.gigchain.json"_s));
+        QVERIFY(saved.has_value());
+        QCOMPARE(saved->songs[0].patches[0].channels[0].instrument->state, QByteArray("spy settings: spy/Piano.vst3"));
+    }
+
+    void aDuplicatedSongSoundsLikeTheOriginalDoesNow()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->duplicateSong(0));
+        const auto& copy = m_doc->setlist().songs.at(1);
+        QCOMPARE(copy.patches[0].channels[0].instrument->state, QByteArray("spy settings: spy/Piano.vst3"));
+    }
+
+    void aPluginEditMarksTheSetlistUnsaved()
+    {
+        QVERIFY(m_doc->saveAs(path(u"gig.gigchain.json"_s)));
+        QVERIFY(!m_doc->isDirty());
+        EngineStatus status(*m_engine, *m_doc);
+        m_engine->pluginEdited = true; // a knob turned in a plugin window
+        status.poll();
+        QVERIFY(m_doc->isDirty()); // the title shows it and closing asks to save
+        QVERIFY(!m_engine->pluginEdited);
     }
 
     void pastedChordSheetBecomesTheSongsChart()

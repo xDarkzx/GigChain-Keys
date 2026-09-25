@@ -363,6 +363,15 @@ bool DocumentController::renamePatch(int song, int patch, const QString& name)
 bool DocumentController::duplicateSong(int song)
 {
     const auto current = currentPatchId();
+    // The copy starts with the plugins' settings as they are now, not as
+    // they were last saved.
+    if (song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size()) {
+        core::Setlist one;
+        one.songs = {m_setlist.songs[static_cast<std::size_t>(song)]};
+        const std::vector<QString> problems = m_engine.storePluginStates(one); // each logged
+        if (!problems.empty()) reportMessage(problems.back());
+        m_setlist.songs[static_cast<std::size_t>(song)] = std::move(one.songs.front());
+    }
     const auto index = core::duplicateSong(m_setlist, song);
     if (!index) return report(index.error());
     commitStructure(core::Cursor{*index, 0}, current);
@@ -621,12 +630,18 @@ bool DocumentController::saveAs(const QString& path)
 {
     QString target = path;
     if (!target.endsWith(u".json"_s, Qt::CaseInsensitive)) target += branding::setlistSuffix();
+    // Each plugin's settings (preset, knobs) are saved with it.
+    const std::vector<QString> problems = m_engine.storePluginStates(m_setlist); // each logged
     if (auto r = core::saveSetlistFile(m_setlist, target); !r) return report(r.error());
     setFilePath(target);
     rememberRecent(target);
     m_settings.setValue(kLastFileKey, target);
     setDirty(false);
     qCInfo(lcUi).noquote() << "Saved setlist" << target;
+    if (!problems.empty()) {
+        reportMessage(tr("Saved, but %1").arg(problems.size() == 1 ? problems.front()
+                                                                  : tr("%n plugins' settings could not be saved (see the log)", nullptr, static_cast<int>(problems.size()))));
+    }
     return true;
 }
 
@@ -767,6 +782,11 @@ bool DocumentController::effectExists(int channel, int effect) const
     const core::Patch* patch = currentPatch();
     return patch != nullptr && channel >= 0 && static_cast<std::size_t>(channel) < patch->channels.size() && effect >= 0 &&
            static_cast<std::size_t>(effect) < patch->channels[static_cast<std::size_t>(channel)].effects.size();
+}
+
+void DocumentController::markPluginSettingsChanged()
+{
+    if (m_hasSetlist) setDirty(true);
 }
 
 void DocumentController::setDirty(bool dirty)
