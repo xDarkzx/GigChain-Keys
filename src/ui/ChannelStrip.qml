@@ -41,7 +41,7 @@ Rectangle {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {
             strip.doc.selectedChannel = strip.index
-            if (mouse.button === Qt.RightButton) channelMenu.popup(mouse.x, mouse.y)
+            if (mouse.button === Qt.RightButton) strip.menu(channelMenuComponent).popup(mouse.x, mouse.y)
         }
     }
 
@@ -52,50 +52,68 @@ Rectangle {
     }
 
     // ---------------------------------------------------------------- menus
-    StageMenu {
-        id: channelMenu
-        StageMenuItem { text: qsTr("Open %1").arg(strip.instrumentName || qsTr("instrument")); onTriggered: strip.doc.selectedChannel = strip.index }
-        StageMenuItem { text: strip.mute ? qsTr("Unmute") : qsTr("Mute"); onTriggered: strip.doc.setChannelMute(strip.index, !strip.mute) }
-        StageMenuItem { text: strip.solo ? qsTr("Unsolo") : qsTr("Solo"); onTriggered: strip.doc.setChannelSolo(strip.index, !strip.solo) }
+    // Each menu lists every installed plugin, so it is built the first time
+    // it is opened, not when the strip is created: switching songs rebuilds
+    // the strips and must stay instant.
+    property var builtMenus: ({})
+    function menu(component) {
+        const key = component.toString()
+        if (!builtMenus[key]) builtMenus[key] = component.createObject(strip)
+        return builtMenus[key]
+    }
+
+    Component {
+        id: channelMenuComponent
+        StageMenu {
+            StageMenuItem { text: qsTr("Open %1").arg(strip.instrumentName || qsTr("instrument")); onTriggered: strip.doc.selectedChannel = strip.index }
+            StageMenuItem { text: strip.mute ? qsTr("Unmute") : qsTr("Mute"); onTriggered: strip.doc.setChannelMute(strip.index, !strip.mute) }
+            StageMenuItem { text: strip.solo ? qsTr("Unsolo") : qsTr("Solo"); onTriggered: strip.doc.setChannelSolo(strip.index, !strip.solo) }
+            EffectPickerMenu {
+                title: qsTr("Add Effect")
+                pluginModel: strip.pluginModel
+                onPicked: (pluginId, name) => strip.doc.addEffect(strip.index, pluginId, name)
+            }
+            InstrumentPickerMenu {
+                title: qsTr("Replace Instrument")
+                pluginModel: strip.pluginModel
+                onPicked: (pluginId, name) => strip.doc.setChannelInstrument(strip.index, pluginId, name)
+            }
+            MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+            StageMenuItem { text: qsTr("Remove Channel"); onTriggered: strip.doc.removeChannel(strip.index) }
+        }
+    }
+
+    Component {
+        id: effectMenuComponent
+        StageMenu {
+            StageMenuItem {
+                text: strip.menuEffect >= 0 && strip.effectBypassed[strip.menuEffect] ? qsTr("Turn On") : qsTr("Bypass")
+                onTriggered: strip.doc.setEffectBypass(strip.index, strip.menuEffect, !strip.effectBypassed[strip.menuEffect])
+            }
+            EffectPickerMenu {
+                title: qsTr("Replace With")
+                pluginModel: strip.pluginModel
+                onPicked: (pluginId, name) => strip.doc.replaceEffect(strip.index, strip.menuEffect, pluginId, name)
+            }
+            MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+            StageMenuItem { text: qsTr("Remove Effect"); onTriggered: strip.doc.removeEffect(strip.index, strip.menuEffect) }
+        }
+    }
+
+    Component {
+        id: addEffectMenuComponent
         EffectPickerMenu {
-            title: qsTr("Add Effect")
             pluginModel: strip.pluginModel
             onPicked: (pluginId, name) => strip.doc.addEffect(strip.index, pluginId, name)
         }
+    }
+
+    Component {
+        id: instrumentPickerComponent
         InstrumentPickerMenu {
-            title: qsTr("Replace Instrument")
             pluginModel: strip.pluginModel
             onPicked: (pluginId, name) => strip.doc.setChannelInstrument(strip.index, pluginId, name)
         }
-        MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
-        StageMenuItem { text: qsTr("Remove Channel"); onTriggered: strip.doc.removeChannel(strip.index) }
-    }
-
-    StageMenu {
-        id: effectMenu
-        StageMenuItem {
-            text: strip.menuEffect >= 0 && strip.effectBypassed[strip.menuEffect] ? qsTr("Turn On") : qsTr("Bypass")
-            onTriggered: strip.doc.setEffectBypass(strip.index, strip.menuEffect, !strip.effectBypassed[strip.menuEffect])
-        }
-        EffectPickerMenu {
-            title: qsTr("Replace With")
-            pluginModel: strip.pluginModel
-            onPicked: (pluginId, name) => strip.doc.replaceEffect(strip.index, strip.menuEffect, pluginId, name)
-        }
-        MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
-        StageMenuItem { text: qsTr("Remove Effect"); onTriggered: strip.doc.removeEffect(strip.index, strip.menuEffect) }
-    }
-
-    EffectPickerMenu {
-        id: addEffectMenu
-        pluginModel: strip.pluginModel
-        onPicked: (pluginId, name) => strip.doc.addEffect(strip.index, pluginId, name)
-    }
-
-    InstrumentPickerMenu {
-        id: instrumentPicker
-        pluginModel: strip.pluginModel
-        onPicked: (pluginId, name) => strip.doc.setChannelInstrument(strip.index, pluginId, name)
     }
 
     // ---------------------------------------------------------------- layout
@@ -165,9 +183,9 @@ Rectangle {
             loadedColor: Theme.slotInstrument
             onClicked: {
                 strip.doc.selectedChannel = strip.index
-                if (!loaded) instrumentPicker.popup(instrumentSlot, 0, instrumentSlot.height)
+                if (!loaded) strip.menu(instrumentPickerComponent).popup(instrumentSlot, 0, instrumentSlot.height)
             }
-            onMenuRequested: channelMenu.popup(instrumentSlot, 0, instrumentSlot.height)
+            onMenuRequested: strip.menu(channelMenuComponent).popup(instrumentSlot, 0, instrumentSlot.height)
         }
 
         // effect slots, then one empty slot to add another
@@ -184,7 +202,7 @@ Rectangle {
                 onPowerToggled: strip.doc.setEffectBypass(strip.index, index, !bypassed)
                 onMenuRequested: {
                     strip.menuEffect = index
-                    effectMenu.popup(fxSlot, 0, fxSlot.height)
+                    strip.menu(effectMenuComponent).popup(fxSlot, 0, fxSlot.height)
                 }
             }
         }
@@ -192,7 +210,7 @@ Rectangle {
             id: addSlot
             Layout.fillWidth: true
             text: ""
-            onClicked: addEffectMenu.popup(addSlot, 0, addSlot.height)
+            onClicked: strip.menu(addEffectMenuComponent).popup(addSlot, 0, addSlot.height)
         }
 
         PanKnob {
