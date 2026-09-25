@@ -425,6 +425,11 @@ bool DocumentController::movePatch(int song, int from, int to)
 
 bool DocumentController::addChannel(const QString& pluginId, const QString& name)
 {
+    if (!m_hasSetlist) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("Start or open a setlist first")});
+    }
+    // The first instrument of an empty setlist starts its first song.
+    if (m_setlist.songs.empty() && !addSong()) return false;
     const auto index = core::addChannel(m_setlist, m_cursor, core::PluginSlot{pluginId, name, false});
     if (!index) return report(index.error());
     commitChannels(*index);

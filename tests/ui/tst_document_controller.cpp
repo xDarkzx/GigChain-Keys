@@ -56,6 +56,18 @@ private slots:
         QVERIFY(!fresh.isDirty());
     }
 
+    void anInstrumentNeedsASetlistAndStartsTheFirstSong()
+    {
+        DocumentController fresh(*m_engine, *m_settings);
+        QVERIFY(!fresh.addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s)); // start screen: nothing to add to
+        QCOMPARE(fresh.lastError(), u"Start or open a setlist first"_s);
+
+        fresh.newSetlist();
+        QVERIFY(fresh.addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s)); // not "Patch does not exist"
+        QCOMPARE(fresh.setlist().songs.size(), std::size_t{1});
+        QCOMPARE(fresh.currentPatch()->channels.size(), std::size_t{1});
+    }
+
     void pastingIntoAnEmptySetlistCreatesTheSong()
     {
         DocumentController fresh(*m_engine, *m_settings);
