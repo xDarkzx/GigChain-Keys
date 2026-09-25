@@ -348,6 +348,41 @@ private slots:
         QVERIFY(!engine.createEffectEditor(core::ChannelId(u"gone"_s), 0)); // no such channel
     }
 
+    void masterEffectsStayWhateverSetlistIsOpen()
+    {
+        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+
+        std::vector<core::PluginSlot> master{core::PluginSlot{kSmall, u"Kotelnikov"_s, false},
+                                             core::PluginSlot{kSmall, u"Kotelnikov"_s, true}};
+        engine.setMasterEffects(master);
+        QVERIFY(engine.poll().empty());
+        QVERIFY(!engine.takeMasterEdits()); // loading is not an edit
+        auto editor = engine.createMasterEffectEditor(0);
+        QVERIFY2(editor.has_value() && *editor, editor ? "no editor" : qPrintable(editor.error().message));
+        editor->reset();
+        QVERIFY(!engine.createMasterEffectEditor(1)); // switched off: not loaded
+        QVERIFY(!engine.createMasterEffectEditor(2));
+
+        // Opening another setlist does not touch the master bus.
+        engine.preload(core::Setlist{});
+        QVERIFY(engine.createMasterEffectEditor(0).has_value());
+
+        QVERIFY(engine.storeMasterEffectStates(master).empty());
+        QVERIFY(!master[0].state.isEmpty());
+        QVERIFY(master[1].state.isEmpty()); // not loaded: kept as it was
+
+        engine.setOutputLimiter(true, -3.0);
+        (void)engine.takeLimiterActivity();
+        engine.setMasterEffects({});
+        QVERIFY(!engine.createMasterEffectEditor(0));
+    }
+
     void unknownPluginIsReportedNotIgnored()
     {
         auto created = createRealEngine();

@@ -171,6 +171,29 @@ private slots:
         settle();
     }
 
+    void masterStripTakesEffectsAndShowsTheLimiter()
+    {
+        auto* bus = window()->property("masterBus").value<QObject*>();
+        QVERIFY(bus != nullptr);
+        bool added = false;
+        QVERIFY(QMetaObject::invokeMethod(bus, "addEffect", Q_RETURN_ARG(bool, added), Q_ARG(QString, u"fake.reverb"_s),
+                                          Q_ARG(QString, u"Reverb"_s)));
+        QVERIFY(added);
+        settle();
+        auto* list = item(u"masterEffectList"_s);
+        QVERIFY(list != nullptr);
+        QCOMPARE(list->property("count").toInt(), 1);
+        QVERIFY(item(u"masterAddEffect"_s) != nullptr);
+        QVERIFY(item(u"limiterLight"_s) != nullptr);
+        auto* dialog = window()->findChild<QObject*>(u"settingsDialog"_s);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "open"));
+        QVERIFY(dialog->setProperty("page", 1)); // Audio: the limiter's settings
+        settle();
+        QVERIFY(dialog->findChild<QObject*>(u"limiterCeiling"_s) != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        settle();
+    }
+
     void channelVolumeTypesAndPanDragsSideways()
     {
         QVERIFY(m_session->document().addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));

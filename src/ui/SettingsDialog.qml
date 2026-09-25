@@ -178,6 +178,35 @@ Popup {
                                 color: Theme.textDim
                             }
                         }
+                        SettingsSection { title: qsTr("Safety limiter") }
+                        CheckBox {
+                            objectName: "limiterEnabled"
+                            Layout.leftMargin: 14
+                            text: qsTr("Never let the output go past the ceiling")
+                            checked: dialog.settings.limiterEnabled
+                            onToggled: dialog.settings.limiterEnabled = checked
+                            focusPolicy: Qt.NoFocus
+                        }
+                        SettingsRow {
+                            label: qsTr("Ceiling")
+                            StageComboBox {
+                                objectName: "limiterCeiling"
+                                enabled: dialog.settings.limiterEnabled
+                                model: dialog.settings.limiterCeilings.map((c) => c.toFixed(1) + " dB")
+                                currentIndex: dialog.settings.limiterCeilings.indexOf(dialog.settings.limiterCeilingDb)
+                                onActivated: (i) => dialog.settings.limiterCeilingDb = dialog.settings.limiterCeilings[i]
+                            }
+                        }
+                        Label {
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            text: qsTr("The last thing before your audio interface: a patch that is too hot or a synth that runs away "
+                                       + "never reaches the sound desk louder than this. Below the ceiling your sound is untouched. "
+                                       + "The LIM light on the Master strip shows when it steps in.")
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
                         SettingsSection { title: qsTr("Running now") }
                         Label {
                             Layout.leftMargin: 20

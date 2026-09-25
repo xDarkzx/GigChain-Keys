@@ -165,6 +165,17 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
         else qCWarning(lcEngine).noquote() << size.error().message;
     }
 
+    auto node = loadWithSettings(slot);
+    if (!node) return nullptr;
+    if (arturiaSize) m_arturiaLoadedSize[node.get()] = *arturiaSize;
+    m_nodeStates[key] = slot.state;
+    m_editedNodes.erase(key);
+    m_nodes.emplace(key, node);
+    return node;
+}
+
+std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& slot)
+{
     QElapsedTimer timer;
     timer.start();
     auto node = Vst3Node::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());
@@ -186,10 +197,6 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
     }
     (void)(*node)->takeEdited(); // loading and restoring are not edits
     qCInfo(lcEngine).noquote() << "Plugin" << slot.displayName << "ready in" << timer.elapsed() << "ms";
-    if (arturiaSize) m_arturiaLoadedSize[node->get()] = *arturiaSize;
-    m_nodeStates[key] = slot.state;
-    m_editedNodes.erase(key);
-    m_nodes.emplace(key, *node);
     return *node;
 }
 
@@ -257,9 +264,11 @@ void RealEngine::syncPluginsToDevice()
         qCWarning(lcEngine).noquote() << m_pendingNotices.back();
         return; // plugins stay as they were; the graph skips blocks larger than they expect
     }
-    for (const auto& [key, node] : m_nodes) {
-        if (auto prepared = node->prepare(rate, block); !prepared) { // logged by prepare()
-            m_pendingNotices.push_back(prepared.error().message);
+    for (const auto* nodes : {&m_nodes, &m_masterNodes}) {
+        for (const auto& [key, node] : *nodes) {
+            if (auto prepared = node->prepare(rate, block); !prepared) { // logged by prepare()
+                m_pendingNotices.push_back(prepared.error().message);
+            }
         }
     }
     m_preparedRate = rate;
@@ -379,7 +388,12 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     for (const auto& [key, node] : m_nodes) {
         if (used.count(node.get()) == 0) node->releaseAllNotes();
     }
-    m_exchange.publish(std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock()));
+    std::vector<std::shared_ptr<INode>> master;
+    for (const QString& key : masterKeys()) {
+        if (const auto it = m_masterNodes.find(key); it != m_masterNodes.end()) master.push_back(it->second);
+    }
+    m_exchange.publish(std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(),
+                                                     std::move(master)));
     qCInfo(lcEngine).noquote() << "Patch applied:" << patch.name << "(" << patch.channels.size() << "channels ) in"
                                << timer.elapsed() << "ms";
 }
@@ -558,6 +572,92 @@ core::Result<bool> RealEngine::fitEditorToArea(const core::ChannelId& id, QSize 
     return true;
 }
 
+std::vector<QString> RealEngine::masterKeys() const
+{
+    std::vector<QString> keys;
+    std::map<QString, int> uses;
+    for (const core::PluginSlot& slot : m_masterSlots) {
+        if (slot.bypass) {
+            keys.emplace_back();
+            continue;
+        }
+        const int n = uses[slot.pluginId]++;
+        keys.push_back(u"master|fx|"_s + slot.pluginId + u'#' + QString::number(n));
+    }
+    return keys;
+}
+
+void RealEngine::setMasterEffects(const std::vector<core::PluginSlot>& effects)
+{
+    QElapsedTimer timer;
+    timer.start();
+    m_masterSlots = effects;
+    const std::vector<QString> keys = masterKeys();
+    // Take edits made to instances that are going away before they go.
+    (void)takeMasterEdits();
+    m_masterEdited = false;
+    std::erase_if(m_masterNodes, [&](const auto& entry) {
+        return std::find(keys.begin(), keys.end(), entry.first) == keys.end();
+    });
+    for (std::size_t i = 0; i < keys.size(); ++i) {
+        if (keys[i].isEmpty() || m_masterNodes.count(keys[i]) != 0) continue;
+        if (auto node = loadWithSettings(m_masterSlots[i])) m_masterNodes.emplace(keys[i], std::move(node));
+    }
+    applyPatch(m_song, m_patch); // the graph now plays them
+    qCInfo(lcEngine) << "Master effects:" << m_masterNodes.size() << "loaded in" << timer.elapsed() << "ms";
+}
+
+std::vector<QString> RealEngine::storeMasterEffectStates(std::vector<core::PluginSlot>& effects)
+{
+    std::vector<QString> problems;
+    const std::vector<QString> keys = masterKeys();
+    for (std::size_t i = 0; i < effects.size() && i < keys.size(); ++i) {
+        const auto node = m_masterNodes.find(keys[i]);
+        if (node == m_masterNodes.end() || effects[i].pluginId != m_masterSlots[i].pluginId) continue;
+        auto state = node->second->saveState();
+        if (!state) {
+            problems.push_back(u"The settings of %1 could not be saved: %2"_s.arg(effects[i].displayName, state.error().message));
+            qCWarning(lcEngine).noquote() << problems.back();
+            continue;
+        }
+        effects[i].state = state->encode();
+        m_masterSlots[i].state = effects[i].state;
+    }
+    return problems;
+}
+
+bool RealEngine::takeMasterEdits()
+{
+    for (const auto& [key, node] : m_masterNodes) {
+        if (node->takeEdited()) m_masterEdited = true;
+    }
+    return std::exchange(m_masterEdited, false);
+}
+
+core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createMasterEffectEditor(int effect)
+{
+    const std::vector<QString> keys = masterKeys();
+    if (effect < 0 || static_cast<std::size_t>(effect) >= keys.size()) {
+        return core::fail(core::ErrorCode::OutOfRange, u"That master effect is no longer there"_s);
+    }
+    const core::PluginSlot& slot = m_masterSlots[static_cast<std::size_t>(effect)];
+    if (slot.bypass) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
+    }
+    const auto node = m_masterNodes.find(keys[static_cast<std::size_t>(effect)]);
+    if (node == m_masterNodes.end()) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
+    }
+    return Vst3Node::createEditor(node->second);
+}
+
+void RealEngine::setOutputLimiter(bool enabled, double ceilingDb)
+{
+    m_limiter.setEnabled(enabled);
+    m_limiter.setCeilingDb(ceilingDb);
+    qCInfo(lcEngine) << "Safety limiter" << (enabled ? "on at" : "off (ceiling") << ceilingDb << "dB";
+}
+
 void RealEngine::collectEdits()
 {
     for (const auto& [key, node] : m_nodes) {
@@ -665,6 +765,13 @@ void RealEngine::render(AudioBlock out) noexcept
         std::fill_n(out.right, out.frames, 0.0F);
     }
     m_exchange.release();
+
+    // The safety limiter: last before the output.
+    if (const double rate = m_audio.sampleRate(); rate != m_limiterRate) {
+        m_limiter.setSampleRate(rate);
+        m_limiterRate = rate;
+    }
+    m_limiter.process(out);
 
     // The master meter: what leaves the app.
     float peak = 0.0F;

@@ -4,6 +4,7 @@
 #include "GraphExchange.h"
 #include "MidiInput.h"
 #include "MidiQueue.h"
+#include "SafetyLimiter.h"
 #include "Vst3Node.h"
 
 #include "gigchain/engine/IEngine.h"
@@ -48,6 +49,12 @@ public:
     void setChannelSolo(const core::ChannelId& id, bool solo) override;
     void setMasterVolume(double volumeDb) override;
     void setMasterMute(bool mute) override;
+    void setMasterEffects(const std::vector<core::PluginSlot>& effects) override;
+    std::vector<QString> storeMasterEffectStates(std::vector<core::PluginSlot>& effects) override;
+    bool takeMasterEdits() override;
+    core::Result<std::unique_ptr<IPluginEditor>> createMasterEffectEditor(int effect) override;
+    void setOutputLimiter(bool enabled, double ceilingDb) override;
+    bool takeLimiterActivity() override { return m_limiter.takeActivity(); }
     [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
     [[nodiscard]] double masterVolume() const override { return m_masterDb; }
     void injectNote(int midiChannel, int note, int velocity) override;
@@ -70,6 +77,12 @@ private:
     // The plugin instance for a slot, loaded if needed (logged; a failure is
     // reported to the user). `announce`: show the load in the progress UI.
     std::shared_ptr<Vst3Node> nodeFor(const QString& key, const core::PluginSlot& slot, bool announce);
+    // Loads a plugin with its slot's settings (a failure to take them is
+    // reported, and it plays at its defaults). nullptr when it cannot load
+    // (reported). Loading is not an edit.
+    std::shared_ptr<Vst3Node> loadWithSettings(const core::PluginSlot& slot);
+    // The instance key of each master effect, by position (empty: switched off).
+    [[nodiscard]] std::vector<QString> masterKeys() const;
     // Every plugin slot of a patch with the key of the instance it plays:
     // song + plugin + its position among the patch's uses of that plugin.
     struct PlannedSlot
@@ -129,6 +142,13 @@ private:
     std::chrono::steady_clock::time_point m_lastMidiCheck{};
     // Main thread: the instrument each channel of the current patch plays.
     std::map<QString, std::shared_ptr<Vst3Node>> m_currentInstruments;
+    // The master bus: its slots, their instances (outside any setlist), and
+    // whether one was edited since the last takeMasterEdits().
+    std::vector<core::PluginSlot> m_masterSlots;
+    std::map<QString, std::shared_ptr<Vst3Node>> m_masterNodes;
+    bool m_masterEdited = false;
+    SafetyLimiter m_limiter;
+    double m_limiterRate = 0.0; // audio thread: the rate the limiter is set for
     // ... and its effects, by position (nullptr: switched off or not loaded).
     std::map<QString, std::vector<std::shared_ptr<Vst3Node>>> m_currentEffects;
 

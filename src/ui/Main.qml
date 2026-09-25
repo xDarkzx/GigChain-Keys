@@ -14,6 +14,7 @@ ApplicationWindow {
     required property EngineStatus engineStatus
     required property EditorService editorService
     required property EffectWindows effectWindows
+    required property MasterBus masterBus
     required property SettingsController settings
     required property StartupProgress loading
 
@@ -256,6 +257,7 @@ ApplicationWindow {
                         pluginModel: root.pluginModel
                         engineStatus: root.engineStatus
                         effectWindows: root.effectWindows
+                        masterBus: root.masterBus
                     }
                 }
             }
@@ -269,6 +271,7 @@ ApplicationWindow {
                 engineStatus: root.engineStatus
                 sidePanelOpen: root.sidePanelOpen
                 effectWindows: root.effectWindows
+                masterBus: root.masterBus
             }
         }
 

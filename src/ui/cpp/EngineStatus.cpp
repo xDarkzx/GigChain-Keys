@@ -79,6 +79,11 @@ void EngineStatus::poll()
         emit masterLevelChanged();
     }
 
+    const bool wasLimiting = limiting();
+    if (m_engine.takeLimiterActivity()) m_limitingPolls = 500 / kPollIntervalMs;
+    else if (m_limitingPolls > 0) --m_limitingPolls;
+    if (limiting() != wasLimiting) emit limitingChanged();
+
     const float cpu = m_engine.cpuLoad();
     const bool midi = m_engine.midiActivity();
     const QString status = m_engine.statusText();

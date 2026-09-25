@@ -71,6 +71,35 @@ public:
     void setChannelSolo(const core::ChannelId& id, bool solo) override { solos[id.value()] = solo; }
     void setMasterVolume(double db) override { master = db; }
     [[nodiscard]] double masterVolume() const override { return master; }
+    std::vector<core::PluginSlot> masterEffects;
+    int masterEffectChanges = 0;
+    void setMasterEffects(const std::vector<core::PluginSlot>& effects) override
+    {
+        ++masterEffectChanges;
+        masterEffects = effects;
+    }
+    std::vector<QString> storeMasterEffectStates(std::vector<core::PluginSlot>& effects) override
+    {
+        for (auto& slot : effects) slot.state = "spy master settings: " + slot.pluginId.toUtf8();
+        return {};
+    }
+    bool masterEdited = false;
+    bool takeMasterEdits() override { return std::exchange(masterEdited, false); }
+    std::vector<int> masterEditorRequests;
+    core::Result<std::unique_ptr<engine::IPluginEditor>> createMasterEffectEditor(int effect) override
+    {
+        masterEditorRequests.push_back(effect);
+        return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Spy effects have no window"));
+    }
+    bool limiterOn = true;
+    double limiterCeiling = -1.0;
+    void setOutputLimiter(bool enabled, double ceilingDb) override
+    {
+        limiterOn = enabled;
+        limiterCeiling = ceilingDb;
+    }
+    bool limiterActivity = false;
+    bool takeLimiterActivity() override { return std::exchange(limiterActivity, false); }
     bool muted = false;
     void setMasterMute(bool mute) override { muted = mute; }
     [[nodiscard]] bool masterMuted() const override { return muted; }

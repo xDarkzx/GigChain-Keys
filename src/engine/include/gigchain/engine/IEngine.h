@@ -71,6 +71,25 @@ public:
     virtual void setChannelSolo(const core::ChannelId& id, bool solo) = 0;
     virtual void setMasterVolume(double volumeDb) = 0;
     [[nodiscard]] virtual double masterVolume() const = 0;
+    // The master bus belongs to the rig, not to a setlist: its effects work
+    // on everything (after the channels mix, before the master fader) and
+    // stay loaded whatever setlist is open. Loads what is missing, with each
+    // slot's settings; a switched-off effect is not loaded. Problems are
+    // reported through poll().
+    virtual void setMasterEffects(const std::vector<core::PluginSlot>& effects) = 0;
+    // Each loaded master effect's settings into its slot (for saving).
+    // Returns what could not be stored (each logged).
+    virtual std::vector<QString> storeMasterEffectStates(std::vector<core::PluginSlot>& effects) = 0;
+    // True once after a master effect's settings changed in its window.
+    virtual bool takeMasterEdits() = 0;
+    virtual core::Result<std::unique_ptr<IPluginEditor>> createMasterEffectEditor(int effect) = 0;
+    // The safety limiter, last before the output: nothing leaves louder than
+    // `ceilingDb` (-24..0). Garbage from a plugin (NaN, infinity) is always
+    // silenced. On at -1 dB unless set otherwise.
+    virtual void setOutputLimiter(bool enabled, double ceilingDb) = 0;
+    // True once if the limiter caught a peak since the last call (the LIM light).
+    virtual bool takeLimiterActivity() = 0;
+
     // Silences everything that leaves the app; the volume is kept for unmute.
     virtual void setMasterMute(bool mute) = 0;
     [[nodiscard]] virtual bool masterMuted() const = 0;
