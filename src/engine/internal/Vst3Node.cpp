@@ -4,6 +4,7 @@
 #include "EngineLog.h"
 #include "LoaderErrors.h"
 #include "PluginModules.h"
+#include "gigchain/core/Checks.h"
 
 #include "public.sdk/source/common/memorystream.h"
 #include "public.sdk/source/vst/hosting/eventlist.h"
@@ -241,6 +242,7 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
 
 core::Result<std::shared_ptr<Vst3Node>> Vst3Node::load(const QString& bundlePath, double sampleRate, int maxBlock)
 {
+    GC_ONLY_MAIN_THREAD();
     auto node = loadUnlogged(bundlePath, sampleRate, maxBlock);
     if (node) {
         qCInfo(lcEngine).noquote() << "Loaded plugin" << (*node)->name() << "from" << bundlePath;
@@ -266,6 +268,7 @@ Vst3Node::~Vst3Node()
 
 core::Result<void> Vst3Node::prepare(double sampleRate, int maxBlock)
 {
+    GC_ONLY_MAIN_THREAD();
     m_impl->deactivate();
     auto activated = m_impl->activate(sampleRate, maxBlock);
     if (!activated) {
@@ -421,11 +424,13 @@ core::Result<Vst3Node::State> Vst3Node::State::decode(const QByteArray& bytes)
 
 bool Vst3Node::takeEdited()
 {
+    GC_ONLY_MAIN_THREAD();
     return m_impl->componentHandler.takeEdited();
 }
 
 core::Result<Vst3Node::State> Vst3Node::saveState() const
 {
+    GC_ONLY_MAIN_THREAD();
     // A plugin's code may throw; that must not end the app (as Audacity 4
     // guards its state calls).
     try {
@@ -455,6 +460,7 @@ core::Result<Vst3Node::State> Vst3Node::saveStateUnguarded() const
 
 core::Result<void> Vst3Node::restoreState(const State& state)
 {
+    GC_ONLY_MAIN_THREAD();
     try {
         return restoreStateUnguarded(state);
     } catch (const std::exception& e) {
@@ -636,6 +642,7 @@ private:
 
 core::Result<std::unique_ptr<IPluginEditor>> Vst3Node::createEditor(const std::shared_ptr<Vst3Node>& node)
 {
+    GC_ONLY_MAIN_THREAD();
     if (!node) return core::fail(core::ErrorCode::InvalidData, u"No plugin to open an editor for"_s);
     Impl& impl = *node->m_impl;
     if (!impl.controller) {

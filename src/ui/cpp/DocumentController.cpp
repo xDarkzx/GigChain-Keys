@@ -3,6 +3,7 @@
 
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/Chart.h"
+#include "gigchain/core/Checks.h"
 
 #include <QStringDecoder>
 
@@ -579,6 +580,7 @@ bool DocumentController::setChannelSolo(int channel, bool solo)
 
 void DocumentController::newSetlist()
 {
+    GC_ONLY_MAIN_THREAD();
     m_setlist = {}; // empty: the user adds (or pastes) songs
     setHasSetlist(true);
     m_engine.preload(m_setlist); // unloads the previous setlist's plugins
@@ -590,6 +592,7 @@ void DocumentController::newSetlist()
 
 bool DocumentController::open(const QString& path)
 {
+    GC_ONLY_MAIN_THREAD();
     auto loaded = core::loadSetlistFile(path);
     if (!loaded) {
         if (loaded.error().code == core::ErrorCode::FileNotFound) forgetRecent(path); // moved or deleted
@@ -628,6 +631,7 @@ bool DocumentController::save()
 
 bool DocumentController::saveAs(const QString& path)
 {
+    GC_ONLY_MAIN_THREAD();
     QString target = path;
     if (!target.endsWith(u".json"_s, Qt::CaseInsensitive)) target += branding::setlistSuffix();
     // Each plugin's settings (preset, knobs) are saved with it.
@@ -691,6 +695,7 @@ bool DocumentController::report(const core::Error& error)
 
 void DocumentController::setCursor(core::Cursor cursor, bool force)
 {
+    GC_ONLY_MAIN_THREAD();
     if (cursor == m_cursor && !force) return;
     m_cursor = cursor;
     const core::Patch* patch = currentPatch();

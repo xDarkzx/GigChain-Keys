@@ -4,10 +4,12 @@
 #include "FreezeWatchdog.h"
 
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/core/Checks.h"
 
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QLoggingCategory>
+#include <QScopeGuard>
 
 #include <algorithm>
 #include <cmath>
@@ -72,14 +74,24 @@ EffectWindows::~EffectWindows()
 
 bool EffectWindows::open(int channel, int effect, QWindow* owner)
 {
+    GC_ONLY_MAIN_THREAD();
     const core::Patch* patch = m_document.currentPatch();
-    if (patch == nullptr || channel < 0 || static_cast<std::size_t>(channel) >= patch->channels.size()) return false;
+    if (patch == nullptr || channel < 0 || static_cast<std::size_t>(channel) >= patch->channels.size()) {
+        // A click that arrived after the patch changed: nothing to open.
+        qCWarning(lcUi) << "No effect window: channel" << channel << "is not in the current patch";
+        return false;
+    }
     const core::Channel& strip = patch->channels[static_cast<std::size_t>(channel)];
-    if (effect < 0 || static_cast<std::size_t>(effect) >= strip.effects.size()) return false;
+    if (effect < 0 || static_cast<std::size_t>(effect) >= strip.effects.size()) {
+        qCWarning(lcUi).noquote() << "No effect window: effect" << effect << "is not on" << strip.name << "("
+                                  << strip.effects.size() << "effects)";
+        return false;
+    }
     const core::PluginSlot& slot = strip.effects[static_cast<std::size_t>(effect)];
 
     for (auto& entry : m_open) {
         if (entry->channel == strip.id && entry->effect == effect && entry->pluginId == slot.pluginId) {
+            GC_IF_FAILED(entry->window) { break; } // an open entry always has its window
             entry->window->raise();
             entry->window->requestActivate();
             return true;
@@ -113,10 +125,15 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
 
 bool EffectWindows::openMaster(int effect, const std::vector<core::PluginSlot>& masterSlots, QWindow* owner)
 {
-    if (effect < 0 || static_cast<std::size_t>(effect) >= masterSlots.size()) return false;
+    GC_ONLY_MAIN_THREAD();
+    if (effect < 0 || static_cast<std::size_t>(effect) >= masterSlots.size()) {
+        qCWarning(lcUi) << "No effect window: master effect" << effect << "does not exist (" << masterSlots.size() << "effects)";
+        return false;
+    }
     const core::PluginSlot& slot = masterSlots[static_cast<std::size_t>(effect)];
     for (auto& entry : m_open) {
         if (entry->master && entry->effect == effect && entry->pluginId == slot.pluginId) {
+            GC_IF_FAILED(entry->window) { break; } // an open entry always has its window
             entry->window->raise();
             entry->window->requestActivate();
             return true;
@@ -142,6 +159,8 @@ bool EffectWindows::openMaster(int effect, const std::vector<core::PluginSlot>& 
 
 bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWindow* owner)
 {
+    GC_ONLY_MAIN_THREAD();
+    GC_IF_FAILED(entry && entry->editor) { return false; }
     auto* window = new FloatingWindow;
     window->setFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowSystemMenuHint | Qt::WindowCloseButtonHint);
     if (owner != nullptr) window->setTransientParent(owner); // stays above the main window
@@ -159,27 +178,28 @@ bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWi
 
     Entry* raw = entry.get();
     const auto fitWindowTo = [raw](QSize physical) {
+        GC_IF_FAILED(raw->window) { return; }
         const QSize logical = toLogical(physical, raw->ratio);
         raw->resizing = true;
+        const auto resized = qScopeGuard([raw] { raw->resizing = false; });
         if (!raw->editor->canResize()) {
             raw->window->setMinimumSize(logical);
             raw->window->setMaximumSize(logical);
         }
         raw->window->resize(logical);
-        raw->resizing = false;
     };
     fitWindowTo(entry->editor->preferredSize());
     // The plugin changed its own size (a panel opened, its own zoom menu).
     entry->editor->setResizeHandler(fitWindowTo);
     // The user drags the window edge of a plugin that can be resized.
     const auto userResized = [raw] {
-        if (raw->resizing || !raw->editor->canResize()) return;
+        if (raw->resizing || !raw->editor->canResize() || !raw->window) return;
         const QSize wanted(qRound(raw->window->width() * raw->ratio), qRound(raw->window->height() * raw->ratio));
         const QSize accepted = raw->editor->setSize(wanted);
         if (accepted != wanted && !accepted.isEmpty()) {
             raw->resizing = true;
+            const auto resized = qScopeGuard([raw] { raw->resizing = false; });
             raw->window->resize(toLogical(accepted, raw->ratio));
-            raw->resizing = false;
         }
     };
     connect(window, &QWindow::widthChanged, this, userResized);
@@ -208,6 +228,7 @@ void EffectWindows::closeAll()
 
 void EffectWindows::close(Entry& entry)
 {
+    GC_ONLY_MAIN_THREAD();
     const bool master = entry.master;
     entry.editor->detach(); // before its window goes
     entry.editor.reset();
@@ -222,6 +243,7 @@ void EffectWindows::close(Entry& entry)
 
 void EffectWindows::sweepMaster(const std::vector<core::PluginSlot>& masterSlots)
 {
+    GC_ONLY_MAIN_THREAD();
     std::vector<Entry*> gone;
     for (auto& entry : m_open) {
         if (!entry->master) continue;
@@ -235,6 +257,7 @@ void EffectWindows::sweepMaster(const std::vector<core::PluginSlot>& masterSlots
 
 void EffectWindows::sweep()
 {
+    GC_ONLY_MAIN_THREAD();
     const core::Patch* patch = m_document.currentPatch();
     std::vector<Entry*> gone;
     for (auto& entry : m_open) {

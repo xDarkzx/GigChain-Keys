@@ -1,4 +1,6 @@
 ﻿#include "PluginEditorHost.h"
+
+#include "gigchain/core/Checks.h"
 #include "FreezeWatchdog.h"
 
 #include <QAbstractNativeEventFilter>
@@ -97,6 +99,7 @@ void PluginEditorHost::itemChange(ItemChange change, const ItemChangeData& value
 
 void PluginEditorHost::rebuild()
 {
+    GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
     teardown();
@@ -175,6 +178,7 @@ void PluginEditorHost::rebuild()
 
 void PluginEditorHost::teardown()
 {
+    GC_ONLY_MAIN_THREAD();
     disconnect(m_frameConnection);
     disconnect(m_stateConnection);
     if (m_dragEnd) {

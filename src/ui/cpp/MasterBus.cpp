@@ -4,6 +4,7 @@
 #include "EffectWindows.h"
 
 #include "gigchain/core/Limits.h"
+#include "gigchain/core/Checks.h"
 #include "gigchain/engine/IEngine.h"
 
 #include <QLoggingCategory>
@@ -52,6 +53,7 @@ QVariantList MasterBus::effectBypassed() const
 
 void MasterBus::load()
 {
+    GC_ONLY_MAIN_THREAD();
     m_effects.clear();
     const QVariantList saved = m_settings.value(kEffectsKey).toList();
     for (const QVariant& item : saved) {
@@ -77,12 +79,19 @@ void MasterBus::load()
 
 bool MasterBus::validIndex(int effect) const
 {
-    return effect >= 0 && static_cast<std::size_t>(effect) < m_effects.size();
+    if (effect >= 0 && static_cast<std::size_t>(effect) < m_effects.size()) return true;
+    // A menu used after the list changed: nothing to do, but not silently.
+    qCWarning(lcUi) << "Ignored: master effect" << effect << "does not exist (" << m_effects.size() << "effects)";
+    return false;
 }
 
 bool MasterBus::addEffect(const QString& pluginId, const QString& name)
 {
-    if (pluginId.isEmpty()) return false;
+    GC_ONLY_MAIN_THREAD();
+    if (pluginId.isEmpty()) {
+        qCWarning(lcUi) << "Ignored: a master effect with no plugin";
+        return false;
+    }
     if (static_cast<int>(m_effects.size()) >= core::limits::kMaxEffectsPerChannel) {
         m_document.reportMessage(tr("The master already has %1 effects").arg(core::limits::kMaxEffectsPerChannel));
         return false;
@@ -94,6 +103,7 @@ bool MasterBus::addEffect(const QString& pluginId, const QString& name)
 
 bool MasterBus::removeEffect(int effect)
 {
+    GC_ONLY_MAIN_THREAD();
     if (!validIndex(effect)) return false;
     (void)m_engine.storeMasterEffectStates(m_effects); // the others keep their current settings
     m_effects.erase(m_effects.begin() + effect);
@@ -103,7 +113,12 @@ bool MasterBus::removeEffect(int effect)
 
 bool MasterBus::replaceEffect(int effect, const QString& pluginId, const QString& name)
 {
-    if (!validIndex(effect) || pluginId.isEmpty()) return false;
+    GC_ONLY_MAIN_THREAD();
+    if (!validIndex(effect)) return false;
+    if (pluginId.isEmpty()) {
+        qCWarning(lcUi) << "Ignored: replacing a master effect with no plugin";
+        return false;
+    }
     (void)m_engine.storeMasterEffectStates(m_effects);
     m_effects[static_cast<std::size_t>(effect)] = core::PluginSlot{pluginId, name, false, {}};
     commit();
@@ -112,6 +127,7 @@ bool MasterBus::replaceEffect(int effect, const QString& pluginId, const QString
 
 bool MasterBus::setEffectBypass(int effect, bool bypass)
 {
+    GC_ONLY_MAIN_THREAD();
     if (!validIndex(effect)) return false;
     // Switching off unloads it: keep its settings for when it comes back.
     (void)m_engine.storeMasterEffectStates(m_effects);
@@ -122,6 +138,7 @@ bool MasterBus::setEffectBypass(int effect, bool bypass)
 
 bool MasterBus::openEffect(int effect, QWindow* owner)
 {
+    GC_ONLY_MAIN_THREAD();
     return m_windows.openMaster(effect, m_effects, owner);
 }
 
@@ -135,6 +152,7 @@ void MasterBus::commit()
 
 void MasterBus::save()
 {
+    GC_ONLY_MAIN_THREAD();
     for (const QString& problem : m_engine.storeMasterEffectStates(m_effects)) m_document.reportMessage(problem);
     QVariantList list;
     for (const core::PluginSlot& slot : m_effects) {
