@@ -27,9 +27,21 @@ public:
     IEngine(IEngine&&) = delete;
     IEngine& operator=(IEngine&&) = delete;
 
-    // Makes `patch` the sounding patch. The engine copies what it needs;
-    // `patch` does not have to outlive the call.
-    virtual void applyPatch(const core::Patch& patch) = 0;
+    // Makes `patch` of `song` the sounding patch. The engine copies what it
+    // needs. A song's patches share their plugins (the same plugin in the
+    // same position is one instance), so moving between a song's sections
+    // loads nothing and keeps sounds ringing.
+    virtual void applyPatch(const core::SongId& song, const core::Patch& patch) = 0;
+    // A patch outside any song (tests, previews).
+    void applyPatch(const core::Patch& patch) { applyPatch(core::SongId{}, patch); }
+
+    // Loads every plugin the setlist uses, so switching songs and patches
+    // never loads anything mid-show, and unloads plugins it no longer uses.
+    // Progress goes to the progress handler.
+    virtual void preload(const core::Setlist& setlist) = 0;
+    virtual void setProgressHandler(LoadProgress handler) = 0;
+    // Plugin instances in memory (for tests and diagnostics).
+    [[nodiscard]] virtual std::size_t loadedPluginCount() const = 0;
 
     [[nodiscard]] virtual std::vector<PluginInfo> availablePlugins() const = 0;
     // Peak since the previous call for this channel (then reset) and current RMS.

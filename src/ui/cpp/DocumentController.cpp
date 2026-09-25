@@ -508,6 +508,7 @@ void DocumentController::newSetlist()
 {
     m_setlist = {}; // empty: the user adds (or pastes) songs
     setHasSetlist(true);
+    m_engine.preload(m_setlist); // unloads the previous setlist's plugins
     setFilePath({});
     setDirty(false);
     emit structureChanged();
@@ -523,6 +524,9 @@ bool DocumentController::open(const QString& path)
     }
     m_setlist = std::move(*loaded);
     setHasSetlist(true);
+    // Every sound up front (behind the splash or loading overlay), so
+    // switching songs never loads anything mid-show.
+    m_engine.preload(m_setlist);
     setFilePath(path);
     m_settings.setValue(kLastFileKey, path);
     rememberRecent(path);
@@ -674,7 +678,11 @@ void DocumentController::resetSelectedChannel()
 void DocumentController::applyCurrentPatchToEngine()
 {
     const core::Patch* patch = currentPatch();
-    m_engine.applyPatch(patch != nullptr ? *patch : core::Patch{});
+    const int song = m_cursor.song;
+    const core::SongId songId =
+        song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size() ? m_setlist.songs[static_cast<std::size_t>(song)].id
+                                                                            : core::SongId{};
+    m_engine.applyPatch(songId, patch != nullptr ? *patch : core::Patch{});
 }
 
 bool DocumentController::effectExists(int channel, int effect) const

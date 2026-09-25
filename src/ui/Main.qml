@@ -14,6 +14,7 @@ ApplicationWindow {
     required property EngineStatus engineStatus
     required property EditorService editorService
     required property SettingsController settings
+    required property StartupProgress loading
 
     property bool performMode: false
     property bool sidePanelOpen: true
@@ -140,6 +141,12 @@ ApplicationWindow {
                 root.pendingAction = ""
         }
     }
+    // While sounds load (opening a setlist, adding an instrument): the app
+    // is busy for a moment, so say so instead of looking frozen.
+    LoadingOverlay {
+        progress: root.loading
+    }
+
     SettingsDialog {
         id: settingsDialog
         objectName: "settingsDialog"

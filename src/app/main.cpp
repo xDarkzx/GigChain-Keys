@@ -107,7 +107,6 @@ int main(int argc, char* argv[])
     // Splash first: opening audio, scanning plugins and loading the last
     // setlist's sounds all happen before the main window appears.
     ui::StartupProgress startup;
-    bool starting = true; // progress is shown only until the main window is up
     QElapsedTimer splashShown;
     splashShown.start();
     auto splash = std::make_unique<QQmlApplicationEngine>();
@@ -122,13 +121,12 @@ int main(int argc, char* argv[])
     engine::RealEngineOptions engineOptions = ui::SettingsController::engineOptions(settings);
     engineOptions.pluginCacheFile =
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-cache.json"_s;
-    engineOptions.progress = [&startup, &starting, &quips](const QString& what, int done, int total) {
-        if (!starting) return;
-        if (total > 0) { // scanning plugins
-            startup.addPlugin(what);
-            startup.report(quips.line(Quip::Unpacking), what, static_cast<double>(done) / total);
-        } else { // loading a sound for the setlist
-            startup.report(quips.line(Quip::WarmingUp), what);
+    engineOptions.progress = [&startup, &quips](engine::LoadStage stage, const QString& what, int done, int total) {
+        if (stage == engine::LoadStage::ScanningPlugins) {
+            if (done < total) startup.addPlugin(what);
+            startup.report(quips.line(Quip::Unpacking), what, total > 0 ? static_cast<double>(done) / total : -1.0);
+        } else {
+            startup.report(quips.line(Quip::WarmingUp), what, total > 0 ? static_cast<double>(done) / total : -1.0);
         }
     };
 
@@ -171,7 +169,9 @@ int main(int argc, char* argv[])
         qCCritical(lcApp) << "The main window failed to load";
         return 1;
     }
-    starting = false;
+    engine->setProgressHandler([&session](engine::LoadStage, const QString& what, int done, int total) {
+        session.loading().loading(QGuiApplication::tr("Loading sounds…"), what, done, total);
+    });
 
     // Swap the splash for the main window, brought to the front.
     const auto reveal = [&splash, mainWindow] {

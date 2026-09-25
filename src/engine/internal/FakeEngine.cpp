@@ -49,7 +49,7 @@ std::vector<PluginInfo> demoPlugins()
 
 FakeEngine::FakeEngine(Clock clock) : m_clock(std::move(clock)) {}
 
-void FakeEngine::applyPatch(const core::Patch& patch)
+void FakeEngine::applyPatch(const core::SongId&, const core::Patch& patch)
 {
     m_channels.clear();
     m_channels.reserve(patch.channels.size());

@@ -221,6 +221,55 @@ private slots:
         QVERIFY2(peak > 0.001F, "piano went silent after the reload");
     }
 
+    void aSongsPatchesShareTheirPluginsAndPreloadPrunes()
+    {
+        // A small plugin keeps this quick; any plugin behaves the same.
+        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+
+        const auto channelWith = [&](const QString& name) {
+            core::Channel channel = core::makeChannel(name);
+            channel.instrument = core::PluginSlot{kSmall, u"Kotelnikov"_s, false};
+            return channel;
+        };
+        core::Setlist setlist;
+        core::Song ballad = core::makeSong(u"Ballad"_s);
+        ballad.patches[0].channels = {channelWith(u"Piano"_s)};                           // Intro
+        ballad.patches.push_back(core::makePatch(u"Chorus"_s));
+        ballad.patches[1].channels = {channelWith(u"Piano"_s), channelWith(u"Layer"_s)};  // same piano + a layer
+        core::Song funk = core::makeSong(u"Funk"_s);
+        funk.patches[0].channels = {channelWith(u"Keys"_s)};
+        setlist.songs = {ballad, funk};
+
+        std::vector<std::pair<int, int>> steps;
+        engine.setProgressHandler([&](LoadStage stage, const QString&, int done, int total) {
+            if (stage == LoadStage::LoadingSounds) steps.emplace_back(done, total);
+        });
+        engine.preload(setlist);
+        // Ballad: one shared piano (Intro and Chorus) + the Chorus layer; Funk: its own.
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{3});
+        QVERIFY(!steps.empty());
+        QCOMPARE(steps.back(), std::make_pair(3, 3)); // the overlay knows when it is done
+
+        // Switching patches loads nothing: everything was loaded up front.
+        engine.applyPatch(ballad.id, ballad.patches[1]);
+        engine.applyPatch(ballad.id, ballad.patches[0]);
+        engine.applyPatch(funk.id, funk.patches[0]);
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{3});
+
+        // Another setlist: plugins it does not use are unloaded (memory freed).
+        core::Setlist onlyFunk;
+        onlyFunk.songs = {funk};
+        engine.preload(onlyFunk);
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
+        QVERIFY(engine.poll().empty());
+    }
+
     void unknownPluginIsReportedNotIgnored()
     {
         auto created = createRealEngine();

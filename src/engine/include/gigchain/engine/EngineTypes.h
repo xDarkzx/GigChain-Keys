@@ -2,6 +2,7 @@
 
 #include <QString>
 
+#include <functional>
 #include <vector>
 
 namespace gigchain::engine {
@@ -26,6 +27,16 @@ struct PluginInfo
     QString email;
     QString sdkVersion; // the VST3 SDK it was built with, e.g. "VST 3.7.9"
 };
+
+// What a long engine job is doing, for a splash screen or loading overlay.
+enum class LoadStage
+{
+    ScanningPlugins, // `what` = the plugin file being scanned
+    LoadingSounds,   // `what` = the plugin being loaded; done == total at the end
+};
+// Called on the thread that started the job, before each item and once
+// more when done (done == total).
+using LoadProgress = std::function<void(LoadStage stage, const QString& what, int done, int total)>;
 
 enum class AudioDriver
 {
