@@ -58,6 +58,17 @@ void FakeEngine::applyPatch(const core::SongId&, const core::Patch& patch)
     }
 }
 
+LevelReading FakeEngine::masterLevel()
+{
+    // The loudest simulated channel stands in for the mix.
+    LevelReading loudest;
+    for (const ChannelState& state : m_channels) {
+        const LevelReading level = channelLevel(state.id);
+        if (level.peak > loudest.peak) loudest = level;
+    }
+    return loudest;
+}
+
 std::vector<PluginInfo> FakeEngine::availablePlugins() const
 {
     return demoPlugins();

@@ -21,6 +21,7 @@ public:
     [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override;
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
+    [[nodiscard]] LevelReading masterLevel() override;
     [[nodiscard]] float cpuLoad() const override;
     [[nodiscard]] bool midiActivity() const override;
     void setChannelVolume(const core::ChannelId& id, double volumeDb) override;

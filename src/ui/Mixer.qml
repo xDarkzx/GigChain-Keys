@@ -95,7 +95,9 @@ Rectangle {
                 VolumeFader {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    objectName: "masterFader"
                     volumeDb: mixer.engineStatus.masterVolumeDb
+                    level: mixer.engineStatus.masterPeak
                     onVolumeMoved: (db) => mixer.engineStatus.masterVolumeDb = db
                 }
                 Rectangle {

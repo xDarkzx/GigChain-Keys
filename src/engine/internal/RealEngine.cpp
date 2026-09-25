@@ -387,6 +387,12 @@ LevelReading RealEngine::channelLevel(const core::ChannelId& id)
     return strip != nullptr ? strip->takeLevel() : LevelReading{};
 }
 
+LevelReading RealEngine::masterLevel()
+{
+    return LevelReading{m_masterPeak.exchange(0.0F, std::memory_order_relaxed),
+                        m_masterRms.load(std::memory_order_relaxed)};
+}
+
 void RealEngine::setChannelVolume(const core::ChannelId& id, double volumeDb)
 {
     if (RenderGraph* graph = m_exchange.current()) {
@@ -628,6 +634,19 @@ void RealEngine::render(AudioBlock out) noexcept
         std::fill_n(out.right, out.frames, 0.0F);
     }
     m_exchange.release();
+
+    // The master meter: what leaves the app.
+    float peak = 0.0F;
+    double sumSquares = 0.0;
+    for (std::size_t i = 0; i < out.frames; ++i) {
+        peak = std::max({peak, std::abs(out.left[i]), std::abs(out.right[i])});
+        sumSquares += 0.5 * (static_cast<double>(out.left[i]) * out.left[i] + static_cast<double>(out.right[i]) * out.right[i]);
+    }
+    float held = m_masterPeak.load(std::memory_order_relaxed);
+    while (peak > held && !m_masterPeak.compare_exchange_weak(held, peak, std::memory_order_relaxed)) {
+    }
+    m_masterRms.store(out.frames > 0 ? static_cast<float>(std::sqrt(sumSquares / static_cast<double>(out.frames))) : 0.0F,
+                      std::memory_order_relaxed);
 
     // Share of the block's time budget spent rendering, smoothed.
     const double budget = static_cast<double>(out.frames) / m_audio.sampleRate();

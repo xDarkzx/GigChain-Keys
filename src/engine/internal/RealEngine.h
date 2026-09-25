@@ -39,6 +39,7 @@ public:
     bool takePluginEdits() override;
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override { return m_plugins; }
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
+    [[nodiscard]] LevelReading masterLevel() override;
     [[nodiscard]] float cpuLoad() const override { return m_cpuLoad.load(std::memory_order_relaxed); }
     [[nodiscard]] bool midiActivity() const override { return m_midiSeen.load(std::memory_order_relaxed); }
     void setChannelVolume(const core::ChannelId& id, double volumeDb) override;
@@ -130,6 +131,10 @@ private:
     std::array<MidiEvent, kMaxEventsPerBlock> m_events{};
 
     std::atomic<float> m_masterGain{1.0F};
+    // What left the app (after the master fader): peak since masterLevel()
+    // last asked, and the last block's RMS.
+    std::atomic<float> m_masterPeak{0.0F};
+    std::atomic<float> m_masterRms{0.0F};
     double m_masterDb = 0.0;
     std::atomic<float> m_cpuLoad{0.0F};
     std::atomic<bool> m_midiSeen{false};

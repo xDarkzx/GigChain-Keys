@@ -79,12 +79,18 @@ private slots:
         engine.applyPatch(patch);
         QVERIFY(engine.poll().empty()); // plugin loaded without problems
 
+        engine.setMasterVolume(-90.0); // still inaudible, but measurable
+        (void)engine.masterLevel();
         engine.injectNote(1, 60, 110);
         pump(engine, 400);
         const float peak = engine.channelLevel(patch.channels[0].id).peak;
+        const LevelReading master = engine.masterLevel();
         engine.injectNote(1, 60, 0);
         pump(engine, 50);
         QVERIFY2(peak > 0.001F, "piano channel stayed silent");
+        // The master meter shows what leaves the app: after the master fader.
+        QVERIFY2(master.peak > 0.0F, "master meter stayed empty");
+        QVERIFY(master.peak < peak);
         QVERIFY(engine.cpuLoad() > 0.0F && engine.cpuLoad() < 1.0F);
     }
 
