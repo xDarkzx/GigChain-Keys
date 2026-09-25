@@ -12,6 +12,7 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_selectedChannel(m_document),
       m_pluginModel(engine, m_artwork, &settings),
       m_engineStatus(engine, m_document),
+      m_editorService(engine, m_document),
       m_effectWindows(engine, m_document),
       m_masterBus(engine, m_document, settings, m_effectWindows),
       m_settingsController(engine, m_document, settings)
@@ -34,6 +35,7 @@ QVariantMap Session::initialProperties()
         {u"selectedChannel"_s, QVariant::fromValue(&m_selectedChannel)},
         {u"pluginModel"_s, QVariant::fromValue(&m_pluginModel)},
         {u"engineStatus"_s, QVariant::fromValue(&m_engineStatus)},
+        {u"editorService"_s, QVariant::fromValue(&m_editorService)},
         {u"effectWindows"_s, QVariant::fromValue(&m_effectWindows)},
         {u"masterBus"_s, QVariant::fromValue(&m_masterBus)},
         {u"settings"_s, QVariant::fromValue(&m_settingsController)},

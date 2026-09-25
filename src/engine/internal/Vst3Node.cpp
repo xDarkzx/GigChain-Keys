@@ -570,8 +570,8 @@ public:
         m_view->setFrame(nullptr);
     }
 
-    // IPlugFrame: a plugin asking for a new size is refused. Plugin windows
-    // keep the size they opened with.
+    // IPlugFrame: the plugin asks the host for a new size. Refused: plugin
+    // windows keep the size they opened with.
     tresult PLUGIN_API resizeView(IPlugView* view, ViewRect*) override
     {
         return view == m_view.get() ? kResultFalse : kInvalidArgument;
