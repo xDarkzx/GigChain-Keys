@@ -149,6 +149,9 @@ public:
     // The Settings choice restoreLastSession() follows (bool, default false).
     [[nodiscard]] static QString reopenLastSetlistKey();
 
+    // A plugin's own settings changed (in its window): unsaved changes.
+    void markPluginSettingsChanged();
+
     Q_INVOKABLE void clearError();
     // Shows a message from elsewhere (e.g. the engine) the same way as errors.
     Q_INVOKABLE void reportMessage(const QString& message);

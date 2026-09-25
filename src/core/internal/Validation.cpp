@@ -41,6 +41,10 @@ Result<void> validateSlot(const PluginSlot& slot, const QString& path)
         return fail(ErrorCode::LimitExceeded,
                     u"%1.pluginId is longer than %2 characters"_s.arg(path).arg(limits::kMaxPluginIdLength));
     }
+    if (slot.state.size() > limits::kMaxPluginStateBytes) {
+        return fail(ErrorCode::LimitExceeded,
+                    u"%1.state is larger than %2 bytes"_s.arg(path).arg(limits::kMaxPluginStateBytes));
+    }
     return validateName(slot.displayName, path + ".displayName"_L1);
 }
 

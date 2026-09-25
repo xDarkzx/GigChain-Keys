@@ -3,6 +3,7 @@
 #include "gigchain/engine/IEngine.h"
 
 #include <array>
+#include <utility>
 #include <map>
 #include <vector>
 
@@ -27,6 +28,22 @@ public:
     void preload(const core::Setlist&) override { ++preloadCount; }
     void setProgressHandler(engine::LoadProgress) override {}
     [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }
+    int storeCount = 0;
+    std::vector<QString> storeProblems;
+    std::vector<QString> storePluginStates(core::Setlist& setlist) override
+    {
+        ++storeCount;
+        for (auto& song : setlist.songs) {
+            for (auto& patch : song.patches) {
+                for (auto& channel : patch.channels) {
+                    if (channel.instrument) channel.instrument->state = "spy settings: " + channel.instrument->pluginId.toUtf8();
+                }
+            }
+        }
+        return storeProblems;
+    }
+    bool pluginEdited = false;
+    bool takePluginEdits() override { return std::exchange(pluginEdited, false); }
     void applyPatch(const core::SongId&, const core::Patch& patch) override
     {
         ++applyCount;

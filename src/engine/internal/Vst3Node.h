@@ -68,11 +68,20 @@ public:
     {
         QByteArray component;
         QByteArray controller;
+
+        // How the setlist stores it (core::PluginSlot::state): compressed,
+        // with a format tag. decode() rejects anything damaged.
+        [[nodiscard]] QByteArray encode() const;
+        [[nodiscard]] static core::Result<State> decode(const QByteArray& bytes);
     };
     // Main thread.
     [[nodiscard]] core::Result<State> saveState() const;
     // Main thread, before the node is published to the audio graph.
     core::Result<void> restoreState(const State& state);
+    // Main thread. True once after the plugin reported a change of its
+    // settings (see ComponentHandler); loading and restoring can report
+    // changes too, so call it once after those to start clean.
+    bool takeEdited();
 
     [[nodiscard]] QString bundlePath() const;
     [[nodiscard]] QString name() const;

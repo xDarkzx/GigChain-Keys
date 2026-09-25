@@ -60,6 +60,7 @@ void EngineStatus::poll()
     // Notices are already logged by the engine; show the latest to the user.
     const auto notices = m_engine.poll();
     if (!notices.empty()) m_document.reportMessage(notices.back());
+    if (m_engine.takePluginEdits()) m_document.markPluginSettingsChanged();
 
     const float cpu = m_engine.cpuLoad();
     const bool midi = m_engine.midiActivity();

@@ -40,6 +40,18 @@ public:
     // Progress goes to the progress handler.
     virtual void preload(const core::Setlist& setlist) = 0;
     virtual void setProgressHandler(LoadProgress handler) = 0;
+
+    // Plugin settings (preset, knobs, loaded sounds), for saving: each loaded
+    // plugin's settings go into its slots of `setlist` (core::PluginSlot::
+    // state). Slots whose plugin is not loaded (bypassed, failed to load)
+    // keep what they had. Returns what could not be stored (each logged).
+    // A plugin loads with its slot's settings; preload() reloads a plugin
+    // whose settings in the setlist differ from what it plays (reopening a
+    // file after changes that were not saved gives the file's sound back).
+    virtual std::vector<QString> storePluginStates(core::Setlist& setlist) = 0;
+    // True once after any plugin reported a change to its settings (a knob
+    // turned or a preset picked in its own window) since the last call.
+    virtual bool takePluginEdits() = 0;
     // Plugin instances in memory (for tests and diagnostics).
     [[nodiscard]] virtual std::size_t loadedPluginCount() const = 0;
 

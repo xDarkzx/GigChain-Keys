@@ -18,6 +18,7 @@ Setlist richSetlist()
     Song song = makeSong(QStringLiteral("Café ☕ 🎹"));
     Channel piano = makeChannel(QStringLiteral("Piano"));
     piano.instrument = PluginSlot{QStringLiteral("fake.grand-piano"), QStringLiteral("Grand Piano"), false};
+    piano.instrument->state = QByteArray("GCS1\x00\x01\xff binary sound settings", 30); // opaque to core
     piano.effects.push_back(PluginSlot{QStringLiteral("fake.eq"), QStringLiteral("Channel EQ"), true});
     piano.volumeDb = -6.5;
     piano.keyLow = 21;
@@ -76,6 +77,29 @@ private slots:
         const auto parsed = fromJson(toJson(original));
         QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
         QVERIFY(*parsed == original);
+    }
+
+    void pluginSettingsAreOptional()
+    {
+        QJsonObject slot{{u"pluginId"_s, u"fake.piano"_s}, {u"displayName"_s, u"Piano"_s}, {u"bypass"_s, false}};
+        const auto parsed = fromJson(withFirstChannelField(u"instrument"_s, slot));
+        QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
+        QVERIFY(parsed->songs[0].patches[0].channels[0].instrument->state.isEmpty()); // the plugin's defaults
+    }
+
+    void rejectsBrokenPluginSettings()
+    {
+        QJsonObject slot{{u"pluginId"_s, u"fake.piano"_s}, {u"displayName"_s, u"Piano"_s}, {u"bypass"_s, false},
+                         {u"state"_s, u"this is not base64 !!"_s}};
+        const auto parsed = fromJson(withFirstChannelField(u"instrument"_s, slot));
+        QVERIFY(!parsed);
+        QVERIFY(parsed.error().code == ErrorCode::InvalidData);
+        QVERIFY2(parsed.error().message.contains(u"instrument.state"_s), qPrintable(parsed.error().message));
+
+        slot.insert(u"state"_s, QString::fromLatin1(QByteArray(limits::kMaxPluginStateBytes + 3, 'x').toBase64()));
+        const auto huge = fromJson(withFirstChannelField(u"instrument"_s, slot));
+        QVERIFY(!huge);
+        QVERIFY(huge.error().code == ErrorCode::LimitExceeded || huge.error().code == ErrorCode::FileTooLarge);
     }
 
     void writesFormatVersion()

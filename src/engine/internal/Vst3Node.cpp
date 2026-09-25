@@ -1,5 +1,6 @@
 #include "Vst3Node.h"
 
+#include "ComponentHandler.h"
 #include "EngineLog.h"
 #include "LoaderErrors.h"
 
@@ -18,7 +19,9 @@
 #include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/gui/iplugviewcontentscalesupport.h"
 
+#include <QDataStream>
 #include <QFileInfo>
+#include <QtEndian>
 
 #include <algorithm>
 #include <atomic>
@@ -45,30 +48,6 @@ Vst::HostApplication& hostContext()
     return host;
 }
 
-
-// The host side of IComponentHandler: plugins report parameter edits and
-// ask for restarts through it. Some plugins (e.g. FabFilter Pro-DS) call it
-// during setup and crash when a host has not provided one. v1 accepts the
-// calls; forwarding edits to automation comes later.
-class ComponentHandler final : public Vst::IComponentHandler
-{
-public:
-    tresult PLUGIN_API beginEdit(Vst::ParamID) override { return kResultOk; }
-    tresult PLUGIN_API performEdit(Vst::ParamID, Vst::ParamValue) override { return kResultOk; }
-    tresult PLUGIN_API endEdit(Vst::ParamID) override { return kResultOk; }
-    tresult PLUGIN_API restartComponent(int32) override { return kResultOk; }
-
-    tresult PLUGIN_API queryInterface(const TUID requested, void** object) override
-    {
-        QUERY_INTERFACE(requested, object, FUnknown::iid, Vst::IComponentHandler)
-        QUERY_INTERFACE(requested, object, Vst::IComponentHandler::iid, Vst::IComponentHandler)
-        *object = nullptr;
-        return kNoInterface;
-    }
-    // Owned by the node (lives as long as the controller that uses it).
-    uint32 PLUGIN_API addRef() override { return 1; }
-    uint32 PLUGIN_API release() override { return 1; }
-};
 
 // kNotImplemented means "nothing to do" for optional calls; anything else
 // that is not kResultOk is a real failure.
@@ -392,6 +371,57 @@ QByteArray streamBytes(MemoryStream& stream)
 }
 
 } // namespace
+
+namespace {
+
+constexpr QByteArrayView kStateMagic = "GCS1";
+// A plugin's settings, uncompressed, larger than this are not believed (the
+// largest measured: Synclavier V, 628 KB).
+constexpr quint32 kMaxRawStateBytes = 256U * 1024 * 1024;
+
+} // namespace
+
+QByteArray Vst3Node::State::encode() const
+{
+    // Arturia gives two identical copies (component and controller): kept once.
+    const bool controllerIsComponent = controller == component;
+    QByteArray raw;
+    QDataStream out(&raw, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_6_0);
+    out << controllerIsComponent << component;
+    if (!controllerIsComponent) out << controller;
+    return kStateMagic.toByteArray() + qCompress(raw, 9);
+}
+
+core::Result<Vst3Node::State> Vst3Node::State::decode(const QByteArray& bytes)
+{
+    const auto damaged = [](const QString& why) {
+        return core::fail(core::ErrorCode::InvalidData, u"The saved plugin settings are damaged (%1)"_s.arg(why));
+    };
+    if (!bytes.startsWith(kStateMagic)) return damaged(u"not in the expected format"_s);
+    const QByteArray packed = bytes.mid(kStateMagic.size());
+    // qCompress puts the uncompressed size first; check it before inflating.
+    if (packed.size() < 5) return damaged(u"too short"_s);
+    const quint32 rawSize = qFromBigEndian<quint32>(packed.constData());
+    if (rawSize == 0 || rawSize > kMaxRawStateBytes) return damaged(u"impossible size"_s);
+    const QByteArray raw = qUncompress(packed);
+    if (raw.size() != static_cast<qsizetype>(rawSize)) return damaged(u"could not be unpacked"_s);
+
+    State state;
+    bool controllerIsComponent = false;
+    QDataStream in(raw);
+    in.setVersion(QDataStream::Qt_6_0);
+    in >> controllerIsComponent >> state.component;
+    if (controllerIsComponent) state.controller = state.component;
+    else in >> state.controller;
+    if (in.status() != QDataStream::Ok || !in.atEnd()) return damaged(u"unreadable contents"_s);
+    return state;
+}
+
+bool Vst3Node::takeEdited()
+{
+    return m_impl->componentHandler.takeEdited();
+}
 
 core::Result<Vst3Node::State> Vst3Node::saveState() const
 {

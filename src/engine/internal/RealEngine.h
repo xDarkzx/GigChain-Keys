@@ -13,6 +13,7 @@
 #include <chrono>
 #include <atomic>
 #include <map>
+#include <set>
 #include <memory>
 #include <vector>
 
@@ -34,6 +35,8 @@ public:
     void preload(const core::Setlist& setlist) override;
     void setProgressHandler(LoadProgress handler) override { m_progress = std::move(handler); }
     [[nodiscard]] std::size_t loadedPluginCount() const override { return m_nodes.size(); }
+    std::vector<QString> storePluginStates(core::Setlist& setlist) override;
+    bool takePluginEdits() override;
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override { return m_plugins; }
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
     [[nodiscard]] float cpuLoad() const override { return m_cpuLoad.load(std::memory_order_relaxed); }
@@ -93,6 +96,13 @@ private:
 
     // Main thread: every plugin instance created so far, by channel slot.
     std::map<QString, std::shared_ptr<Vst3Node>> m_nodes;
+    // Per instance: the settings it was loaded with or last stored (as the
+    // setlist holds them), and whether it was changed since.
+    std::map<QString, QByteArray> m_nodeStates;
+    std::set<QString> m_editedNodes;
+    bool m_unreportedEdit = false;
+    // Collects the plugins' edit reports into m_editedNodes.
+    void collectEdits();
     std::vector<QString> m_pendingNotices;
     core::Patch m_patch;         // the sounding patch, rebuilt after a device change
     core::SongId m_song;         // the song it belongs to

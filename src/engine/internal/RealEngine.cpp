@@ -14,6 +14,7 @@
 #include <cmath>
 #include <optional>
 #include <set>
+#include <utility>
 
 using namespace Qt::StringLiterals;
 
@@ -100,17 +101,29 @@ void RealEngine::preload(const core::Setlist& setlist)
             for (const PlannedSlot& planned : planPatch(song.id, patch)) wanted.emplace(planned.key, planned.slot);
         }
     }
-    // Unload what this setlist does not use (the sounding graph keeps its own
-    // references until it is replaced).
+    // Unload what this setlist does not use, and what must load again with
+    // the setlist's settings: different from what it plays, or changed since
+    // (the sounding graph keeps its own references until it is replaced).
+    collectEdits();
     const std::size_t before = m_nodes.size();
+    std::size_t reloads = 0;
     std::erase_if(m_nodes, [&](const auto& entry) {
-        if (wanted.count(entry.first) != 0) return false;
+        const auto it = wanted.find(entry.first);
+        if (it != wanted.end()) {
+            const auto had = m_nodeStates.find(entry.first);
+            const bool same = had != m_nodeStates.end() && had->second == it->second->state;
+            if (same && m_editedNodes.count(entry.first) == 0) return false;
+            ++reloads;
+        }
         m_arturiaLoadedSize.erase(entry.second.get());
+        m_nodeStates.erase(entry.first);
+        m_editedNodes.erase(entry.first);
         return true;
     });
-    if (m_nodes.size() != before) {
-        qCInfo(lcEngine) << "Unloaded" << before - m_nodes.size() << "plugins the setlist no longer uses";
+    if (m_nodes.size() + reloads != before) {
+        qCInfo(lcEngine) << "Unloaded" << before - m_nodes.size() - reloads << "plugins the setlist no longer uses";
     }
+    if (reloads > 0) qCInfo(lcEngine) << "Reloading" << reloads << "plugins with the setlist's saved settings";
 
     QElapsedTimer timer;
     timer.start();
@@ -160,8 +173,22 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
         m_pendingNotices.push_back(u"Could not load %1: %2"_s.arg(slot.displayName, node.error().message));
         return nullptr;
     }
+    if (!slot.state.isEmpty()) {
+        auto state = Vst3Node::State::decode(slot.state);
+        auto restored = state ? (*node)->restoreState(*state) : core::Result<void>(tl::unexpected(state.error()));
+        if (!restored) {
+            // It still plays, at its defaults; the user needs to know.
+            const QString problem = u"%1 could not take its saved settings (%2); it plays with its defaults"_s.arg(
+                slot.displayName, restored.error().message);
+            qCWarning(lcEngine).noquote() << problem;
+            m_pendingNotices.push_back(problem);
+        }
+    }
+    (void)(*node)->takeEdited(); // loading and restoring are not edits
     qCInfo(lcEngine).noquote() << "Plugin" << slot.displayName << "ready in" << timer.elapsed() << "ms";
     if (arturiaSize) m_arturiaLoadedSize[node->get()] = *arturiaSize;
+    m_nodeStates[key] = slot.state;
+    m_editedNodes.erase(key);
     m_nodes.emplace(key, *node);
     return *node;
 }
@@ -479,6 +506,8 @@ core::Result<bool> RealEngine::fitEditorToArea(const core::ChannelId& id, QSize 
         return tl::unexpected(restored.error());
     }
 
+    (void)(*fresh)->takeEdited(); // restoring is not an edit
+    collectEdits();                // but changes made to the old one still count
     for (auto& [key, node] : m_nodes) {
         if (node == old) node = *fresh;
     }
@@ -490,6 +519,69 @@ core::Result<bool> RealEngine::fitEditorToArea(const core::ChannelId& id, QSize 
     qCInfo(lcEngine).noquote() << old->name() << "reloaded at" << qRound(arturiaScale(best) * 100)
                                << "% to fit the window (" << area.width() << "x" << area.height() << ")";
     return true;
+}
+
+void RealEngine::collectEdits()
+{
+    for (const auto& [key, node] : m_nodes) {
+        if (!node->takeEdited()) continue;
+        m_editedNodes.insert(key);
+        m_unreportedEdit = true;
+    }
+}
+
+bool RealEngine::takePluginEdits()
+{
+    collectEdits();
+    return std::exchange(m_unreportedEdit, false);
+}
+
+std::vector<QString> RealEngine::storePluginStates(core::Setlist& setlist)
+{
+    QElapsedTimer timer;
+    timer.start();
+    collectEdits();
+    std::vector<QString> problems;
+    std::map<QString, std::optional<QByteArray>> stored; // per instance; nullopt = not stored
+    const auto stateOf = [&](const QString& key) -> std::optional<QByteArray> {
+        if (const auto it = stored.find(key); it != stored.end()) return it->second;
+        const auto node = m_nodes.find(key);
+        if (node == m_nodes.end()) return stored[key] = std::nullopt; // not loaded: its slot keeps what it had
+        auto state = node->second->saveState();
+        if (!state) {
+            const QString problem =
+                u"The settings of %1 could not be saved: %2"_s.arg(node->second->name(), state.error().message);
+            qCWarning(lcEngine).noquote() << problem;
+            problems.push_back(problem);
+            return stored[key] = std::nullopt;
+        }
+        return stored[key] = state->encode();
+    };
+    for (core::Song& song : setlist.songs) {
+        for (core::Patch& patch : song.patches) {
+            for (const PlannedSlot& planned : planPatch(song.id, patch)) {
+                const auto bytes = stateOf(planned.key);
+                if (!bytes) continue;
+                core::Channel& channel = patch.channels[static_cast<std::size_t>(planned.channel)];
+                core::PluginSlot& slot = planned.effect < 0
+                                             ? *channel.instrument
+                                             : channel.effects[static_cast<std::size_t>(planned.effect)];
+                slot.state = *bytes;
+            }
+        }
+    }
+    qsizetype total = 0;
+    int count = 0;
+    for (const auto& [key, bytes] : stored) {
+        if (!bytes) continue;
+        m_nodeStates[key] = *bytes;
+        m_editedNodes.erase(key);
+        total += bytes->size();
+        ++count;
+    }
+    qCInfo(lcEngine) << "Stored the settings of" << count << "plugins (" << total / 1024 << "KB ) in"
+                     << timer.elapsed() << "ms";
+    return problems;
 }
 
 void RealEngine::rewriteArturiaSizes()

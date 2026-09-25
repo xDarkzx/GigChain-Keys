@@ -270,6 +270,50 @@ private slots:
         QVERIFY(engine.poll().empty());
     }
 
+    void pluginSettingsAreStoredAndComeBack()
+    {
+        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+
+        core::Channel channel = core::makeChannel(u"Keys"_s);
+        channel.instrument = core::PluginSlot{kSmall, u"Kotelnikov"_s, false};
+        core::Song song = core::makeSong(u"Ballad"_s);
+        song.patches[0].channels = {channel};
+        song.patches.push_back(core::makePatch(u"Chorus"_s));
+        song.patches[1].channels = {channel}; // the same shared instance
+        core::Setlist setlist;
+        setlist.songs = {song};
+        engine.preload(setlist);
+        QVERIFY(engine.poll().empty());
+        QVERIFY(!engine.takePluginEdits()); // loading is not an edit
+
+        QVERIFY(engine.storePluginStates(setlist).empty());
+        const QByteArray stored = setlist.songs[0].patches[0].channels[0].instrument->state;
+        QVERIFY(!stored.isEmpty());
+        QCOMPARE(setlist.songs[0].patches[1].channels[0].instrument->state, stored); // one instance, one state
+
+        // Opening a setlist whose settings differ reloads the plugin with them;
+        // settings it cannot take are reported, not ignored.
+        core::Setlist broken = setlist;
+        broken.songs[0].patches[0].channels[0].instrument->state = "GCS1 garbage";
+        broken.songs[0].patches[1].channels[0].instrument->state = "GCS1 garbage";
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov.*saved settings"_s));
+        engine.preload(broken);
+        const auto notices = engine.poll();
+        QCOMPARE(notices.size(), std::size_t{1});
+        QVERIFY2(notices[0].contains(u"Kotelnikov"_s), qPrintable(notices[0]));
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{1}); // still playing, at its defaults
+
+        engine.preload(setlist); // good settings: reloaded with them, quietly
+        QVERIFY(engine.poll().empty());
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
+    }
+
     void unknownPluginIsReportedNotIgnored()
     {
         auto created = createRealEngine();
