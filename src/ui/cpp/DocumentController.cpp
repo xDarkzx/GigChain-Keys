@@ -1,4 +1,5 @@
 #include "DocumentController.h"
+#include "FreezeWatchdog.h"
 
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/Chart.h"
@@ -6,6 +7,7 @@
 #include <QStringDecoder>
 
 #include <QClipboard>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QGuiApplication>
 #include <QRegularExpression>
@@ -608,13 +610,20 @@ void DocumentController::setCursor(core::Cursor cursor, bool force)
 {
     if (cursor == m_cursor && !force) return;
     m_cursor = cursor;
+    const core::Patch* patch = currentPatch();
+    FreezeWatchdog::mark(u"switch to %1 / %2"_s.arg(currentSongName(), patch != nullptr ? patch->name : QString()));
+    QElapsedTimer timer;
+    timer.start();
     resetSelectedChannel();
     // The engine first: views react to these signals by asking the engine
     // about the new channels (e.g. for plugin editors).
     applyCurrentPatchToEngine();
+    const qint64 sound = timer.elapsed();
     emit currentChanged();
     emit channelsChanged();
     emit selectedChannelChanged();
+    qCInfo(lcUi).noquote() << "Switched to" << currentSongName() << "/" << (patch != nullptr ? patch->name : QString())
+                           << ": sound" << sound << "ms, screen updates" << timer.elapsed() - sound << "ms";
 }
 
 void DocumentController::commitStructure(core::Cursor target, const std::optional<core::PatchId>& previous)

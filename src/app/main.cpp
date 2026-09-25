@@ -2,6 +2,7 @@
 // runs and wires it to the UI. The product's name comes from branding.cmake.
 #include "Session.h"
 #include "SettingsController.h"
+#include "FreezeWatchdog.h"
 #include "SettingsMigration.h"
 #include "StageQuips.h"
 #include "StartupProgress.h"
@@ -32,6 +33,7 @@
 #endif
 #include <windows.h>
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
 
@@ -65,6 +67,8 @@ void bringToFront(QWindow& window)
 // The splash stays up at least this long, even when everything loads faster
 // (the plugin list usually comes from the cache in milliseconds).
 constexpr qint64 kMinimumSplashMs = 10'000;
+// The line check at the end of the splash (every plugin named) takes at least this long.
+constexpr qint64 kLineCheckMs = 4'000;
 
 // Closes the log file last, after everything that might still log is gone.
 struct LogScope
@@ -102,6 +106,7 @@ int main(int argc, char* argv[])
 
     QQuickStyle::setStyle(u"Basic"_s); // fully themeable by Theme.qml
     QSettings settings;
+    const ui::FreezeWatchdog watchdog; // logs any moment the window stops responding
     ui::carryOverPreviousSettings(settings); // after a rename: nothing to set up again
 
     // Splash first: opening audio, scanning plugins and loading the last
@@ -179,13 +184,12 @@ int main(int argc, char* argv[])
         bringToFront(*mainWindow);
         splash.reset(); // after the main window is up: the app never loses the front
     };
-    const qint64 remaining = kMinimumSplashMs - splashShown.elapsed();
-    if (remaining > 0) {
-        startup.finish(static_cast<int>(remaining), quips.line(Quip::LineCheck), quips.line(Quip::Ready));
-        QTimer::singleShot(std::chrono::milliseconds(remaining), mainWindow, reveal);
-    } else {
-        reveal();
-    }
+    // Always finish with the line check (every plugin named, the bar gliding
+    // across), even when loading the setlist's sounds took longer than the
+    // minimum splash time.
+    const qint64 remaining = std::max(kMinimumSplashMs - splashShown.elapsed(), kLineCheckMs);
+    startup.finish(static_cast<int>(remaining), quips.line(Quip::LineCheck), quips.line(Quip::Ready));
+    QTimer::singleShot(std::chrono::milliseconds(remaining), mainWindow, reveal);
     const int code = QGuiApplication::exec();
     qCInfo(lcApp).noquote() << branding::name() << "exiting with code" << code;
     return code;
