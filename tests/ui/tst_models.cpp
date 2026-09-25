@@ -58,6 +58,8 @@ private slots:
         m_settings = std::make_unique<QSettings>(m_dir->filePath(u"s.ini"_s), QSettings::IniFormat);
         m_engine = std::make_unique<test::SpyEngine>();
         m_doc = std::make_unique<DocumentController>(*m_engine, *m_settings);
+        m_doc->newSetlist();
+        QVERIFY(m_doc->addSong());
     }
 
     void cleanup()

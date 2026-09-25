@@ -12,11 +12,26 @@ Rectangle {
     property bool suspended: false
     property alias currentTab: tabs.currentIndex
 
+    signal newRequested()
+    signal openRequested()
+    signal openRecentRequested(string path)
+
     color: Theme.background
+
+    // Nothing is open yet: start a setlist or open one.
+    StartScreen {
+        anchors.fill: parent
+        visible: !area.doc.hasSetlist
+        doc: area.doc
+        onNewRequested: area.newRequested()
+        onOpenRequested: area.openRequested()
+        onOpenRecentRequested: (path) => area.openRecentRequested(path)
+    }
 
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
+        visible: area.doc.hasSetlist
 
         TabBar {
             id: tabs
@@ -40,7 +55,7 @@ Rectangle {
                 doc: area.doc
                 editorService: area.editorService
                 // The plugin's window sits above everything: hide it behind the chart tab and dialogs.
-                suspended: area.suspended || tabs.currentIndex !== 1
+                suspended: area.suspended || tabs.currentIndex !== 1 || !area.doc.hasSetlist
             }
         }
     }

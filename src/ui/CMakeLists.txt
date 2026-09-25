@@ -41,6 +41,7 @@ qt_add_qml_module(gigchain_ui
         CardButton.qml
         ChartPanel.qml
         MainArea.qml
+        StartScreen.qml
         DetailRow.qml
         Splash.qml
         SettingsDialog.qml

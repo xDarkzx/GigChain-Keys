@@ -60,6 +60,8 @@ private slots:
         m_settings = std::make_unique<QSettings>(m_dir->filePath(u"s.ini"_s), QSettings::IniFormat);
         m_engine = engine::createFakeEngine();
         m_session = std::make_unique<ui::Session>(*m_engine, *m_settings);
+        m_session->document().newSetlist();
+        QVERIFY(m_session->document().addSong());
         m_qml = std::make_unique<QQmlApplicationEngine>();
         m_warnings.clear();
         connect(m_qml.get(), &QQmlEngine::warnings, this, [this](const QList<QQmlError>& warnings) {
