@@ -44,6 +44,8 @@ class SettingsController : public QObject
     Q_PROPERTY(QVariantList midiInputs READ midiInputs NOTIFY changed)            // [{name, enabled, channel}]
     Q_PROPERTY(QString running READ running NOTIFY changed)                      // the engine's status line
     Q_PROPERTY(QString error READ error NOTIFY changed)
+    // General: open the last setlist on start instead of the start screen.
+    Q_PROPERTY(bool reopenLastSetlist READ reopenLastSetlist WRITE setReopenLastSetlist NOTIFY changed)
 
 public:
     SettingsController(engine::IEngine& engine, DocumentController& document, QSettings& settings,
@@ -68,6 +70,8 @@ public:
     [[nodiscard]] QVariantList midiInputs() const;
     [[nodiscard]] QString running() const { return m_running; }
     [[nodiscard]] QString error() const { return m_error; }
+    [[nodiscard]] bool reopenLastSetlist() const { return m_reopenLast; }
+    void setReopenLastSetlist(bool reopen);
 
     // Probes the devices (ASIO drivers can take a moment) and shows what runs now.
     Q_INVOKABLE void load();
@@ -77,7 +81,8 @@ public:
     // While the window is open: picks up keyboards plugged in or pulled out,
     // keeping the choices already made on this page.
     Q_INVOKABLE void refreshMidi();
-    // Windows default output at its own rate, 256 frames, only the first MIDI input on.
+    // Windows default output at its own rate, 256 frames, only the first MIDI
+    // input on, the start screen on start.
     Q_INVOKABLE void resetToDefaults();
     // OK: true when everything took effect (and was saved).
     Q_INVOKABLE bool apply();
@@ -98,6 +103,7 @@ private:
     engine::AudioSetup m_loaded; // what ran when the window opened
     std::vector<engine::MidiPort> m_midi; // as shown, with this page's changes
     bool m_midiTouched = false;           // changed on this page since load()
+    bool m_reopenLast = false;
     QString m_running;
     QString m_error;
 };

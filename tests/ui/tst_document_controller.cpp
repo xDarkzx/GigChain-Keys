@@ -238,11 +238,24 @@ private slots:
         QVERIFY(checks >= 4);
     }
 
-    void restoreLastSessionReopensTheFile()
+    void startsOnTheStartScreenByDefault()
+    {
+        QVERIFY(m_doc->saveAs(path(u"gig.gigchain.json"_s)));
+        QVERIFY(m_doc->open(path(u"gig.gigchain.json"_s)));
+
+        DocumentController second(*m_engine, *m_settings); // next start
+        second.restoreLastSession();
+        QVERIFY(!second.hasSetlist()); // nothing opens until the user picks it
+        QVERIFY(second.lastError().isEmpty());
+        QCOMPARE(second.recentFiles().first(), path(u"gig.gigchain.json"_s)); // offered on the start screen
+    }
+
+    void restoreLastSessionReopensTheFileWhenChosen()
     {
         QVERIFY(m_doc->addSong());
         QVERIFY(m_doc->saveAs(path(u"gig.gigchain.json"_s)));
         QVERIFY(m_doc->open(path(u"gig.gigchain.json"_s))); // remembers it
+        m_settings->setValue(DocumentController::reopenLastSetlistKey(), true);
 
         DocumentController second(*m_engine, *m_settings);
         second.restoreLastSession();
@@ -253,6 +266,7 @@ private slots:
     void restoreWithMissingFileReportsIt()
     {
         m_settings->setValue(u"session/lastFile"_s, path(u"gone.gigchain.json"_s));
+        m_settings->setValue(DocumentController::reopenLastSetlistKey(), true);
         DocumentController second(*m_engine, *m_settings);
         second.restoreLastSession();
         QVERIFY(second.lastError().contains(u"gone.gigchain.json"_s));
@@ -275,6 +289,37 @@ private slots:
         QVERIFY(QFile::remove(path(u"set6.gigchain.json"_s)));
         QVERIFY(!next.open(path(u"set6.gigchain.json"_s))); // moved or deleted
         QVERIFY(!next.recentFiles().contains(path(u"set6.gigchain.json"_s)));
+        QCOMPARE(next.recentSetlists().size(), 4); // its details went with it
+    }
+
+    void recentSetlistsShowTheirSongCountAndWhenOpened()
+    {
+        const QDateTime before = QDateTime::currentDateTime().addSecs(-1);
+        QVERIFY(m_doc->saveAs(path(u"gig.gigchain.json"_s)));
+        QVariantList recent = m_doc->recentSetlists();
+        QCOMPARE(recent.size(), 1);
+        QVariantMap entry = recent.first().toMap();
+        QCOMPARE(entry.value(u"path"_s).toString(), path(u"gig.gigchain.json"_s));
+        QCOMPARE(entry.value(u"name"_s).toString(), u"gig"_s); // no ".gigchain.json"
+        QCOMPARE(entry.value(u"songs"_s).toInt(), 1);
+        QVERIFY(entry.value(u"opened"_s).toDateTime() >= before);
+
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->save()); // the count follows the saved file
+        QCOMPARE(m_doc->recentSetlists().first().toMap().value(u"songs"_s).toInt(), 2);
+
+        DocumentController next(*m_engine, *m_settings); // next start
+        QCOMPARE(next.recentSetlists().first().toMap().value(u"songs"_s).toInt(), 2);
+    }
+
+    void recentSetlistsFromBeforeDetailsStillShow()
+    {
+        m_settings->setValue(u"session/recentFiles"_s, QStringList{path(u"old.gigchain.json"_s)});
+        DocumentController next(*m_engine, *m_settings);
+        const QVariantMap entry = next.recentSetlists().first().toMap();
+        QCOMPARE(entry.value(u"name"_s).toString(), u"old"_s);
+        QCOMPARE(entry.value(u"songs"_s).toInt(), -1); // unknown until opened
+        QVERIFY(!entry.value(u"opened"_s).toDateTime().isValid());
     }
 
     void pastedChordSheetBecomesTheSongsChart()

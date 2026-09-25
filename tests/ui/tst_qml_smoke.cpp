@@ -116,7 +116,7 @@ private slots:
         auto* dialog = m_qml->rootObjects().value(0)->findChild<QObject*>(u"settingsDialog"_s);
         QVERIFY(dialog != nullptr);
         QVERIFY(QMetaObject::invokeMethod(dialog, "open"));
-        for (int page = 0; page < 3; ++page) {
+        for (int page = 0; page < 4; ++page) {
             QVERIFY(dialog->setProperty("page", page));
             settle(); // no warnings from any page
         }

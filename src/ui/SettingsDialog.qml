@@ -67,7 +67,7 @@ Popup {
                 Layout.fillHeight: true
                 Layout.topMargin: 8
                 interactive: false
-                model: [qsTr("Audio"), qsTr("MIDI"), qsTr("Plugins")]
+                model: [qsTr("General"), qsTr("Audio"), qsTr("MIDI"), qsTr("Plugins")]
                 delegate: ItemDelegate {
                     id: pageRow
                     required property int index
@@ -98,6 +98,33 @@ Popup {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 currentIndex: dialog.page
+
+                // ------------------------------------------------ General
+                ScrollView {
+                    contentWidth: availableWidth
+                    ColumnLayout {
+                        width: parent.width
+                        spacing: 10
+                        SettingsSection { title: qsTr("When %1 starts").arg(Branding.name) }
+                        CheckBox {
+                            objectName: "reopenLastSetlist"
+                            Layout.leftMargin: 14
+                            text: qsTr("Open the last setlist I used")
+                            checked: dialog.settings.reopenLastSetlist
+                            onToggled: dialog.settings.reopenLastSetlist = checked
+                            focusPolicy: Qt.NoFocus
+                        }
+                        Label {
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            text: qsTr("Handy on a gig night: its sounds load behind the splash screen, ready to play. "
+                                       + "Off, you start on the start screen and pick a setlist (or make a new one).")
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                }
 
                 // ------------------------------------------------ Audio
                 ScrollView {

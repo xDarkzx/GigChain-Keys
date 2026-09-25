@@ -64,7 +64,15 @@ void SettingsController::load()
     m_midiTouched = false;
     m_running = m_engine.statusText();
     m_error.clear();
+    m_reopenLast = m_settings.value(DocumentController::reopenLastSetlistKey(), false).toBool();
     keepRateValid();
+    emit changed();
+}
+
+void SettingsController::setReopenLastSetlist(bool reopen)
+{
+    if (m_reopenLast == reopen) return;
+    m_reopenLast = reopen;
     emit changed();
 }
 
@@ -246,6 +254,7 @@ void SettingsController::resetToDefaults()
         m_midi[i].channel = 0;
     }
     m_midiTouched = true;
+    m_reopenLast = false;
     emit changed();
 }
 
@@ -279,6 +288,8 @@ bool SettingsController::apply()
         m_settings.setValue(kMidiChannelsKey, channels);
         m_midiTouched = false;
     }
+
+    m_settings.setValue(DocumentController::reopenLastSetlistKey(), m_reopenLast);
 
     m_settings.sync();
     if (m_settings.status() != QSettings::NoError) {
