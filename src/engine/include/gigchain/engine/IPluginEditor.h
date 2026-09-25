@@ -6,6 +6,7 @@
 #include <QString>
 #include <QtGlobal>
 
+#include <functional>
 
 namespace gigchain::engine {
 

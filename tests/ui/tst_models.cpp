@@ -1,5 +1,6 @@
 #include "ChannelModel.h"
 #include "DocumentController.h"
+#include "EditorService.h"
 #include "OfficialArtwork.h"
 #include "EngineStatus.h"
 #include "PluginListModel.h"
@@ -260,6 +261,58 @@ private slots:
         const QVariantList effects = model.effects();
         QCOMPARE(effects.size(), 1);
         QCOMPARE(effects[0].toMap().value(u"name"_s).toString(), u"Spy Reverb"_s);
+    }
+
+    void editorServiceFollowsTheSelectedChannel()
+    {
+        EditorService service(*m_engine, *m_doc);
+        QSignalSpy target(&service, &EditorService::targetChanged);
+        QCOMPARE(service.emptyReason(), u"Drag an instrument here to start this patch"_s);
+
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->addChannel(u"spy/Pad.vst3"_s, u"Spy Pad"_s));
+        QTRY_VERIFY(target.count() >= 1);
+
+        m_doc->setSelectedChannel(0);
+        const auto editor = service.createForSelection();
+        QVERIFY(editor.has_value());
+        QCOMPARE(m_engine->editorRequests.back(), m_doc->currentPatch()->channels[0].id.value());
+        QCOMPARE(service.emptyReason(), u"Spy Piano has no editor to show"_s);
+
+        m_doc->setSelectedChannel(-1);
+        QCOMPARE(service.emptyReason(), u"Select a channel in the mixer"_s);
+    }
+
+    void mixerMovesDoNotRebuildTheEditor()
+    {
+        // Volume, pan, mute and solo never change which plugin is shown; the
+        // editor must not be closed and reopened while a fader moves.
+        EditorService service(*m_engine, *m_doc);
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QTest::qWait(10);
+        QSignalSpy target(&service, &EditorService::targetChanged);
+        QVERIFY(m_doc->setChannelVolume(0, -3.0));
+        QVERIFY(m_doc->setChannelPan(0, 0.3));
+        QVERIFY(m_doc->setChannelMute(0, true));
+        QVERIFY(m_doc->setChannelSolo(0, true));
+        QVERIFY(m_doc->setChannelName(0, u"Keys"_s));
+        QTest::qWait(20);
+        QCOMPARE(target.count(), 0);
+    }
+
+    void editorServiceSignalsOncePerChange()
+    {
+        // A patch change emits several document signals; the editor (slow to
+        // open) must be rebuilt once, not once per signal.
+        EditorService service(*m_engine, *m_doc);
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->addPatch(0));
+        QTest::qWait(10);
+        QSignalSpy target(&service, &EditorService::targetChanged);
+        m_doc->previousPatch();
+        QVERIFY(target.wait(500));
+        QTest::qWait(20);
+        QCOMPARE(target.count(), 1);
     }
 
     void engineStatusPollsAndForwardsNotices()
