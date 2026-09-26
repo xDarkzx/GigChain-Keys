@@ -13,20 +13,26 @@ sounds instantly on stage.
 - **Setlists:** songs and patches, with rename, reorder, duplicate and
   delete. Space / arrow keys switch patches; Tab enters full-screen
   **Perform** mode.
-- **VST3 hosting:** each installed instrument's own window fills the main
-  area. Plugins that support it resize or zoom to fit; Arturia plugins are
-  reloaded at their own window size when the window is maximized or restored.
+- **VST3 hosting:** each installed instrument's own window shows in the main
+  area, shrunk to fit when the area is smaller and never cut off, keeping
+  its own shape.
 - **Mixer:** Logic-style channel strips along the bottom, each with an
   instrument slot, effect slots (bypass, replace, remove), pan, volume, meters,
   mute and solo. Right-click a strip for everything else.
-- **Instruments browser:** your installed VST3 instruments, shown with each
-  maker's own artwork where the plugin provides it.
+- **Instruments browser:** your installed VST3 instruments, shown with the
+  artwork each plugin installs in its own folder.
 - **Settings** (Ctrl+,):
   - **Audio:** Windows Audio (WASAPI) or ASIO, device, sample rate and buffer
     size. Plugins are re-prepared, not reloaded, when these change.
   - **MIDI:** each input with its own mode and channel. By default only the
     first port of a keyboard plays; plugged-in keyboards are picked up
     automatically.
+
+## What's planned
+
+Instrument toggles and song sections, a loop station, EDM stack presets with
+built-in sidechain, and a tablet remote for the music stand: see
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Building
 
