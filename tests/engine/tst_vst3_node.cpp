@@ -33,6 +33,22 @@ float blockPeak(const std::vector<float>& left, const std::vector<float>& right)
     return peak;
 }
 
+// Plays `blocks` blocks on a fresh instrument, each block's events from
+// `at(block)`, and returns the loudest sample from block `from` on.
+template <typename EventsAt>
+float loudestFrom(Vst3Node& node, int blocks, int from, EventsAt at)
+{
+    std::vector<float> left(kBlock);
+    std::vector<float> right(kBlock);
+    float loudest = 0.0F;
+    for (int block = 0; block < blocks; ++block) {
+        const std::vector<MidiEvent> events = at(block);
+        node.process(std::span<const MidiEvent>(events), AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock});
+        if (block >= from) loudest = std::max(loudest, blockPeak(left, right));
+    }
+    return loudest;
+}
+
 } // namespace
 
 class TestVst3Node : public QObject
@@ -107,6 +123,53 @@ private slots:
         const auto problems = (*node)->takeProblems();
         QCOMPARE(problems.oversizedBlocks, uint64_t{1});
         QVERIFY(!(*node)->takeProblems().any()); // taking resets
+    }
+
+    // Velocity reaches the plugin: the same key, softly and hard (as the
+    // keyboard sends them: measured 13 to 85 from an Impact GXP61).
+    void softNotesPlaySofterThanHardOnes()
+    {
+        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        auto play = [](uint8_t velocity) {
+            auto node = Vst3Node::load(kInstrument, kRate, kBlock);
+            if (!node) return -1.0F;
+            return loudestFrom(**node, 40, 0, [velocity](int block) {
+                return block == 0 ? std::vector<MidiEvent>{MidiEvent{.status = 0x90, .data1 = 60, .data2 = velocity}}
+                                  : std::vector<MidiEvent>{};
+            });
+        };
+        const float soft = play(20);
+        const float hard = play(120);
+        qInfo() << "velocity 20 peak" << soft << "velocity 120 peak" << hard;
+        QVERIFY(soft > 0.0F && hard > 0.0F);
+        QVERIFY2(soft < hard * 0.7F, qPrintable(u"soft %1, hard %2"_s.arg(soft).arg(hard)));
+    }
+
+    // The sustain pedal (controller 64, as the keyboard sends it) holds a
+    // released note: it still sounds long after the key is let go.
+    void theSustainPedalHoldsReleasedNotes()
+    {
+        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        constexpr int kRelease = 10;     // key let go (~53 ms at 256 frames, 48 kHz)
+        constexpr int kListenFrom = 120; // ~0.6 s after
+        auto afterRelease = [](bool pedal) {
+            auto node = Vst3Node::load(kInstrument, kRate, kBlock);
+            if (!node) return -1.0F;
+            return loudestFrom(**node, 160, kListenFrom, [pedal](int block) {
+                std::vector<MidiEvent> events;
+                if (block == 0) {
+                    if (pedal) events.push_back(MidiEvent{.status = 0xB0, .data1 = 64, .data2 = 127}); // sustain on
+                    events.push_back(MidiEvent{.status = 0x90, .data1 = 60, .data2 = 100});
+                }
+                if (block == kRelease) events.push_back(MidiEvent{.status = 0x80, .data1 = 60, .data2 = 0});
+                return events;
+            });
+        };
+        const float damped = afterRelease(false);
+        const float held = afterRelease(true);
+        qInfo() << "after release: without pedal" << damped << "with pedal" << held;
+        QVERIFY(damped >= 0.0F && held >= 0.0F);
+        QVERIFY2(held > damped * 3.0F && held > 0.001F, qPrintable(u"without pedal %1, with pedal %2"_s.arg(damped).arg(held)));
     }
 
     void stateMovesToAFreshInstance()
