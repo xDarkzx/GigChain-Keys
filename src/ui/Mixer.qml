@@ -81,9 +81,16 @@ Rectangle {
                     x: 4
                     y: parent.height - height
                     width: Theme.stripWidth
-                    height: 26
-                    text: qsTr("+ Audio input")
+                    height: 44
+                    text: "" // the empty-slot look, as the instrument slot above
                     onClicked: newInputMenu.popup(newInputSlot, 0, 0)
+                    Text {
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: 12
+                        text: qsTr("Audio input")
+                        color: Theme.textDim
+                        font.pixelSize: Theme.smallFontSize
+                    }
                 }
                 StageMenu {
                     id: newInputMenu
