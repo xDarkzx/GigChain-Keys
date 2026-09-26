@@ -1,9 +1,18 @@
 #pragma once
 
+#include "gigchain/core/Ids.h"
+#include "gigchain/engine/EngineTypes.h"
+
+#include <QElapsedTimer>
 #include <QObject>
 #include <QString>
 #include <QTimer>
+#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
+
+#include <optional>
+#include <utility>
+#include <vector>
 
 namespace gigchain::engine {
 class IEngine;
@@ -33,6 +42,21 @@ class EngineStatus : public QObject
     // The LIM light: the safety limiter caught a peak (lit for about half a
     // second after each catch, so a short one can be seen).
     Q_PROPERTY(bool limiting READ limiting NOTIFY limitingChanged)
+    // The tempo playing (BPM), the click, and the song's backing track.
+    Q_PROPERTY(double tempo READ tempo NOTIFY transportChanged)
+    Q_PROPERTY(bool clickOn READ clickOn WRITE setClickOn NOTIFY transportChanged)
+    Q_PROPERTY(double clickVolumeDb READ clickVolumeDb WRITE setClickVolumeDb NOTIFY transportChanged)
+    Q_PROPERTY(bool trackLoaded READ trackLoaded NOTIFY transportChanged)
+    Q_PROPERTY(bool trackLoading READ trackLoading NOTIFY transportChanged)
+    Q_PROPERTY(bool trackPlaying READ trackPlaying NOTIFY transportChanged)
+    Q_PROPERTY(double trackPosition READ trackPosition NOTIFY transportChanged) // seconds
+    Q_PROPERTY(double trackLength READ trackLength NOTIFY transportChanged)     // seconds
+    // Learning a knob for a plugin parameter: what has been caught so far.
+    Q_PROPERTY(bool learningMapping READ learningMapping NOTIFY mappingLearnChanged)
+    Q_PROPERTY(QString learnedKnob READ learnedKnob NOTIFY mappingLearnChanged)
+    Q_PROPERTY(QString learnedParameter READ learnedParameter NOTIFY mappingLearnChanged)
+    // Audio input channels open now (0: no input device chosen in Settings).
+    Q_PROPERTY(int audioInputChannels READ audioInputChannels NOTIFY statusChanged)
 
 public:
     static constexpr int kPollIntervalMs = 33;
@@ -57,6 +81,41 @@ public:
     // On-screen keyboard: note on (velocity 100) or off, on MIDI channel 1.
     Q_INVOKABLE void playNote(int note, bool on);
 
+    [[nodiscard]] double tempo() const { return m_tempo; }
+    // Sets the tempo playing now (not the song's; see DocumentController::setSongTempo).
+    Q_INVOKABLE void setTempo(double bpm);
+    // Each tap is a beat: after two, the tempo is their pace (the last few
+    // taps averaged). A pause of two seconds starts counting again.
+    Q_INVOKABLE void tapTempo();
+    [[nodiscard]] bool clickOn() const { return m_clickOn; }
+    void setClickOn(bool on);
+    [[nodiscard]] double clickVolumeDb() const { return m_clickVolumeDb; }
+    void setClickVolumeDb(double volumeDb);
+
+    [[nodiscard]] bool trackLoaded() const { return m_track.loaded; }
+    [[nodiscard]] bool trackLoading() const { return m_track.loading; }
+    [[nodiscard]] bool trackPlaying() const { return m_track.playing; }
+    [[nodiscard]] double trackPosition() const { return m_track.position; }
+    [[nodiscard]] double trackLength() const { return m_track.length; }
+    Q_INVOKABLE void playPauseTrack();
+    Q_INVOKABLE void rewindTrack();
+
+    // Learning a knob: move a knob on the keyboard and the control in the
+    // plugin's window (either order); the mapping is added to the channel
+    // of the current patch when both are caught.
+    Q_INVOKABLE void startMappingLearn(int channel, int target);
+    Q_INVOKABLE void cancelMappingLearn();
+    // While learning: the parameter picked from the list instead of moved in
+    // the plugin's window.
+    Q_INVOKABLE void setLearnParameter(quint32 id, const QString& name);
+    [[nodiscard]] int audioInputChannels() const { return m_audioInputs; }
+    [[nodiscard]] bool learningMapping() const { return m_learnChannel >= 0; }
+    [[nodiscard]] QString learnedKnob() const;
+    [[nodiscard]] QString learnedParameter() const { return m_learnedParameter ? m_learnedParameter->name : QString(); }
+    // The parameters a knob can move on a channel's instrument (-1) or
+    // effect: [{id, name}]; empty when that plugin is not loaded.
+    Q_INVOKABLE QVariantList parameters(int channel, int target) const;
+
 public slots:
     void poll();
 
@@ -66,10 +125,16 @@ signals:
     void masterLevelChanged();
     void masterMutedChanged();
     void limitingChanged();
+    void transportChanged();
+    void mappingLearnChanged();
+    void mappingLearned(int channel); // a knob was mapped
     void polled();
 
 private:
     double readMemoryMb();
+    void pollTransport();
+    void pollMappingLearn();
+    [[nodiscard]] std::optional<core::ChannelId> channelId(int channel) const;
 
     engine::IEngine& m_engine;
     DocumentController& m_document;
@@ -81,6 +146,18 @@ private:
     bool m_memoryErrorLogged = false;
     bool m_midiActivity = false;
     QString m_statusText;
+
+    int m_audioInputs = 0;
+    double m_tempo = 120.0;
+    bool m_clickOn = false;
+    double m_clickVolumeDb = -6.0;
+    engine::BackingTrackState m_track;
+    QElapsedTimer m_tapClock;
+    std::vector<qint64> m_taps; // ms, the last few taps
+    int m_learnChannel = -1;
+    int m_learnTarget = -1;
+    std::optional<std::pair<int, int>> m_learnedKnob;
+    std::optional<engine::PluginParameter> m_learnedParameter;
 };
 
 } // namespace gigchain::ui

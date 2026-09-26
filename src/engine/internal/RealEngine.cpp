@@ -22,6 +22,14 @@
 using namespace Qt::StringLiterals;
 
 namespace gigchain::engine {
+namespace {
+
+// Strips of earlier patches ringing out at once, at most.
+constexpr std::size_t kMaxTails = 8;
+// The slowest tempo taken (the fastest is core::limits::kMaxTempo).
+constexpr double kMinTempo = 20.0;
+
+} // namespace
 
 core::Result<std::unique_ptr<IEngine>> createRealEngine(const RealEngineOptions& options)
 {
@@ -35,7 +43,11 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     std::unique_ptr<RealEngine> engine(new RealEngine()); // private constructor; owned immediately
 
     auto opened = engine->openAudio(options.audio);
-    const AudioSetup systemAudio{.driver = AudioDriver::System, .device = {}, .sampleRate = 0, .bufferFrames = options.audio.bufferFrames};
+    const AudioSetup systemAudio{.driver = AudioDriver::System,
+                                 .device = {},
+                                 .sampleRate = 0,
+                                 .bufferFrames = options.audio.bufferFrames,
+                                 .inputDevice = {}};
     if (!opened && options.audio != systemAudio) {
         // The saved setup failed: fall back to system audio (logged by open()).
         engine->m_pendingNotices.push_back(Notice::warning(u"%1 could not be used (%2); using system audio instead"_s.arg(
@@ -50,6 +62,7 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_preparedBlock = engine->m_audio.maxBlock();
     engine->m_midiSetup = options.midi;
     std::ranges::transform(engine->openMidi(), std::back_inserter(engine->m_pendingNotices), &Notice::warning);
+    std::ranges::transform(engine->applyClockSetup(), std::back_inserter(engine->m_pendingNotices), &Notice::warning);
     engine->m_progress = options.progress;
     engine->m_guard = PluginLoadGuard(options.pluginGuardFolder);
     for (const QString& crashed : engine->m_guard.takeCrashed()) {
@@ -66,16 +79,39 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_pluginFolder = options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder;
     engine->m_plugins = PluginCatalog::scan(engine->m_pluginFolder, options.pluginCacheFile, nullptr, scanProgress,
                                             &engine->m_guard, options.pluginScanner);
+    // The app's own plugins, unless the same one is installed already.
+    if (!options.bundledPluginFolder.isEmpty() && QFileInfo(options.bundledPluginFolder).isDir()) {
+        const QString bundledCache = options.pluginCacheFile.isEmpty() ? QString() : options.pluginCacheFile + u".bundled"_s;
+        int added = 0;
+        for (PluginInfo& plugin : PluginCatalog::scan(options.bundledPluginFolder, bundledCache, nullptr, scanProgress,
+                                                      &engine->m_guard, options.pluginScanner)) {
+            const bool installed = std::ranges::any_of(engine->m_plugins, [&plugin](const PluginInfo& p) {
+                return p.name == plugin.name && p.vendor == plugin.vendor;
+            });
+            if (installed) continue;
+            engine->m_plugins.push_back(std::move(plugin));
+            ++added;
+        }
+        qCInfo(lcEngine).noquote() << "Plugins that come with the app:" << added << "from" << options.bundledPluginFolder;
+    }
     return engine;
 }
 
 RealEngine::~RealEngine()
 {
     // Stop audio before any graph or plugin is destroyed.
+    m_clockOut.close();
     m_midi.close();
     m_audio.close();
     m_exchange.publish(nullptr);
     m_exchange.collectGarbage();
+    m_track.publish(nullptr);
+    m_track.collectGarbage();
+    // A backing track still being read writes into this engine: let it stop.
+    if (m_trackReader) {
+        m_cancelTrackRead.store(true, std::memory_order_relaxed);
+        m_trackReader->wait();
+    }
 }
 
 std::vector<RealEngine::PlannedSlot> RealEngine::planPatch(const core::SongId& song, const core::Patch& patch)
@@ -222,13 +258,29 @@ std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& s
 
 core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
 {
+    const AudioApi api = setup.driver == AudioDriver::Asio ? AudioApi::Asio : AudioApi::Wasapi;
     std::optional<DeviceChoice> choice;
     if (!setup.device.isEmpty()) {
-        choice = DeviceChoice{.api = setup.driver == AudioDriver::Asio ? AudioApi::Asio : AudioApi::Wasapi, .name = setup.device};
+        choice = DeviceChoice{.api = api, .name = setup.device};
     } else if (setup.driver == AudioDriver::Asio) {
         return core::fail(core::ErrorCode::InvalidData, u"Choose an ASIO device"_s);
     }
-    return m_audio.open(choice, setup.bufferFrames, [this](const AudioBlock& out) { render(out); }, setup.sampleRate);
+    std::optional<DeviceChoice> input;
+    if (!setup.inputDevice.isEmpty()) input = DeviceChoice{.api = api, .name = setup.inputDevice};
+    return m_audio.open(choice, setup.bufferFrames,
+                        [this](const AudioBlock& out, const AudioInputs& inputs) { render(out, inputs); }, setup.sampleRate,
+                        input);
+}
+
+std::vector<AudioInputDevice> RealEngine::audioInputDevices() const
+{
+    std::vector<AudioInputDevice> devices;
+    std::ranges::transform(AudioDevice::listInputs(), std::back_inserter(devices), [](const AudioDeviceInfo& info) {
+        return AudioInputDevice{.driver = info.api == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
+                                .name = info.name,
+                                .channels = std::min(info.inputChannels, kMaxAudioInputs)};
+    });
+    return devices;
 }
 
 std::vector<AudioOutput> RealEngine::audioOutputs() const
@@ -254,7 +306,8 @@ AudioSetup RealEngine::audioSetup() const
     return AudioSetup{.driver = m_audio.api() == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
                       .device = m_audio.deviceName(),
                       .sampleRate = static_cast<unsigned int>(m_audio.sampleRate()),
-                      .bufferFrames = static_cast<unsigned int>(m_audio.maxBlock())};
+                      .bufferFrames = static_cast<unsigned int>(m_audio.maxBlock()),
+                      .inputDevice = m_audio.inputName()};
 }
 
 core::Result<void> RealEngine::setAudioSetup(const AudioSetup& setup)
@@ -340,12 +393,23 @@ core::Result<void> RealEngine::setMidiSetup(const MidiSetup& setup)
 {
     GC_ONLY_MAIN_THREAD();
     m_midiSetup = setup;
-    const std::vector<QString> problems = openMidi();
+    std::vector<QString> problems = openMidi();
+    std::ranges::move(applyClockSetup(), std::back_inserter(problems));
     if (!problems.empty()) {
         QStringList text;
         for (const QString& problem : problems) text << problem;
         return core::fail(core::ErrorCode::DeviceUnavailable, text.join(u"; "_s));
     }
+    return {};
+}
+
+std::vector<QString> RealEngine::applyClockSetup()
+{
+    GC_ONLY_MAIN_THREAD();
+    m_followClock.store(m_midiSetup.followClock, std::memory_order_relaxed);
+    if (m_midiSetup.clockOutput == m_clockOut.portName()) return {};
+    m_clockOut.setTempo(tempo());
+    if (auto opened = m_clockOut.open(m_midiSetup.clockOutput); !opened) return {opened.error().message}; // logged
     return {};
 }
 
@@ -390,11 +454,16 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
         spec.route = RouteSettings{.keyLow = channel.keyLow,
                                    .keyHigh = channel.keyHigh,
                                    .transpose = channel.transpose,
-                                   .midiChannel = channel.midiChannel};
+                                   .midiChannel = channel.midiChannel,
+                                   .velocityLow = channel.velocityLow,
+                                   .velocityHigh = channel.velocityHigh};
         spec.volumeDb = channel.volumeDb;
         spec.pan = channel.pan;
         spec.mute = channel.mute;
         spec.solo = channel.solo;
+        spec.inputLeft = channel.inputLeft - 1; // 1-based in the setlist, -1 = none
+        spec.inputRight = channel.inputRight - 1;
+        std::map<int, int> effectAt; // the channel's effect position -> its place in the strip (switched-off ones are left out)
         for (const PlannedSlot& planned : plan) {
             if (std::cmp_not_equal(planned.channel, c)) continue;
             // Loaded up front by preload(); a plugin just added loads here.
@@ -408,25 +477,61 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
                 auto& effects = m_currentEffects[channel.id.value()];
                 effects.resize(channel.effects.size());
                 effects.at(static_cast<std::size_t>(planned.effect)) = node;
+                effectAt[planned.effect] = static_cast<int>(spec.effects.size());
                 spec.effects.push_back(std::move(node));
             }
+        }
+        for (const core::ControlMapping& m : channel.mappings) {
+            int target = -1;
+            if (m.target >= 0) {
+                const auto at = effectAt.find(m.target);
+                if (at == effectAt.end()) continue; // its effect is switched off or not loaded
+                target = at->second;
+            } else if (!spec.instrument) {
+                continue;
+            }
+            spec.mappings.push_back(ParameterMapping{.midiChannel = m.midiChannel,
+                                                     .controller = m.controller,
+                                                     .target = target,
+                                                     .parameter = m.parameter,
+                                                     .minimum = m.minimum,
+                                                     .maximum = m.maximum});
         }
         specs.push_back(std::move(spec));
     }
 
-    // Instruments leaving the sound release their notes, so they do not hang
-    // when the patch comes back.
+    // Strips of the sounding graph (and its own tails) that the new patch
+    // does not play ring out: held notes until they are let go, reverbs
+    // until they fade. A strip sharing a plugin with the new patch cannot
+    // (the plugin plays in the new patch).
+    const std::set<const INode*> playing(used.begin(), used.end());
+    std::vector<std::shared_ptr<ChannelStrip>> tails;
+    std::set<const INode*> ringing;
+    if (const std::shared_ptr<RenderGraph>& previous = m_exchange.currentShared()) {
+        for (const auto* strips : {&previous->strips(), &previous->tails()}) {
+            for (const auto& strip : *strips) {
+                const std::vector<const INode*> nodes = strip->nodes();
+                const bool shared = std::ranges::any_of(nodes, [&playing](const INode* n) { return playing.contains(n); });
+                if (strip->tailDone() || shared || nodes.empty() || tails.size() >= kMaxTails) continue;
+                tails.push_back(strip);
+                ringing.insert(nodes.begin(), nodes.end());
+            }
+        }
+    }
+
+    // Instruments leaving the sound (and not ringing out) release their
+    // notes, so they do not hang when the patch comes back.
     for (const auto& [key, node] : m_nodes) {
-        if (used.count(node.get()) == 0) node->releaseAllNotes();
+        if (used.count(node.get()) == 0 && !ringing.contains(node.get())) node->releaseAllNotes();
     }
     std::vector<std::shared_ptr<INode>> master;
     for (const QString& key : masterKeys()) {
         if (const auto it = m_masterNodes.find(key); it != m_masterNodes.end()) master.push_back(it->second);
     }
     m_exchange.publish(std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(),
-                                                     std::move(master)));
-    qCInfo(lcEngine).noquote() << "Patch applied:" << patch.name << "(" << patch.channels.size() << "channels ) in"
-                               << timer.elapsed() << "ms";
+                                                     std::move(master), std::move(tails)));
+    qCInfo(lcEngine).noquote() << "Patch applied:" << patch.name << "(" << patch.channels.size() << "channels,"
+                               << m_exchange.current()->tails().size() << "ringing out ) in" << timer.elapsed() << "ms";
 }
 
 LevelReading RealEngine::channelLevel(const core::ChannelId& id)
@@ -506,6 +611,15 @@ std::vector<Notice> RealEngine::poll()
     // A lost device may have come back at another rate or block size.
     syncPluginsToDevice();
     watchMidiPorts(notices);
+    collectBackingTrack(notices);
+    m_clockOut.setTempo(tempo());
+    if (m_clockOut.takeFailed()) {
+        notices.push_back(Notice::warning(u"The MIDI clock to %1 stopped: the output stopped working"_s.arg(m_clockOut.portName())));
+        qCWarning(lcEngine).noquote() << notices.back().text;
+        m_clockOut.close(); // choosing the output again in Settings restarts it
+    }
+    // Knobs mapped to parameters: shown in the plugins' own windows.
+    for (const auto& [key, node] : m_nodes) node->showParameterChanges();
     std::ranges::move(m_pendingNotices, std::back_inserter(notices));
     m_pendingNotices.clear();
 
@@ -666,6 +780,9 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
         if (const MidiTrigger press = learnable(event.status, event.data1, event.data2); press.isSet()) {
             m_learned.store(press.pack(), std::memory_order_relaxed);
         }
+        if ((event.status & 0xF0) == 0xB0) {
+            m_movedController.store(((event.status & 0x0F) * 128) + event.data1, std::memory_order_relaxed);
+        }
         bool consumed = false;
         if (any) {
             uint32_t action = 1U;
@@ -709,6 +826,14 @@ int RealEngine::takeProgramChange()
 {
     GC_ONLY_MAIN_THREAD();
     return m_program.exchange(-1, std::memory_order_relaxed);
+}
+
+std::optional<std::pair<int, int>> RealEngine::takeMovedController()
+{
+    GC_ONLY_MAIN_THREAD();
+    const int moved = m_movedController.exchange(-1, std::memory_order_relaxed);
+    if (moved < 0) return std::nullopt;
+    return std::pair{(moved / 128) + 1, moved % 128};
 }
 
 MidiTrigger RealEngine::takeLearnedTrigger()
@@ -816,6 +941,155 @@ std::vector<QString> RealEngine::storePluginStates(core::Setlist& setlist)
     return problems;
 }
 
+void RealEngine::setTempo(double bpm)
+{
+    if (!std::isfinite(bpm) || bpm < kMinTempo || bpm > core::limits::kMaxTempo) {
+        qCWarning(lcEngine) << "Tempo" << bpm << "ignored: it must be between" << kMinTempo << "and" << core::limits::kMaxTempo;
+        return;
+    }
+    m_tempo.store(bpm, std::memory_order_relaxed);
+}
+
+double RealEngine::tempo() const
+{
+    if (m_followClock.load(std::memory_order_relaxed)) {
+        if (const double clock = m_midi.clockTempo(); clock > 0.0) return clock;
+    }
+    return m_tempo.load(std::memory_order_relaxed);
+}
+
+void RealEngine::setClick(bool on, double volumeDb)
+{
+    m_click.setVolumeDb(volumeDb);
+    m_click.setOn(on);
+}
+
+std::shared_ptr<Vst3Node> RealEngine::currentNode(const core::ChannelId& id, int target) const
+{
+    if (target < 0) {
+        const auto it = m_currentInstruments.find(id.value());
+        return it != m_currentInstruments.end() ? it->second : nullptr;
+    }
+    const auto effects = m_currentEffects.find(id.value());
+    if (effects == m_currentEffects.end() || std::cmp_greater_equal(target, effects->second.size())) return nullptr;
+    return effects->second.at(static_cast<std::size_t>(target));
+}
+
+std::vector<PluginParameter> RealEngine::pluginParameters(const core::ChannelId& id, int target) const
+{
+    GC_ONLY_MAIN_THREAD();
+    std::vector<PluginParameter> list;
+    const auto node = currentNode(id, target);
+    if (!node) return list;
+    std::ranges::transform(node->parameters(), std::back_inserter(list),
+                           [](const Vst3Node::Parameter& p) { return PluginParameter{.id = p.id, .name = p.name}; });
+    return list;
+}
+
+std::optional<PluginParameter> RealEngine::takeTouchedParameter(const core::ChannelId& id, int target)
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto node = currentNode(id, target);
+    if (!node) return std::nullopt;
+    const std::optional<uint32_t> touched = node->takeTouchedParameter();
+    if (!touched) return std::nullopt;
+    const std::vector<Vst3Node::Parameter> listed = node->parameters();
+    const auto found = std::ranges::find_if(listed, [&touched](const Vst3Node::Parameter& p) { return p.id == *touched; });
+    if (found != listed.end()) return PluginParameter{.id = found->id, .name = found->name};
+    return PluginParameter{.id = *touched, .name = u"Parameter %1"_s.arg(*touched)}; // moved, but not listed as automatable
+}
+
+void RealEngine::setBackingTrack(const QString& path)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (path == m_trackPath) return;
+    m_trackPath = path;
+    m_trackFailed.clear();
+    m_trackPlaying.store(false, std::memory_order_relaxed);
+    m_trackPosition.store(0, std::memory_order_relaxed);
+    m_track.publish(nullptr); // the old track stops at once
+    if (m_trackReader) {
+        m_cancelTrackRead.store(true, std::memory_order_relaxed); // the new one starts when it has stopped (poll)
+        return;
+    }
+    if (!path.isEmpty()) startReadingTrack(path);
+}
+
+void RealEngine::startReadingTrack(const QString& path)
+{
+    GC_ONLY_MAIN_THREAD();
+    m_cancelTrackRead.store(false, std::memory_order_relaxed);
+    const double rate = m_audio.sampleRate();
+    m_trackReader.reset(QThread::create([this, path, rate] {
+        auto clip = decodeAudioFile(path, rate, &m_cancelTrackRead);
+        const std::scoped_lock lock(m_trackMutex);
+        m_trackRead = std::move(clip);
+        m_trackReadPath = path;
+    }));
+    m_trackReader->setObjectName(u"BackingTrackReader"_s);
+    m_trackReader->start(QThread::LowPriority);
+}
+
+void RealEngine::collectBackingTrack(std::vector<Notice>& notices)
+{
+    GC_ONLY_MAIN_THREAD();
+    m_track.collectGarbage();
+    if (m_trackReader && m_trackReader->isFinished()) {
+        m_trackReader.reset();
+        std::optional<core::Result<AudioClip>> read;
+        QString readPath;
+        {
+            const std::scoped_lock lock(m_trackMutex);
+            read.swap(m_trackRead);
+            readPath = m_trackReadPath;
+        }
+        if (read && readPath == m_trackPath) {
+            if (*read) {
+                m_trackPosition.store(0, std::memory_order_relaxed);
+                m_track.publish(std::make_shared<AudioClip>(std::move(**read)));
+            } else {
+                m_trackFailed = m_trackPath;
+                qCWarning(lcEngine).noquote() << read->error().message;
+                notices.push_back(Notice::error(read->error().message));
+            }
+        }
+    }
+    if (m_trackReader || m_trackPath.isEmpty() || m_trackFailed == m_trackPath) return;
+    // Not read yet (another read was running), or read for another sample
+    // rate (the audio device changed): read it (again).
+    const AudioClip* clip = m_track.current();
+    if (clip == nullptr || clip->path != m_trackPath || clip->sampleRate != m_audio.sampleRate()) {
+        if (clip != nullptr) {
+            m_trackPlaying.store(false, std::memory_order_relaxed);
+            m_track.publish(nullptr);
+        }
+        startReadingTrack(m_trackPath);
+    }
+}
+
+void RealEngine::playBackingTrack(bool play)
+{
+    const AudioClip* clip = m_track.current();
+    if (play && (clip == nullptr || clip->path != m_trackPath)) return; // nothing ready to play
+    if (play && m_trackPosition.load(std::memory_order_relaxed) >= clip->frames()) {
+        m_trackPosition.store(0, std::memory_order_relaxed); // it ended: from the start
+    }
+    m_trackPlaying.store(play, std::memory_order_relaxed);
+}
+
+BackingTrackState RealEngine::backingTrack() const
+{
+    const AudioClip* clip = m_track.current();
+    const bool loaded = clip != nullptr && clip->path == m_trackPath && !m_trackPath.isEmpty();
+    const double rate = loaded ? clip->sampleRate : 0.0;
+    return BackingTrackState{.path = m_trackPath,
+                             .loading = m_trackReader != nullptr,
+                             .loaded = loaded,
+                             .playing = loaded && m_trackPlaying.load(std::memory_order_relaxed),
+                             .position = rate > 0.0 ? static_cast<double>(m_trackPosition.load(std::memory_order_relaxed)) / rate : 0.0,
+                             .length = loaded ? clip->seconds() : 0.0};
+}
+
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(const QString& pluginId)
 {
     GC_ONLY_MAIN_THREAD();
@@ -838,7 +1112,7 @@ QString RealEngine::statusText() const
         .arg(ports.isEmpty() ? u"none"_s : ports.join(u", "_s));
 }
 
-void RealEngine::render(AudioBlock out) noexcept
+void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
 {
     GC_ONLY_AUDIO_THREAD();
     const auto start = std::chrono::steady_clock::now();
@@ -848,17 +1122,66 @@ void RealEngine::render(AudioBlock out) noexcept
     while (count < m_events.size() && m_injected.pop(injected)) m_events.at(count++) = injected; // room checked
     count = takeControlMessages(count);
 
+    // The clock: the set tempo, or a followed MIDI clock's (whose Start
+    // begins bar 1 here too).
+    double bpm = m_tempo.load(std::memory_order_relaxed);
+    const bool clockStarted = m_midi.takeClockStart();
+    if (m_followClock.load(std::memory_order_relaxed)) {
+        if (clockStarted) {
+            m_samplePosition = 0;
+            m_ppq = 0.0;
+        }
+        if (const double clock = m_midi.clockTempo(); clock > 0.0) bpm = clock;
+    }
+    const double rate = m_audio.sampleRate();
+    TimeInfo time{.tempo = bpm,
+                  .sampleRate = rate,
+                  .samplePosition = m_samplePosition,
+                  .ppqPosition = m_ppq,
+                  .barStartPpq = 0.0,
+                  .timeSigNumerator = 4,
+                  .timeSigDenominator = 4};
+    time.barStartPpq = std::floor(m_ppq / time.quartersPerBar()) * time.quartersPerBar();
+
+    const float masterGain = m_masterGain.load(std::memory_order_relaxed);
     RenderGraph* graph = m_exchange.acquire();
     if (graph != nullptr) {
-        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, m_masterGain.load(std::memory_order_relaxed));
+        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs);
     } else {
         std::fill_n(out.left, out.frames, 0.0F);
         std::fill_n(out.right, out.frames, 0.0F);
     }
     m_exchange.release();
 
+    // The backing track, through the master fader.
+    const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
+    if (const AudioClip* clip = m_track.acquire(); clip != nullptr) {
+        if (m_trackRewind.exchange(false, std::memory_order_relaxed)) m_trackPosition.store(0, std::memory_order_relaxed);
+        const int64_t position = std::clamp<int64_t>(m_trackPosition.load(std::memory_order_relaxed), 0, clip->frames());
+        if (m_trackPlaying.load(std::memory_order_relaxed)) {
+            const auto n = static_cast<std::size_t>(std::min<int64_t>(static_cast<int64_t>(frames), clip->frames() - position));
+            const float gain = m_trackGain.load(std::memory_order_relaxed) * masterGain;
+            const auto from = static_cast<std::size_t>(position);
+            const auto add = [gain](float mix, float sample) { return mix + (sample * gain); };
+            const std::span<float> left(out.left, n);
+            const std::span<float> right(out.right, n);
+            std::ranges::transform(left, std::span<const float>(clip->left).subspan(from, n), left.begin(), add);
+            std::ranges::transform(right, std::span<const float>(clip->right).subspan(from, n), right.begin(), add);
+            m_trackPosition.store(position + static_cast<int64_t>(n), std::memory_order_relaxed);
+            if (position + static_cast<int64_t>(n) >= clip->frames()) m_trackPlaying.store(false, std::memory_order_relaxed);
+        }
+    }
+    m_track.release();
+
+    // The click, on top of everything (not through the master fader: it
+    // still counts in when the band is muted).
+    m_click.process(out, time);
+
+    m_samplePosition += static_cast<int64_t>(frames);
+    if (rate > 0.0) m_ppq += static_cast<double>(frames) * bpm / 60.0 / rate;
+
     // The safety limiter: last before the output.
-    if (const double rate = m_audio.sampleRate(); rate != m_limiterRate) {
+    if (rate != m_limiterRate) {
         m_limiter.setSampleRate(rate);
         m_limiterRate = rate;
     }
@@ -867,7 +1190,6 @@ void RealEngine::render(AudioBlock out) noexcept
     // The master meter: what leaves the app.
     float peak = 0.0F;
     double sumSquares = 0.0;
-    const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
     const std::span<const float> left(out.left, frames);
     const std::span<const float> right(out.right, frames);
     auto r = right.begin();

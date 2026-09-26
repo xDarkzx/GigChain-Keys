@@ -7,7 +7,9 @@
 
 #include "gigchain/core/SetlistFile.h"
 
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -532,12 +534,200 @@ private slots:
 
     void editingCycleDoesNotLeak()
     {
-        QCOMPARE(test::leakedBlocks([this] {
-                     QVERIFY(m_doc->addSong());
-                     QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
-                     QVERIFY(m_doc->removeSong(m_doc->songIndex()));
-                 }),
-                 0LL);
+        const auto edits = [this] {
+            QVERIFY(m_doc->addSong());
+            QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+            QVERIFY(m_doc->removeSong(m_doc->songIndex()));
+        };
+        // Undo keeps the last 100 steps: fill it first, so what grows after
+        // is a leak and not the history (which must stay at its limit).
+        for (int i = 0; i < 40; ++i) edits();
+        QCOMPARE(test::leakedBlocks(edits), 0LL);
+    }
+
+    void everyEditCanBeUndoneAndRedone()
+    {
+        m_doc->newSetlist();
+        QVERIFY(!m_doc->canUndo()); // a new setlist starts with no history
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->renameSong(0, u"Hallelujah"_s));
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->canUndo());
+        QVERIFY(m_doc->undo()); // the channel goes
+        QVERIFY(m_doc->currentPatch()->channels.empty());
+        QCOMPARE(m_engine->lastPatch.channels.size(), std::size_t{0}); // and the engine plays the undone patch
+        QVERIFY(m_doc->undo()); // the name goes back
+        QCOMPARE(m_doc->currentSongName(), u"Song 1"_s);
+        QVERIFY(m_doc->canRedo());
+        QVERIFY(m_doc->redo());
+        QVERIFY(m_doc->redo());
+        QCOMPARE(m_doc->currentSongName(), u"Hallelujah"_s);
+        QVERIFY(m_doc->canUndo()); // and back to the empty setlist, three steps down
+        QVERIFY(m_doc->undo() && m_doc->undo() && m_doc->undo());
+        QVERIFY(m_doc->setlist().songs.empty());
+        QVERIFY(!m_doc->canUndo());
+        QVERIFY(m_doc->redo() && m_doc->redo() && m_doc->redo());
+        QCOMPARE(m_doc->currentPatch()->channels.size(), std::size_t{1});
+        QVERIFY(!m_doc->canRedo());
+        // A new edit after undoing drops what could be redone.
+        QVERIFY(m_doc->undo());
+        QVERIFY(m_doc->addSong());
+        QVERIFY(!m_doc->canRedo());
+    }
+
+    void aFaderDragIsOneUndoStep()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        for (int i = 1; i <= 20; ++i) QVERIFY(m_doc->setChannelVolume(0, -0.5 * i));
+        QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, -10.0);
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, 0.0); // back to before the drag, not one step
+        QVERIFY(m_doc->undo());
+        QVERIFY(m_doc->currentPatch()->channels.empty());
+    }
+
+    void openingASetlistClearsTheHistory()
+    {
+        QVERIFY(m_doc->renameSong(0, u"First"_s));
+        QVERIFY(m_doc->saveAs(path(u"a.gigchain.json"_s)));
+        QVERIFY(m_doc->open(path(u"a.gigchain.json"_s)));
+        QVERIFY(!m_doc->canUndo());
+        QVERIFY(!m_doc->canRedo());
+    }
+
+    void aSongsTempoPlaysWhenTheSongIsChosen()
+    {
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->setSongTempo(0, 84.0));
+        QCOMPARE(m_engine->tempoNow, 120.0); // song 2 is playing: its tempo is not set
+        QVERIFY(m_doc->selectPatch(0, 0));
+        QCOMPARE(m_doc->songTempo(), 84.0);
+        QCOMPARE(m_engine->tempoNow, 84.0);
+        QVERIFY(m_doc->selectPatch(1, 0));
+        QCOMPARE(m_doc->songTempo(), 0.0);
+        QCOMPARE(m_engine->tempoNow, 84.0); // a song without a tempo keeps the one playing
+        QVERIFY(m_doc->setSongTempo(1, 128.0)); // the current song: at once
+        QCOMPARE(m_engine->tempoNow, 128.0);
+        QVERIFY(!m_doc->setSongTempo(1, 500.0));
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->songTempo(), 0.0);
+    }
+
+    void aBackingTrackIsKeptInTheSetlistsFolder()
+    {
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Save the setlist first"_s));
+        QVERIFY(!m_doc->setSongBackingTrack(0, QUrl::fromLocalFile(path(u"x.wav"_s))));
+
+        QVERIFY(QDir().mkpath(path(u"show"_s)));
+        QVERIFY(m_doc->saveAs(path(u"show/set.gigchain.json"_s)));
+        const QString elsewhere = path(u"music/Hallelujah backing.wav"_s);
+        QDir().mkpath(path(u"music"_s));
+        {
+            QFile file(elsewhere);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("RIFF....WAVE");
+        }
+        QVERIFY(m_doc->setSongBackingTrack(0, QUrl::fromLocalFile(elsewhere)));
+        QCOMPARE(m_doc->songBackingTrack(), u"Hallelujah backing.wav"_s);
+        QVERIFY(QFileInfo::exists(path(u"show/Hallelujah backing.wav"_s))); // copied next to the setlist
+        QCOMPARE(QFileInfo(m_engine->track.path).absoluteFilePath(), QFileInfo(path(u"show/Hallelujah backing.wav"_s)).absoluteFilePath());
+        // Saved and read back with the song.
+        QVERIFY(m_doc->save());
+        QVERIFY(m_doc->open(path(u"show/set.gigchain.json"_s)));
+        QCOMPARE(m_doc->songBackingTrack(), u"Hallelujah backing.wav"_s);
+        // Removing it stops it.
+        QVERIFY(m_doc->setSongBackingTrack(0, QUrl()));
+        QVERIFY(m_engine->track.path.isEmpty());
+    }
+
+    void aVelocityLayerAndAnInputChannelReachTheEngine()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->setChannelVelocityRange(0, 1, 70));
+        QCOMPARE(m_engine->lastPatch.channels.at(0).velocityHigh, 70);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"velocityLow must not be above velocityHigh"_s));
+        QVERIFY(!m_doc->setChannelVelocityRange(0, 90, 20));
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Choose which input"_s));
+        QVERIFY(!m_doc->addInputChannel(0, 0));
+        QVERIFY(m_doc->addInputChannel(1, 2)); // no inputs open: added, with a warning to open them
+        const core::Channel& input = m_engine->lastPatch.channels.at(1);
+        QVERIFY(!input.instrument.has_value());
+        QCOMPARE(input.inputLeft, 1);
+        QCOMPARE(input.inputRight, 2);
+        QCOMPARE(input.name, u"Input 1+2"_s);
+    }
+
+    void knobsAreMappedAndRangedPerChannel()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->addMapping(0, 1, 74, -1, 7, u"Cutoff"_s));
+        QVERIFY(m_doc->addMapping(0, 1, 74, -1, 9, u"Drive"_s)); // the same knob learned again: replaces it
+        QCOMPARE(m_doc->mappings(0).size(), 1);
+        QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"parameterName"_s).toString(), u"Drive"_s);
+        QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"targetName"_s).toString(), u"Spy Piano"_s);
+        QVERIFY(m_doc->setMappingRange(0, 0, 0.25, 0.75));
+        QCOMPARE(m_engine->lastPatch.channels.at(0).mappings.at(0).maximum, 0.75);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"must be between 0 and 1"_s));
+        QVERIFY(!m_doc->setMappingRange(0, 0, -1.0, 2.0));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"target must be between"_s));
+        QVERIFY(!m_doc->addMapping(0, 1, 75, 3, 1, u"On a missing effect"_s));
+        QVERIFY(m_doc->removeMapping(0, 0));
+        QVERIFY(m_doc->mappings(0).isEmpty());
+    }
+
+    void aKnobIsLearnedFromTheKeyboardAndThePlugin()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        EngineStatus status(*m_engine, *m_doc);
+        QSignalSpy learned(&status, &EngineStatus::mappingLearned);
+        status.startMappingLearn(0, -1);
+        QVERIFY(status.learningMapping());
+        m_engine->movedController = std::pair{1, 21};
+        status.poll();
+        QCOMPARE(status.learnedKnob(), u"Knob CC 21 (channel 1)"_s);
+        QVERIFY(status.learningMapping()); // the parameter is still to come
+        m_engine->touched = engine::PluginParameter{.id = 9, .name = u"Drive"_s};
+        status.poll();
+        QCOMPARE(learned.count(), 1);
+        QVERIFY(!status.learningMapping());
+        const auto mapping = m_engine->lastPatch.channels.at(0).mappings.at(0);
+        QCOMPARE(mapping.controller, 21);
+        QCOMPARE(mapping.parameter, quint32{9});
+
+        // Picked from the list instead of moved in the plugin.
+        status.startMappingLearn(0, -1);
+        status.setLearnParameter(7, u"Cutoff"_s);
+        m_engine->movedController = std::pair{1, 22};
+        status.poll();
+        QCOMPARE(m_engine->lastPatch.channels.at(0).mappings.size(), std::size_t{2});
+    }
+
+    void tapTempoFollowsTheTaps()
+    {
+        EngineStatus status(*m_engine, *m_doc);
+        status.tapTempo();
+        QVERIFY(m_engine->tempoRequests.empty()); // one tap is not a tempo
+        for (int i = 0; i < 3; ++i) {
+            QTest::qSleep(300); // tapping at 200 BPM: the time between taps is what is measured
+            status.tapTempo();
+        }
+        QVERIFY(!m_engine->tempoRequests.empty());
+        QVERIFY2(std::abs(m_engine->tempoRequests.back() - 200.0) < 15.0, qPrintable(QString::number(m_engine->tempoRequests.back())));
+    }
+
+    void pedalsTapTheTempoAndStartTheBackingTrack()
+    {
+        EngineStatus status(*m_engine, *m_doc);
+        m_engine->track = engine::BackingTrackState{.path = u"x.wav"_s, .loading = false, .loaded = true, .playing = false,
+                                                    .position = 0.0, .length = 60.0};
+        m_engine->pendingActions = {engine::ControlAction::PlayBacking};
+        status.poll();
+        QVERIFY(m_engine->track.playing);
+        QVERIFY(status.trackPlaying());
+        m_engine->pendingActions = {engine::ControlAction::PlayBacking};
+        status.poll();
+        QVERIFY(!m_engine->track.playing);
     }
 };
 

@@ -19,6 +19,11 @@ struct RealEngineOptions
     AudioSetup audio;
     MidiSetup midi;            // the inputs chosen in Settings
     QString pluginFolder;      // empty: the standard VST3 folder
+    // Plugins that come with the app (open-source instruments an installer
+    // puts next to it), scanned after pluginFolder when the folder exists. A
+    // plugin also installed in pluginFolder (same name and maker) is taken
+    // from there. Empty: none.
+    QString bundledPluginFolder;
     QString pluginCacheFile;   // what the plugin scan learned; empty: open every plugin
     QString pluginGuardFolder; // remembers plugins that crashed the app while loading; empty: off
     // The plugin scanner program: new plugins are read in a process of their

@@ -32,6 +32,11 @@ inline constexpr int kMinTranspose = -48;
 inline constexpr int kMaxTranspose = 48;
 inline constexpr int kMinMidiChannel = 0; // omni
 inline constexpr int kMaxMidiChannel = 16;
+inline constexpr int kMinVelocity = 1;
+inline constexpr int kMaxVelocity = 127;
+inline constexpr int kMaxMappingsPerChannel = 32;
+inline constexpr int kMaxController = 127;
+inline constexpr int kMaxAudioInput = 64; // 1-based input numbers; 0 = none
 inline constexpr double kMinVolumeDb = -96.0;
 inline constexpr double kMaxVolumeDb = 12.0;
 inline constexpr double kMinPan = -1.0;

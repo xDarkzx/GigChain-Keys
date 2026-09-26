@@ -1,7 +1,10 @@
 #pragma once
 
 #include "AudioDevice.h"
+#include "AudioFile.h"
 #include "GraphExchange.h"
+#include "Metronome.h"
+#include "MidiClockOut.h"
 #include "MidiInput.h"
 #include "MidiQueue.h"
 #include "PluginLoadGuard.h"
@@ -11,12 +14,16 @@
 #include "gigchain/engine/IEngine.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
+#include <QThread>
+
 #include <array>
-#include <chrono>
 #include <atomic>
+#include <chrono>
 #include <map>
-#include <set>
 #include <memory>
+#include <mutex>
+#include <optional>
+#include <set>
 #include <vector>
 
 namespace gigchain::engine {
@@ -79,9 +86,32 @@ public:
     core::Result<std::unique_ptr<IPluginEditor>> createEffectEditor(const core::ChannelId& id, int effect) override;
     core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) override;
 
+    void setTempo(double bpm) override;
+    [[nodiscard]] double tempo() const override;
+    void setClick(bool on, double volumeDb) override;
+    [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
+    void setBackingTrack(const QString& path) override;
+    void playBackingTrack(bool play) override;
+    void rewindBackingTrack() override { m_trackRewind.store(true, std::memory_order_relaxed); }
+    void setBackingTrackVolume(double volumeDb) override { m_trackGain.store(dbToGain(volumeDb), std::memory_order_relaxed); }
+    [[nodiscard]] BackingTrackState backingTrack() const override;
+    [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId& id, int target) const override;
+    std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId& id, int target) override;
+    std::optional<std::pair<int, int>> takeMovedController() override;
+    [[nodiscard]] std::vector<AudioInputDevice> audioInputDevices() const override;
+    [[nodiscard]] int audioInputChannels() const override { return m_audio.inputChannels(); }
+    [[nodiscard]] QStringList midiOutputs() const override { return MidiClockOut::listPorts(); }
+
 private:
     RealEngine() = default;
-    void render(AudioBlock out) noexcept;
+    void render(AudioBlock out, const AudioInputs& inputs) noexcept;
+    // The plugin a channel's slot plays in the current patch (target -1 =
+    // its instrument), or null.
+    [[nodiscard]] std::shared_ptr<Vst3Node> currentNode(const core::ChannelId& id, int target) const;
+    // Main thread: a finished backing-track read becomes the track; a track
+    // read for another sample rate is read again.
+    void collectBackingTrack(std::vector<Notice>& notices);
+    void startReadingTrack(const QString& path);
     // The plugin instance for a slot, loaded if needed (logged; a failure is
     // reported to the user). `announce`: show the load in the progress UI.
     std::shared_ptr<Vst3Node> nodeFor(const QString& key, const core::PluginSlot& slot, bool announce);
@@ -109,6 +139,9 @@ private:
     std::vector<QString> openMidi();
     // Every couple of seconds: notices a keyboard plugged in or pulled out.
     void watchMidiPorts(std::vector<Notice>& notices);
+    // Follows m_midiSetup's clock choices: whether the tempo follows an
+    // incoming clock, and where the clock is sent. Problems returned (logged).
+    std::vector<QString> applyClockSetup();
 
     AudioDevice m_audio;
     MidiInput m_midi;
@@ -168,8 +201,34 @@ private:
     std::atomic<uint32_t> m_pressedActions{0};
     std::atomic<uint32_t> m_learned{0};
     std::atomic<int> m_program{-1}; // the last Program Change, -1 when none since taken
+    std::atomic<int> m_movedController{-1}; // the last CC moved: channel (0-15) * 128 + number; -1 = none since taken
     // Audio thread: takes control messages out of `count` events (in place).
     std::size_t takeControlMessages(std::size_t count) noexcept;
+
+    // The clock plugins and the click follow. Tempo set by the main thread;
+    // position kept by the audio thread.
+    std::atomic<double> m_tempo{120.0};
+    std::atomic<bool> m_followClock{false};
+    int64_t m_samplePosition = 0; // audio thread
+    double m_ppq = 0.0;           // audio thread
+    Metronome m_click;
+    MidiClockOut m_clockOut;
+
+    // The backing track: read on a worker thread, handed to the audio thread
+    // through the exchange. Play state and position are atomics.
+    HazardExchange<AudioClip> m_track;
+    QString m_trackPath;          // main thread: the file asked for
+    std::atomic<bool> m_trackPlaying{false};
+    std::atomic<bool> m_trackRewind{false};
+    std::atomic<int64_t> m_trackPosition{0}; // frames; written by the audio thread
+    std::atomic<float> m_trackGain{1.0F};
+    // The reading in progress, and its outcome (guarded by m_trackMutex).
+    std::unique_ptr<QThread> m_trackReader;
+    std::atomic<bool> m_cancelTrackRead{false};
+    std::mutex m_trackMutex;
+    std::optional<core::Result<AudioClip>> m_trackRead;
+    QString m_trackReadPath; // the path m_trackRead is for
+    QString m_trackFailed;   // main thread: a path that could not be read (not tried again until asked again)
 };
 
 } // namespace gigchain::engine

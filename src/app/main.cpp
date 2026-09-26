@@ -140,6 +140,8 @@ int runApp(int argc, char** argv)
     // Built next to the app (src/scanner): new plugins are read there.
     engineOptions.pluginScanner =
         QCoreApplication::applicationDirPath() + u"/"_s + branding::executable() + u"Scan.exe"_s;
+    // Instruments that come with the app, where an installer puts them.
+    engineOptions.bundledPluginFolder = QCoreApplication::applicationDirPath() + u"/plugins"_s;
     engineOptions.progress = [&startup, &quips](engine::LoadStage stage, const QString& what, int done, int total) {
         if (stage == engine::LoadStage::ScanningPlugins) {
             if (done < total) startup.addPlugin(what);

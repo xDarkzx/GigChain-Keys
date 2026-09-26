@@ -153,6 +153,26 @@ Popup {
                                 onActivated: (i) => dialog.settings.device = dialog.settings.devices[i]
                             }
                         }
+                        SettingsSection { title: qsTr("Audio inputs") }
+                        SettingsRow {
+                            label: qsTr("Input device")
+                            StageComboBox {
+                                objectName: "inputDeviceBox"
+                                implicitWidth: 360
+                                model: [qsTr("None")].concat(dialog.settings.inputDevices)
+                                currentIndex: dialog.settings.inputDevice === "" ? 0 : dialog.settings.inputDevices.indexOf(dialog.settings.inputDevice) + 1
+                                onActivated: (i) => dialog.settings.inputDevice = i === 0 ? "" : dialog.settings.inputDevices[i - 1]
+                            }
+                        }
+                        Label {
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            text: qsTr("A vocal mic or a guitar through effects: choose the device it is plugged into, then add an "
+                                       + "audio input channel in the mixer. With ASIO it is the same device as the output.")
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
                         SettingsSection { title: qsTr("Quality and latency") }
                         SettingsRow {
                             label: qsTr("Sample rate")
@@ -288,6 +308,26 @@ Popup {
                                        + "has not seen before stay disabled.").arg(Branding.name)
                             color: Theme.textDim
                             wrapMode: Text.Wrap
+                        }
+
+                        SettingsSection { title: qsTr("MIDI clock") }
+                        SettingsRow {
+                            label: qsTr("Send clock to")
+                            StageComboBox {
+                                objectName: "clockOutputBox"
+                                implicitWidth: 360
+                                model: [qsTr("Nowhere")].concat(dialog.settings.midiOutputs)
+                                currentIndex: dialog.settings.clockOutput === "" ? 0 : dialog.settings.midiOutputs.indexOf(dialog.settings.clockOutput) + 1
+                                onActivated: (i) => dialog.settings.clockOutput = i === 0 ? "" : dialog.settings.midiOutputs[i - 1]
+                            }
+                        }
+                        CheckBox {
+                            objectName: "followClock"
+                            Layout.leftMargin: 14
+                            text: qsTr("Follow the tempo of a MIDI clock coming in (a drum machine or DAW leads)")
+                            checked: dialog.settings.followClock
+                            onToggled: dialog.settings.followClock = checked
+                            focusPolicy: Qt.NoFocus
                         }
 
                         SettingsSection { title: qsTr("Pedals and pads") }

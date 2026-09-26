@@ -58,6 +58,12 @@ class DocumentController : public QObject
     Q_PROPERTY(QString currentChart READ currentChart NOTIFY chartChanged)
     // The last paste can be undone: exactly what was pasted, and the old name.
     Q_PROPERTY(bool canUndoPaste READ canUndoPaste NOTIFY pasteUndoChanged)
+    // Undo and redo of every edit to the setlist (Ctrl+Z, Ctrl+Shift+Z).
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY undoChanged)
+    Q_PROPERTY(bool canRedo READ canRedo NOTIFY undoChanged)
+    // The current song's tempo (0 = not set) and backing track file name ("" = none).
+    Q_PROPERTY(double songTempo READ songTempo NOTIFY songChanged)
+    Q_PROPERTY(QString songBackingTrack READ songBackingTrack NOTIFY songChanged)
 
 public:
     DocumentController(engine::IEngine& engine, QSettings& settings, QObject* parent = nullptr);
@@ -141,6 +147,37 @@ public:
     Q_INVOKABLE bool setChannelPan(int channel, double pan);
     Q_INVOKABLE bool setChannelMute(int channel, bool mute);
     Q_INVOKABLE bool setChannelSolo(int channel, bool solo);
+    // The note-on velocities (1-127) the channel plays: a velocity layer.
+    Q_INVOKABLE bool setChannelVelocityRange(int channel, int low, int high);
+    // A channel playing an audio input (1-based; right 0 = mono) through its
+    // effects; addInputChannel makes a new one.
+    Q_INVOKABLE bool addInputChannel(int inputLeft, int inputRight);
+    Q_INVOKABLE bool setChannelInput(int channel, int inputLeft, int inputRight);
+    // Keyboard knobs mapped to plugin parameters (target -1 = the
+    // instrument, else the effect's position). The range is the parameter's
+    // value (0-1) at the knob's lowest and highest position.
+    Q_INVOKABLE bool addMapping(int channel, int midiChannel, int controller, int target, quint32 parameter,
+                                const QString& parameterName);
+    Q_INVOKABLE bool removeMapping(int channel, int mapping);
+    Q_INVOKABLE bool setMappingRange(int channel, int mapping, double minimum, double maximum);
+    // For the knob editor: [{midiChannel, controller, target, targetName, parameter, parameterName, minimum, maximum}].
+    Q_INVOKABLE QVariantList mappings(int channel) const;
+    // Opens a channel's editor ("zone": keys, velocity, transpose, MIDI
+    // channel; "knobs": knob mappings) wherever the window shows it.
+    Q_INVOKABLE void editChannel(int channel, const QString& page);
+
+    // Song tempo (BPM, 0 = not set): it plays whenever the song is chosen.
+    [[nodiscard]] double songTempo() const;
+    Q_INVOKABLE bool setSongTempo(int song, double bpm);
+    // The song's backing track: `file` is copied into the setlist's folder
+    // (the setlist must be saved first); an empty url removes it.
+    [[nodiscard]] QString songBackingTrack() const;
+    Q_INVOKABLE bool setSongBackingTrack(int song, const QUrl& file);
+
+    [[nodiscard]] bool canUndo() const { return !m_undo.empty(); }
+    [[nodiscard]] bool canRedo() const { return !m_redo.empty(); }
+    Q_INVOKABLE bool undo();
+    Q_INVOKABLE bool redo();
 
     // Files
     Q_INVOKABLE void newSetlist();
@@ -180,6 +217,9 @@ signals:
     void hasSetlistChanged();
     void pasteUndoChanged();
     void recentFilesChanged();
+    void undoChanged();
+    void songChanged(); // the current song, or its tempo or backing track
+    void channelEditRequested(int channel, const QString& page);
 
 private:
     bool report(const core::Error& error);
@@ -198,6 +238,21 @@ private:
     void setDirty(bool dirty);
     [[nodiscard]] bool effectExists(int channel, int effect) const;
     void setFilePath(const QString& path);
+    // The current song's tempo and backing track, to the engine.
+    void applyCurrentSongToEngine();
+    [[nodiscard]] const core::Song* currentSong() const;
+    // Undo: the setlist as it was before each edit. Called whenever an edit
+    // is committed; edits in a row with the same `m_coalesceKey` within a
+    // moment (a fader being dragged) are one step.
+    struct UndoStep
+    {
+        core::Setlist setlist;
+        core::Cursor cursor;
+    };
+    void recordEdit();
+    void resetUndo();
+    // Goes back to the last step of `from`, keeping where it was in `to`.
+    bool restore(std::vector<UndoStep>& from, std::vector<UndoStep>& to);
 
     engine::IEngine& m_engine;
     QSettings& m_settings;
@@ -216,6 +271,15 @@ private:
     core::Cursor m_cursor;
     int m_selectedChannel = -1;
     bool m_dirty = false;
+    // Undo history: each step is the setlist and position before an edit.
+    std::vector<UndoStep> m_undo;
+    std::vector<UndoStep> m_redo;
+    core::Setlist m_committed; // the setlist after the last recorded edit
+    core::Cursor m_committedCursor;
+    QString m_coalesceKey;     // set by an edit that merges with the same edit just before
+    QString m_lastCoalesceKey;
+    qint64 m_lastEditMs = 0;
+    bool m_restoring = false;
     QString m_filePath;
     QString m_lastError;
     Notifications m_notifications;

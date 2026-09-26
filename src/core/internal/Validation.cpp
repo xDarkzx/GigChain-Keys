@@ -48,7 +48,27 @@ Result<void> validateSlot(const PluginSlot& slot, const QString& path)
     return validateName(slot.displayName, path + ".displayName"_L1);
 }
 
+Result<void> validateLength(const QString& text, int max, const QString& path)
+{
+    if (text.size() > max) {
+        return fail(ErrorCode::LimitExceeded, u"%1 is longer than %2 characters"_s.arg(path).arg(max));
+    }
+    return {};
+}
+
 } // namespace
+
+Result<void> validateFileName(const QString& name, const QString& path)
+{
+    if (auto r = validateLength(name, limits::kMaxFileNameLength, path); !r) return r;
+    // A plain file name inside the setlist's folder: no folders, drives or
+    // "..", so a setlist cannot reach other files on the computer.
+    if (name.trimmed().isEmpty() || name.contains(u'/') || name.contains(u'\\') || name.contains(u':') ||
+        name == u"."_s || name == u".."_s) {
+        return fail(ErrorCode::InvalidData, u"%1 must be a plain file name"_s.arg(path));
+    }
+    return {};
+}
 
 Result<void> validateName(const QString& name, const QString& path)
 {
@@ -90,13 +110,42 @@ Result<void> validateChannel(const Channel& channel, const QString& path)
         return fail(ErrorCode::OutOfRange, u"%1.keyLow must not be above keyHigh"_s.arg(path));
     }
     if (auto r = checkRange(channel.transpose, limits::kMinTranspose, limits::kMaxTranspose, path + ".transpose"_L1); !r) return r;
-    return checkRange(channel.midiChannel, limits::kMinMidiChannel, limits::kMaxMidiChannel, path + ".midiChannel"_L1);
-}
-
-Result<void> validateLength(const QString& text, int max, const QString& path)
-{
-    if (text.size() > max) {
-        return fail(ErrorCode::LimitExceeded, u"%1 is longer than %2 characters"_s.arg(path).arg(max));
+    if (auto r = checkRange(channel.midiChannel, limits::kMinMidiChannel, limits::kMaxMidiChannel, path + ".midiChannel"_L1);
+        !r) {
+        return r;
+    }
+    if (auto r = checkRange(channel.velocityLow, limits::kMinVelocity, limits::kMaxVelocity, path + ".velocityLow"_L1); !r) {
+        return r;
+    }
+    if (auto r = checkRange(channel.velocityHigh, limits::kMinVelocity, limits::kMaxVelocity, path + ".velocityHigh"_L1);
+        !r) {
+        return r;
+    }
+    if (channel.velocityLow > channel.velocityHigh) {
+        return fail(ErrorCode::OutOfRange, u"%1.velocityLow must not be above velocityHigh"_s.arg(path));
+    }
+    if (auto r = checkRange(channel.inputLeft, 0, limits::kMaxAudioInput, path + ".inputLeft"_L1); !r) return r;
+    if (auto r = checkRange(channel.inputRight, 0, limits::kMaxAudioInput, path + ".inputRight"_L1); !r) return r;
+    if (channel.inputLeft == 0 && channel.inputRight != 0) {
+        return fail(ErrorCode::InvalidData, u"%1.inputRight needs inputLeft"_s.arg(path));
+    }
+    if (channel.mappings.size() > static_cast<std::size_t>(limits::kMaxMappingsPerChannel)) {
+        return fail(ErrorCode::LimitExceeded,
+                    u"%1 has more than %2 control mappings"_s.arg(path).arg(limits::kMaxMappingsPerChannel));
+    }
+    for (std::size_t i = 0; i < channel.mappings.size(); ++i) {
+        const ControlMapping& m = channel.mappings.at(i);
+        const QString at = u"%1.mappings[%2]"_s.arg(path).arg(i);
+        if (auto r = checkRange(m.midiChannel, limits::kMinMidiChannel, limits::kMaxMidiChannel, at + ".midiChannel"_L1); !r) {
+            return r;
+        }
+        if (auto r = checkRange(m.controller, 0, limits::kMaxController, at + ".controller"_L1); !r) return r;
+        if (auto r = checkRange(m.target, -1, static_cast<int>(channel.effects.size()) - 1, at + ".target"_L1); !r) return r;
+        if (!std::isfinite(m.minimum) || !std::isfinite(m.maximum) || m.minimum < 0.0 || m.minimum > 1.0 ||
+            m.maximum < 0.0 || m.maximum > 1.0) {
+            return fail(ErrorCode::OutOfRange, u"%1 range must be between 0 and 1"_s.arg(at));
+        }
+        if (auto r = validateLength(m.parameterName, limits::kMaxNameLength, at + ".parameterName"_L1); !r) return r;
     }
     return {};
 }
@@ -129,15 +178,10 @@ Result<void> validateChart(const Song& song, const QString& path)
                     u"%1 has more than %2 attachments"_s.arg(path).arg(limits::kMaxAttachmentsPerSong));
     }
     for (std::size_t i = 0; i < song.attachments.size(); ++i) {
-        const QString& name = song.attachments.at(i);
-        const QString attachmentPath = u"%1.attachments[%2]"_s.arg(path).arg(i);
-        if (auto r = validateLength(name, limits::kMaxFileNameLength, attachmentPath); !r) return r;
-        // A plain file name inside the setlist's folder: no folders, drives
-        // or "..", so a setlist cannot reach other files on the computer.
-        if (name.trimmed().isEmpty() || name.contains(u'/') || name.contains(u'\\') || name.contains(u':') ||
-            name == u"."_s || name == u".."_s) {
-            return fail(ErrorCode::InvalidData, u"%1 must be a plain file name"_s.arg(attachmentPath));
-        }
+        if (auto r = validateFileName(song.attachments.at(i), u"%1.attachments[%2]"_s.arg(path).arg(i)); !r) return r;
+    }
+    if (!song.backingTrack.isEmpty()) {
+        if (auto r = validateFileName(song.backingTrack, path + ".backingTrack"_L1); !r) return r;
     }
     return {};
 }

@@ -69,7 +69,41 @@ public:
     }
     core::Result<std::unique_ptr<IPluginEditor>> createEditorForPlugin(const QString& pluginId) override;
 
+    void setTempo(double bpm) override
+    {
+        if (bpm >= 20.0 && bpm <= 400.0) m_tempo = bpm;
+    }
+    [[nodiscard]] double tempo() const override { return m_tempo; }
+    void setClick(bool on, double) override { m_click = on; }
+    [[nodiscard]] bool clickOn() const override { return m_click; }
+    // The demo "reads" any track at once, as three minutes long.
+    void setBackingTrack(const QString& path) override
+    {
+        if (path == m_track.path) return;
+        m_track = BackingTrackState{.path = path, .loading = false, .loaded = !path.isEmpty(), .playing = false,
+                                    .position = 0.0, .length = path.isEmpty() ? 0.0 : 180.0};
+    }
+    void playBackingTrack(bool play) override { m_track.playing = play && m_track.loaded; }
+    void rewindBackingTrack() override { m_track.position = 0.0; }
+    void setBackingTrackVolume(double) override {}
+    [[nodiscard]] BackingTrackState backingTrack() const override { return m_track; }
+    [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId&, int) const override
+    {
+        return {{.id = 1, .name = QStringLiteral("Cutoff")}, {.id = 2, .name = QStringLiteral("Resonance")}};
+    }
+    std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId&, int) override { return std::nullopt; }
+    std::optional<std::pair<int, int>> takeMovedController() override { return std::nullopt; } // no MIDI input
+    [[nodiscard]] std::vector<AudioInputDevice> audioInputDevices() const override
+    {
+        return {{.driver = AudioDriver::System, .name = QStringLiteral("Demo input"), .channels = 2}};
+    }
+    [[nodiscard]] int audioInputChannels() const override { return m_setup.inputDevice.isEmpty() ? 0 : 2; }
+    [[nodiscard]] QStringList midiOutputs() const override { return {}; }
+
 private:
+    double m_tempo = 120.0;
+    bool m_click = false;
+    BackingTrackState m_track;
     struct ChannelState
     {
         core::ChannelId id;

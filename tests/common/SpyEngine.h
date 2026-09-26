@@ -3,8 +3,9 @@
 #include "gigchain/engine/IEngine.h"
 
 #include <array>
-#include <utility>
 #include <map>
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace gigchain::test {
@@ -181,6 +182,56 @@ public:
         midi = chosen;
         return {};
     }
+
+    double tempoNow = 120.0;
+    std::vector<double> tempoRequests;
+    void setTempo(double bpm) override
+    {
+        tempoRequests.push_back(bpm);
+        if (bpm >= 20.0 && bpm <= 400.0) tempoNow = bpm;
+    }
+    [[nodiscard]] double tempo() const override { return tempoNow; }
+    bool click = false;
+    double clickVolume = 0.0;
+    void setClick(bool on, double volumeDb) override
+    {
+        click = on;
+        clickVolume = volumeDb;
+    }
+    [[nodiscard]] bool clickOn() const override { return click; }
+    engine::BackingTrackState track;
+    std::vector<QString> trackRequests;
+    void setBackingTrack(const QString& path) override
+    {
+        trackRequests.push_back(path);
+        if (path == track.path) return;
+        track = engine::BackingTrackState{.path = path, .loading = false, .loaded = !path.isEmpty(), .playing = false,
+                                          .position = 0.0, .length = path.isEmpty() ? 0.0 : 60.0};
+    }
+    void playBackingTrack(bool play) override { track.playing = play && track.loaded; }
+    void rewindBackingTrack() override { track.position = 0.0; }
+    double trackVolume = 0.0;
+    void setBackingTrackVolume(double volumeDb) override { trackVolume = volumeDb; }
+    [[nodiscard]] engine::BackingTrackState backingTrack() const override { return track; }
+    std::vector<engine::PluginParameter> parameters{{.id = 7, .name = QStringLiteral("Cutoff")},
+                                                    {.id = 9, .name = QStringLiteral("Drive")}};
+    [[nodiscard]] std::vector<engine::PluginParameter> pluginParameters(const core::ChannelId&, int) const override
+    {
+        return parameters;
+    }
+    std::optional<engine::PluginParameter> touched;
+    std::optional<engine::PluginParameter> takeTouchedParameter(const core::ChannelId&, int) override
+    {
+        return std::exchange(touched, std::nullopt);
+    }
+    std::optional<std::pair<int, int>> movedController;
+    std::optional<std::pair<int, int>> takeMovedController() override { return std::exchange(movedController, std::nullopt); }
+    [[nodiscard]] std::vector<engine::AudioInputDevice> audioInputDevices() const override
+    {
+        return {{.driver = engine::AudioDriver::System, .name = QStringLiteral("Spy Mic"), .channels = 2}};
+    }
+    [[nodiscard]] int audioInputChannels() const override { return setup.inputDevice.isEmpty() ? 0 : 2; }
+    [[nodiscard]] QStringList midiOutputs() const override { return {QStringLiteral("Spy Drum Machine")}; }
 };
 
 } // namespace gigchain::test

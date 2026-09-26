@@ -71,6 +71,13 @@ public:
         return array(obj, key, path, maxCount);
     }
 
+    // A whole number that may be absent (fields added after format 1 shipped).
+    int optionalInteger(const QJsonObject& obj, QLatin1StringView key, const QString& path, int min, int max, int fallback)
+    {
+        if (failed() || !obj.contains(key)) return fallback;
+        return integer(obj, key, path, min, max);
+    }
+
     // A number that may be absent (fields added after format 1 shipped).
     double optionalNumber(const QJsonObject& obj, QLatin1StringView key, const QString& path, double min, double max,
                           double fallback)
@@ -223,6 +230,26 @@ Channel readChannel(JsonReader& r, const QJsonObject& obj, const QString& path)
     channel.keyHigh = r.integer(obj, "keyHigh"_L1, path, limits::kMinMidiNote, limits::kMaxMidiNote);
     channel.transpose = r.integer(obj, "transpose"_L1, path, limits::kMinTranspose, limits::kMaxTranspose);
     channel.midiChannel = r.integer(obj, "midiChannel"_L1, path, limits::kMinMidiChannel, limits::kMaxMidiChannel);
+    // Added in format 3.
+    channel.velocityLow = r.optionalInteger(obj, "velocityLow"_L1, path, limits::kMinVelocity, limits::kMaxVelocity,
+                                            limits::kMinVelocity);
+    channel.velocityHigh = r.optionalInteger(obj, "velocityHigh"_L1, path, limits::kMinVelocity, limits::kMaxVelocity,
+                                             limits::kMaxVelocity);
+    channel.inputLeft = r.optionalInteger(obj, "inputLeft"_L1, path, 0, limits::kMaxAudioInput, 0);
+    channel.inputRight = r.optionalInteger(obj, "inputRight"_L1, path, 0, limits::kMaxAudioInput, 0);
+    const QJsonArray mappings = r.optionalArray(obj, "mappings"_L1, path, limits::kMaxMappingsPerChannel);
+    for (qsizetype i = 0; i < mappings.size() && !r.failed(); ++i) {
+        const QString at = u"%1.mappings[%2]"_s.arg(path).arg(i);
+        const QJsonObject m = r.object(mappings.at(i), at);
+        channel.mappings.push_back(ControlMapping{
+            .midiChannel = r.integer(m, "midiChannel"_L1, at, limits::kMinMidiChannel, limits::kMaxMidiChannel),
+            .controller = r.integer(m, "controller"_L1, at, 0, limits::kMaxController),
+            .target = r.integer(m, "target"_L1, at, -1, limits::kMaxEffectsPerChannel - 1),
+            .parameter = static_cast<quint32>(r.number(m, "parameter"_L1, at, 0.0, 4294967295.0)),
+            .parameterName = r.string(m, "parameterName"_L1, at, limits::kMaxNameLength),
+            .minimum = r.number(m, "minimum"_L1, at, 0.0, 1.0),
+            .maximum = r.number(m, "maximum"_L1, at, 0.0, 1.0)});
+    }
     return channel;
 }
 
@@ -270,6 +297,7 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
         }
         song.attachments.push_back(attachments.at(i).toString());
     }
+    song.backingTrack = r.optionalString(obj, "backingTrack"_L1, path, limits::kMaxFileNameLength); // format 3
     return song;
 }
 
@@ -290,6 +318,16 @@ QJsonObject writeChannel(const Channel& channel)
     for (const PluginSlot& effect : channel.effects) {
         effects.append(writeSlot(effect));
     }
+    QJsonArray mappings;
+    for (const ControlMapping& m : channel.mappings) {
+        mappings.append(QJsonObject{{u"midiChannel"_s, m.midiChannel},
+                                    {u"controller"_s, m.controller},
+                                    {u"target"_s, m.target},
+                                    {u"parameter"_s, static_cast<double>(m.parameter)},
+                                    {u"parameterName"_s, m.parameterName},
+                                    {u"minimum"_s, m.minimum},
+                                    {u"maximum"_s, m.maximum}});
+    }
     return QJsonObject{
         {u"id"_s, channel.id.value()},
         {u"name"_s, channel.name},
@@ -303,6 +341,11 @@ QJsonObject writeChannel(const Channel& channel)
         {u"keyHigh"_s, channel.keyHigh},
         {u"transpose"_s, channel.transpose},
         {u"midiChannel"_s, channel.midiChannel},
+        {u"velocityLow"_s, channel.velocityLow},
+        {u"velocityHigh"_s, channel.velocityHigh},
+        {u"inputLeft"_s, channel.inputLeft},
+        {u"inputRight"_s, channel.inputRight},
+        {u"mappings"_s, mappings},
     };
 }
 
@@ -333,7 +376,8 @@ QJsonObject writeSong(const Song& song)
                        {u"tempo"_s, song.tempo},
                        {u"notes"_s, song.notes},
                        {u"links"_s, links},
-                       {u"attachments"_s, attachments}};
+                       {u"attachments"_s, attachments},
+                       {u"backingTrack"_s, song.backingTrack}};
 }
 
 } // namespace

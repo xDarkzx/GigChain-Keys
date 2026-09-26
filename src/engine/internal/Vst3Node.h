@@ -10,6 +10,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
+#include <vector>
 
 namespace gigchain::engine {
 
@@ -39,8 +41,25 @@ public:
     Vst3Node(Token, std::unique_ptr<Impl> impl);
     ~Vst3Node() override; // main thread
 
-    core::Result<void> prepare(double sampleRate, int maxBlock) override;      // main thread; failure is logged
-    void process(std::span<const MidiEvent> events, AudioBlock io) override;   // audio thread
+    core::Result<void> prepare(double sampleRate, int maxBlock) override; // main thread; failure is logged
+    void process(std::span<const MidiEvent> events, AudioBlock io, const TimeInfo& time) override; // audio thread
+    void queueParameter(uint32_t id, double value, int32_t sampleOffset) noexcept override;         // audio thread
+    [[nodiscard]] bool holdsNotes() const noexcept override;                                         // audio thread
+    // Main thread, regularly: parameters set by mapped knobs, shown in the
+    // plugin's own window (the sound changed already, on the audio thread).
+    void showParameterChanges();
+
+    // Main thread: the plugin's parameters a knob can be mapped to (those it
+    // marks automatable), as {id, name}.
+    struct Parameter
+    {
+        uint32_t id = 0;
+        QString name;
+    };
+    [[nodiscard]] std::vector<Parameter> parameters() const;
+    // Main thread: the last parameter the user moved in the plugin's own
+    // window since the previous call (for "learn"), or nothing.
+    [[nodiscard]] std::optional<uint32_t> takeTouchedParameter();
 
     // Problems the audio thread counted since the last call (it cannot log).
     // The main thread polls this and logs anything non-zero.

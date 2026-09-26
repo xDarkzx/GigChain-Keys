@@ -7,9 +7,11 @@
 
 namespace gigchain::core {
 
-// 2: songs gained chart, key, tempo, notes, links and attachments. Files in
-// format 1 still open (those fields empty).
-inline constexpr int kSetlistFormatVersion = 2;
+// 2: songs gained chart, key, tempo, notes, links and attachments.
+// 3: channels gained velocity ranges, control mappings and audio inputs;
+//    songs gained a backing track.
+// Older files still open (the new fields at their defaults).
+inline constexpr int kSetlistFormatVersion = 3;
 
 // Serialises a setlist as indented JSON with "formatVersion".
 QByteArray toJson(const Setlist& setlist);

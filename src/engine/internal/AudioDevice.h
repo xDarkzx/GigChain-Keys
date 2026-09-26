@@ -7,6 +7,7 @@
 
 #include <QString>
 
+#include <array>
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -29,6 +30,7 @@ struct AudioDeviceInfo
     AudioApi api = AudioApi::Wasapi;
     QString name;
     int outputChannels = 0;
+    int inputChannels = 0;
     unsigned int preferredSampleRate = 0;
     bool isDefault = false;
     std::vector<unsigned int> sampleRates; // the rates it can run at, ascending
@@ -40,12 +42,17 @@ struct DeviceChoice
     QString name;
 };
 
-// Called on the audio thread for every block; must be real-time safe.
-using RenderCallback = std::function<void(AudioBlock)>;
+// Called on the audio thread for every block, with the inputs' audio when
+// inputs are open; must be real-time safe.
+using RenderCallback = std::function<void(AudioBlock, const AudioInputs&)>;
 
-// A stereo output stream (first two channels) on one device, wrapping
-// RtAudio. The only unit that includes RtAudio. Main-thread API except for
-// the render callback it runs.
+// The most input channels read from one device.
+inline constexpr int kMaxAudioInputs = 16;
+
+// A stereo output stream (first two channels) on one device, and optionally
+// the inputs of a device of the same driver (duplex), wrapping RtAudio. The
+// only unit that includes RtAudio. Main-thread API except for the render
+// callback it runs.
 //
 // Recovery policy (user decision 2026-09-24): if the device is lost, an ASIO
 // device is reopened once; if that fails, or a WASAPI device is lost, the
@@ -64,11 +71,15 @@ public:
     // Every WASAPI and ASIO output with at least two channels. Problems while
     // probing drivers are logged.
     static std::vector<AudioDeviceInfo> listOutputs();
+    // Every WASAPI and ASIO device with inputs (microphones, instrument inputs).
+    static std::vector<AudioDeviceInfo> listInputs();
 
     // std::nullopt = the default system (WASAPI) output. wantedRate 0 = the
     // device's own rate; any other rate the device does not list is an error.
+    // `input`: a device whose inputs open with the output (same driver; for
+    // ASIO the same device); none by default.
     core::Result<void> open(std::optional<DeviceChoice> choice, unsigned int bufferFrames, RenderCallback render,
-                            unsigned int wantedRate = 0);
+                            unsigned int wantedRate = 0, std::optional<DeviceChoice> input = std::nullopt);
     void close();
 
     // Stop / restart the running stream without closing it. When pause()
@@ -88,16 +99,24 @@ public:
     [[nodiscard]] QString deviceName() const { return m_choice.name; }
     [[nodiscard]] AudioApi api() const { return m_choice.api; }
     [[nodiscard]] double latencyMs() const { return m_latencyMs; }
+    // The open input device (empty when none) and its channel count.
+    [[nodiscard]] QString inputName() const { return m_inputChannels > 0 ? m_input.name : QString(); }
+    [[nodiscard]] int inputChannels() const { return m_inputChannels; }
 
 private:
     static int callback(void* output, void* input, unsigned int frames, double streamTime, unsigned int status,
                         void* user);
     void onError(int type, const std::string& text);
-    core::Result<void> openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames, unsigned int wantedRate);
+    core::Result<void> openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames, unsigned int wantedRate,
+                                    std::optional<DeviceChoice> input);
 
     std::unique_ptr<RtAudio> m_rtaudio;
     RenderCallback m_render;
     DeviceChoice m_choice;
+    DeviceChoice m_input;
+    std::optional<DeviceChoice> m_requestedInput;
+    int m_inputChannels = 0;
+    std::array<const float*, kMaxAudioInputs> m_inputPointers{}; // audio thread
     unsigned int m_requestedFrames = 256;
     unsigned int m_requestedRate = 0; // 0 = the device's own
     double m_sampleRate = 0.0;

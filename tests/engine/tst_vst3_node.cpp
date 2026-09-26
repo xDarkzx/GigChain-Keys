@@ -25,6 +25,8 @@ const QString kInstrument = u"C:/Program Files/Common Files/VST3/Arturia/Piano V
 const QString kEffect = u"C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-Q 3.vst3"_s;
 constexpr double kRate = 48000.0;
 constexpr int kBlock = 256;
+const TimeInfo kTime{.tempo = 120.0, .sampleRate = kRate, .samplePosition = 0, .ppqPosition = 0.0,
+                     .barStartPpq = 0.0, .timeSigNumerator = 4, .timeSigDenominator = 4};
 
 float blockPeak(const std::vector<float>& left, const std::vector<float>& right)
 {
@@ -43,7 +45,8 @@ float loudestFrom(Vst3Node& node, int blocks, int from, EventsAt at)
     float loudest = 0.0F;
     for (int block = 0; block < blocks; ++block) {
         const std::vector<MidiEvent> events = at(block);
-        node.process(std::span<const MidiEvent>(events), AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock});
+        node.process(std::span<const MidiEvent>(events), AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock},
+                     kTime);
         if (block >= from) loudest = std::max(loudest, blockPeak(left, right));
     }
     return loudest;
@@ -110,7 +113,7 @@ private slots:
         float loudest = 0.0F;
         for (int block = 0; block < 40; ++block) {
             (*node)->process(block == 0 ? std::span<const MidiEvent>(on) : std::span<const MidiEvent>(),
-                             AudioBlock{left.data(), right.data(), kBlock});
+                             AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, kTime);
             loudest = std::max(loudest, blockPeak(left, right));
         }
         QVERIFY2(loudest > 0.001F, "piano produced silence");
@@ -119,7 +122,7 @@ private slots:
         // A block bigger than prepared is refused (silence) and counted, not ignored.
         std::vector<float> bigLeft(kBlock * 2);
         std::vector<float> bigRight(kBlock * 2);
-        (*node)->process({}, AudioBlock{bigLeft.data(), bigRight.data(), kBlock * 2});
+        (*node)->process({}, AudioBlock{.left = bigLeft.data(), .right = bigRight.data(), .frames = kBlock * 2}, kTime);
         const auto problems = (*node)->takeProblems();
         QCOMPARE(problems.oversizedBlocks, uint64_t{1});
         QVERIFY(!(*node)->takeProblems().any()); // taking resets
@@ -262,7 +265,7 @@ private slots:
             const MidiEvent on[] = {MidiEvent{0x90, 60, 110, 0}};
             for (int block = 0; block < 40; ++block) {
                 (*second)->process(block == 0 ? std::span<const MidiEvent>(on) : std::span<const MidiEvent>(),
-                                   AudioBlock{left.data(), right.data(), kBlock});
+                                   AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, kTime);
                 peak = std::max(peak, blockPeak(left, right));
             }
             QVERIFY2(peak > 0.001F, "the remaining instance went silent");
@@ -280,7 +283,7 @@ private slots:
         QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
         std::vector<float> left(kBlock, 0.1F);
         std::vector<float> right(kBlock, 0.1F);
-        (*node)->process({}, AudioBlock{left.data(), right.data(), kBlock});
+        (*node)->process({}, AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, kTime);
         QVERIFY(!(*node)->takeProblems().any());
     }
 
@@ -300,7 +303,7 @@ private slots:
                 left[static_cast<std::size_t>(i)] = right[static_cast<std::size_t>(i)] =
                     static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * 440.0 * t));
             }
-            (*node)->process({}, AudioBlock{left.data(), right.data(), kBlock});
+            (*node)->process({}, AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, kTime);
             loudest = std::max(loudest, blockPeak(left, right));
         }
         QVERIFY2(loudest > 0.1F, "EQ swallowed the signal");

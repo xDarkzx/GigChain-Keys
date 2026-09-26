@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <bitset>
 #include <cmath>
 #include <exception>
@@ -46,6 +47,9 @@ namespace {
 // Points each parameter queue holds without allocating: the SDK's
 // ParameterValueQueue reserves 5 (kQueueReservedPoints, parameterchanges.cpp).
 constexpr int32 kMaxPointsPerBlock = 5;
+// Parameter queues reserved for knobs mapped to parameters, beyond the
+// plugin's own MIDI controllers: different parameters moved in one block.
+constexpr int32 kMappedParameterRoom = 32;
 
 // One host context for the whole process, installed before the first plugin
 // loads (the SDK's PlugProvider reads it from PluginContextFactory).
@@ -174,25 +178,33 @@ struct Vst3Node::Impl
     // the plugin's own parameters, per MIDI channel: VST3 plugins take no raw
     // controllers, the host translates them (IMidiMapping). Built at load.
     std::array<std::array<Vst::ParamID, Vst::kCountCtrlNumber>, 16> midiMapping{};
+    // Parameters the host set from the audio thread (mapped knobs), for the
+    // main thread to show in the plugin's own window: id and value packed,
+    // 0 = nothing new. A slot per id % size; two ids sharing a slot only lose
+    // a window update, never the sound.
+    std::array<std::atomic<uint64_t>, 32> parameterEcho{};
 
     // Main thread, at load: asks the plugin which parameter each controller
-    // moves, and reserves a queue for each so the audio thread never allocates.
+    // moves, and reserves a queue for each (and for mapped knobs) so the
+    // audio thread never allocates.
     void mapMidiControllers()
     {
         for (auto& channel : midiMapping) channel.fill(Vst::kNoParamId);
-        FUnknownPtr<Vst::IMidiMapping> mapping(controller);
-        if (!mapping || component->getBusCount(Vst::kEvent, Vst::kInput) == 0) return;
         std::set<Vst::ParamID> used;
-        for (int16 channel = 0; channel < 16; ++channel) {
-            for (Vst::CtrlNumber number = 0; number < Vst::kCountCtrlNumber; ++number) {
-                Vst::ParamID id = Vst::kNoParamId;
-                if (mapping->getMidiControllerAssignment(0, channel, number, id) == kResultTrue && id != Vst::kNoParamId) {
-                    midiMapping.at(static_cast<std::size_t>(channel)).at(static_cast<std::size_t>(number)) = id;
-                    used.insert(id);
+        FUnknownPtr<Vst::IMidiMapping> mapping(controller);
+        if (mapping && component->getBusCount(Vst::kEvent, Vst::kInput) > 0) {
+            for (int16 channel = 0; channel < 16; ++channel) {
+                for (Vst::CtrlNumber number = 0; number < Vst::kCountCtrlNumber; ++number) {
+                    Vst::ParamID id = Vst::kNoParamId;
+                    if (mapping->getMidiControllerAssignment(0, channel, number, id) == kResultTrue &&
+                        id != Vst::kNoParamId) {
+                        midiMapping.at(static_cast<std::size_t>(channel)).at(static_cast<std::size_t>(number)) = id;
+                        used.insert(id);
+                    }
                 }
             }
         }
-        parameterChanges.setMaxParameters(static_cast<int32>(used.size()));
+        parameterChanges.setMaxParameters(static_cast<int32>(used.size()) + kMappedParameterRoom);
         const Vst::ParamID sustain = midiMapping.front().at(Vst::kCtrlSustainOnOff);
         qCInfo(lcEngine).noquote() << name << "maps" << used.size() << "parameters to MIDI controllers; sustain pedal"
                                    << (sustain != Vst::kNoParamId ? u"mapped"_s : u"not used"_s);
@@ -205,6 +217,12 @@ struct Vst3Node::Impl
         if (channel < 0 || channel >= 16 || number < 0 || number >= Vst::kCountCtrlNumber) return;
         const Vst::ParamID id = midiMapping.at(static_cast<std::size_t>(channel)).at(static_cast<std::size_t>(number));
         if (id == Vst::kNoParamId) return;
+        setParameter(id, value, sampleOffset);
+    }
+
+    // Audio thread: a parameter change in this block's queue.
+    void setParameter(Vst::ParamID id, Vst::ParamValue value, int32 sampleOffset) noexcept
+    {
         int32 index = 0;
         Vst::IParamValueQueue* queue = parameterChanges.addParameterData(id, index);
         if (queue == nullptr) {
@@ -218,6 +236,21 @@ struct Vst3Node::Impl
             queue->getPoint(points - 1, sampleOffset, previous);
         }
         queue->addPoint(sampleOffset, value, index);
+    }
+
+    // Audio thread: where the music is, for this block (VST3 ProcessContext).
+    void setTime(const TimeInfo& time) noexcept
+    {
+        context.state = Vst::ProcessContext::kPlaying | Vst::ProcessContext::kTempoValid |
+                        Vst::ProcessContext::kTimeSigValid | Vst::ProcessContext::kProjectTimeMusicValid |
+                        Vst::ProcessContext::kBarPositionValid | Vst::ProcessContext::kContTimeValid;
+        context.tempo = time.tempo;
+        context.timeSigNumerator = time.timeSigNumerator;
+        context.timeSigDenominator = time.timeSigDenominator;
+        context.projectTimeSamples = time.samplePosition;
+        context.continousTimeSamples = time.samplePosition;
+        context.projectTimeMusic = time.ppqPosition;
+        context.barPositionMusic = time.barStartPpq;
     }
 
     core::Result<void> activate(double sampleRate, int block)
@@ -241,8 +274,13 @@ struct Vst3Node::Impl
 
         data.prepare(*component, block, Vst::kSample32);
         context.sampleRate = sampleRate;
-        context.tempo = 120.0;
-        context.state = Vst::ProcessContext::kTempoValid;
+        setTime(TimeInfo{.tempo = 120.0,
+                         .sampleRate = sampleRate,
+                         .samplePosition = 0,
+                         .ppqPosition = 0.0,
+                         .barStartPpq = 0.0,
+                         .timeSigNumerator = 4,
+                         .timeSigDenominator = 4}); // until the first block says otherwise
         data.inputEvents = &events;
         data.inputParameterChanges = &parameterChanges;
         data.processContext = &context;
@@ -388,19 +426,54 @@ core::Result<void> Vst3Node::prepare(double sampleRate, int maxBlock)
     return activated;
 }
 
-void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
+void Vst3Node::queueParameter(uint32_t id, double value, int32_t sampleOffset) noexcept
+{
+    Impl& impl = *m_impl;
+    const double clamped = std::clamp(value, 0.0, 1.0);
+    impl.setParameter(id, clamped, sampleOffset);
+    const uint64_t packed = (uint64_t{id} << 32U) | std::bit_cast<uint32_t>(static_cast<float>(clamped));
+    impl.parameterEcho.at(id % impl.parameterEcho.size()).store(packed == 0 ? 1 : packed, std::memory_order_relaxed);
+}
+
+bool Vst3Node::holdsNotes() const noexcept
+{
+    return m_impl->heldNotes.any();
+}
+
+void Vst3Node::showParameterChanges()
+{
+    GC_ONLY_MAIN_THREAD();
+    Impl& impl = *m_impl;
+    if (!impl.controller) return;
+    for (auto& slot : impl.parameterEcho) {
+        const uint64_t packed = slot.exchange(0, std::memory_order_relaxed);
+        if (packed == 0) continue;
+        const auto id = static_cast<Vst::ParamID>(packed >> 32U);
+        const auto value = static_cast<double>(std::bit_cast<float>(static_cast<uint32_t>(packed & 0xFFFFFFFFU)));
+        impl.controller->setParamNormalized(id, value); // what the knob shows; the sound already changed
+    }
+}
+
+void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io, const TimeInfo& time)
 {
     Impl& impl = *m_impl;
     const auto frames = static_cast<std::size_t>(std::max(io.frames, 0));
     if (!impl.active || io.frames <= 0 || io.frames > impl.maxBlock) {
         if (io.frames > impl.maxBlock) impl.oversizedBlocks.fetch_add(1, std::memory_order_relaxed);
+        impl.parameterChanges.clearQueue();
         std::fill_n(io.left, frames, 0.0F);
         std::fill_n(io.right, frames, 0.0F);
         return;
     }
 
     impl.events.clear();
-    impl.parameterChanges.clearQueue();
+    impl.setTime(time);
+    // Knobs turned in the plugin's own window reach its sound engine.
+    for (std::size_t slot = 0; slot < ComponentHandler::kEditSlots; ++slot) {
+        Vst::ParamID id = Vst::kNoParamId;
+        Vst::ParamValue value = 0.0;
+        if (impl.componentHandler.takeEditForProcessor(slot, id, value)) impl.setParameter(id, value, 0);
+    }
     if (impl.releaseRequested.exchange(false, std::memory_order_acquire) && impl.heldNotes.any()) {
         for (std::size_t i = 0; i < impl.heldNotes.size(); ++i) {
             if (!impl.heldNotes.test(i)) continue;
@@ -451,6 +524,8 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
     if (impl.processor->process(impl.data) != kResultOk) {
         impl.processFailures.fetch_add(1, std::memory_order_relaxed);
     }
+    // Taken by the plugin; the next block's changes start from empty.
+    impl.parameterChanges.clearQueue();
 
     const std::span<const Vst::AudioBusBuffers> outputs(impl.data.outputs,
                                                         static_cast<std::size_t>(std::max(impl.data.numOutputs, 0)));
@@ -462,6 +537,34 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
         std::fill_n(io.left, frames, 0.0F);
         std::fill_n(io.right, frames, 0.0F);
     }
+}
+
+std::vector<Vst3Node::Parameter> Vst3Node::parameters() const
+{
+    GC_ONLY_MAIN_THREAD();
+    std::vector<Parameter> list;
+    const Impl& impl = *m_impl;
+    if (!impl.controller) return list;
+    const int32 count = impl.controller->getParameterCount();
+    list.reserve(static_cast<std::size_t>(std::max(count, 0)));
+    for (int32 i = 0; i < count; ++i) {
+        Vst::ParameterInfo info{};
+        if (impl.controller->getParameterInfo(i, info) != kResultOk) continue;
+        if ((info.flags & Vst::ParameterInfo::kCanAutomate) == 0 || (info.flags & Vst::ParameterInfo::kIsReadOnly) != 0) {
+            continue;
+        }
+        list.push_back(Parameter{.id = info.id,
+                                 .name = QString::fromUtf16(reinterpret_cast<const char16_t*>(info.title))}); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): VST3 String128 is UTF-16
+    }
+    return list;
+}
+
+std::optional<uint32_t> Vst3Node::takeTouchedParameter()
+{
+    GC_ONLY_MAIN_THREAD();
+    const Vst::ParamID id = m_impl->componentHandler.takeTouched();
+    if (id == Vst::kNoParamId) return std::nullopt;
+    return id;
 }
 
 void Vst3Node::releaseAllNotes()

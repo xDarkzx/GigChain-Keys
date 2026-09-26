@@ -1,5 +1,8 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 
 // The setlist's songs. Click a song to play it, double-click to rename, drag
@@ -114,6 +117,25 @@ Item {
                     id: contextMenu
                     StageMenuItem { text: qsTr("Rename"); onTriggered: row.startRename() }
                     StageMenuItem {
+                        text: qsTr("Tempo…")
+                        onTriggered: {
+                            tempoPopup.song = row.songIndex
+                            tempoPopup.open()
+                        }
+                    }
+                    StageMenuItem {
+                        text: qsTr("Backing Track…")
+                        onTriggered: {
+                            trackDialog.song = row.songIndex
+                            trackDialog.open()
+                        }
+                    }
+                    StageMenuItem {
+                        text: qsTr("Remove Backing Track")
+                        enabled: row.isCurrentSong && view.doc.songBackingTrack !== ""
+                        onTriggered: view.doc.setSongBackingTrack(row.songIndex, "")
+                    }
+                    StageMenuItem {
                         text: qsTr("Duplicate")
                         onTriggered: row.isSong ? view.doc.duplicateSong(row.songIndex)
                                                 : view.doc.duplicatePatch(row.songIndex, row.patchIndex)
@@ -139,5 +161,51 @@ Item {
                 onClicked: view.doc.addSong()
             }
         }
+    }
+
+    // A song's tempo: it plays whenever the song is chosen (0 = none: the
+    // tempo stays as it is).
+    Popup {
+        id: tempoPopup
+        property int song: -1
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        padding: 16
+        onAboutToShow: {
+            view.doc.selectPatch(song, 0)
+            tempoBox.value = Math.round(view.doc.songTempo)
+        }
+        background: Rectangle { color: Theme.panel; border.color: Theme.border; radius: 8 }
+        ColumnLayout {
+            spacing: 10
+            Label { text: qsTr("Song tempo (0 = none)"); font.bold: true }
+            SpinBox {
+                id: tempoBox
+                objectName: "songTempoBox"
+                from: 0; to: 400
+                editable: true
+            }
+            RowLayout {
+                Button { text: qsTr("Cancel"); focusPolicy: Qt.NoFocus; onClicked: tempoPopup.close() }
+                Button {
+                    text: qsTr("Set")
+                    highlighted: true
+                    focusPolicy: Qt.NoFocus
+                    onClicked: {
+                        view.doc.setSongTempo(tempoPopup.song, tempoBox.value)
+                        tempoPopup.close()
+                    }
+                }
+            }
+        }
+    }
+
+    FileDialog {
+        id: trackDialog
+        property int song: -1
+        title: qsTr("Backing track")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Audio files (*.wav *.mp3 *.flac *.m4a *.aac *.ogg *.aiff *.aif)"), qsTr("All files (*)")]
+        onAccepted: view.doc.setSongBackingTrack(song, selectedFile)
     }
 }

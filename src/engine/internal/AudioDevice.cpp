@@ -73,15 +73,38 @@ std::vector<AudioDeviceInfo> AudioDevice::listOutputs()
     return outputs;
 }
 
+std::vector<AudioDeviceInfo> AudioDevice::listInputs()
+{
+    std::vector<AudioDeviceInfo> inputs;
+    for (const AudioApi api : {AudioApi::Wasapi, AudioApi::Asio}) {
+        const auto rt = probe(api);
+        for (const unsigned int id : rt->getDeviceIds()) {
+            const RtAudio::DeviceInfo info = rt->getDeviceInfo(id);
+            if (info.inputChannels < 1) continue;
+            inputs.push_back(AudioDeviceInfo{.api = api,
+                                             .name = QString::fromStdString(info.name),
+                                             .outputChannels = static_cast<int>(info.outputChannels),
+                                             .inputChannels = static_cast<int>(info.inputChannels),
+                                             .preferredSampleRate = info.preferredSampleRate,
+                                             .isDefault = api == AudioApi::Wasapi && info.isDefaultInput,
+                                             .sampleRates = {info.sampleRates.begin(), info.sampleRates.end()}});
+        }
+    }
+    return inputs;
+}
+
 core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigned int bufferFrames, RenderCallback render,
-                                     unsigned int wantedRate)
+                                     unsigned int wantedRate, std::optional<DeviceChoice> input)
 {
     m_render = std::move(render);
     m_asioRetried = false;
-    auto opened = openUnlogged(std::move(choice), bufferFrames, wantedRate);
+    auto opened = openUnlogged(std::move(choice), bufferFrames, wantedRate, std::move(input));
     if (opened) {
         qCInfo(lcEngine).noquote() << "Audio output:" << m_choice.name << "(" << apiName(m_choice.api) << ")"
                                    << m_sampleRate << "Hz," << m_maxBlock << "frames, latency" << m_latencyMs << "ms";
+        if (m_inputChannels > 0) {
+            qCInfo(lcEngine).noquote() << "Audio input:" << m_input.name << "," << m_inputChannels << "channels";
+        }
     } else {
         qCWarning(lcEngine).noquote() << opened.error().message;
     }
@@ -89,11 +112,13 @@ core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigne
 }
 
 core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames,
-                                             unsigned int wantedRate)
+                                             unsigned int wantedRate, std::optional<DeviceChoice> input)
 {
     close();
     m_requestedFrames = bufferFrames;
     m_requestedRate = wantedRate;
+    m_requestedInput = input;
+    m_inputChannels = 0;
     const AudioApi driver = choice ? choice->api : AudioApi::Wasapi;
     auto rt = std::make_unique<RtAudio>(
         toRtApi(driver), [this](RtAudioErrorType type, const std::string& text) { onError(type, text); });
@@ -134,6 +159,33 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     }
     unsigned int frames = bufferFrames;
 
+    // The inputs, when asked for: a device of the same driver.
+    RtAudio::StreamParameters inputParameters;
+    int openInputs = 0;
+    if (input) {
+        if (input->api != driver) {
+            return core::fail(core::ErrorCode::InvalidData,
+                              u"The input %1 (%2) and the output %3 (%4) must use the same driver"_s.arg(
+                                  input->name, apiName(input->api), QString::fromStdString(info.name), apiName(driver)));
+        }
+        std::optional<unsigned int> inputId;
+        for (const unsigned int id : rt->getDeviceIds()) {
+            const RtAudio::DeviceInfo candidate = rt->getDeviceInfo(id);
+            if (QString::fromStdString(candidate.name) == input->name && candidate.inputChannels > 0) {
+                inputId = id;
+                openInputs = std::min(static_cast<int>(candidate.inputChannels), kMaxAudioInputs);
+                break;
+            }
+        }
+        if (!inputId) {
+            return core::fail(core::ErrorCode::InvalidData,
+                              u"No audio input named \"%1\" (%2)"_s.arg(input->name, apiName(driver)));
+        }
+        inputParameters.deviceId = *inputId;
+        inputParameters.nChannels = static_cast<unsigned int>(openInputs);
+        inputParameters.firstChannel = 0;
+    }
+
     const auto takeLastError = [this](const QString& fallback) {
         const std::scoped_lock lock(m_errorMutex);
         QString text = m_errors.empty() ? fallback : m_errors.back();
@@ -141,16 +193,20 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
         return text;
     };
 
-    if (rt->openStream(&output, nullptr, RTAUDIO_FLOAT32, rate, &frames, &AudioDevice::callback, this, &options) !=
-        RTAUDIO_NO_ERROR) {
+    if (rt->openStream(&output, input ? &inputParameters : nullptr, RTAUDIO_FLOAT32, rate, &frames, &AudioDevice::callback,
+                       this, &options) != RTAUDIO_NO_ERROR) {
         return core::fail(core::ErrorCode::DeviceUnavailable,
-                          u"Could not open %1 (%2): %3"_s.arg(QString::fromStdString(info.name), apiName(driver),
-                                                             takeLastError(u"unknown error"_s)));
+                          u"Could not open %1%2 (%3): %4"_s.arg(QString::fromStdString(info.name),
+                                                                input ? u" with the inputs of "_s + input->name : QString(),
+                                                                apiName(driver), takeLastError(u"unknown error"_s)));
     }
+    m_inputChannels = openInputs;
+    if (input) m_input = *input;
     m_maxBlock = static_cast<int>(frames);
     m_sampleRate = rt->getStreamSampleRate();
     if (rt->startStream() != RTAUDIO_NO_ERROR) {
         rt->closeStream();
+        m_inputChannels = 0;
         return core::fail(core::ErrorCode::DeviceUnavailable,
                           u"Could not start %1 (%2): %3"_s.arg(QString::fromStdString(info.name), apiName(driver),
                                                               takeLastError(u"unknown error"_s)));
@@ -227,7 +283,7 @@ std::vector<Notice> AudioDevice::poll()
 
     if (lost.api == AudioApi::Asio && !m_asioRetried) {
         m_asioRetried = true;
-        if (auto reopened = openUnlogged(lost, m_requestedFrames, m_requestedRate)) {
+        if (auto reopened = openUnlogged(lost, m_requestedFrames, m_requestedRate, m_requestedInput)) {
             notices.push_back(Notice::info(u"%1 restarted after the driver asked for a reset"_s.arg(lost.name)));
             qCInfo(lcEngine).noquote() << notices.back().text;
             return notices;
@@ -238,8 +294,11 @@ std::vector<Notice> AudioDevice::poll()
 
     // System audio at its own rate: the chosen rate may not exist there. The
     // engine re-prepares plugins for whatever rate this ends up at.
-    if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0)) {
-        notices.push_back(Notice::warning(u"%1 stopped working; switched to system audio (%2)"_s.arg(lost.name, m_choice.name)));
+    const bool hadInputs = m_requestedInput.has_value();
+    if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0, std::nullopt)) {
+        notices.push_back(Notice::warning(
+            u"%1 stopped working; switched to system audio (%2)%3"_s.arg(lost.name, m_choice.name,
+                                                                          hadInputs ? u", without inputs"_s : QString())));
         qCWarning(lcEngine).noquote() << notices.back().text;
     } else {
         notices.push_back(Notice::error(u"No audio output is available: %1"_s.arg(fallback.error().message)));
@@ -248,15 +307,26 @@ std::vector<Notice> AudioDevice::poll()
     return notices;
 }
 
-int AudioDevice::callback(void* output, void*, unsigned int frames, double, unsigned int status, void* user)
+int AudioDevice::callback(void* output, void* input, unsigned int frames, double, unsigned int status, void* user)
 {
     auto* self = static_cast<AudioDevice*>(user);
     // Flush denormals to zero: decaying reverb tails otherwise cost huge CPU.
     _mm_setcsr(_mm_getcsr() | 0x8040);
-    if ((status & RTAUDIO_OUTPUT_UNDERFLOW) != 0) self->m_underflows.fetch_add(1, std::memory_order_relaxed);
-    // Non-interleaved: [left block][right block].
+    if ((status & (RTAUDIO_OUTPUT_UNDERFLOW | RTAUDIO_INPUT_OVERFLOW)) != 0) {
+        self->m_underflows.fetch_add(1, std::memory_order_relaxed);
+    }
+    // Non-interleaved: [left block][right block], and each input channel's block in turn.
     const std::span<float> both(static_cast<float*>(output), static_cast<std::size_t>(frames) * 2);
-    self->m_render(AudioBlock{.left = both.data(), .right = both.subspan(frames).data(), .frames = static_cast<int>(frames)});
+    AudioInputs inputs;
+    if (input != nullptr && self->m_inputChannels > 0) {
+        const auto count = static_cast<std::size_t>(self->m_inputChannels);
+        const std::span<const float> all(static_cast<const float*>(input), count * frames);
+        for (std::size_t c = 0; c < count; ++c) self->m_inputPointers.at(c) = all.subspan(c * frames).data();
+        inputs = AudioInputs{.channels = std::span<const float* const>(self->m_inputPointers.data(), count),
+                             .frames = static_cast<int>(frames)};
+    }
+    self->m_render(AudioBlock{.left = both.data(), .right = both.subspan(frames).data(), .frames = static_cast<int>(frames)},
+                   inputs);
     return 0;
 }
 

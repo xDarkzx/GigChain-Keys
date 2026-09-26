@@ -27,8 +27,16 @@ Setlist richSetlist()
     piano.midiChannel = 3;
     piano.mute = true;
     piano.pan = -0.25;
+    piano.velocityLow = 20;
+    piano.velocityHigh = 90;
+    piano.mappings.push_back(ControlMapping{.midiChannel = 1, .controller = 74, .target = -1, .parameter = 4000000000U,
+                                            .parameterName = QStringLiteral("Brightness"), .minimum = 0.25, .maximum = 0.8});
+    piano.mappings.push_back(ControlMapping{.midiChannel = 0, .controller = 11, .target = 0, .parameter = 12,
+                                            .parameterName = QStringLiteral("Gain"), .minimum = 1.0, .maximum = 0.0});
     Channel empty = makeChannel(QStringLiteral("Spare"));
-    song.patches.front().channels = {piano, empty};
+    Channel mic = makeChannel(QStringLiteral("Vocal"));
+    mic.inputLeft = 1;
+    song.patches.front().channels = {piano, empty, mic};
     song.patches.push_back(makePatch(QStringLiteral("Chorus")));
     song.chart = QStringLiteral("{title: Café}\n[Dm]I love [C#m7]you so much[D/E]\n");
     song.key = QStringLiteral("Dm");
@@ -36,6 +44,7 @@ Setlist richSetlist()
     song.notes = QStringLiteral("Capo 2 on the guitar; keys play the pad");
     song.links.push_back(SongLink{QStringLiteral("Chords"), QStringLiteral("https://tabs.example/cafe")});
     song.attachments.push_back(QStringLiteral("cafe-chords.pdf"));
+    song.backingTrack = QStringLiteral("cafe backing.mp3");
     setlist.songs.push_back(song);
     setlist.songs.push_back(makeSong(QStringLiteral("Second")));
     return setlist;
@@ -127,6 +136,59 @@ private slots:
         const auto parsed = fromJson(QJsonDocument(root).toJson());
         QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
         QCOMPARE(parsed->songs[0].patches[0].channels[0].pan, 0.0);
+    }
+
+    void versionTwoFilesOpenWithTheNewFieldsAtTheirDefaults()
+    {
+        // A file saved before velocity ranges, knobs, inputs and backing tracks.
+        QJsonObject root = richJson();
+        root.insert(u"formatVersion", 2);
+        QJsonArray songs = root.value(u"songs").toArray();
+        QJsonObject song = songs.at(0).toObject();
+        song.remove(u"backingTrack");
+        QJsonArray patches = song.value(u"patches").toArray();
+        QJsonObject patch = patches.at(0).toObject();
+        QJsonArray channels = patch.value(u"channels").toArray();
+        QJsonObject channel = channels.at(0).toObject();
+        for (const auto& key : {u"velocityLow", u"velocityHigh", u"inputLeft", u"inputRight", u"mappings"}) channel.remove(key);
+        channels.replace(0, channel);
+        patch.insert(u"channels", channels);
+        patches.replace(0, patch);
+        song.insert(u"patches", patches);
+        songs.replace(0, song);
+        root.insert(u"songs", songs);
+        const auto parsed = fromJson(QJsonDocument(root).toJson());
+        QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
+        const Channel& piano = parsed->songs.at(0).patches.at(0).channels.at(0);
+        QCOMPARE(piano.velocityLow, 1);
+        QCOMPARE(piano.velocityHigh, 127);
+        QCOMPARE(piano.inputLeft, 0);
+        QVERIFY(piano.mappings.empty());
+        QVERIFY(parsed->songs.at(0).backingTrack.isEmpty());
+    }
+
+    void rejectsBadNewFields()
+    {
+        const auto inverted = fromJson(withFirstChannelField(u"velocityLow"_s, 100));
+        QVERIFY(!inverted); // 100 above velocityHigh (90)
+        QVERIFY2(inverted.error().message.contains(u"velocityLow"_s), qPrintable(inverted.error().message));
+        QVERIFY(!fromJson(withFirstChannelField(u"velocityHigh"_s, 128)));
+        QVERIFY(!fromJson(withFirstChannelField(u"inputRight"_s, 3))); // on the piano: inputRight without inputLeft
+        const QJsonArray badTarget{QJsonObject{{u"midiChannel"_s, 0}, {u"controller"_s, 1}, {u"target"_s, 5},
+                                               {u"parameter"_s, 1}, {u"parameterName"_s, u"x"_s},
+                                               {u"minimum"_s, 0.0}, {u"maximum"_s, 1.0}}};
+        const auto noSuchEffect = fromJson(withFirstChannelField(u"mappings"_s, badTarget));
+        QVERIFY(!noSuchEffect);
+        QVERIFY2(noSuchEffect.error().message.contains(u"target"_s), qPrintable(noSuchEffect.error().message));
+
+        // A backing track is a plain file name in the setlist's folder, never a path.
+        QJsonObject root = richJson();
+        QJsonArray songs = root.value(u"songs").toArray();
+        QJsonObject song = songs.at(0).toObject();
+        song.insert(u"backingTrack", u"C:/Windows/system32/evil.wav"_s);
+        songs.replace(0, song);
+        root.insert(u"songs", songs);
+        QVERIFY(!fromJson(QJsonDocument(root).toJson()));
     }
 
     void rejectsNonJson()

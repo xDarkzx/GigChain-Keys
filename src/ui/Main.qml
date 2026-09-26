@@ -155,6 +155,26 @@ ApplicationWindow {
         settings: root.settings
         pluginModel: root.pluginModel
     }
+    ChannelZoneDialog {
+        id: zoneDialog
+        objectName: "zoneDialog"
+        doc: root.doc
+        channel: root.selectedChannel
+    }
+    KnobDialog {
+        id: knobDialog
+        objectName: "knobDialog"
+        doc: root.doc
+        channel: root.selectedChannel
+        engineStatus: root.engineStatus
+    }
+    Connections {
+        target: root.doc
+        function onChannelEditRequested(channel, page) {
+            if (page === "knobs") knobDialog.open()
+            else zoneDialog.open()
+        }
+    }
 
     // ------------------------------------------------------------- shortcuts
     Shortcut { sequences: ["Space", "Right"]; enabled: !root.typing; onActivated: root.doc.nextPatch() }
@@ -168,6 +188,8 @@ ApplicationWindow {
     Shortcut { sequences: [StandardKey.Save]; enabled: !root.performMode; onActivated: root.save() }
     Shortcut { sequence: "Ctrl+Shift+S"; enabled: !root.performMode; onActivated: saveDialog.open() }
     Shortcut { sequence: "Ctrl+,"; enabled: !root.performMode; onActivated: settingsDialog.open() }
+    Shortcut { sequences: [StandardKey.Undo]; enabled: !root.performMode && !root.typing; onActivated: root.doc.undo() }
+    Shortcut { sequences: [StandardKey.Redo, "Ctrl+Shift+Z"]; enabled: !root.performMode && !root.typing; onActivated: root.doc.redo() }
 
     header: Toolbar {
         doc: root.doc
@@ -222,7 +244,7 @@ ApplicationWindow {
                         onOpenRequested: root.guarded("open")
                         onOpenRecentRequested: (path) => root.openRecent(path)
                         // Plugin windows sit above Qt content: hide them while a dialog is up.
-                        suspended: settingsDialog.visible || unsavedDialog.visible
+                        suspended: settingsDialog.visible || unsavedDialog.visible || zoneDialog.visible || knobDialog.visible
                     }
                     Mixer {
                         visible: root.mixerOpen

@@ -3,8 +3,10 @@
 
 #include <QtTest>
 
+#include <array>
 #include <atomic>
 #include <cmath>
+#include <utility>
 #include <cstdlib>
 #include <new>
 #include <vector>
@@ -33,27 +35,41 @@ namespace {
 
 constexpr int kFrames = 64;
 
-// Instrument that outputs a constant value while any note is held.
+// Instrument that outputs a constant value while any note is held, and
+// records what reaches it: events, the time, and parameter changes.
 class HeldNoteNode final : public INode
 {
 public:
     explicit HeldNoteNode(float value) : m_value(value) {}
     core::Result<void> prepare(double, int) override { return {}; }
-    void process(std::span<const MidiEvent> events, AudioBlock out) override
+    void process(std::span<const MidiEvent> events, AudioBlock out, const TimeInfo& time) override
     {
+        lastTime = time;
         for (const MidiEvent& e : events) {
             received.push_back(e);
-            if ((e.status & 0xF0) == 0x90 && e.data2 > 0) ++m_held;
-            else if ((e.status & 0xF0) == 0x80 || (e.status & 0xF0) == 0x90) --m_held;
+            // Keys are held one by one: a note-off ends only its own note.
+            const bool on = (e.status & 0xF0) == 0x90 && e.data2 > 0;
+            if (on && !m_keys.at(e.data1)) ++m_held;
+            if (!on && ((e.status & 0xF0) == 0x80 || (e.status & 0xF0) == 0x90) && m_keys.at(e.data1)) --m_held;
+            if ((e.status & 0xF0) == 0x80 || (e.status & 0xF0) == 0x90) m_keys.at(e.data1) = on;
         }
         const float v = m_held > 0 ? m_value : 0.0F;
         std::fill_n(out.left, out.frames, v);
         std::fill_n(out.right, out.frames, v);
     }
+    void queueParameter(uint32_t id, double value, int32_t) noexcept override
+    {
+        if (parameterCount < parameters.size()) parameters.at(parameterCount++) = {id, value};
+    }
+    [[nodiscard]] bool holdsNotes() const noexcept override { return m_held > 0; }
     std::vector<MidiEvent> received; // test-only; reserved before render
+    std::array<std::pair<uint32_t, double>, 16> parameters{}; // the first 16 parameter changes
+    std::size_t parameterCount = 0;
+    TimeInfo lastTime;
 private:
     float m_value;
     int m_held = 0;
+    std::array<bool, 128> m_keys{};
 };
 
 // Effect that computes out = (in + add) * mul, so ordering is observable.
@@ -62,7 +78,7 @@ class MathEffect final : public INode
 public:
     MathEffect(float add, float mul) : m_add(add), m_mul(mul) {}
     core::Result<void> prepare(double, int) override { return {}; }
-    void process(std::span<const MidiEvent>, AudioBlock io) override
+    void process(std::span<const MidiEvent>, AudioBlock io, const TimeInfo&) override
     {
         for (int i = 0; i < io.frames; ++i) {
             io.left[i] = (io.left[i] + m_add) * m_mul;
@@ -75,6 +91,12 @@ private:
 };
 
 MidiEvent noteOn(uint8_t note, uint8_t channel = 0) { return MidiEvent{static_cast<uint8_t>(0x90 | channel), note, 100, 0}; }
+
+// Any other message: a controller, a note-off.
+MidiEvent cc(uint8_t status, uint8_t data1, uint8_t data2)
+{
+    return MidiEvent{.status = status, .data1 = data1, .data2 = data2, .sampleOffset = 0};
+}
 
 struct Output
 {
@@ -264,25 +286,142 @@ private slots:
         QVERIFY(graph.findStrip(core::ChannelId::generate()) == nullptr);
     }
 
+    void theTimeReachesEveryNode()
+    {
+        auto piano = std::make_shared<HeldNoteNode>(0.1F);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(piano));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+        const TimeInfo time{.tempo = 97.5, .sampleRate = 48000.0, .samplePosition = 4800, .ppqPosition = 3.25,
+                            .barStartPpq = 0.0, .timeSigNumerator = 4, .timeSigDenominator = 4};
+        graph.render({}, out.block(), 1.0F, time);
+        QCOMPARE(piano->lastTime.tempo, 97.5);
+        QCOMPARE(piano->lastTime.ppqPosition, 3.25);
+        QCOMPARE(piano->lastTime.samplePosition, int64_t{4800});
+    }
+
+    void velocityLayersSplitByTouch()
+    {
+        RouteSettings soft;
+        soft.velocityHigh = 63;
+        RouteSettings hard;
+        hard.velocityLow = 64;
+        QVERIFY(routeEvent(MidiEvent{0x90, 60, 40, 0}, soft).has_value());
+        QVERIFY(!routeEvent(MidiEvent{0x90, 60, 40, 0}, hard).has_value());
+        QVERIFY(!routeEvent(MidiEvent{0x90, 60, 100, 0}, soft).has_value());
+        QVERIFY(routeEvent(MidiEvent{0x90, 60, 100, 0}, hard).has_value());
+        // Note-offs reach every layer (a key let go must never hang).
+        QVERIFY(routeEvent(MidiEvent{0x80, 60, 0, 0}, soft).has_value());
+        QVERIFY(routeEvent(MidiEvent{0x90, 60, 0, 0}, hard).has_value());
+    }
+
+    void aMappedKnobMovesItsParameterAndNothingElseHearsIt()
+    {
+        auto synth = std::make_shared<HeldNoteNode>(0.1F);
+        auto effect = std::make_shared<HeldNoteNode>(0.0F);
+        synth->received.reserve(16);
+        StripSpec spec = strip(synth);
+        spec.effects.push_back(effect);
+        spec.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 74, .target = -1, .parameter = 42,
+                                                 .minimum = 0.2, .maximum = 0.6});
+        spec.mappings.push_back(ParameterMapping{.midiChannel = 2, .controller = 71, .target = 0, .parameter = 7,
+                                                 .minimum = 1.0, .maximum = 0.0}); // reversed
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+        const std::array events{cc(0xB0, 74, 127), cc(0xB1, 71, 0), cc(0xB0, 71, 127), cc(0xB0, 1, 64)};
+        graph.render(events, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{1});
+        QCOMPARE(synth->parameters.at(0).first, uint32_t{42});
+        QVERIFY(std::abs(synth->parameters.at(0).second - 0.6) < 1e-9);
+        QCOMPARE(effect->parameterCount, std::size_t{1}); // CC 71 on channel 1 is not its knob
+        QVERIFY(std::abs(effect->parameters.at(0).second - 1.0) < 1e-9);
+        // Only the unmapped mod wheel reached the instrument as MIDI.
+        QCOMPARE(synth->received.size(), std::size_t{2});
+        QCOMPARE(int(synth->received.at(1).data1), 1);
+    }
+
+    void anInputChannelPlaysTheAudioInput()
+    {
+        StripSpec spec;
+        spec.id = core::ChannelId::generate();
+        spec.inputLeft = 1; // the second input, mono
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        std::vector<float> in1(kFrames, 0.1F);
+        std::vector<float> in2(kFrames, 0.3F);
+        const std::array<const float*, 2> channels{in1.data(), in2.data()};
+        Output out;
+        graph.render({}, out.block(), 1.0F, {}, AudioInputs{.channels = channels, .frames = kFrames});
+        QVERIFY(std::abs(out.left.front() - 0.3F) < 1e-6F && std::abs(out.right.back() - 0.3F) < 1e-6F);
+        // No inputs open (none chosen, or unplugged): silence, not garbage.
+        graph.render({}, out.block(), 1.0F);
+        QCOMPARE(out.left.front(), 0.0F);
+    }
+
+    void aHeldNoteRingsOnAfterAPatchChange()
+    {
+        auto pad = std::make_shared<HeldNoteNode>(0.4F);
+        auto piano = std::make_shared<HeldNoteNode>(0.1F);
+        pad->received.reserve(16);
+        piano->received.reserve(16);
+        std::vector<StripSpec> first;
+        first.push_back(strip(pad));
+        RenderGraph before(std::move(first), 48000.0, kFrames);
+        Output out;
+        const std::array hold{noteOn(60)};
+        before.render(hold, out.block(), 1.0F);
+
+        // The next patch plays the piano; the pad carries on as a tail.
+        std::vector<StripSpec> second;
+        second.push_back(strip(piano));
+        RenderGraph after(std::move(second), 48000.0, kFrames, {}, before.strips());
+        const std::array newNote{noteOn(64)};
+        after.render(newNote, out.block(), 1.0F);
+        QVERIFY2(std::abs(out.left.front() - 0.5F) < 1e-6F, "the held pad and the new piano note sound together");
+        QCOMPARE(pad->received.size(), std::size_t{1}); // the new note went to the piano only
+
+        // Letting the key go ends the pad; after a quiet second the tail is done.
+        const std::array release{cc(0x80, 60, 0)};
+        after.render(release, out.block(), 1.0F);
+        QVERIFY(std::abs(out.left.front() - 0.1F) < 1e-6F);
+        QVERIFY(!after.tails().front()->tailDone());
+        for (int i = 0; i < 48000 / kFrames + 1; ++i) after.render({}, out.block(), 1.0F);
+        QVERIFY(after.tails().front()->tailDone());
+    }
+
     void renderDoesNotAllocate()
     {
         auto first = std::make_shared<HeldNoteNode>(0.3F);
         auto second = std::make_shared<HeldNoteNode>(0.2F);
         first->received.reserve(1024); // the test node's own bookkeeping must not count
         second->received.reserve(1024);
+        // A tail from an earlier patch rings while the new graph plays.
+        auto tailNode = std::make_shared<HeldNoteNode>(0.2F);
+        tailNode->received.reserve(1024);
+        std::vector<StripSpec> tailSpecs;
+        tailSpecs.push_back(strip(tailNode));
+        RenderGraph old(std::move(tailSpecs), 48000.0, kFrames);
         StripSpec spec = strip(first, RouteSettings{0, 127, 5, 0});
         spec.effects.push_back(std::make_shared<MathEffect>(0.0F, 0.5F));
+        spec.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 74, .target = -1, .parameter = 3,
+                                                 .minimum = 0.0, .maximum = 1.0});
         std::vector<StripSpec> specs;
         specs.push_back(std::move(spec));
         specs.push_back(strip(second));
-        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        RenderGraph graph(std::move(specs), 48000.0, kFrames, {}, old.strips());
         Output out;
-        const MidiEvent events[] = {noteOn(60), noteOn(61), MidiEvent{0xB0, 64, 127, 0}};
+        const std::array events{noteOn(60), noteOn(61), cc(0xB0, 64, 127), cc(0xB0, 74, 90)};
+        const TimeInfo time{.tempo = 128.0, .sampleRate = 48000.0, .samplePosition = 0, .ppqPosition = 0.0,
+                            .barStartPpq = 0.0, .timeSigNumerator = 4, .timeSigDenominator = 4};
 
         g_allocations = 0;
         t_countAllocations = true;
         for (int i = 0; i < 100; ++i) {
-            graph.render(events, out.block(), 1.0F);
+            graph.render(events, out.block(), 1.0F, time);
             (void)graph.strip(0)->takeLevel();
         }
         t_countAllocations = false;

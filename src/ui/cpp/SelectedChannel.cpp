@@ -77,4 +77,28 @@ double SelectedChannel::volumeDb() const
     return c != nullptr ? c->volumeDb : 0.0;
 }
 
+int SelectedChannel::velocityLow() const
+{
+    const core::Channel* c = channel();
+    return c != nullptr ? c->velocityLow : 1;
+}
+
+int SelectedChannel::velocityHigh() const
+{
+    const core::Channel* c = channel();
+    return c != nullptr ? c->velocityHigh : 127;
+}
+
+int SelectedChannel::inputLeft() const
+{
+    const core::Channel* c = channel();
+    return c != nullptr ? c->inputLeft : 0;
+}
+
+int SelectedChannel::inputRight() const
+{
+    const core::Channel* c = channel();
+    return c != nullptr ? c->inputRight : 0;
+}
+
 } // namespace gigchain::ui

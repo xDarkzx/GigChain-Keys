@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -21,10 +23,33 @@ Rectangle {
     required property string icon
     required property bool officialIcon
     required property string color
+    required property int keyLow
+    required property int keyHigh
+    required property int transpose
+    required property int velocityLow
+    required property int velocityHigh
+    required property int inputLeft
+    required property int inputRight
+    required property int mappingCount
     required property DocumentController doc
     required property PluginListModel pluginModel
     // Clicking an effect opens its own window (floating, as in a DAW).
     property EffectWindows effectWindows: null
+    // Audio input channels open now (for "Play Audio Input").
+    property int inputChannels: 0
+
+    readonly property var noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+    function noteName(n) { return noteNames[n % 12] + (Math.floor(n / 12) - 1) }
+    // What the strip plays when it is not the whole keyboard: "C2–B3 +12 · vel 1–64".
+    readonly property string zoneText: {
+        const parts = []
+        if (inputLeft > 0) parts.push(inputRight > 0 ? qsTr("In %1+%2").arg(inputLeft).arg(inputRight) : qsTr("In %1").arg(inputLeft))
+        if (keyLow > 0 || keyHigh < 127) parts.push(noteName(keyLow) + "–" + noteName(keyHigh))
+        if (transpose !== 0) parts.push((transpose > 0 ? "+" : "") + transpose)
+        if (velocityLow > 1 || velocityHigh < 127) parts.push(qsTr("vel %1–%2").arg(velocityLow).arg(velocityHigh))
+        if (mappingCount > 0) parts.push(qsTr("%n knob(s)", "", mappingCount))
+        return parts.join(" · ")
+    }
 
     readonly property real peakDb: peak > 0 ? 20 * Math.log10(peak) : -200
     property int menuEffect: -1 // effect the effect menu acts on
@@ -70,6 +95,38 @@ Rectangle {
             StageMenuItem { text: qsTr("Open %1").arg(strip.instrumentName || qsTr("instrument")); onTriggered: strip.doc.selectedChannel = strip.index }
             StageMenuItem { text: strip.mute ? qsTr("Unmute") : qsTr("Mute"); onTriggered: strip.doc.setChannelMute(strip.index, !strip.mute) }
             StageMenuItem { text: strip.solo ? qsTr("Unsolo") : qsTr("Solo"); onTriggered: strip.doc.setChannelSolo(strip.index, !strip.solo) }
+            StageMenuItem { text: qsTr("Keyboard Zone…"); onTriggered: strip.doc.editChannel(strip.index, "zone") }
+            StageMenuItem { text: qsTr("Knobs…"); onTriggered: strip.doc.editChannel(strip.index, "knobs") }
+            StageMenu {
+                id: inputMenu
+                title: qsTr("Play Audio Input")
+                StageMenuItem {
+                    text: qsTr("None (the instrument)")
+                    enabled: strip.inputLeft > 0
+                    onTriggered: strip.doc.setChannelInput(strip.index, 0, 0)
+                }
+                Instantiator {
+                    // Mono inputs, then stereo pairs.
+                    model: {
+                        const list = []
+                        for (let i = 1; i <= strip.inputChannels; ++i) list.push({ l: i, r: 0 })
+                        for (let i = 1; i + 1 <= strip.inputChannels; i += 2) list.push({ l: i, r: i + 1 })
+                        return list
+                    }
+                    delegate: StageMenuItem {
+                        required property var modelData
+                        text: modelData.r > 0 ? qsTr("Input %1+%2 (stereo)").arg(modelData.l).arg(modelData.r) : qsTr("Input %1").arg(modelData.l)
+                        onTriggered: strip.doc.setChannelInput(strip.index, modelData.l, modelData.r)
+                    }
+                    onObjectAdded: (i, object) => inputMenu.insertItem(i + 1, object)
+                    onObjectRemoved: (i, object) => inputMenu.removeItem(object)
+                }
+                StageMenuItem {
+                    visible: strip.inputChannels === 0
+                    text: qsTr("No inputs open: choose an input device in Settings > Audio")
+                    enabled: false
+                }
+            }
             EffectPickerMenu {
                 title: qsTr("Add Effect")
                 pluginModel: strip.pluginModel
@@ -288,6 +345,22 @@ Rectangle {
                 active: strip.solo
                 activeColor: Theme.soloColor
                 onClicked: strip.doc.setChannelSolo(strip.index, !strip.solo)
+            }
+        }
+
+        // where it plays, when not the whole keyboard (click to change)
+        Text {
+            objectName: "zoneText"
+            Layout.fillWidth: true
+            visible: strip.zoneText !== ""
+            text: strip.zoneText
+            color: Theme.textDim
+            font.pixelSize: 9
+            elide: Text.ElideRight
+            horizontalAlignment: Text.AlignHCenter
+            MouseArea {
+                anchors.fill: parent
+                onClicked: strip.doc.editChannel(strip.index, "zone")
             }
         }
 
