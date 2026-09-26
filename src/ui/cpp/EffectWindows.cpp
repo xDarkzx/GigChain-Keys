@@ -38,8 +38,7 @@ protected:
 
 QSize toLogical(QSize physical, double ratio)
 {
-    return QSize(static_cast<int>(std::ceil(physical.width() / ratio)),
-                 static_cast<int>(std::ceil(physical.height() / ratio)));
+    return {static_cast<int>(std::ceil(physical.width() / ratio)), static_cast<int>(std::ceil(physical.height() / ratio))};
 }
 
 } // namespace
@@ -80,13 +79,13 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
         qCWarning(lcUi) << "No effect window: channel" << channel << "is not in the current patch";
         return false;
     }
-    const core::Channel& strip = patch->channels[static_cast<std::size_t>(channel)];
+    const core::Channel& strip = patch->channels.at(static_cast<std::size_t>(channel));
     if (effect < 0 || static_cast<std::size_t>(effect) >= strip.effects.size()) {
         qCWarning(lcUi).noquote() << "No effect window: effect" << effect << "is not on" << strip.name << "("
                                   << strip.effects.size() << "effects)";
         return false;
     }
-    const core::PluginSlot& slot = strip.effects[static_cast<std::size_t>(effect)];
+    const core::PluginSlot& slot = strip.effects.at(static_cast<std::size_t>(effect));
 
     for (auto& entry : m_open) {
         if (entry->channel == strip.id && entry->effect == effect && entry->pluginId == slot.pluginId) {
@@ -129,7 +128,7 @@ bool EffectWindows::openMaster(int effect, const std::vector<core::PluginSlot>& 
         qCWarning(lcUi) << "No effect window: master effect" << effect << "does not exist (" << masterSlots.size() << "effects)";
         return false;
     }
-    const core::PluginSlot& slot = masterSlots[static_cast<std::size_t>(effect)];
+    const core::PluginSlot& slot = masterSlots.at(static_cast<std::size_t>(effect));
     for (auto& entry : m_open) {
         if (entry->master && entry->effect == effect && entry->pluginId == slot.pluginId) {
             GC_IF_FAILED(entry->window) { break; } // an open entry always has its window
@@ -180,7 +179,7 @@ bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWi
     window->setMaximumSize(logical);
     window->resize(logical);
     window->onClose = [this, raw] {
-        const auto it = std::find_if(m_open.begin(), m_open.end(), [raw](const auto& e) { return e.get() == raw; });
+        const auto it = std::ranges::find_if(m_open, [raw](const auto& e) { return e.get() == raw; });
         if (it != m_open.end()) close(**it);
     };
 
@@ -223,8 +222,8 @@ void EffectWindows::sweepMaster(const std::vector<core::PluginSlot>& masterSlots
     for (auto& entry : m_open) {
         if (!entry->master) continue;
         const bool stillThere = std::cmp_less(entry->effect, masterSlots.size())
-                                && masterSlots[static_cast<std::size_t>(entry->effect)].pluginId == entry->pluginId
-                                && !masterSlots[static_cast<std::size_t>(entry->effect)].bypass;
+                                && masterSlots.at(static_cast<std::size_t>(entry->effect)).pluginId == entry->pluginId
+                                && !masterSlots.at(static_cast<std::size_t>(entry->effect)).bypass;
         if (!stillThere) gone.push_back(entry.get());
     }
     for (Entry* entry : gone) close(*entry);
@@ -244,8 +243,8 @@ void EffectWindows::sweep()
             }
         }
         const bool stillThere = channel != nullptr && std::cmp_less(entry->effect, channel->effects.size())
-                                && channel->effects[static_cast<std::size_t>(entry->effect)].pluginId == entry->pluginId
-                                && !channel->effects[static_cast<std::size_t>(entry->effect)].bypass;
+                                && channel->effects.at(static_cast<std::size_t>(entry->effect)).pluginId == entry->pluginId
+                                && !channel->effects.at(static_cast<std::size_t>(entry->effect)).bypass;
         if (!stillThere) gone.push_back(entry.get());
     }
     for (Entry* entry : gone) close(*entry);

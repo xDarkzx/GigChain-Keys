@@ -43,7 +43,7 @@ const core::Channel* ChannelModel::channelAt(int row) const
     if (patch == nullptr || row < 0 || row >= m_rowCount || static_cast<std::size_t>(row) >= patch->channels.size()) {
         return nullptr;
     }
-    return &patch->channels[static_cast<std::size_t>(row)];
+    return &patch->channels.at(static_cast<std::size_t>(row));
 }
 
 QVariant ChannelModel::data(const QModelIndex& index, int role) const
@@ -74,8 +74,8 @@ QVariant ChannelModel::data(const QModelIndex& index, int role) const
     case KeyHighRole: return channel->keyHigh;
     case TransposeRole: return channel->transpose;
     case MidiChannelRole: return channel->midiChannel;
-    case PeakRole: return row < m_levels.size() ? m_levels[row].peak : 0.0F;
-    case RmsRole: return row < m_levels.size() ? m_levels[row].rms : 0.0F;
+    case PeakRole: return row < m_levels.size() ? m_levels.at(row).peak : 0.0F;
+    case RmsRole: return row < m_levels.size() ? m_levels.at(row).rms : 0.0F;
     case SelectedRole: return index.row() == m_document.selectedChannel();
     case PanRole: return channel->pan;
     case IconRole: {
@@ -103,7 +103,7 @@ QVariant ChannelModel::data(const QModelIndex& index, int role) const
     case ColorRole: {
         static const std::array<const char*, 8> palette = {"#4a8fe7", "#45b36b", "#e0a526", "#e5484d",
                                                            "#9b6dff", "#2bb5c9", "#f07b3f", "#c96dd8"};
-        return QString::fromLatin1(palette[row % palette.size()]);
+        return QString::fromLatin1(palette.at(row % palette.size()));
     }
     default: return {};
     }
@@ -126,8 +126,8 @@ void ChannelModel::refreshLevels()
     if (m_rowCount == 0) return;
     for (int row = 0; row < m_rowCount; ++row) {
         const core::Channel* channel = channelAt(row);
-        m_levels[static_cast<std::size_t>(row)] = channel != nullptr ? m_engine.channelLevel(channel->id)
-                                                                     : engine::LevelReading{};
+        m_levels.at(static_cast<std::size_t>(row)) = channel != nullptr ? m_engine.channelLevel(channel->id)
+                                                                        : engine::LevelReading{};
     }
     emit dataChanged(index(0), index(m_rowCount - 1), {PeakRole, RmsRole});
 }

@@ -22,17 +22,17 @@ int SetlistModel::rowCount(const QModelIndex& parent) const
 QVariant SetlistModel::data(const QModelIndex& index, int role) const
 {
     if (!checkIndex(index, CheckIndexOption::IndexIsValid | CheckIndexOption::ParentIsInvalid)) return {};
-    const Row& row = m_rows[static_cast<std::size_t>(index.row())];
+    const Row& row = m_rows.at(static_cast<std::size_t>(index.row()));
     const auto& songs = m_document.setlist().songs;
     if (row.song < 0 || static_cast<std::size_t>(row.song) >= songs.size()) return {};
-    const auto& song = songs[static_cast<std::size_t>(row.song)];
+    const auto& song = songs.at(static_cast<std::size_t>(row.song));
     const bool isSong = row.patch < 0;
     if (!isSong && static_cast<std::size_t>(row.patch) >= song.patches.size()) return {};
     const core::Cursor cursor = m_document.cursor();
 
     switch (role) {
     case KindRole: return isSong ? u"song"_s : u"patch"_s;
-    case NameRole: return isSong ? song.name : song.patches[static_cast<std::size_t>(row.patch)].name;
+    case NameRole: return isSong ? song.name : song.patches.at(static_cast<std::size_t>(row.patch)).name;
     case SongIndexRole: return row.song;
     case PatchIndexRole: return row.patch;
     case NumberRole: return (isSong ? row.song : row.patch) + 1;
@@ -57,9 +57,9 @@ void SetlistModel::rebuild()
     m_rows.clear();
     const auto& songs = m_document.setlist().songs;
     for (std::size_t s = 0; s < songs.size(); ++s) {
-        m_rows.push_back(Row{static_cast<int>(s), -1});
-        for (std::size_t p = 0; p < songs[s].patches.size(); ++p) {
-            m_rows.push_back(Row{static_cast<int>(s), static_cast<int>(p)});
+        m_rows.push_back(Row{.song = static_cast<int>(s), .patch = -1});
+        for (std::size_t p = 0; p < songs.at(s).patches.size(); ++p) {
+            m_rows.push_back(Row{.song = static_cast<int>(s), .patch = static_cast<int>(p)});
         }
     }
     endResetModel();

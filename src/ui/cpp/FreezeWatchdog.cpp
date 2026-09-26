@@ -14,29 +14,35 @@ Q_DECLARE_LOGGING_CATEGORY(lcUi)
 namespace gigchain::ui {
 namespace {
 
-std::mutex g_markMutex;
-QElapsedTimer g_clock;
-
-// What the app was last doing; built on first use (nothing thrown before main).
-QString& lastMark()
+// What the app was last doing, and the clock the watchdog measures with.
+// Shared by every watchdog and mark(); built on first use (nothing thrown
+// before main).
+struct Shared
 {
-    static QString mark = QStringLiteral("(nothing yet)");
-    return mark;
+    std::mutex mutex;
+    QString lastMark = QStringLiteral("(nothing yet)"); // guarded by mutex
+    QElapsedTimer clock;
+};
+
+Shared& shared()
+{
+    static Shared state;
+    return state;
 }
 
 } // namespace
 
 void FreezeWatchdog::mark(const QString& action)
 {
-    const std::scoped_lock lock(g_markMutex);
-    lastMark() = action;
+    Shared& s = shared();
+    const std::scoped_lock lock(s.mutex);
+    s.lastMark = action;
     CrashReports::setLastAction(action);
 }
 
 FreezeWatchdog::FreezeWatchdog(QObject* parent) : QObject(parent)
 {
-    g_clock.start();
-    m_answeredAt = 0;
+    shared().clock.start();
     connect(&m_thread, &QThread::started, &m_thread, [this] { watch(); }, Qt::DirectConnection);
     m_thread.setObjectName(QStringLiteral("FreezeWatchdog"));
     m_thread.start(QThread::LowPriority);
@@ -56,9 +62,9 @@ void FreezeWatchdog::watch()
     qint64 reportedUpTo = 0; // one log line per freeze
     while (!m_stop) {
         // Ask the UI thread to note the time; if it is busy, the answer waits.
-        QMetaObject::invokeMethod(this, [this] { m_answeredAt = g_clock.elapsed(); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this] { m_answeredAt = shared().clock.elapsed(); }, Qt::QueuedConnection);
         QThread::sleep(kInterval);
-        const qint64 now = g_clock.elapsed();
+        const qint64 now = shared().clock.elapsed();
         const qint64 blocked = now - m_answeredAt;
         if (blocked > kFreezeMs + 100) {
             reportedUpTo = m_answeredAt; // still frozen: report when it ends
@@ -66,8 +72,9 @@ void FreezeWatchdog::watch()
             const qint64 lasted = m_answeredAt - reportedUpTo;
             QString after;
             {
-                const std::scoped_lock lock(g_markMutex);
-                after = lastMark();
+                Shared& s = shared();
+                const std::scoped_lock lock(s.mutex);
+                after = s.lastMark;
             }
             qCWarning(lcUi).noquote() << "UI froze for about" << lasted << "ms, after:" << after;
             reportedUpTo = 0;

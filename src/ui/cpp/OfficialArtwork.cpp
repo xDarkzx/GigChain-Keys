@@ -96,7 +96,8 @@ OfficialArtwork::OfficialArtwork(Sources sources) : m_sources(std::move(sources)
         }
         const NiProductHints product = parseProductHints(xml.readAll(), path);
         if (product.binName.isEmpty()) continue;
-        m_niProducts.insert(product.binName.toLower(), NiProduct{product.name, product.company, product.regKey});
+        m_niProducts.insert(product.binName.toLower(),
+                            NiProduct{.name = product.name, .company = product.company, .regKey = product.regKey});
     }
 }
 
@@ -114,7 +115,7 @@ PluginArtwork OfficialArtwork::fromSnapshot(const engine::PluginInfo& plugin) co
     const QString banner = firstExisting(folder, {plugin.classId + u"_snapshot_2.0x.png"_s,
                                                   plugin.classId + u"_snapshot.png"_s});
     if (banner.isEmpty()) return {};
-    return PluginArtwork{banner, {}, {}, u"VST3 snapshot"_s};
+    return PluginArtwork{.banner = banner, .icon = {}, .logo = {}, .source = u"VST3 snapshot"_s};
 }
 
 PluginArtwork OfficialArtwork::fromNks(const engine::PluginInfo& plugin) const
