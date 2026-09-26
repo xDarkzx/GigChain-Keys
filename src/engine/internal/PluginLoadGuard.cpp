@@ -21,7 +21,7 @@ QString normalised(const QString& path)
     return QDir::cleanPath(QDir::fromNativeSeparators(path)).toLower();
 }
 
-constexpr qint64 kMaxListBytes = 1024 * 1024;
+constexpr qint64 kMaxListBytes = qint64{1024} * 1024;
 
 } // namespace
 
@@ -126,7 +126,8 @@ void PluginLoadGuard::readBlocked()
                                       << "is damaged; no plugin is blocked";
         return;
     }
-    for (const QJsonValue& value : doc.array()) {
+    const QJsonArray entries = doc.array();
+    for (const auto& value : entries) {
         if (value.isString() && !value.toString().isEmpty()) m_blocked << value.toString();
     }
 }

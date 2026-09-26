@@ -11,6 +11,8 @@
 #include <QSettings>
 #include <QVariantMap>
 
+#include <exception>
+
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
 using namespace Qt::StringLiterals;
@@ -34,7 +36,15 @@ MasterBus::MasterBus(engine::IEngine& engine, DocumentController& document, QSet
 
 MasterBus::~MasterBus()
 {
-    if (m_edited) save(); // the app is quitting: keep what was changed
+    // The app is quitting: keep what was changed. A destructor must not
+    // throw (the app would be ended on the spot): a failure is logged.
+    try {
+        if (m_edited) save();
+    } catch (const std::exception& e) {
+        qCWarning(lcUi).noquote() << "The master effects could not be saved on quitting:" << e.what();
+    } catch (...) {
+        qCWarning(lcUi) << "The master effects could not be saved on quitting (unknown error)";
+    }
 }
 
 QStringList MasterBus::effectNames() const

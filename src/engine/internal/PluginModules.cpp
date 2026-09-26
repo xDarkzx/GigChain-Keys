@@ -10,9 +10,19 @@
 namespace gigchain::engine {
 namespace {
 
-std::mutex g_mutex;
-// Weak: the library goes when its last instance goes.
-std::map<QString, std::weak_ptr<VST3::Hosting::Module>> g_modules;
+// The libraries loaded now, one per plugin file. Weak: a library goes when
+// its last instance goes. Built on first use (nothing thrown before main).
+struct Loaded
+{
+    std::mutex mutex;
+    std::map<QString, std::weak_ptr<VST3::Hosting::Module>> modules;
+};
+
+Loaded& loaded()
+{
+    static Loaded instance;
+    return instance;
+}
 
 QString keyFor(const QString& bundlePath)
 {
@@ -23,22 +33,24 @@ QString keyFor(const QString& bundlePath)
 
 VST3::Hosting::Module::Ptr PluginModules::get(const QString& bundlePath, std::string& error)
 {
-    const std::lock_guard lock(g_mutex);
+    Loaded& all = loaded();
+    const std::scoped_lock lock(all.mutex);
     const QString key = keyFor(bundlePath);
-    if (const auto it = g_modules.find(key); it != g_modules.end()) {
+    if (const auto it = all.modules.find(key); it != all.modules.end()) {
         if (auto shared = it->second.lock()) return shared;
     }
     auto module = VST3::Hosting::Module::create(QFileInfo(bundlePath).absoluteFilePath().toStdString(), error);
-    if (module) g_modules[key] = module;
-    else g_modules.erase(key);
+    if (module) all.modules[key] = module;
+    else all.modules.erase(key);
     return module;
 }
 
 std::size_t PluginModules::loadedCount()
 {
-    const std::lock_guard lock(g_mutex);
+    Loaded& all = loaded();
+    const std::scoped_lock lock(all.mutex);
     std::size_t count = 0;
-    for (const auto& [key, module] : g_modules) {
+    for (const auto& [key, module] : all.modules) {
         if (!module.expired()) ++count;
     }
     return count;

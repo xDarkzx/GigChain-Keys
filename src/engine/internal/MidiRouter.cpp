@@ -1,5 +1,7 @@
 #include "MidiRouter.h"
 
+#include <utility>
+
 namespace gigchain::engine {
 
 std::optional<MidiEvent> routeEvent(const MidiEvent& event, const RouteSettings& route) noexcept
@@ -13,7 +15,7 @@ std::optional<MidiEvent> routeEvent(const MidiEvent& event, const RouteSettings&
     const bool isKeyed = type == 0x80 || type == 0x90 || type == 0xA0;
     if (!isKeyed) return event;
 
-    if (event.data1 < route.keyLow || event.data1 > route.keyHigh) return std::nullopt;
+    if (std::cmp_less(event.data1, route.keyLow) || std::cmp_greater(event.data1, route.keyHigh)) return std::nullopt;
     const int note = event.data1 + route.transpose;
     if (note < 0 || note > 127) return std::nullopt;
 

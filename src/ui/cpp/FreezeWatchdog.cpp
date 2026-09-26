@@ -15,15 +15,21 @@ namespace gigchain::ui {
 namespace {
 
 std::mutex g_markMutex;
-QString g_lastMark = QStringLiteral("(nothing yet)");
 QElapsedTimer g_clock;
+
+// What the app was last doing; built on first use (nothing thrown before main).
+QString& lastMark()
+{
+    static QString mark = QStringLiteral("(nothing yet)");
+    return mark;
+}
 
 } // namespace
 
 void FreezeWatchdog::mark(const QString& action)
 {
-    const std::lock_guard lock(g_markMutex);
-    g_lastMark = action;
+    const std::scoped_lock lock(g_markMutex);
+    lastMark() = action;
     CrashReports::setLastAction(action);
 }
 
@@ -60,8 +66,8 @@ void FreezeWatchdog::watch()
             const qint64 lasted = m_answeredAt - reportedUpTo;
             QString after;
             {
-                const std::lock_guard lock(g_markMutex);
-                after = g_lastMark;
+                const std::scoped_lock lock(g_markMutex);
+                after = lastMark();
             }
             qCWarning(lcUi).noquote() << "UI froze for about" << lasted << "ms, after:" << after;
             reportedUpTo = 0;

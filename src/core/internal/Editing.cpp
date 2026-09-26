@@ -17,7 +17,7 @@ constexpr auto kCopySuffix = " (copy)"_L1;
 
 bool inRange(int index, std::size_t size)
 {
-    return index >= 0 && static_cast<std::size_t>(index) < size;
+    return index >= 0 && std::cmp_less(index, size);
 }
 
 std::size_t toIndex(int index)

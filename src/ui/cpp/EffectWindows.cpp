@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <utility>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
@@ -221,7 +222,7 @@ void EffectWindows::sweepMaster(const std::vector<core::PluginSlot>& masterSlots
     std::vector<Entry*> gone;
     for (auto& entry : m_open) {
         if (!entry->master) continue;
-        const bool stillThere = entry->effect < static_cast<int>(masterSlots.size())
+        const bool stillThere = std::cmp_less(entry->effect, masterSlots.size())
                                 && masterSlots[static_cast<std::size_t>(entry->effect)].pluginId == entry->pluginId
                                 && !masterSlots[static_cast<std::size_t>(entry->effect)].bypass;
         if (!stillThere) gone.push_back(entry.get());
@@ -242,7 +243,7 @@ void EffectWindows::sweep()
                 if (c.id == entry->channel) channel = &c;
             }
         }
-        const bool stillThere = channel != nullptr && entry->effect < static_cast<int>(channel->effects.size())
+        const bool stillThere = channel != nullptr && std::cmp_less(entry->effect, channel->effects.size())
                                 && channel->effects[static_cast<std::size_t>(entry->effect)].pluginId == entry->pluginId
                                 && !channel->effects[static_cast<std::size_t>(entry->effect)].bypass;
         if (!stillThere) gone.push_back(entry.get());

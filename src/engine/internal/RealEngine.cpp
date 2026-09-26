@@ -374,7 +374,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
         spec.mute = channel.mute;
         spec.solo = channel.solo;
         for (const PlannedSlot& planned : plan) {
-            if (planned.channel != static_cast<int>(c)) continue;
+            if (std::cmp_not_equal(planned.channel, c)) continue;
             // Loaded up front by preload(); a plugin just added loads here.
             auto node = nodeFor(planned.key, *planned.slot, true);
             if (!node) continue;
@@ -840,7 +840,7 @@ void RealEngine::render(AudioBlock out) noexcept
     // The master meter: what leaves the app.
     float peak = 0.0F;
     double sumSquares = 0.0;
-    for (std::size_t i = 0; i < out.frames; ++i) {
+    for (int i = 0; i < out.frames; ++i) {
         peak = std::max({peak, std::abs(out.left[i]), std::abs(out.right[i])});
         sumSquares += 0.5 * (static_cast<double>(out.left[i]) * out.left[i] + static_cast<double>(out.right[i]) * out.right[i]);
     }
