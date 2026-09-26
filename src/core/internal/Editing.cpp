@@ -71,7 +71,7 @@ Result<int> addPatch(Setlist& setlist, int songIndex, const QString& name)
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
     auto clean = cleanName(name, u"Patch name"_s);
     if (!clean) return tl::unexpected(clean.error());
-    Song& song = setlist.songs[toIndex(songIndex)];
+    Song& song = setlist.songs.at(toIndex(songIndex));
     if (song.patches.size() >= toIndex(limits::kMaxPatchesPerSong)) {
         return fail(ErrorCode::LimitExceeded, u"A song can hold at most %1 patches"_s.arg(limits::kMaxPatchesPerSong));
     }
@@ -84,7 +84,7 @@ Result<void> renameSong(Setlist& setlist, int songIndex, const QString& name)
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
     auto clean = cleanName(name, u"Song name"_s);
     if (!clean) return tl::unexpected(clean.error());
-    setlist.songs[toIndex(songIndex)].name = *clean;
+    setlist.songs.at(toIndex(songIndex)).name = *clean;
     return {};
 }
 
@@ -95,7 +95,7 @@ Result<void> setSongChart(Setlist& setlist, int songIndex, const QString& chart)
         return fail(ErrorCode::LimitExceeded,
                     u"The chart is longer than %1 characters"_s.arg(limits::kMaxChartLength));
     }
-    setlist.songs[toIndex(songIndex)].chart = chart;
+    setlist.songs.at(toIndex(songIndex)).chart = chart;
     return {};
 }
 
@@ -108,7 +108,7 @@ Result<void> setSongKeyAndTempo(Setlist& setlist, int songIndex, const QString& 
     if (!std::isfinite(tempo) || tempo < 0.0 || tempo > limits::kMaxTempo) {
         return fail(ErrorCode::OutOfRange, u"The tempo must be between 0 and %1"_s.arg(limits::kMaxTempo));
     }
-    Song& song = setlist.songs[toIndex(songIndex)];
+    Song& song = setlist.songs.at(toIndex(songIndex));
     song.key = key.trimmed();
     song.tempo = tempo;
     return {};
@@ -130,7 +130,7 @@ Result<int> duplicateSong(Setlist& setlist, int songIndex)
     if (setlist.songs.size() >= toIndex(limits::kMaxSongs)) {
         return fail(ErrorCode::LimitExceeded, u"A setlist can hold at most %1 songs"_s.arg(limits::kMaxSongs));
     }
-    Song copy = withFreshIds(setlist.songs[toIndex(songIndex)]);
+    Song copy = withFreshIds(setlist.songs.at(toIndex(songIndex)));
     copy.name = copyName(copy.name);
     setlist.songs.insert(setlist.songs.begin() + songIndex + 1, std::move(copy));
     return songIndex + 1;
@@ -140,7 +140,7 @@ Result<int> duplicatePatch(Setlist& setlist, Cursor cursor)
 {
     const Patch* patch = patchAt(setlist, cursor);
     if (patch == nullptr) return missing(u"Patch"_s);
-    Song& song = setlist.songs[toIndex(cursor.song)];
+    Song& song = setlist.songs.at(toIndex(cursor.song));
     if (song.patches.size() >= toIndex(limits::kMaxPatchesPerSong)) {
         return fail(ErrorCode::LimitExceeded, u"A song can hold at most %1 patches"_s.arg(limits::kMaxPatchesPerSong));
     }
@@ -160,7 +160,7 @@ Result<void> removeSong(Setlist& setlist, int songIndex)
 Result<void> removePatch(Setlist& setlist, Cursor cursor)
 {
     if (patchAt(setlist, cursor) == nullptr) return missing(u"Patch"_s);
-    Song& song = setlist.songs[toIndex(cursor.song)];
+    Song& song = setlist.songs.at(toIndex(cursor.song));
     if (song.patches.size() == 1) {
         return fail(ErrorCode::InvalidData, u"A song needs at least one patch; delete the song instead"_s);
     }
@@ -180,7 +180,7 @@ Result<void> moveSong(Setlist& setlist, int from, int to)
 Result<void> movePatch(Setlist& setlist, int songIndex, int from, int to)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
-    auto& patches = setlist.songs[toIndex(songIndex)].patches;
+    auto& patches = setlist.songs.at(toIndex(songIndex)).patches;
     if (!inRange(from, patches.size()) || !inRange(to, patches.size())) return missing(u"Patch position"_s);
     moveElement(patches, from, to);
     return {};
@@ -223,7 +223,7 @@ Result<void> removeEffect(Setlist& setlist, Cursor cursor, int channelIndex, int
     if (patch == nullptr || !inRange(channelIndex, patch->channels.size())) {
         return missing(u"Channel %1"_s.arg(channelIndex + 1));
     }
-    if (!inRange(effectIndex, patch->channels[toIndex(channelIndex)].effects.size())) {
+    if (!inRange(effectIndex, patch->channels.at(toIndex(channelIndex)).effects.size())) {
         return missing(u"Effect %1"_s.arg(effectIndex + 1));
     }
     return updateChannel(setlist, cursor, channelIndex, [effectIndex](Channel& channel) {
@@ -238,11 +238,11 @@ Result<void> updateChannel(Setlist& setlist, Cursor cursor, int channelIndex,
     if (patch == nullptr) return missing(u"Patch"_s);
     if (!inRange(channelIndex, patch->channels.size())) return missing(u"Channel %1"_s.arg(channelIndex + 1));
 
-    Channel updated = patch->channels[toIndex(channelIndex)];
+    Channel updated = patch->channels.at(toIndex(channelIndex));
     edit(updated);
     updated.name = updated.name.trimmed();
     if (auto valid = validateChannel(updated, u"Channel"_s); !valid) return valid;
-    patch->channels[toIndex(channelIndex)] = std::move(updated);
+    patch->channels.at(toIndex(channelIndex)) = std::move(updated);
     return {};
 }
 

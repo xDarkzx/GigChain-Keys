@@ -49,7 +49,7 @@ QString sectionName(const QString& type)
     if (type == u"grid"_s || type == u"g"_s) return u"Grid"_s;
     QString name = type;
     name.replace(u'_', u' ');
-    if (!name.isEmpty()) name[0] = name[0].toUpper();
+    if (!name.isEmpty()) name.front() = name.front().toUpper();
     return name;
 }
 
@@ -59,16 +59,16 @@ std::vector<ChartSegment> parseSegments(const QString& line)
     ChartSegment current;
     qsizetype i = 0;
     while (i < line.size()) {
-        if (line[i] == u'[') {
+        if (line.at(i) == u'[') {
             const qsizetype close = line.indexOf(u']', i + 1);
             if (close > i) {
                 if (!current.chord.isEmpty() || !current.text.isEmpty()) segments.push_back(current);
-                current = ChartSegment{line.mid(i + 1, close - i - 1).trimmed(), {}};
+                current = ChartSegment{.chord = line.mid(i + 1, close - i - 1).trimmed(), .text = {}};
                 i = close + 1;
                 continue;
             }
         }
-        current.text += line[i];
+        current.text += line.at(i);
         ++i;
     }
     if (!current.chord.isEmpty() || !current.text.isEmpty() || segments.empty()) segments.push_back(current);
@@ -181,7 +181,7 @@ QString chordSheetToChordPro(const QString& sheet)
 
     QStringList out;
     for (qsizetype i = 0; i < lines.size(); ++i) {
-        const QString& line = lines[i];
+        const QString& line = lines.at(i);
         const auto label = kSectionLabel().match(line.trimmed());
         if (label.hasMatch() && !isChord(label.captured(1))) {
             const QString note = label.captured(2);
@@ -274,7 +274,8 @@ QString normaliseSpacing(const QString& line)
     QString out;
     for (const QChar c : line) {
         if (c == u'\t') {
-            do { out += u' '; } while (out.size() % 8 != 0);
+            out += u' '; // at least one space, then on to the next tab stop (every 8)
+            while (out.size() % 8 != 0) out += u' ';
         } else {
             out += (c == QChar(0x00A0) ? QChar(u' ') : c);
         }
@@ -305,11 +306,11 @@ QString tidyChordPro(const QString& chordPro)
             // A chord that sat over the space before a word goes onto that
             // word (pasted sheets are often a column or two off).
             for (std::size_t i = 1; i < line.segments.size(); ++i) {
-                QString& text = line.segments[i].text;
+                QString& text = line.segments.at(i).text;
                 qsizetype spaces = 0;
-                while (spaces < text.size() && text[spaces] == u' ') ++spaces;
-                if (spaces == 0 || spaces == text.size() || line.segments[i].chord.isEmpty()) continue;
-                line.segments[i - 1].text += text.left(spaces);
+                while (spaces < text.size() && text.at(spaces) == u' ') ++spaces;
+                if (spaces == 0 || spaces == text.size() || line.segments.at(i).chord.isEmpty()) continue;
+                line.segments.at(i - 1).text += text.left(spaces);
                 text.remove(0, spaces);
             }
             for (ChartSegment& segment : line.segments) {
@@ -435,10 +436,10 @@ ImportedSheet importChordSheet(const QString& text)
     // Where the song starts: the first section label, else the first chords.
     qsizetype start = -1;
     for (qsizetype i = 0; i < lines.size() && start < 0; ++i) {
-        if (isSectionLabel(lines[i])) start = i;
+        if (isSectionLabel(lines.at(i))) start = i;
     }
     for (qsizetype i = 0; i < lines.size() && start < 0; ++i) {
-        if (isChordLine(normaliseSpacing(lines[i]))) start = i;
+        if (isChordLine(normaliseSpacing(lines.at(i)))) start = i;
     }
     if (start < 0) start = 0;
     // Where it ends: the first line of site clutter after it.
@@ -453,7 +454,7 @@ ImportedSheet importChordSheet(const QString& text)
     // The song's details from the header.
     bool titleSeen = false;
     for (qsizetype i = 0; i < start; ++i) {
-        const QString line = lines[i].trimmed();
+        const QString line = lines.at(i).trimmed();
         if (line.isEmpty() || kSeparator().match(line).hasMatch() || kTabStaff().match(line).hasMatch() ||
             kJunk().match(line).hasMatch()) {
             continue; // never a title

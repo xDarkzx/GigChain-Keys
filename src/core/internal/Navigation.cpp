@@ -13,7 +13,7 @@ int songCount(const Setlist& setlist)
 int patchCount(const Setlist& setlist, int song)
 {
     if (song < 0 || song >= songCount(setlist)) return 0;
-    return static_cast<int>(setlist.songs[static_cast<std::size_t>(song)].patches.size());
+    return static_cast<int>(setlist.songs.at(static_cast<std::size_t>(song)).patches.size());
 }
 
 bool pointsAtPatch(const Setlist& setlist, Cursor cursor)
@@ -90,9 +90,9 @@ Cursor previousSong(const Setlist& setlist, Cursor cursor)
 std::optional<Cursor> findPatch(const Setlist& setlist, const PatchId& id)
 {
     for (int song = 0; song < songCount(setlist); ++song) {
-        const auto& patches = setlist.songs[static_cast<std::size_t>(song)].patches;
+        const auto& patches = setlist.songs.at(static_cast<std::size_t>(song)).patches;
         for (std::size_t patch = 0; patch < patches.size(); ++patch) {
-            if (patches[patch].id == id) return Cursor{song, static_cast<int>(patch)};
+            if (patches.at(patch).id == id) return Cursor{song, static_cast<int>(patch)};
         }
     }
     return std::nullopt;
@@ -101,13 +101,13 @@ std::optional<Cursor> findPatch(const Setlist& setlist, const PatchId& id)
 const Patch* patchAt(const Setlist& setlist, Cursor cursor)
 {
     if (!pointsAtPatch(setlist, cursor)) return nullptr;
-    return &setlist.songs[static_cast<std::size_t>(cursor.song)].patches[static_cast<std::size_t>(cursor.patch)];
+    return &setlist.songs.at(static_cast<std::size_t>(cursor.song)).patches.at(static_cast<std::size_t>(cursor.patch));
 }
 
 Patch* patchAt(Setlist& setlist, Cursor cursor)
 {
     if (!pointsAtPatch(setlist, cursor)) return nullptr;
-    return &setlist.songs[static_cast<std::size_t>(cursor.song)].patches[static_cast<std::size_t>(cursor.patch)];
+    return &setlist.songs.at(static_cast<std::size_t>(cursor.song)).patches.at(static_cast<std::size_t>(cursor.patch));
 }
 
 } // namespace gigchain::core
