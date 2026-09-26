@@ -9,6 +9,7 @@
 #include <xmmintrin.h>
 
 #include <algorithm>
+#include <span>
 
 using namespace Qt::StringLiterals;
 
@@ -62,11 +63,10 @@ std::vector<AudioDeviceInfo> AudioDevice::listOutputs()
             device.isDefault = api == AudioApi::Wasapi && info.isDefaultOutput;
             device.sampleRates.assign(info.sampleRates.begin(), info.sampleRates.end());
             if (device.preferredSampleRate != 0 &&
-                std::find(device.sampleRates.begin(), device.sampleRates.end(), device.preferredSampleRate) ==
-                    device.sampleRates.end()) {
+                std::ranges::find(device.sampleRates, device.preferredSampleRate) == device.sampleRates.end()) {
                 device.sampleRates.push_back(device.preferredSampleRate);
             }
-            std::sort(device.sampleRates.begin(), device.sampleRates.end());
+            std::ranges::sort(device.sampleRates);
             outputs.push_back(std::move(device));
         }
     }
@@ -128,14 +128,14 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     const unsigned int ownRate = info.preferredSampleRate != 0 ? info.preferredSampleRate : 48000;
     const unsigned int rate = sampleRate != 0 ? sampleRate : ownRate;
     if (sampleRate != 0 && sampleRate != info.preferredSampleRate &&
-        std::find(info.sampleRates.begin(), info.sampleRates.end(), sampleRate) == info.sampleRates.end()) {
+        std::ranges::find(info.sampleRates, sampleRate) == info.sampleRates.end()) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 (%2) cannot run at %3 Hz"_s.arg(
                                                             QString::fromStdString(info.name), apiName(api)).arg(sampleRate));
     }
     unsigned int frames = bufferFrames;
 
     const auto takeLastError = [this](const QString& fallback) {
-        const std::lock_guard lock(m_errorMutex);
+        const std::scoped_lock lock(m_errorMutex);
         QString text = m_errors.empty() ? fallback : m_errors.back();
         m_errors.clear();
         return text;
@@ -155,9 +155,9 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
                           u"Could not start %1 (%2): %3"_s.arg(QString::fromStdString(info.name), apiName(api),
                                                               takeLastError(u"unknown error"_s)));
     }
-    const double latencyFrames = static_cast<double>(rt->getStreamLatency());
+    const auto latencyFrames = static_cast<double>(rt->getStreamLatency());
     m_latencyMs = m_sampleRate > 0.0 ? 1000.0 * std::max(latencyFrames, static_cast<double>(frames)) / m_sampleRate : 0.0;
-    m_choice = DeviceChoice{api, QString::fromStdString(info.name)};
+    m_choice = DeviceChoice{.api = api, .name = QString::fromStdString(info.name)};
     m_rtaudio = std::move(rt);
     return {};
 }
@@ -176,7 +176,7 @@ core::Result<void> AudioDevice::pause()
 {
     if (!m_rtaudio || !m_rtaudio->isStreamRunning()) return {};
     if (m_rtaudio->stopStream() != RTAUDIO_NO_ERROR) {
-        const std::lock_guard lock(m_errorMutex);
+        const std::scoped_lock lock(m_errorMutex);
         const QString why = m_errors.empty() ? u"unknown error"_s : m_errors.back();
         m_errors.clear();
         return core::fail(core::ErrorCode::DeviceUnavailable, u"Could not pause %1: %2"_s.arg(m_choice.name, why));
@@ -191,7 +191,7 @@ core::Result<void> AudioDevice::resume()
     }
     if (m_rtaudio->isStreamRunning()) return {};
     if (m_rtaudio->startStream() != RTAUDIO_NO_ERROR) {
-        const std::lock_guard lock(m_errorMutex);
+        const std::scoped_lock lock(m_errorMutex);
         const QString why = m_errors.empty() ? u"unknown error"_s : m_errors.back();
         m_errors.clear();
         return core::fail(core::ErrorCode::DeviceUnavailable, u"Could not restart %1: %2"_s.arg(m_choice.name, why));
@@ -209,7 +209,7 @@ std::vector<Notice> AudioDevice::poll()
     std::vector<Notice> notices;
     std::vector<QString> errors;
     {
-        const std::lock_guard lock(m_errorMutex);
+        const std::scoped_lock lock(m_errorMutex);
         errors.swap(m_errors);
     }
     for (const QString& error : errors) {
@@ -254,15 +254,16 @@ int AudioDevice::callback(void* output, void*, unsigned int frames, double, unsi
     // Flush denormals to zero: decaying reverb tails otherwise cost huge CPU.
     _mm_setcsr(_mm_getcsr() | 0x8040);
     if ((status & RTAUDIO_OUTPUT_UNDERFLOW) != 0) self->m_underflows.fetch_add(1, std::memory_order_relaxed);
-    auto* out = static_cast<float*>(output); // non-interleaved: [left block][right block]
-    self->m_render(AudioBlock{out, out + frames, static_cast<int>(frames)});
+    // Non-interleaved: [left block][right block].
+    const std::span<float> both(static_cast<float*>(output), static_cast<std::size_t>(frames) * 2);
+    self->m_render(AudioBlock{.left = both.data(), .right = both.subspan(frames).data(), .frames = static_cast<int>(frames)});
     return 0;
 }
 
 void AudioDevice::onError(int type, const std::string& text)
 {
     if (type == RTAUDIO_DEVICE_DISCONNECT) m_deviceLost.store(true);
-    const std::lock_guard lock(m_errorMutex);
+    const std::scoped_lock lock(m_errorMutex);
     m_errors.push_back(QString::fromStdString(text));
 }
 

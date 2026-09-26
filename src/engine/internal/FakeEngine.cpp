@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <iterator>
 #include <optional>
 #include <utility>
 
@@ -65,9 +66,9 @@ void FakeEngine::applyPatch(const core::SongId&, const core::Patch& patch)
 {
     m_channels.clear();
     m_channels.reserve(patch.channels.size());
-    for (const core::Channel& channel : patch.channels) {
-        m_channels.push_back(ChannelState{channel.id, channel.volumeDb, channel.mute, channel.solo});
-    }
+    std::ranges::transform(patch.channels, std::back_inserter(m_channels), [](const core::Channel& channel) {
+        return ChannelState{.id = channel.id, .volumeDb = channel.volumeDb, .mute = channel.mute, .solo = channel.solo};
+    });
 }
 
 LevelReading FakeEngine::masterLevel()
@@ -88,18 +89,16 @@ std::vector<PluginInfo> FakeEngine::availablePlugins() const
 
 LevelReading FakeEngine::channelLevel(const core::ChannelId& id)
 {
-    const auto it = std::find_if(m_channels.begin(), m_channels.end(),
-                                 [&id](const ChannelState& state) { return state.id == id; });
+    const auto it = std::ranges::find_if(m_channels, [&id](const ChannelState& state) { return state.id == id; });
     if (it == m_channels.end()) return {};
-    const bool anySolo = std::any_of(m_channels.begin(), m_channels.end(),
-                                     [](const ChannelState& state) { return state.solo; });
+    const bool anySolo = std::ranges::any_of(m_channels, [](const ChannelState& state) { return state.solo; });
     if (it->mute || (anySolo && !it->solo)) return {};
 
     const auto index = static_cast<double>(std::distance(m_channels.begin(), it));
     const double wave = 0.55 + 0.35 * std::sin(m_clock() * 4.4 + index * 1.3);
     const double master = m_masterMuted ? 0.0 : dbToGain(m_masterDb);
     const double peak = std::clamp(wave * dbToGain(it->volumeDb) * master, 0.0, 1.0);
-    return LevelReading{static_cast<float>(peak), static_cast<float>(peak * 0.7)};
+    return LevelReading{.peak = static_cast<float>(peak), .rms = static_cast<float>(peak * 0.7)};
 }
 
 float FakeEngine::cpuLoad() const
@@ -167,7 +166,11 @@ core::Result<std::unique_ptr<IPluginEditor>> FakeEngine::createEditorForPlugin(c
 
 std::vector<AudioOutput> FakeEngine::audioOutputs() const
 {
-    return {AudioOutput{AudioDriver::System, m_setup.device, {44100, 48000}, 48000, true}};
+    return {AudioOutput{.driver = AudioDriver::System,
+                        .name = m_setup.device,
+                        .sampleRates = {44100, 48000},
+                        .preferredSampleRate = 48000,
+                        .isDefault = true}};
 }
 
 core::Result<void> FakeEngine::setAudioSetup(const AudioSetup& setup)
@@ -187,8 +190,7 @@ QString FakeEngine::statusText() const
 
 FakeEngine::ChannelState* FakeEngine::find(const core::ChannelId& id)
 {
-    const auto it = std::find_if(m_channels.begin(), m_channels.end(),
-                                 [&id](const ChannelState& state) { return state.id == id; });
+    const auto it = std::ranges::find_if(m_channels, [&id](const ChannelState& state) { return state.id == id; });
     return it == m_channels.end() ? nullptr : &*it;
 }
 

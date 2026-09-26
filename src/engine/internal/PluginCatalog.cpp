@@ -79,7 +79,7 @@ Fingerprint fingerprintOf(const QString& bundle)
         const QFileInfo module(bundle + u"/Contents/x86_64-win/"_s + file.fileName());
         if (module.exists()) file = module;
     }
-    return Fingerprint{file.isFile() ? file.size() : -1, file.lastModified().toMSecsSinceEpoch()};
+    return Fingerprint{.size = file.isFile() ? file.size() : -1, .modified = file.lastModified().toMSecsSinceEpoch()};
 }
 
 struct CacheEntry
@@ -115,21 +115,21 @@ QJsonObject toJson(const QString& bundle, const CacheEntry& entry)
 CacheEntry fromJson(const QJsonObject& o)
 {
     CacheEntry entry;
-    entry.fingerprint = Fingerprint{o.value(u"size"_s).toInteger(-1), o.value(u"modified"_s).toInteger(0)};
+    entry.fingerprint = Fingerprint{.size = o.value(u"size"_s).toInteger(-1), .modified = o.value(u"modified"_s).toInteger(0)};
     if (o.contains(u"error"_s)) {
         entry.error = o.value(u"error"_s).toString();
         return entry;
     }
-    entry.info = PluginInfo{o.value(u"path"_s).toString(),
-                            o.value(u"name"_s).toString(),
-                            o.value(u"vendor"_s).toString(),
-                            o.value(u"instrument"_s).toBool() ? PluginKind::Instrument : PluginKind::Effect,
-                            o.value(u"subCategories"_s).toString(),
-                            o.value(u"version"_s).toString(),
-                            o.value(u"classId"_s).toString(),
-                            o.value(u"website"_s).toString(),
-                            o.value(u"email"_s).toString(),
-                            o.value(u"sdkVersion"_s).toString()};
+    entry.info = PluginInfo{.id = o.value(u"path"_s).toString(),
+                            .name = o.value(u"name"_s).toString(),
+                            .vendor = o.value(u"vendor"_s).toString(),
+                            .kind = o.value(u"instrument"_s).toBool() ? PluginKind::Instrument : PluginKind::Effect,
+                            .subCategories = o.value(u"subCategories"_s).toString(),
+                            .version = o.value(u"version"_s).toString(),
+                            .classId = o.value(u"classId"_s).toString(),
+                            .website = o.value(u"website"_s).toString(),
+                            .email = o.value(u"email"_s).toString(),
+                            .sdkVersion = o.value(u"sdkVersion"_s).toString()};
     return entry;
 }
 
@@ -199,16 +199,16 @@ CacheEntry openAndRead(const QString& bundle)
             QString vendor = QString::fromStdString(info.vendor());
             if (vendor.isEmpty()) vendor = QString::fromStdString(factory.info().vendor());
             const bool instrument = QString::fromStdString(info.subCategoriesString()).contains(u"Instrument"_s);
-            entry.info = PluginInfo{bundle,
-                                    QString::fromStdString(info.name()),
-                                    vendor,
-                                    instrument ? PluginKind::Instrument : PluginKind::Effect,
-                                    QString::fromStdString(info.subCategoriesString()),
-                                    QString::fromStdString(info.version()),
-                                    QString::fromStdString(info.ID().toString()),
-                                    QString::fromStdString(factory.info().url()),
-                                    QString::fromStdString(factory.info().email()),
-                                    QString::fromStdString(info.sdkVersion())};
+            entry.info = PluginInfo{.id = bundle,
+                                    .name = QString::fromStdString(info.name()),
+                                    .vendor = vendor,
+                                    .kind = instrument ? PluginKind::Instrument : PluginKind::Effect,
+                                    .subCategories = QString::fromStdString(info.subCategoriesString()),
+                                    .version = QString::fromStdString(info.version()),
+                                    .classId = QString::fromStdString(info.ID().toString()),
+                                    .website = QString::fromStdString(factory.info().url()),
+                                    .email = QString::fromStdString(factory.info().email()),
+                                    .sdkVersion = QString::fromStdString(info.sdkVersion())};
             return entry; // v1: one plugin per bundle (the first audio class), matching Vst3Node::load
         }
         entry.error = u"no audio processor class"_s;
@@ -428,7 +428,7 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString
     }
     if (counts.opened > 0 || fresh.size() != cached.size()) writeCache(cacheFile, fresh);
 
-    std::sort(plugins.begin(), plugins.end(), [](const PluginInfo& a, const PluginInfo& b) {
+    std::ranges::sort(plugins, [](const PluginInfo& a, const PluginInfo& b) {
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
     });
     qCInfo(lcEngine).noquote() << "Found" << plugins.size() << "VST3 plugins in" << folder << "(" << counts.opened
