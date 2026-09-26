@@ -31,7 +31,8 @@ sounds instantly on stage.
 ## What's planned
 
 Instrument toggles and song sections, a loop station, EDM stack presets with
-built-in sidechain, and a tablet remote for the music stand: see
+built-in sidechain, a tablet remote for the music stand, and macOS and Linux
+versions: see
 [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Building
