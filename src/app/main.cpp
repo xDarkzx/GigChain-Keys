@@ -39,6 +39,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <exception>
 #include <memory>
 
 Q_IMPORT_QML_PLUGIN(GigChain_UiPlugin)
@@ -55,7 +56,7 @@ namespace {
 // always-on-top for a moment, which puts it above everything, then set back.
 void bringToFront(QWindow& window)
 {
-    const auto hwnd = reinterpret_cast<HWND>(window.winId());
+    const auto hwnd = reinterpret_cast<HWND>(window.winId()); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): a window id is an HWND on Windows
     constexpr UINT kKeep = SWP_NOMOVE | SWP_NOSIZE;
     if (!SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, kKeep | SWP_SHOWWINDOW) ||
         !SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, kKeep | SWP_SHOWWINDOW)) {
@@ -85,9 +86,7 @@ struct LogScope
     ~LogScope() { core::FileLog::uninstall(); }
 };
 
-} // namespace
-
-int main(int argc, char* argv[])
+int runApp(int argc, char** argv)
 {
 #if defined(_MSC_VER) && defined(_DEBUG)
     // Report leaks to the debugger output at exit during development.
@@ -214,4 +213,20 @@ int main(int argc, char* argv[])
     const int code = QGuiApplication::exec();
     qCInfo(lcApp).noquote() << branding::name() << "exiting with code" << code;
     return code;
+}
+
+} // namespace
+
+// Anything thrown out of the app is said, with what it was, instead of the
+// process being ended without a word.
+int main(int argc, char** argv)
+{
+    try {
+        return runApp(argc, argv);
+    } catch (const std::exception& e) {
+        qCCritical(lcApp).noquote() << "Stopped by an unexpected error:" << e.what();
+    } catch (...) {
+        qCCritical(lcApp) << "Stopped by an unexpected error of an unknown kind";
+    }
+    return 1;
 }

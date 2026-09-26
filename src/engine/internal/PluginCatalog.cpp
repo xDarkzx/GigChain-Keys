@@ -156,7 +156,8 @@ std::map<QString, CacheEntry> readCache(const QString& cacheFile)
         qCInfo(lcEngine).noquote() << "Plugin cache" << cacheFile << "is from another version; scanning every plugin";
         return cache;
     }
-    for (const QJsonValue& value : doc.object().value(u"plugins"_s).toArray()) {
+    const QJsonArray entries = doc.object().value(u"plugins"_s).toArray();
+    for (const auto& value : entries) {
         const QJsonObject o = value.toObject();
         cache.emplace(o.value(u"path"_s).toString(), fromJson(o));
     }

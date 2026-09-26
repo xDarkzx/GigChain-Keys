@@ -120,7 +120,7 @@ struct Vst3Node::Impl
     std::atomic<uint64_t> oversizedBlocks{0};
     // Notes currently held, per MIDI channel (audio thread only), and a
     // main-thread request to release them on the next block.
-    std::bitset<16 * 128> heldNotes;
+    std::bitset<std::size_t{16} * 128> heldNotes;
     std::atomic<bool> releaseRequested{false};
     // MIDI controllers (sustain pedal, mod wheel, pitch bend, aftertouch) as
     // the plugin's own parameters, per MIDI channel: VST3 plugins take no raw
@@ -373,9 +373,9 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
             event.noteOn.pitch = e.data1;
             event.noteOn.velocity = static_cast<float>(e.data2) / 127.0F;
             event.noteOn.noteId = -1;
-            impl.heldNotes.set(static_cast<std::size_t>((e.status & 0x0F) * 128 + e.data1));
+            impl.heldNotes.set((static_cast<std::size_t>(e.status & 0x0F) * 128) + e.data1);
         } else if (type == 0x80 || type == 0x90) {
-            impl.heldNotes.reset(static_cast<std::size_t>((e.status & 0x0F) * 128 + e.data1));
+            impl.heldNotes.reset((static_cast<std::size_t>(e.status & 0x0F) * 128) + e.data1);
             event.type = Vst::Event::kNoteOffEvent;
             event.noteOff.channel = static_cast<int16>(e.status & 0x0F);
             event.noteOff.pitch = e.data1;
@@ -635,7 +635,7 @@ public:
             return logged(core::fail(core::ErrorCode::InvalidData, u"%1's editor does not support Windows windows"_s.arg(m_title)));
         }
         m_view->setFrame(this);
-        if (m_view->attached(reinterpret_cast<void*>(nativeParent), kPlatformTypeHWND) != kResultOk) {
+        if (m_view->attached(reinterpret_cast<void*>(nativeParent), kPlatformTypeHWND) != kResultOk) { // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): VST3 takes the HWND as a void*
             m_view->setFrame(nullptr);
             return logged(core::fail(core::ErrorCode::InvalidData, u"%1's editor failed to open"_s.arg(m_title)));
         }

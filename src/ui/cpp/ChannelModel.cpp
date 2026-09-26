@@ -87,8 +87,16 @@ QVariant ChannelModel::data(const QModelIndex& index, int role) const
         // Unknown ids (plugin removed since) still get an icon from the name.
         const engine::PluginInfo plugin = m_plugins.value(
             channel->instrument->pluginId,
-            engine::PluginInfo{channel->instrument->pluginId, channel->instrument->displayName, {},
-                               engine::PluginKind::Instrument, {}, {}});
+            engine::PluginInfo{.id = channel->instrument->pluginId,
+                               .name = channel->instrument->displayName,
+                               .vendor = {},
+                               .kind = engine::PluginKind::Instrument,
+                               .subCategories = {},
+                               .version = {},
+                               .classId = {},
+                               .website = {},
+                               .email = {},
+                               .sdkVersion = {}});
         return iconUrl(iconFor(plugin));
     }
     case OfficialIconRole: return channel->instrument && m_officialIcons.contains(channel->instrument->pluginId);

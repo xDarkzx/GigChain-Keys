@@ -340,7 +340,7 @@ bool DocumentController::importChartFile(int song, const QUrl& file)
     if (!in.open(QIODevice::ReadOnly)) {
         return report(core::Error{core::ErrorCode::FileReadFailed, tr("Could not open %1: %2").arg(path, in.errorString())});
     }
-    constexpr qint64 kMaxChartFile = 1024 * 1024; // a chart is a few KB
+    constexpr qint64 kMaxChartFile = qint64{1024} * 1024; // a chart is a few KB
     if (in.size() > kMaxChartFile) {
         return report(core::Error{core::ErrorCode::FileTooLarge, tr("%1 is too large for a chart").arg(path)});
     }
@@ -453,7 +453,7 @@ bool DocumentController::addChannel(const QString& pluginId, const QString& name
     }
     // The first instrument of an empty setlist starts its first song.
     if (m_setlist.songs.empty() && !addSong()) return false;
-    const auto index = core::addChannel(m_setlist, m_cursor, core::PluginSlot{pluginId, name, false});
+    const auto index = core::addChannel(m_setlist, m_cursor, core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = false, .state = {}});
     if (!index) return report(index.error());
     commitChannels(*index);
     emit channelAdded(*index);
@@ -471,7 +471,7 @@ bool DocumentController::removeChannel(int channel)
 
 bool DocumentController::addEffect(int channel, const QString& pluginId, const QString& name)
 {
-    if (auto r = core::addEffect(m_setlist, m_cursor, channel, core::PluginSlot{pluginId, name, false}); !r) {
+    if (auto r = core::addEffect(m_setlist, m_cursor, channel, core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = false, .state = {}}); !r) {
         return report(r.error());
     }
     commitChannelField(channel, true);
@@ -504,7 +504,8 @@ bool DocumentController::replaceEffect(int channel, int effect, const QString& p
         return report(core::Error{core::ErrorCode::OutOfRange, tr("That effect does not exist")});
     }
     auto r = core::updateChannel(m_setlist, m_cursor, channel, [&](core::Channel& c) {
-        c.effects[static_cast<std::size_t>(effect)] = core::PluginSlot{pluginId, name, false};
+        c.effects.at(static_cast<std::size_t>(effect)) =
+            core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = false, .state = {}};
     });
     if (!r) return report(r.error());
     commitChannelField(channel, true);
@@ -516,7 +517,7 @@ bool DocumentController::setChannelInstrument(int channel, const QString& plugin
     auto r = core::updateChannel(m_setlist, m_cursor, channel, [&](core::Channel& c) {
         // A channel still named after its old instrument takes the new name.
         if (!c.instrument || c.name == c.instrument->displayName) c.name = name;
-        c.instrument = core::PluginSlot{pluginId, name, false};
+        c.instrument = core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = false, .state = {}};
     });
     if (!r) return report(r.error());
     commitChannelField(channel, true);

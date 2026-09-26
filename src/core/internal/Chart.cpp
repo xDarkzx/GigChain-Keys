@@ -9,18 +9,35 @@ namespace {
 
 // Root, quality, extensions/alterations and an optional bass note:
 // C, F#m7b5, Bbmaj9, Dsus4, E7(b9), A/C#, Cm(add9)...
-const QRegularExpression kChord(
-    uR"(^[A-G](?:#|b)?(?:maj|min|dim|aug|sus|add|m|M|°|ø|\+|-)?(?:\d+|maj\d*|sus\d*|add\d+|dim\d*|aug|alt|[b#]\d+|\([^)]*\))*(?:/[A-G](?:#|b)?)?$)"_s);
+// (Each pattern is built on first use, not before main: nothing thrown at start-up.)
+const QRegularExpression& kChord()
+{
+    static const QRegularExpression pattern(
+        uR"(^[A-G](?:#|b)?(?:maj|min|dim|aug|sus|add|m|M|°|ø|\+|-)?(?:\d+|maj\d*|sus\d*|add\d+|dim\d*|aug|alt|[b#]\d+|\([^)]*\))*(?:/[A-G](?:#|b)?)?$)"_s);
+    return pattern;
+}
 // Marks that may sit on a chord line: bars, repeats, "no chord".
-const QRegularExpression kChordLineMark(uR"(^(?:\||\|\||/|-|%|x\d+|\(x\d+\)|\d+x|N\.?C\.?|\(|\))$)"_s);
-const QRegularExpression kDirective(uR"(^\{\s*([A-Za-z_]+)\s*(?::\s*(.*?))?\s*\}$)"_s);
+const QRegularExpression& kChordLineMark()
+{
+    static const QRegularExpression pattern(uR"(^(?:\||\|\||/|-|%|x\d+|\(x\d+\)|\d+x|N\.?C\.?|\(|\))$)"_s);
+    return pattern;
+}
+const QRegularExpression& kDirective()
+{
+    static const QRegularExpression pattern(uR"(^\{\s*([A-Za-z_]+)\s*(?::\s*(.*?))?\s*\}$)"_s);
+    return pattern;
+}
 // "[Verse 1]", "[Chorus]" on its own line in chord-site sheets.
 // "[Verse 1]", "[Chorus] (play loud)": a label, maybe with a note after it.
-const QRegularExpression kSectionLabel(uR"(^\[([A-Za-z][A-Za-z0-9 \-']*)\]\s*(.*?)\s*$)"_s);
+const QRegularExpression& kSectionLabel()
+{
+    static const QRegularExpression pattern(uR"(^\[([A-Za-z][A-Za-z0-9 \-']*)\]\s*(.*?)\s*$)"_s);
+    return pattern;
+}
 
 bool isChord(const QString& word)
 {
-    return kChord.match(word).hasMatch();
+    return kChord().match(word).hasMatch();
 }
 
 QString sectionName(const QString& type)
@@ -67,7 +84,7 @@ ChartLine parseLine(const QString& raw, Chart& chart)
         line.kind = ChartLine::Kind::Blank;
         return line;
     }
-    const auto directive = kDirective.match(trimmed);
+    const auto directive = kDirective().match(trimmed);
     if (!directive.hasMatch()) {
         line.kind = ChartLine::Kind::Lyrics;
         line.segments = parseSegments(raw);
@@ -148,7 +165,7 @@ bool isChordLine(const QString& line)
     bool anyChord = false;
     for (const QString& word : words) {
         if (isChord(word)) anyChord = true;
-        else if (!kChordLineMark.match(word).hasMatch()) return false;
+        else if (!kChordLineMark().match(word).hasMatch()) return false;
     }
     return anyChord;
 }
@@ -165,7 +182,7 @@ QString chordSheetToChordPro(const QString& sheet)
     QStringList out;
     for (qsizetype i = 0; i < lines.size(); ++i) {
         const QString& line = lines[i];
-        const auto label = kSectionLabel.match(line.trimmed());
+        const auto label = kSectionLabel().match(line.trimmed());
         if (label.hasMatch() && !isChord(label.captured(1))) {
             const QString note = label.captured(2);
             out << u"{comment: "_s + label.captured(1).trimmed() + (note.isEmpty() ? QString() : u' ' + note) + u'}';
@@ -182,8 +199,8 @@ QString chordSheetToChordPro(const QString& sheet)
             const auto m = it.next();
             if (isChord(m.captured())) chords.emplace_back(m.capturedStart(), m.captured());
         }
-        const bool lyricsBelow = i + 1 < lines.size() && !lines[i + 1].trimmed().isEmpty() &&
-                                 !isChordLine(lines[i + 1]) && !kSectionLabel.match(lines[i + 1].trimmed()).hasMatch();
+        const bool lyricsBelow = i + 1 < lines.size() && !lines.at(i + 1).trimmed().isEmpty() &&
+                                 !isChordLine(lines.at(i + 1)) && !kSectionLabel().match(lines.at(i + 1).trimmed()).hasMatch();
         if (!lyricsBelow) {
             QStringList bracketed;
             for (const auto& chord : chords) bracketed << u'[' + chord.second + u']';
@@ -192,7 +209,7 @@ QString chordSheetToChordPro(const QString& sheet)
         }
         // Put each chord before the character it sat above; chords past the
         // end of the lyrics follow it, a space apart.
-        const QString lyric = lines[++i];
+        const QString& lyric = lines.at(++i);
         QString merged;
         qsizetype taken = 0;
         for (const auto& [column, chord] : chords) {
@@ -215,15 +232,41 @@ QString chordSheetToChordPro(const QString& sheet)
 namespace {
 
 // A guitar tab staff line: "e|-----0-----|", "B|--1--1--|", "|-3-5-|".
-const QRegularExpression kTabStaff(uR"(^\s*[A-Ga-g]?[#b]?\s*[|:][-0-9hpbrvx/\~|:.()\s]*-[-0-9hpbrvx/\~|:.()\s]*$)"_s);
+const QRegularExpression& kTabStaff()
+{
+    static const QRegularExpression pattern(
+        uR"(^\s*[A-Ga-g]?[#b]?\s*[|:][-0-9hpbrvx/\~|:.()\s]*-[-0-9hpbrvx/\~|:.()\s]*$)"_s);
+    return pattern;
+}
 // A separator row: "-----", "=====", "*****", "_____", "~~~~~".
-const QRegularExpression kSeparator(uR"(^\s*([-=*_~#])\1{3,}\s*$)"_s);
+const QRegularExpression& kSeparator()
+{
+    static const QRegularExpression pattern(uR"(^\s*([-=*_~#])\1{3,}\s*$)"_s);
+    return pattern;
+}
 // Site header lines that mean nothing to a keys player.
-const QRegularExpression kJunk(uR"(^\s*(tuning|tabbed by|transcribed by|chords by|tab by|difficulty|author|standard tuning)\b.*$)"_s,
-                               QRegularExpression::CaseInsensitiveOption);
-const QRegularExpression kCapo(uR"(^\s*capo\s*:?\s*(.+?)\s*$)"_s, QRegularExpression::CaseInsensitiveOption);
-const QRegularExpression kKeyLine(uR"(^\s*key\s*:\s*(\S+)\s*$)"_s, QRegularExpression::CaseInsensitiveOption);
-const QRegularExpression kInlineChord(uR"(\[([^\]]+)\])"_s);
+const QRegularExpression& kJunk()
+{
+    static const QRegularExpression pattern(
+        uR"(^\s*(tuning|tabbed by|transcribed by|chords by|tab by|difficulty|author|standard tuning)\b.*$)"_s,
+        QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
+const QRegularExpression& kCapo()
+{
+    static const QRegularExpression pattern(uR"(^\s*capo\s*:?\s*(.+?)\s*$)"_s, QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
+const QRegularExpression& kKeyLine()
+{
+    static const QRegularExpression pattern(uR"(^\s*key\s*:\s*(\S+)\s*$)"_s, QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
+const QRegularExpression& kInlineChord()
+{
+    static const QRegularExpression pattern(uR"(\[([^\]]+)\])"_s);
+    return pattern;
+}
 
 // Tabs to spaces (to the next multiple of 8), non-breaking spaces to spaces.
 QString normaliseSpacing(const QString& line)
@@ -243,8 +286,8 @@ QString normaliseSpacing(const QString& line)
 bool looksLikeChordPro(const QStringList& lines)
 {
     for (const QString& line : lines) {
-        if (kDirective.match(line.trimmed()).hasMatch()) return true;
-        for (auto it = kInlineChord.globalMatch(line); it.hasNext();) {
+        if (kDirective().match(line.trimmed()).hasMatch()) return true;
+        for (auto it = kInlineChord().globalMatch(line); it.hasNext();) {
             if (isChord(it.next().captured(1).trimmed()) && line.trimmed() != it.peekNext().captured(0)) return true;
         }
     }
@@ -312,12 +355,12 @@ QString tidyChordSheet(const QString& text)
     QStringList lines;
     for (const QString& raw : cleaned.split(u'\n')) {
         const QString line = normaliseSpacing(raw);
-        if (kTabStaff.match(line).hasMatch() || kSeparator.match(line).hasMatch() || kJunk.match(line).hasMatch()) continue;
-        if (const auto capo = kCapo.match(line); capo.hasMatch() && !isChordLine(line)) {
+        if (kTabStaff().match(line).hasMatch() || kSeparator().match(line).hasMatch() || kJunk().match(line).hasMatch()) continue;
+        if (const auto capo = kCapo().match(line); capo.hasMatch() && !isChordLine(line)) {
             lines << u"{comment: Capo "_s + capo.captured(1) + u'}';
             continue;
         }
-        if (const auto key = kKeyLine.match(line); key.hasMatch()) {
+        if (const auto key = kKeyLine().match(line); key.hasMatch()) {
             lines << u"{key: "_s + key.captured(1) + u'}';
             continue;
         }
@@ -330,19 +373,42 @@ QString tidyChordSheet(const QString& text)
 namespace {
 
 // "Hallelujah Chords by Leonard Cohen", "Wonderwall Tab", "Let It Be Lyrics".
-const QRegularExpression kSiteTitle(uR"(^(.+?)\s+(?:guitar\s+|ukulele\s+|piano\s+)?(?:chords|tabs?|lyrics)(?:\s+by\s+(.+?))?\s*$)"_s,
-                                    QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression& kSiteTitle()
+{
+    static const QRegularExpression pattern(
+        uR"(^(.+?)\s+(?:guitar\s+|ukulele\s+|piano\s+)?(?:chords|tabs?|lyrics)(?:\s+by\s+(.+?))?\s*$)"_s,
+        QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
 // "Wonderwall - Oasis"
-const QRegularExpression kTitleDashArtist(uR"(^(.+?)\s+[-–]\s+(.+?)\s*$)"_s);
-const QRegularExpression kCapoFret(uR"(^\s*capo\s*:?\s*(\d+))"_s, QRegularExpression::CaseInsensitiveOption);
-const QRegularExpression kTempoLine(uR"(^\s*(?:bpm|tempo)\s*:?\s*(\d+(?:\.\d+)?))"_s, QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression& kTitleDashArtist()
+{
+    static const QRegularExpression pattern(uR"(^(.+?)\s+[-–]\s+(.+?)\s*$)"_s);
+    return pattern;
+}
+const QRegularExpression& kCapoFret()
+{
+    static const QRegularExpression pattern(uR"(^\s*capo\s*:?\s*(\d+))"_s, QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
+const QRegularExpression& kTempoLine()
+{
+    static const QRegularExpression pattern(uR"(^\s*(?:bpm|tempo)\s*:?\s*(\d+(?:\.\d+)?))"_s,
+                                            QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
 // Below the song on chord sites.
-const QRegularExpression kFooter(uR"(^\s*(?:last update\b|rating\s*$|please,?\s+rate\b|\d+\s+comments?\s*$|report bad tab\b|add to playlist\b|download pdf\b))"_s,
-                                 QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression& kFooter()
+{
+    static const QRegularExpression pattern(
+        uR"(^\s*(?:last update\b|rating\s*$|please,?\s+rate\b|\d+\s+comments?\s*$|report bad tab\b|add to playlist\b|download pdf\b))"_s,
+        QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
 
 bool isSectionLabel(const QString& line)
 {
-    const auto label = kSectionLabel.match(line.trimmed());
+    const auto label = kSectionLabel().match(line.trimmed());
     return label.hasMatch() && !isChord(label.captured(1));
 }
 
@@ -378,7 +444,7 @@ ImportedSheet importChordSheet(const QString& text)
     // Where it ends: the first line of site clutter after it.
     qsizetype end = lines.size();
     for (qsizetype i = start; i < lines.size(); ++i) {
-        if (kFooter.match(lines[i]).hasMatch()) {
+        if (kFooter().match(lines.at(i)).hasMatch()) {
             end = i;
             break;
         }
@@ -388,19 +454,19 @@ ImportedSheet importChordSheet(const QString& text)
     bool titleSeen = false;
     for (qsizetype i = 0; i < start; ++i) {
         const QString line = lines[i].trimmed();
-        if (line.isEmpty() || kSeparator.match(line).hasMatch() || kTabStaff.match(line).hasMatch() ||
-            kJunk.match(line).hasMatch()) {
+        if (line.isEmpty() || kSeparator().match(line).hasMatch() || kTabStaff().match(line).hasMatch() ||
+            kJunk().match(line).hasMatch()) {
             continue; // never a title
         }
-        if (const auto key = kKeyLine.match(line); key.hasMatch()) sheet.key = key.captured(1);
-        else if (const auto capo = kCapoFret.match(line); capo.hasMatch()) sheet.capo = capo.captured(1).toInt();
-        else if (const auto tempo = kTempoLine.match(line); tempo.hasMatch()) sheet.tempo = tempo.captured(1).toDouble();
+        if (const auto key = kKeyLine().match(line); key.hasMatch()) sheet.key = key.captured(1);
+        else if (const auto capo = kCapoFret().match(line); capo.hasMatch()) sheet.capo = capo.captured(1).toInt();
+        else if (const auto tempo = kTempoLine().match(line); tempo.hasMatch()) sheet.tempo = tempo.captured(1).toDouble();
         else if (!titleSeen) {
             titleSeen = true;
-            if (const auto site = kSiteTitle.match(line); site.hasMatch()) {
+            if (const auto site = kSiteTitle().match(line); site.hasMatch()) {
                 sheet.title = site.captured(1).trimmed();
                 sheet.artist = site.captured(2).trimmed();
-            } else if (const auto dash = kTitleDashArtist.match(line); dash.hasMatch()) {
+            } else if (const auto dash = kTitleDashArtist().match(line); dash.hasMatch()) {
                 sheet.title = dash.captured(1).trimmed();
                 sheet.artist = dash.captured(2).trimmed();
             } else {

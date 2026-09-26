@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <iterator>
 #include <cmath>
+#include <utility>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
@@ -270,7 +271,7 @@ void SettingsController::keepRateValid()
 
 void SettingsController::setSampleRate(int rate)
 {
-    if (rate <= 0 || static_cast<unsigned int>(rate) == m_pending.sampleRate) return;
+    if (rate <= 0 || std::cmp_equal(rate, m_pending.sampleRate)) return;
     if (!sampleRates().contains(QVariant(rate))) return;
     m_pending.sampleRate = static_cast<unsigned int>(rate);
     emit changed();
@@ -287,7 +288,7 @@ QVariantList SettingsController::sampleRates() const
 
 void SettingsController::setBufferFrames(int frames)
 {
-    if (frames <= 0 || static_cast<unsigned int>(frames) == m_pending.bufferFrames) return;
+    if (frames <= 0 || std::cmp_equal(frames, m_pending.bufferFrames)) return;
     if (!bufferSizes().contains(QVariant(frames))) return;
     m_pending.bufferFrames = static_cast<unsigned int>(frames);
     emit changed();

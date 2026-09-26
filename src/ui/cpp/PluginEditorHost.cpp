@@ -146,7 +146,7 @@ void PluginEditorHost::rebuild()
         return;
     }
     m_editor = std::move(editor);
-    m_eraseFilter = std::make_unique<EraseFilter>(reinterpret_cast<HWND>(pluginWindow->winId()));
+    m_eraseFilter = std::make_unique<EraseFilter>(reinterpret_cast<HWND>(pluginWindow->winId())); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): a window id is an HWND on Windows
     QCoreApplication::instance()->installNativeEventFilter(m_eraseFilter.get());
     m_editor->updateGeometry(); // VstView::updateViewGeometry
     updateVisibility();
