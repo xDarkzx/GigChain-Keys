@@ -183,7 +183,7 @@ signals:
 
 private:
     bool report(const core::Error& error);
-    void setCursor(core::Cursor cursor, bool force = false);
+    void setCursor(core::Cursor to, bool force = false);
     void commitStructure(core::Cursor target, const std::optional<core::PatchId>& previous);
     void commitRename();
     void commitChannels(int select);

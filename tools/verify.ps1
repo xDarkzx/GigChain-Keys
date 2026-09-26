@@ -191,6 +191,12 @@ if ($cppFiles.Count -eq 0) {
         $arguments = @("--project=$compileDb", '--enable=warning,style,performance,portability', '--inline-suppr',
             '--library=qt', '--library=windows', "--library=$root\tools\cppcheck\vst3.cfg",
             '--suppress=missingIncludeSystem', '--suppress=unmatchedSuppression', '-q', '-j', '8',
+            # Qt types are implicitly shared: returning one by value costs a
+            # reference count, and a returned reference could dangle when the
+            # object changes (the audio device's name after a reconnect).
+            '--suppress=returnByReference',
+            # Qt Test only runs member-function slots: test functions cannot be static.
+            '--suppress=functionStatic:*/tests/*',
             '--template={file}:{line}:{column}: {severity}: {message} [{id}]')
         foreach ($c in $cppFiles) { $arguments += "--file-filter=*$c" }
         $check = Invoke-Logged 'cppcheck' $cppcheckExe $arguments

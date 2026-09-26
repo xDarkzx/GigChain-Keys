@@ -34,6 +34,7 @@
 #include <cmath>
 #include <exception>
 #include <set>
+#include <span>
 #include <string>
 
 using namespace Qt::StringLiterals;
@@ -93,6 +94,53 @@ core::Result<void> activateMainBuses(Vst::IComponent& component, Vst::BusDirecti
     }
     return {};
 }
+
+// Vst::Event is the SDK's tagged union: each builder sets the tag (type) with
+// the member it fills, so the member read later always matches the tag.
+// NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
+Vst::Event noteOnEvent(int32 sampleOffset, int channel, int pitch, int velocity)
+{
+    Vst::Event event{};
+    event.sampleOffset = sampleOffset;
+    event.type = Vst::Event::kNoteOnEvent;
+    event.noteOn.channel = static_cast<int16>(channel);
+    event.noteOn.pitch = static_cast<int16>(pitch);
+    event.noteOn.velocity = static_cast<float>(velocity) / 127.0F;
+    event.noteOn.noteId = -1;
+    return event;
+}
+
+Vst::Event noteOffEvent(int32 sampleOffset, int channel, int pitch, int velocity)
+{
+    Vst::Event event{};
+    event.sampleOffset = sampleOffset;
+    event.type = Vst::Event::kNoteOffEvent;
+    event.noteOff.channel = static_cast<int16>(channel);
+    event.noteOff.pitch = static_cast<int16>(pitch);
+    event.noteOff.velocity = static_cast<float>(velocity) / 127.0F;
+    event.noteOff.noteId = -1;
+    return event;
+}
+
+Vst::Event polyPressureEvent(int32 sampleOffset, int channel, int pitch, int pressure)
+{
+    Vst::Event event{};
+    event.sampleOffset = sampleOffset;
+    event.type = Vst::Event::kPolyPressureEvent;
+    event.polyPressure.channel = static_cast<int16>(channel);
+    event.polyPressure.pitch = static_cast<int16>(pitch);
+    event.polyPressure.pressure = static_cast<float>(pressure) / 127.0F;
+    event.polyPressure.noteId = -1;
+    return event;
+}
+
+// A bus's channel pointers. The SDK keeps the 32- and 64-bit ones in a union;
+// activate() sets every node up for 32-bit samples.
+std::span<Vst::Sample32*> channels32(const Vst::AudioBusBuffers& bus)
+{
+    return {bus.channelBuffers32, static_cast<std::size_t>(std::max(bus.numChannels, 0))};
+}
+// NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
 } // namespace
 
@@ -182,7 +230,10 @@ struct Vst3Node::Impl
             !succeeded(component->activateBus(Vst::kEvent, Vst::kInput, 0, true))) {
             return core::fail(core::ErrorCode::InvalidData, u"%1 refused to activate its MIDI input"_s.arg(name));
         }
-        Vst::ProcessSetup setup{Vst::kRealtime, Vst::kSample32, block, sampleRate};
+        Vst::ProcessSetup setup{.processMode = Vst::kRealtime,
+                                .symbolicSampleSize = Vst::kSample32,
+                                .maxSamplesPerBlock = block,
+                                .sampleRate = sampleRate};
         if (processor->setupProcessing(setup) != kResultOk) {
             return core::fail(core::ErrorCode::InvalidData,
                               u"%1 does not support %2 Hz / %3-sample blocks"_s.arg(name).arg(sampleRate).arg(block));
@@ -353,49 +404,32 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
     if (impl.releaseRequested.exchange(false, std::memory_order_acquire) && impl.heldNotes.any()) {
         for (std::size_t i = 0; i < impl.heldNotes.size(); ++i) {
             if (!impl.heldNotes.test(i)) continue;
-            Vst::Event off{};
-            off.type = Vst::Event::kNoteOffEvent;
-            off.noteOff.channel = static_cast<int16>(i / 128);
-            off.noteOff.pitch = static_cast<int16>(i % 128);
-            off.noteOff.noteId = -1;
+            Vst::Event off = noteOffEvent(0, static_cast<int>(i / 128), static_cast<int>(i % 128), 0);
             if (impl.events.addEvent(off) != kResultOk) impl.droppedEvents.fetch_add(1, std::memory_order_relaxed);
         }
         impl.heldNotes.reset();
     }
     for (const MidiEvent& e : events) {
         const int type = e.status & 0xF0;
+        const int channel = e.status & 0x0F;
         Vst::Event event{};
-        event.busIndex = 0;
-        event.sampleOffset = e.sampleOffset;
         if (type == 0x90 && e.data2 > 0) {
-            event.type = Vst::Event::kNoteOnEvent;
-            event.noteOn.channel = static_cast<int16>(e.status & 0x0F);
-            event.noteOn.pitch = e.data1;
-            event.noteOn.velocity = static_cast<float>(e.data2) / 127.0F;
-            event.noteOn.noteId = -1;
-            impl.heldNotes.set((static_cast<std::size_t>(e.status & 0x0F) * 128) + e.data1);
+            event = noteOnEvent(e.sampleOffset, channel, e.data1, e.data2);
+            impl.heldNotes.set((static_cast<std::size_t>(channel) * 128) + e.data1);
         } else if (type == 0x80 || type == 0x90) {
-            impl.heldNotes.reset((static_cast<std::size_t>(e.status & 0x0F) * 128) + e.data1);
-            event.type = Vst::Event::kNoteOffEvent;
-            event.noteOff.channel = static_cast<int16>(e.status & 0x0F);
-            event.noteOff.pitch = e.data1;
-            event.noteOff.velocity = static_cast<float>(e.data2) / 127.0F;
-            event.noteOff.noteId = -1;
+            impl.heldNotes.reset((static_cast<std::size_t>(channel) * 128) + e.data1);
+            event = noteOffEvent(e.sampleOffset, channel, e.data1, e.data2);
         } else if (type == 0xA0) {
-            event.type = Vst::Event::kPolyPressureEvent;
-            event.polyPressure.channel = static_cast<int16>(e.status & 0x0F);
-            event.polyPressure.pitch = e.data1;
-            event.polyPressure.pressure = static_cast<float>(e.data2) / 127.0F;
-            event.polyPressure.noteId = -1;
+            event = polyPressureEvent(e.sampleOffset, channel, e.data1, e.data2);
         } else if (type == 0xB0) { // controller: sustain pedal (64), mod wheel (1), ...
-            impl.sendController(e.status & 0x0F, e.data1, static_cast<double>(e.data2) / 127.0, e.sampleOffset);
+            impl.sendController(channel, e.data1, static_cast<double>(e.data2) / 127.0, e.sampleOffset);
             continue;
         } else if (type == 0xD0) { // channel pressure
-            impl.sendController(e.status & 0x0F, Vst::kAfterTouch, static_cast<double>(e.data1) / 127.0, e.sampleOffset);
+            impl.sendController(channel, Vst::kAfterTouch, static_cast<double>(e.data1) / 127.0, e.sampleOffset);
             continue;
         } else if (type == 0xE0) { // pitch bend: 14 bits, centre 8192
             const int bend = (e.data2 << 7) | e.data1;
-            impl.sendController(e.status & 0x0F, Vst::kPitchBend, static_cast<double>(bend) / 16383.0, e.sampleOffset);
+            impl.sendController(channel, Vst::kPitchBend, static_cast<double>(bend) / 16383.0, e.sampleOffset);
             continue;
         } else {
             continue; // program change: not a note or controller
@@ -404,11 +438,13 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
     }
 
     // Effects read their input from the main input bus.
-    if (impl.data.numInputs > 0 && impl.data.inputs[0].numChannels > 0) {
-        Vst::AudioBusBuffers& in = impl.data.inputs[0];
-        std::copy_n(io.left, frames, in.channelBuffers32[0]);
-        if (in.numChannels > 1) std::copy_n(io.right, frames, in.channelBuffers32[1]);
-        in.silenceFlags = 0;
+    const std::span<Vst::AudioBusBuffers> inputs(impl.data.inputs, static_cast<std::size_t>(std::max(impl.data.numInputs, 0)));
+    if (!inputs.empty() && !channels32(inputs.front()).empty()) {
+        Vst::AudioBusBuffers& bus = inputs.front();
+        const auto in = channels32(bus);
+        std::copy_n(io.left, frames, in.front());
+        if (in.size() > 1) std::copy_n(io.right, frames, in.subspan(1).front());
+        bus.silenceFlags = 0;
     }
 
     impl.data.numSamples = static_cast<int32>(io.frames);
@@ -416,10 +452,12 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
         impl.processFailures.fetch_add(1, std::memory_order_relaxed);
     }
 
-    if (impl.data.numOutputs > 0 && impl.data.outputs[0].numChannels > 0) {
-        const Vst::AudioBusBuffers& out = impl.data.outputs[0];
-        std::copy_n(out.channelBuffers32[0], frames, io.left);
-        std::copy_n(out.channelBuffers32[out.numChannels > 1 ? 1 : 0], frames, io.right);
+    const std::span<const Vst::AudioBusBuffers> outputs(impl.data.outputs,
+                                                        static_cast<std::size_t>(std::max(impl.data.numOutputs, 0)));
+    if (!outputs.empty() && !channels32(outputs.front()).empty()) {
+        const auto out = channels32(outputs.front());
+        std::copy_n(out.front(), frames, io.left);
+        std::copy_n(out.size() > 1 ? out.subspan(1).front() : out.front(), frames, io.right);
     } else {
         std::fill_n(io.left, frames, 0.0F);
         std::fill_n(io.right, frames, 0.0F);
@@ -433,15 +471,16 @@ void Vst3Node::releaseAllNotes()
 
 Vst3Node::Problems Vst3Node::takeProblems()
 {
-    return Problems{m_impl->processFailures.exchange(0), m_impl->droppedEvents.exchange(0),
-                    m_impl->oversizedBlocks.exchange(0)};
+    return Problems{.processFailures = m_impl->processFailures.exchange(0),
+                    .droppedEvents = m_impl->droppedEvents.exchange(0),
+                    .oversizedBlocks = m_impl->oversizedBlocks.exchange(0)};
 }
 
 namespace {
 
 QByteArray streamBytes(MemoryStream& stream)
 {
-    return QByteArray(stream.getData(), static_cast<qsizetype>(stream.getSize()));
+    return {stream.getData(), static_cast<qsizetype>(stream.getSize())};
 }
 
 } // namespace
@@ -476,7 +515,7 @@ core::Result<Vst3Node::State> Vst3Node::State::decode(const QByteArray& bytes)
     const QByteArray packed = bytes.mid(kStateMagic.size());
     // qCompress puts the uncompressed size first; check it before inflating.
     if (packed.size() < 5) return damaged(u"too short"_s);
-    const quint32 rawSize = qFromBigEndian<quint32>(packed.constData());
+    const auto rawSize = qFromBigEndian<quint32>(packed.constData());
     if (rawSize == 0 || rawSize > kMaxRawStateBytes) return damaged(u"impossible size"_s);
     const QByteArray raw = qUncompress(packed);
     if (raw.size() != static_cast<qsizetype>(rawSize)) return damaged(u"could not be unpacked"_s);
@@ -543,7 +582,10 @@ core::Result<void> Vst3Node::restoreState(const State& state)
 core::Result<void> Vst3Node::restoreStateUnguarded(const State& state)
 {
     if (state.component.isEmpty()) return {};
-    MemoryStream component(const_cast<char*>(state.component.constData()), state.component.size());
+    // The plugin gets its own copies: a stream is writable, and a plugin that
+    // wrote to one would otherwise change the saved state it was given.
+    QByteArray componentBytes(state.component.constData(), state.component.size());
+    MemoryStream component(componentBytes.data(), componentBytes.size());
     if (m_impl->component->setState(&component) != kResultOk) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 rejected its saved state"_s.arg(m_impl->name));
     }
@@ -553,7 +595,8 @@ core::Result<void> Vst3Node::restoreStateUnguarded(const State& state)
             return core::fail(core::ErrorCode::InvalidData, u"%1's editor rejected its saved state"_s.arg(m_impl->name));
         }
         if (!state.controller.isEmpty()) {
-            MemoryStream controller(const_cast<char*>(state.controller.constData()), state.controller.size());
+            QByteArray controllerBytes(state.controller.constData(), state.controller.size());
+            MemoryStream controller(controllerBytes.data(), controllerBytes.size());
             if (!succeeded(m_impl->controller->setState(&controller))) {
                 return core::fail(core::ErrorCode::InvalidData,
                                   u"%1's editor rejected its saved settings"_s.arg(m_impl->name));
@@ -719,8 +762,9 @@ public:
 
     tresult PLUGIN_API queryInterface(const TUID requested, void** object) override
     {
-        QUERY_INTERFACE(requested, object, FUnknown::iid, IPlugFrame)
-        QUERY_INTERFACE(requested, object, IPlugFrame::iid, IPlugFrame)
+        // The SDK's macro compares interface ids, which are char arrays.
+        QUERY_INTERFACE(requested, object, FUnknown::iid, IPlugFrame) // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        QUERY_INTERFACE(requested, object, IPlugFrame::iid, IPlugFrame) // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         *object = nullptr;
         return kNoInterface;
     }

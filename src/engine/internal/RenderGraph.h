@@ -42,14 +42,14 @@ public:
     void setVolumeDb(double volumeDb);
     // -1 (left) .. +1 (right), constant-power law (centre = unity on both sides).
     void setPan(double pan);
-    void setMute(bool mute) { m_mute.store(mute, std::memory_order_relaxed); }
-    void setSolo(bool solo) { m_solo.store(solo, std::memory_order_relaxed); }
+    void setMute(bool on) { m_mute.store(on, std::memory_order_relaxed); }
+    void setSolo(bool on) { m_solo.store(on, std::memory_order_relaxed); }
     [[nodiscard]] bool solo() const { return m_solo.load(std::memory_order_relaxed); }
     // Peak since the last call (then reset), and the most recent block's RMS.
     LevelReading takeLevel();
 
     // Audio thread.
-    void render(std::span<const MidiEvent> events, AudioBlock mix, bool anySolo) noexcept;
+    void render(std::span<const MidiEvent> events, const AudioBlock& mix, bool anySolo) noexcept;
 
 private:
     core::ChannelId m_id;

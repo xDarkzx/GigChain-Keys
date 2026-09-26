@@ -106,7 +106,7 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
 
 void MidiInput::close()
 {
-    for (auto& port : m_ports) {
+    for (const auto& port : m_ports) {
         try {
             port->in->cancelCallback();
             port->in->closePort();
@@ -134,6 +134,8 @@ std::size_t MidiInput::drain(std::span<MidiEvent> out) noexcept
     return static_cast<std::size_t>(next - out.begin());
 }
 
+// The signature is RtMidi's (RtMidiIn::RtMidiCallback): the message cannot be const.
+// cppcheck-suppress constParameterCallback
 void MidiInput::callback(double, std::vector<unsigned char>* message, void* user)
 {
     auto* port = static_cast<Port*>(user);

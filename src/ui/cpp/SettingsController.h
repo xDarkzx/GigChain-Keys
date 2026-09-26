@@ -66,9 +66,9 @@ public:
     [[nodiscard]] static engine::RealEngineOptions engineOptions(QSettings& settings);
 
     [[nodiscard]] QString driver() const;
-    void setDriver(const QString& driver);
+    void setDriver(const QString& name);
     [[nodiscard]] QString device() const { return m_pending.device; }
-    void setDevice(const QString& device);
+    void setDevice(const QString& name);
     [[nodiscard]] QStringList devices() const;
     [[nodiscard]] bool asioAvailable() const;
     [[nodiscard]] int sampleRate() const { return static_cast<int>(m_pending.sampleRate); }

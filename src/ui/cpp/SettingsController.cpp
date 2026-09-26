@@ -44,7 +44,7 @@ engine::ControlTriggers savedControls(QSettings& settings)
     return triggers;
 }
 
-double savedCeiling(QSettings& settings)
+double savedCeiling(const QSettings& settings)
 {
     bool ok = false;
     const double ceiling = settings.value(kLimiterCeilingKey, kDefaultCeilingDb).toDouble(&ok);
@@ -164,9 +164,7 @@ void SettingsController::pollLearning()
     const engine::MidiTrigger pressed = m_engine.takeLearnedTrigger();
     if (!pressed.isSet()) return;
     // One control, one action: taken from any other action that had it.
-    for (auto& trigger : m_controls) {
-        if (trigger == pressed) trigger = {};
-    }
+    std::ranges::replace(m_controls, pressed, engine::MidiTrigger{});
     m_controls.at(static_cast<std::size_t>(m_learning)) = pressed;
     qCInfo(lcUi).noquote() << "Learned" << pressed.describe() << "for control" << m_learning;
     m_learning = -1;
@@ -206,9 +204,9 @@ QString SettingsController::driver() const
     return driverName(m_pending.driver);
 }
 
-void SettingsController::setDriver(const QString& driver)
+void SettingsController::setDriver(const QString& name)
 {
-    const auto wanted = driver == u"asio"_s ? engine::AudioDriver::Asio : engine::AudioDriver::System;
+    const auto wanted = name == u"asio"_s ? engine::AudioDriver::Asio : engine::AudioDriver::System;
     if (wanted == m_pending.driver) return;
     m_pending.driver = wanted;
     const QStringList names = devices();
@@ -222,10 +220,10 @@ void SettingsController::setDriver(const QString& driver)
     emit changed();
 }
 
-void SettingsController::setDevice(const QString& device)
+void SettingsController::setDevice(const QString& name)
 {
-    if (device == m_pending.device || !devices().contains(device)) return;
-    m_pending.device = device;
+    if (name == m_pending.device || !devices().contains(name)) return;
+    m_pending.device = name;
     keepRateValid();
     emit changed();
 }
@@ -246,10 +244,10 @@ bool SettingsController::asioAvailable() const
 
 const engine::AudioOutput* SettingsController::chosenOutput() const
 {
-    for (const auto& output : m_outputs) {
-        if (output.driver == m_pending.driver && output.name == m_pending.device) return &output;
-    }
-    return nullptr;
+    const auto found = std::ranges::find_if(m_outputs, [this](const engine::AudioOutput& output) {
+        return output.driver == m_pending.driver && output.name == m_pending.device;
+    });
+    return found == m_outputs.end() ? nullptr : &*found;
 }
 
 void SettingsController::keepRateValid()

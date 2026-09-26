@@ -286,13 +286,13 @@ QString normaliseSpacing(const QString& line)
 // Already ChordPro: {directives} or chords in brackets inside the lines.
 bool looksLikeChordPro(const QStringList& lines)
 {
-    for (const QString& line : lines) {
+    return std::ranges::any_of(lines, [](const QString& line) {
         if (kDirective().match(line.trimmed()).hasMatch()) return true;
         for (auto it = kInlineChord().globalMatch(line); it.hasNext();) {
             if (isChord(it.next().captured(1).trimmed()) && line.trimmed() != it.peekNext().captured(0)) return true;
         }
-    }
-    return false;
+        return false;
+    });
 }
 
 // Lyric spacing collapsed, line ends trimmed, one blank line at most.

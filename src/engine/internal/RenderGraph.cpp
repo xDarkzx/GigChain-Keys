@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <numbers>
 #include <span>
 
@@ -57,7 +58,7 @@ LevelReading ChannelStrip::takeLevel()
     return LevelReading{.peak = m_peak.exchange(0.0F, std::memory_order_relaxed), .rms = m_rms.load(std::memory_order_relaxed)};
 }
 
-void ChannelStrip::render(std::span<const MidiEvent> events, AudioBlock mix, bool anySolo) noexcept
+void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& mix, bool anySolo) noexcept
 {
     std::size_t routedCount = 0;
     for (const MidiEvent& event : events) {
@@ -113,9 +114,9 @@ RenderGraph::RenderGraph(std::vector<StripSpec> specs, double sampleRate, int ma
     : m_masterEffects(std::move(masterEffects)), m_sampleRate(sampleRate), m_maxBlock(maxBlock)
 {
     m_strips.reserve(specs.size());
-    for (StripSpec& spec : specs) {
-        m_strips.push_back(std::make_unique<ChannelStrip>(std::move(spec), maxBlock));
-    }
+    std::ranges::transform(specs, std::back_inserter(m_strips), [maxBlock](StripSpec& spec) {
+        return std::make_unique<ChannelStrip>(std::move(spec), maxBlock);
+    });
 }
 
 void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, float masterGain) noexcept
@@ -130,8 +131,8 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
     if (out.frames <= 0) return;
 
     const bool anySolo = std::ranges::any_of(m_strips, [](const auto& s) { return s->solo(); });
-    for (const auto& strip : m_strips) {
-        strip->render(events, out, anySolo);
+    for (const auto& channel : m_strips) {
+        channel->render(events, out, anySolo);
     }
     for (const auto& effect : m_masterEffects) {
         effect->process({}, out);

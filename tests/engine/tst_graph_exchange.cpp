@@ -47,7 +47,7 @@ private slots:
         const std::weak_ptr<RenderGraph> watch = first;
         exchange.publish(std::move(first));
 
-        RenderGraph* inUse = exchange.acquire(); // audio thread mid-block
+        const RenderGraph* inUse = exchange.acquire(); // audio thread mid-block
         exchange.publish(emptyGraph());
         exchange.collectGarbage();
         QVERIFY(!watch.expired());

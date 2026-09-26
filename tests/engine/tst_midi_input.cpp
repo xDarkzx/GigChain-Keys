@@ -2,7 +2,9 @@
 
 #include <QtTest>
 
+#include <algorithm>
 #include <array>
+#include <iterator>
 #include <vector>
 
 using namespace gigchain::engine;
@@ -46,7 +48,9 @@ private slots:
         const QStringList ports = MidiInput::listPorts();
         MidiInput input;
         std::vector<MidiPort> all;
-        for (const QString& name : ports) all.push_back(MidiPort{name, true, 0});
+        std::ranges::transform(ports, std::back_inserter(all), [](const QString& name) {
+            return MidiPort{.name = name, .enabled = true, .channel = 0};
+        });
         const auto notices = input.openAll(all);
         QCOMPARE(input.openPortNames().size() + static_cast<qsizetype>(notices.size()) >= ports.size(), true);
         std::array<MidiEvent, 16> events{};

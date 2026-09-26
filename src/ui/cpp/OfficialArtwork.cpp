@@ -7,6 +7,7 @@
 #include <QSettings>
 #include <QXmlStreamReader>
 
+#include <algorithm>
 #include <utility>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
@@ -24,9 +25,10 @@ QString firstExisting(const QString& folder, const QStringList& names)
     if (!dir.exists()) return {};
     const QStringList files = dir.entryList(QDir::Files);
     for (const QString& wanted : names) {
-        for (const QString& file : files) {
-            if (file.compare(wanted, Qt::CaseInsensitive) == 0) return dir.filePath(file);
-        }
+        const auto found = std::ranges::find_if(files, [&wanted](const QString& file) {
+            return file.compare(wanted, Qt::CaseInsensitive) == 0;
+        });
+        if (found != files.end()) return dir.filePath(*found);
     }
     return {};
 }
@@ -108,7 +110,7 @@ PluginArtwork OfficialArtwork::find(const engine::PluginInfo& plugin) const
     return fromArturia(plugin);
 }
 
-PluginArtwork OfficialArtwork::fromSnapshot(const engine::PluginInfo& plugin) const
+PluginArtwork OfficialArtwork::fromSnapshot(const engine::PluginInfo& plugin)
 {
     if (plugin.classId.isEmpty()) return {};
     const QString folder = plugin.id + u"/Contents/Resources/Snapshots"_s;

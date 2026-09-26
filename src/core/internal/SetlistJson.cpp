@@ -47,14 +47,14 @@ public:
 
     int integer(const QJsonObject& obj, QLatin1StringView key, const QString& path, int min, int max)
     {
-        const double number = checkedNumber(obj, key, path, min, max, true);
-        return failed() ? 0 : static_cast<int>(number);
+        const double value = checkedNumber(obj, key, path, min, max, true);
+        return failed() ? 0 : static_cast<int>(value);
     }
 
     double number(const QJsonObject& obj, QLatin1StringView key, const QString& path, double min, double max)
     {
-        const double number = checkedNumber(obj, key, path, min, max, false);
-        return failed() ? 0.0 : number;
+        const double value = checkedNumber(obj, key, path, min, max, false);
+        return failed() ? 0.0 : value;
     }
 
     // Text that may be absent (fields added after format 1 shipped).
@@ -172,16 +172,16 @@ private:
             setError(ErrorCode::InvalidData, u"%1 must be a number"_s.arg(where));
             return 0.0;
         }
-        const double number = value->toDouble();
-        if (!std::isfinite(number) || (wholeNumber && std::trunc(number) != number)) {
+        const double found = value->toDouble();
+        if (!std::isfinite(found) || (wholeNumber && std::trunc(found) != found)) {
             setError(ErrorCode::InvalidData, u"%1 must be a whole number"_s.arg(where));
             return 0.0;
         }
-        if (number < min || number > max) {
+        if (found < min || found > max) {
             setError(ErrorCode::OutOfRange, u"%1 must be between %2 and %3"_s.arg(where).arg(min).arg(max));
             return 0.0;
         }
-        return number;
+        return found;
     }
 
     void setError(ErrorCode code, QString message)

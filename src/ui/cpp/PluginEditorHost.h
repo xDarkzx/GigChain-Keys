@@ -41,8 +41,8 @@ public:
     PluginEditorHost(PluginEditorHost&&) = delete;
     PluginEditorHost& operator=(PluginEditorHost&&) = delete;
 
-    [[nodiscard]] EditorService* service() const { return m_service; }
-    void setService(EditorService* service);
+    [[nodiscard]] EditorService* service() const { return m_service.data(); }
+    void setService(EditorService* to);
     [[nodiscard]] bool isSuspended() const { return m_suspended; }
     void setSuspended(bool suspended);
     [[nodiscard]] bool hasEditor() const { return m_editor != nullptr; }

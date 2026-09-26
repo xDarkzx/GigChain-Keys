@@ -44,7 +44,7 @@ class TestOfficialArtwork : public QObject
 
     QTemporaryDir m_root;
 
-    OfficialArtwork::Sources sources(QHash<QString, QString> registry = {}) const
+    [[nodiscard]] OfficialArtwork::Sources sources(const QHash<QString, QString>& registry = {}) const
     {
         OfficialArtwork::Sources s;
         s.arturiaRoot = m_root.filePath(u"Arturia"_s);

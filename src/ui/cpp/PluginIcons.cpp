@@ -2,6 +2,7 @@
 
 #include <QStringList>
 
+#include <algorithm>
 #include <array>
 #include <utility>
 
@@ -44,9 +45,7 @@ template <std::size_t N>
 QString match(const std::array<Rule, N>& rules, const QString& text)
 {
     for (const auto& [words, icon] : rules) {
-        for (const QString& word : words) {
-            if (text.contains(word)) return icon;
-        }
+        if (std::ranges::any_of(words, [&text](const QString& word) { return text.contains(word); })) return icon;
     }
     return {};
 }

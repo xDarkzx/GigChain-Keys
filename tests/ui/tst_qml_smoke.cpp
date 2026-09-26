@@ -27,7 +27,8 @@ QQuickItem* findItem(QQuickItem* item, const QString& name)
 {
     if (item == nullptr) return nullptr;
     if (item->objectName() == name) return item;
-    for (QQuickItem* child : item->childItems()) {
+    // The item itself is wanted, not whether one exists: a plain search.
+    for (QQuickItem* child : item->childItems()) { // cppcheck-suppress useStlAlgorithm
         if (QQuickItem* found = findItem(child, name)) return found;
     }
     return nullptr;

@@ -54,11 +54,11 @@ PluginEditorHost::~PluginEditorHost()
     teardown();
 }
 
-void PluginEditorHost::setService(EditorService* service)
+void PluginEditorHost::setService(EditorService* to)
 {
-    if (m_service == service) return;
+    if (m_service == to) return;
     if (m_service) disconnect(m_service, nullptr, this, nullptr);
-    m_service = service;
+    m_service = to;
     if (m_service) connect(m_service, &EditorService::targetChanged, this, &PluginEditorHost::rebuild);
     emit serviceChanged();
     rebuild();
