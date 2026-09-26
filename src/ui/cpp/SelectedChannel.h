@@ -27,6 +27,11 @@ class SelectedChannel : public QObject
     Q_PROPERTY(int transpose READ transpose NOTIFY changed)
     Q_PROPERTY(int midiChannel READ midiChannel NOTIFY changed)
     Q_PROPERTY(double volumeDb READ volumeDb NOTIFY changed)
+    Q_PROPERTY(int velocityLow READ velocityLow NOTIFY changed)
+    Q_PROPERTY(int velocityHigh READ velocityHigh NOTIFY changed)
+    // 1-based audio input it plays (0 = an instrument channel); right 0 = mono.
+    Q_PROPERTY(int inputLeft READ inputLeft NOTIFY changed)
+    Q_PROPERTY(int inputRight READ inputRight NOTIFY changed)
 
 public:
     explicit SelectedChannel(const DocumentController& document, QObject* parent = nullptr);
@@ -41,6 +46,10 @@ public:
     [[nodiscard]] int transpose() const;
     [[nodiscard]] int midiChannel() const;
     [[nodiscard]] double volumeDb() const;
+    [[nodiscard]] int velocityLow() const;
+    [[nodiscard]] int velocityHigh() const;
+    [[nodiscard]] int inputLeft() const;
+    [[nodiscard]] int inputRight() const;
 
 signals:
     void changed();

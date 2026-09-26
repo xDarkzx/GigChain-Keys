@@ -27,6 +27,12 @@ target_include_directories(tst_safety_limiter PRIVATE ${PROJECT_SOURCE_DIR}/src/
 gigchain_add_test(tst_plugin_load_guard SOURCES tst_plugin_load_guard.cpp LIBS gigchain::engine)
 target_include_directories(tst_plugin_load_guard PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_midi_control SOURCES tst_midi_control.cpp LIBS gigchain::engine)
+gigchain_add_test(tst_metronome SOURCES tst_metronome.cpp LIBS gigchain::engine)
+target_include_directories(tst_metronome PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_test(tst_audio_file SOURCES tst_audio_file.cpp LIBS gigchain::engine)
+target_include_directories(tst_audio_file PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_test(tst_midi_clock SOURCES tst_midi_clock.cpp LIBS gigchain::engine)
+target_include_directories(tst_midi_clock PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 # A fake plugin that crashes whoever reads it, and the scanner that must survive it.
 add_library(tst_crashing_plugin MODULE crashing_plugin.cpp)
 set_target_properties(tst_crashing_plugin PROPERTIES PREFIX "" SUFFIX ".vst3")

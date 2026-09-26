@@ -30,6 +30,9 @@ const QString kMidiConfiguredKey = u"midi/configured"_s;
 const QString kMidiEnabledKey = u"midi/enabled"_s;
 const QString kMidiChannelsKey = u"midi/channels"_s;
 const QString kControlsKey = u"midi/controls"_s; // one packed trigger per action
+const QString kInputDeviceKey = u"audio/inputDevice"_s;
+const QString kClockOutputKey = u"midi/clockOutput"_s;
+const QString kFollowClockKey = u"midi/followClock"_s;
 const QString kLimiterKey = u"master/limiter"_s;
 const QString kLimiterCeilingKey = u"master/limiterCeilingDb"_s;
 constexpr double kDefaultCeilingDb = -1.0;
@@ -79,6 +82,9 @@ engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
     options.audio.sampleRate = settings.value(kRateKey, 0).toUInt();
     options.audio.bufferFrames = settings.value(kBufferKey, kDefaultBuffer).toUInt();
     if (options.audio.bufferFrames == 0) options.audio.bufferFrames = kDefaultBuffer;
+    options.audio.inputDevice = settings.value(kInputDeviceKey).toString();
+    options.midi.clockOutput = settings.value(kClockOutputKey).toString();
+    options.midi.followClock = settings.value(kFollowClockKey, false).toBool();
     options.midi.configured = settings.value(kMidiConfiguredKey, false).toBool();
     options.midi.enabled = settings.value(kMidiEnabledKey).toStringList();
     const QVariantMap channels = settings.value(kMidiChannelsKey).toMap();
@@ -100,7 +106,43 @@ void SettingsController::load()
     m_limiterCeilingDb = savedCeiling(m_settings);
     m_controls = savedControls(m_settings);
     m_learning = -1;
+    m_inputs = m_engine.audioInputDevices();
+    m_midiOutputs = m_engine.midiOutputs();
+    m_clockOutput = m_engine.midiSetup().clockOutput;
+    m_followClock = m_engine.midiSetup().followClock;
     keepRateValid();
+    emit changed();
+}
+
+void SettingsController::setInputDevice(const QString& name)
+{
+    if (name == m_pending.inputDevice || (!name.isEmpty() && !inputDevices().contains(name))) return;
+    m_pending.inputDevice = name;
+    emit changed();
+}
+
+QStringList SettingsController::inputDevices() const
+{
+    QStringList names;
+    for (const auto& input : m_inputs) {
+        if (input.driver == m_pending.driver) names << input.name;
+    }
+    return names;
+}
+
+void SettingsController::setClockOutput(const QString& name)
+{
+    if (name == m_clockOutput || (!name.isEmpty() && !m_midiOutputs.contains(name))) return;
+    m_clockOutput = name;
+    m_midiTouched = true;
+    emit changed();
+}
+
+void SettingsController::setFollowClock(bool follow)
+{
+    if (follow == m_followClock) return;
+    m_followClock = follow;
+    m_midiTouched = true;
     emit changed();
 }
 
@@ -123,8 +165,9 @@ void SettingsController::setLimiterCeilingDb(double ceilingDb)
 QVariantList SettingsController::controls() const
 {
     static constexpr std::array<const char*, engine::kControlActionCount> kLabels{
-        QT_TR_NOOP("Next song"), QT_TR_NOOP("Previous song"), QT_TR_NOOP("Next part"), QT_TR_NOOP("Previous part"),
-        QT_TR_NOOP("Panic (stop all sound)")};
+        QT_TR_NOOP("Next song"),     QT_TR_NOOP("Previous song"), QT_TR_NOOP("Next part"),
+        QT_TR_NOOP("Previous part"), QT_TR_NOOP("Panic (stop all sound)"), QT_TR_NOOP("Tap tempo"),
+        QT_TR_NOOP("Backing track: play / stop")};
     QVariantList list;
     for (int i = 0; i < engine::kControlActionCount; ++i) {
         const engine::MidiTrigger& trigger = m_controls.at(static_cast<std::size_t>(i));
@@ -209,6 +252,7 @@ void SettingsController::setDriver(const QString& name)
     const auto wanted = name == u"asio"_s ? engine::AudioDriver::Asio : engine::AudioDriver::System;
     if (wanted == m_pending.driver) return;
     m_pending.driver = wanted;
+    if (!inputDevices().contains(m_pending.inputDevice)) m_pending.inputDevice.clear(); // inputs share the driver
     const QStringList names = devices();
     m_pending.device = names.isEmpty() ? QString() : names.first();
     if (wanted == engine::AudioDriver::System) {
@@ -350,6 +394,8 @@ engine::MidiSetup SettingsController::pendingMidi() const
 {
     engine::MidiSetup setup = m_engine.midiSetup();
     setup.configured = true;
+    setup.clockOutput = m_clockOutput;
+    setup.followClock = m_followClock;
     for (const auto& port : m_midi) {
         // Inputs not plugged in now keep their saved choice.
         setup.enabled.removeAll(port.name);
@@ -369,6 +415,9 @@ void SettingsController::resetToDefaults()
     }
     m_pending.sampleRate = 0;
     m_pending.bufferFrames = kDefaultBuffer;
+    m_pending.inputDevice.clear();
+    m_clockOutput.clear();
+    m_followClock = false;
     keepRateValid();
     for (engine::MidiPort& port : m_midi) {
         port.enabled = &port == &m_midi.front(); // the default: only the first port
@@ -398,6 +447,7 @@ bool SettingsController::apply()
             m_settings.setValue(kDeviceKey, m_pending.device);
             m_settings.setValue(kRateKey, m_pending.sampleRate);
             m_settings.setValue(kBufferKey, m_pending.bufferFrames);
+            m_settings.setValue(kInputDeviceKey, m_pending.inputDevice);
         }
     }
 
@@ -412,6 +462,8 @@ bool SettingsController::apply()
         m_settings.setValue(kMidiConfiguredKey, true);
         m_settings.setValue(kMidiEnabledKey, midi.enabled);
         m_settings.setValue(kMidiChannelsKey, channels);
+        m_settings.setValue(kClockOutputKey, midi.clockOutput);
+        m_settings.setValue(kFollowClockKey, midi.followClock);
         m_midiTouched = false;
     }
 

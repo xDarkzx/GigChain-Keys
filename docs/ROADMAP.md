@@ -13,42 +13,33 @@ block, so they are best built in that order.
 
 Players will not move their live rig to an app that does less than
 MainStage or Gig Performer, however good the extras. So the basics they
-rely on come before the new ideas below. Audited against the code on
-2026-09-27:
+rely on come before the new ideas below. First audited against the code on
+2026-09-27; updated the same day after the gaps below were closed:
 
 | What players need | Status | Where it stands |
 |---|---|---|
 | Never crashes, never drops out | **Ahead** | Plugins that crash while loading are switched off next start; the plugin scan runs in its own process; plugin state calls cannot end the app; a limiter guards the output. A plugin crashing *while playing* still ends the app (as in both rivals). |
 | Instant patch changes | **Done** | Every sound in the setlist is loaded up front; switching swaps the patch in one audio block. |
-| Held notes and tails carry over a patch change | **Missing** | An instrument not in the new patch stops at once: held chords and reverb tails are cut. Both rivals let them ring out. |
-| Splits and layers | **Partly** | Key range, transpose and MIDI channel per instrument work in the engine and are saved, but no screen sets them. No velocity ranges. |
-| Keyboard knobs and faders control plugin settings | **Partly** | Sustain, mod wheel, pitch bend, expression and aftertouch reach every plugin through its own MIDI mapping. Assigning a knob to any plugin setting, per patch, is missing (MainStage's screen controls, Gig Performer's widgets). |
-| Songs and patches switched from the keyboard | **Done** | Learnable buttons/pedals for next/previous song and patch and panic; Program Change picks the patch. |
-| Tempo | **Missing** | Songs store a tempo, but plugins are always told 120 BPM: synced arps and delays run at the wrong speed. No tap tempo, no MIDI clock. |
-| Backing tracks and click | **Missing** | |
-| Audio inputs (vocal or guitar through effects) | **Missing** | The audio device opens outputs only. |
-| Sounds out of the box | **Missing** | The app plays only plugins the user already owns. |
-| Undo | **Partly** | Only the last chart paste can be undone. |
+| Held notes and tails carry over a patch change | **Done** | An instrument not in the new patch rings on: held notes until their keys (and sustain) are let go, reverbs until they fade. |
+| Splits and layers | **Done** | Keyboard Zone (channel menu): key range, transpose, velocity range (layers), MIDI channel. |
+| Keyboard knobs and faders control plugin settings | **Done** | Knobs (channel menu): learn a knob for any setting of the channel's instrument or effects, with a range; per patch. The plugin's own window follows. |
+| Songs and patches switched from the keyboard | **Done** | Learnable buttons/pedals for next/previous song and patch, panic, tap tempo and backing track; Program Change picks the patch. |
+| Tempo | **Done** | Plugins follow the tempo (and the beat and bar); each song can set one; tap tempo in the toolbar or on a pedal. |
+| Backing tracks and click | **Done** | A backing track per song (WAV, MP3, FLAC...), played from the toolbar or a pedal; a click on every beat. |
+| Audio inputs (vocal or guitar through effects) | **Done** | Choose the input device in Settings > Audio, then add an audio input channel in the mixer. |
+| MIDI clock | **Done** | Sent to a chosen MIDI output; the tempo can follow a clock coming in (Settings > MIDI). |
+| Undo | **Done** | Every edit to the setlist (Ctrl+Z, Ctrl+Shift+Z); a fader drag is one step. |
+| Sounds out of the box | **Partly** | The app scans a `plugins` folder next to itself; an installer has to fill it (see below). |
 | Plugin formats | **Partly** | VST3 only. Gig Performer also hosts VST2 (many older Windows plugins); an open-source VST2 host needs care, since Steinberg no longer licenses the VST2 SDK. |
 | Charts (chords and lyrics on screen) | **Ahead** | Built in; neither rival has them. |
 | Master effects, meters, limiter | **Done** | |
 
-**Closing the gaps, most important first:**
-1. **Tempo:** the song's tempo reaches plugins, plus tap tempo. Small, and
-   synced sounds are wrong until it is done. Also the base for 2 and 3.
-2. **Carry-over:** held notes and tails of the old patch ring out after a
-   change.
-3. **Split and layer editor** for the existing key range and transpose,
-   plus velocity ranges.
-4. **Knob/fader to plugin setting**, per patch (learn by moving both).
-5. **Bundled sounds:** open-source instruments under the same GPL licence,
-   e.g. Surge XT (synth) and Dexed (FM), and a free sampled piano, so a new
-   user can play the moment it installs.
-6. **Audio inputs** as channels (mic, guitar) with effects.
-7. **Backing tracks and click.**
-8. **Undo** for all editing.
-9. **MIDI clock** in and out.
-10. **VST2**, if it can be done within the licences.
+**Still open:**
+- **Bundled sounds:** which open-source instruments ship (e.g. Surge XT and
+  Dexed, both GPL like the app, and a free sampled piano), built and
+  placed in `plugins/` by the installer (6). Their licences and credits go
+  with them.
+- **VST2**, only if it can be done within the licences.
 
 ---
 

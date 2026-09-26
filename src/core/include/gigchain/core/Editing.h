@@ -31,8 +31,15 @@ Result<void> removePatch(Setlist& setlist, Cursor cursor);
 Result<void> moveSong(Setlist& setlist, int from, int to);
 Result<void> movePatch(Setlist& setlist, int songIndex, int from, int to);
 
+// The song's backing track: a plain file name in the setlist's folder, or
+// "" for none.
+Result<void> setSongBackingTrack(Setlist& setlist, int songIndex, const QString& fileName);
+
 // New channel named after the instrument. Returns its index.
 Result<int> addChannel(Setlist& setlist, Cursor cursor, const PluginSlot& instrument);
+// New channel playing an audio input (1-based; `inputRight` 0 = mono)
+// through its effects, instead of an instrument. Returns its index.
+Result<int> addInputChannel(Setlist& setlist, Cursor cursor, const QString& name, int inputLeft, int inputRight);
 Result<void> removeChannel(Setlist& setlist, Cursor cursor, int channelIndex);
 Result<void> addEffect(Setlist& setlist, Cursor cursor, int channelIndex, const PluginSlot& effect);
 Result<void> removeEffect(Setlist& setlist, Cursor cursor, int channelIndex, int effectIndex);

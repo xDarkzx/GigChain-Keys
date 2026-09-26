@@ -7,7 +7,9 @@
 
 #include <QLoggingCategory>
 
+#include <algorithm>
 #include <cmath>
+#include <utility>
 
 #include <windows.h>
 #include <psapi.h>
@@ -75,6 +77,160 @@ void EngineStatus::playNote(int note, bool on)
     m_engine.injectNote(1, note, on ? 100 : 0);
 }
 
+void EngineStatus::setTempo(double bpm)
+{
+    m_engine.setTempo(bpm); // out-of-range values are refused and logged there
+    pollTransport();
+}
+
+void EngineStatus::tapTempo()
+{
+    constexpr qint64 kRestartMs = 2000;
+    constexpr std::size_t kTapsKept = 5; // four beats averaged
+    if (!m_tapClock.isValid()) m_tapClock.start();
+    const qint64 now = m_tapClock.elapsed();
+    if (!m_taps.empty() && now - m_taps.back() > kRestartMs) m_taps.clear();
+    m_taps.push_back(now);
+    if (m_taps.size() > kTapsKept) m_taps.erase(m_taps.begin());
+    if (m_taps.size() < 2) return;
+    const double beatMs = static_cast<double>(m_taps.back() - m_taps.front()) / static_cast<double>(m_taps.size() - 1);
+    if (beatMs <= 0.0) return;
+    const double bpm = std::round(60000.0 / beatMs * 10.0) / 10.0;
+    qCInfo(lcUi) << "Tap tempo:" << bpm << "BPM from" << m_taps.size() << "taps";
+    setTempo(bpm);
+}
+
+void EngineStatus::setClickOn(bool on)
+{
+    if (on == m_clickOn) return;
+    m_clickOn = on;
+    m_engine.setClick(m_clickOn, m_clickVolumeDb);
+    emit transportChanged();
+}
+
+void EngineStatus::setClickVolumeDb(double volumeDb)
+{
+    if (!std::isfinite(volumeDb)) return;
+    m_clickVolumeDb = std::clamp(volumeDb, -60.0, 0.0);
+    m_engine.setClick(m_clickOn, m_clickVolumeDb);
+    emit transportChanged();
+}
+
+void EngineStatus::playPauseTrack()
+{
+    m_track = m_engine.backingTrack(); // as it is now, not as the last poll saw it (a pedal can come first)
+    if (!m_track.loaded) {
+        m_document.reportMessage(m_track.loading ? tr("The backing track is still being read")
+                                                 : tr("This song has no backing track"),
+                                 Notifications::Info);
+        return;
+    }
+    m_engine.playBackingTrack(!m_track.playing);
+    pollTransport();
+}
+
+void EngineStatus::rewindTrack()
+{
+    m_engine.rewindBackingTrack();
+    pollTransport();
+}
+
+void EngineStatus::pollTransport()
+{
+    const double bpm = m_engine.tempo();
+    const engine::BackingTrackState track = m_engine.backingTrack();
+    const bool changed = bpm != m_tempo || track.loaded != m_track.loaded || track.loading != m_track.loading ||
+                         track.playing != m_track.playing || track.length != m_track.length ||
+                         std::abs(track.position - m_track.position) >= 0.1 || track.path != m_track.path;
+    m_tempo = bpm;
+    m_track = track;
+    if (changed) emit transportChanged();
+}
+
+std::optional<core::ChannelId> EngineStatus::channelId(int channel) const
+{
+    const core::Patch* patch = m_document.currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size())) return std::nullopt;
+    return patch->channels.at(static_cast<std::size_t>(channel)).id;
+}
+
+QVariantList EngineStatus::parameters(int channel, int target) const
+{
+    QVariantList list;
+    const auto id = channelId(channel);
+    if (!id) return list;
+    for (const engine::PluginParameter& p : m_engine.pluginParameters(*id, target)) {
+        list << QVariantMap{{u"id"_s, p.id}, {u"name"_s, p.name}};
+    }
+    return list;
+}
+
+void EngineStatus::startMappingLearn(int channel, int target)
+{
+    const auto id = channelId(channel);
+    if (!id) return;
+    m_learnChannel = channel;
+    m_learnTarget = target;
+    m_learnedKnob.reset();
+    m_learnedParameter.reset();
+    // Whatever moved before this does not count.
+    (void)m_engine.takeMovedController();
+    (void)m_engine.takeTouchedParameter(*id, target);
+    emit mappingLearnChanged();
+}
+
+void EngineStatus::setLearnParameter(quint32 id, const QString& name)
+{
+    if (m_learnChannel < 0) return;
+    m_learnedParameter = engine::PluginParameter{.id = id, .name = name};
+    emit mappingLearnChanged();
+    pollMappingLearn(); // done, if the knob was already moved
+}
+
+void EngineStatus::cancelMappingLearn()
+{
+    if (m_learnChannel < 0) return;
+    m_learnChannel = -1;
+    m_learnedKnob.reset();
+    m_learnedParameter.reset();
+    emit mappingLearnChanged();
+}
+
+QString EngineStatus::learnedKnob() const
+{
+    if (!m_learnedKnob) return {};
+    return tr("Knob CC %1 (channel %2)").arg(m_learnedKnob->second).arg(m_learnedKnob->first);
+}
+
+void EngineStatus::pollMappingLearn()
+{
+    if (m_learnChannel < 0) return;
+    const auto id = channelId(m_learnChannel);
+    if (!id) { // the patch changed under it
+        cancelMappingLearn();
+        return;
+    }
+    bool changed = false;
+    if (const auto moved = m_engine.takeMovedController()) {
+        m_learnedKnob = moved;
+        changed = true;
+    }
+    if (const auto touched = m_engine.takeTouchedParameter(*id, m_learnTarget)) {
+        m_learnedParameter = touched;
+        changed = true;
+    }
+    if (m_learnedKnob && m_learnedParameter) {
+        const int channel = m_learnChannel;
+        if (m_document.addMapping(channel, m_learnedKnob->first, m_learnedKnob->second, m_learnTarget, m_learnedParameter->id,
+                                  m_learnedParameter->name)) {
+            emit mappingLearned(channel);
+        }
+        cancelMappingLearn();
+        return;
+    }
+    if (changed) emit mappingLearnChanged();
+}
+
 double EngineStatus::readMemoryMb()
 {
     PROCESS_MEMORY_COUNTERS counters{};
@@ -103,10 +259,14 @@ void EngineStatus::poll()
         case engine::ControlAction::NextPatch: m_document.nextPatch(); break;
         case engine::ControlAction::PreviousPatch: m_document.previousPatch(); break;
         case engine::ControlAction::Panic: panic(); break;
+        case engine::ControlAction::TapTempo: tapTempo(); break;
+        case engine::ControlAction::PlayBacking: playPauseTrack(); break;
         }
     }
     // A keyboard's patch buttons (Program Change).
     if (const int program = m_engine.takeProgramChange(); program >= 0) m_document.selectProgram(program);
+    pollTransport();
+    pollMappingLearn();
 
     if (const float peak = m_engine.masterLevel().peak; peak != m_masterPeak) {
         m_masterPeak = peak;
@@ -122,7 +282,10 @@ void EngineStatus::poll()
     const bool midi = m_engine.midiActivity();
     const QString status = m_engine.statusText();
     const double memory = readMemoryMb();
-    if (cpu != m_cpuLoad || midi != m_midiActivity || status != m_statusText || memory != m_memoryMb) {
+    const int inputs = m_engine.audioInputChannels();
+    if (cpu != m_cpuLoad || midi != m_midiActivity || status != m_statusText || memory != m_memoryMb ||
+        inputs != m_audioInputs) {
+        m_audioInputs = inputs;
         m_cpuLoad = cpu;
         m_memoryMb = memory;
         m_midiActivity = midi;

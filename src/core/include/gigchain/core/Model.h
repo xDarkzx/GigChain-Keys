@@ -24,8 +24,24 @@ struct PluginSlot
     friend bool operator==(const PluginSlot&, const PluginSlot&) = default;
 };
 
-// One mixer strip: an instrument, its effect chain, and how the keyboard
-// reaches it. Several channels in a patch make layers and splits.
+// A keyboard knob, fader or pedal (MIDI controller) moving one plugin
+// parameter on its channel, within a range (MainStage's screen controls).
+struct ControlMapping
+{
+    int midiChannel = 0; // 0 = any, 1..16
+    int controller = 0;  // CC 0-127
+    int target = -1;     // -1 = the channel's instrument, else the effect's position
+    quint32 parameter = 0;
+    QString parameterName; // as the plugin names it, for showing
+    double minimum = 0.0;  // the parameter (0-1) at the controller's lowest...
+    double maximum = 1.0;  // ... and highest position (below minimum: reversed)
+
+    friend bool operator==(const ControlMapping&, const ControlMapping&) = default;
+};
+
+// One mixer strip: an instrument (or an audio input), its effect chain, and
+// how the keyboard reaches it. Several channels in a patch make layers and
+// splits.
 struct Channel
 {
     ChannelId id;
@@ -40,6 +56,14 @@ struct Channel
     int keyHigh = 127;
     int transpose = 0;
     int midiChannel = 0; // 0 = omni, 1..16 = that channel only
+    int velocityLow = 1; // the note-on velocities it plays (a velocity layer)
+    int velocityHigh = 127;
+    std::vector<ControlMapping> mappings;
+    // An audio input played through the channel's effects instead of an
+    // instrument (a vocal mic, a guitar): 1-based input numbers of the audio
+    // interface, 0 = none. Mono when only `inputLeft` is set.
+    int inputLeft = 0;
+    int inputRight = 0;
 
     friend bool operator==(const Channel&, const Channel&) = default;
 };
@@ -81,6 +105,9 @@ struct Song
     // Files (PDF chord sheets, Guitar Pro, MIDI...) kept in the setlist's
     // own folder, by file name.
     std::vector<QString> attachments;
+    // An audio file played along (WAV, MP3, FLAC...), by file name in the
+    // setlist's folder like attachments; empty = none.
+    QString backingTrack;
 
     friend bool operator==(const Song&, const Song&) = default;
 };

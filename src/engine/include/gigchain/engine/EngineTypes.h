@@ -2,6 +2,7 @@
 
 #include <QString>
 
+#include <cstdint>
 #include <functional>
 #include <vector>
 
@@ -61,8 +62,39 @@ struct AudioSetup
     QString device;              // empty = the Windows default output
     unsigned int sampleRate = 0; // 0 = the device's own rate
     unsigned int bufferFrames = 256;
+    // A device whose inputs (microphone, instrument inputs) channels can
+    // play through effects; same driver as the output. Empty = no inputs.
+    QString inputDevice;
 
     bool operator==(const AudioSetup&) const = default;
+};
+
+// A device with inputs the Settings page can offer.
+struct AudioInputDevice
+{
+    AudioDriver driver = AudioDriver::System;
+    QString name;
+    int channels = 0;
+};
+
+// One of a plugin's parameters a knob can be mapped to.
+struct PluginParameter
+{
+    uint32_t id = 0;
+    QString name;
+
+    bool operator==(const PluginParameter&) const = default;
+};
+
+// The song's backing track as it plays now.
+struct BackingTrackState
+{
+    QString path;          // the file asked for; empty = none
+    bool loading = false;  // still being read
+    bool loaded = false;   // ready to play
+    bool playing = false;
+    double position = 0.0; // seconds
+    double length = 0.0;   // seconds
 };
 
 // A MIDI input as Settings shows it.

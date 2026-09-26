@@ -49,6 +49,11 @@ public:
         IconRole,  // the maker's own icon (file URL) when installed, else a category icon (qrc URL)
         OfficialIconRole, // true when IconRole is the maker's own icon
         ColorRole, // the strip's colour tag, "#rrggbb"
+        VelocityLowRole,
+        VelocityHighRole,
+        InputLeftRole,  // 1-based audio input the channel plays, 0 = none (an instrument channel)
+        InputRightRole, // 0 = mono
+        MappingCountRole, // keyboard knobs mapped to its plugins' parameters
     };
     Q_ENUM(Role)
 

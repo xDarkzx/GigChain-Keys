@@ -6,6 +6,7 @@
 #include "gigchain/core/Limits.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
+#include <QDataStream>
 #include <QFile>
 #include <QFileInfo>
 #include <QScopeGuard>
@@ -14,6 +15,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <numbers>
 #include <thread>
 
 using namespace gigchain;
@@ -464,6 +467,167 @@ private slots:
         QCOMPARE(notices.size(), std::size_t{1});
         QVERIFY(notices.front().text.contains(u"Ghost"_s));
         QVERIFY(notices.front().level == Notice::Level::Error); // it does not play
+    }
+
+    void theTempoIsSetAndOutOfRangeIsRefused()
+    {
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        QCOMPARE(engine.tempo(), 120.0);
+        engine.setTempo(92.5);
+        QCOMPARE(engine.tempo(), 92.5);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Tempo 900 ignored"_s));
+        engine.setTempo(900.0);
+        QCOMPARE(engine.tempo(), 92.5);
+    }
+
+    void theClickSoundsOnTheBeat()
+    {
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.applyPatch(core::makePatch(u"Empty"_s)); // nothing else makes sound
+        pump(engine, 100);
+        (void)engine.masterLevel();
+        pump(engine, 600);
+        QCOMPARE(engine.masterLevel().peak, 0.0F);
+
+        engine.setTempo(240.0); // a beat every quarter second
+        engine.setClick(true, -60.0); // measurable, not heard
+        QVERIFY(engine.clickOn());
+        pump(engine, 600);
+        const float peak = engine.masterLevel().peak;
+        QVERIFY2(peak > 0.0001F && peak < 0.002F, qPrintable(QString::number(peak))); // 0.5 at -60 dB
+        engine.setClick(false, -60.0);
+    }
+
+    void aBackingTrackPlaysThroughTheMasterFader()
+    {
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.applyPatch(core::makePatch(u"Empty"_s));
+        engine.setMasterVolume(-60.0);
+
+        // Half a second of a 0.5 sine.
+        const QTemporaryDir dir;
+        const QString path = dir.filePath(u"backing.wav"_s);
+        {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream out(&file);
+            out.setByteOrder(QDataStream::LittleEndian);
+            const quint32 frames = 24000;
+            out.writeRawData("RIFF", 4);
+            out << quint32{36 + (frames * 2)};
+            out.writeRawData("WAVEfmt ", 8);
+            out << quint32{16} << quint16{1} << quint16{1} << quint32{48000} << quint32{96000} << quint16{2} << quint16{16};
+            out.writeRawData("data", 4);
+            out << frames * 2;
+            for (quint32 i = 0; i < frames; ++i) {
+                out << static_cast<qint16>(std::lround(0.5 * 32767.0 * std::sin(2.0 * std::numbers::pi * 440.0 * i / 48000.0)));
+            }
+        }
+        engine.setBackingTrack(path);
+        for (int i = 0; i < 300 && !engine.backingTrack().loaded; ++i) pump(engine, 10);
+        const BackingTrackState ready = engine.backingTrack();
+        QVERIFY2(ready.loaded, "the backing track was not read");
+        QVERIFY(std::abs(ready.length - 0.5) < 0.02);
+        QVERIFY(!ready.playing);
+
+        (void)engine.masterLevel();
+        pump(engine, 200);
+        QCOMPARE(engine.masterLevel().peak, 0.0F); // loaded, not playing: silent
+
+        engine.playBackingTrack(true);
+        pump(engine, 150);
+        const float peak = engine.masterLevel().peak;
+        QVERIFY2(std::abs(peak - 0.0005F) < 0.0001F, qPrintable(QString::number(peak))); // 0.5 at -60 dB
+        QVERIFY(engine.backingTrack().position > 0.05);
+        pump(engine, 600); // past its end: it stops by itself
+        QVERIFY(!engine.backingTrack().playing);
+
+        // A file that is not there is said, not ignored.
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Backing track not found"_s)); // logged once
+        engine.setBackingTrack(dir.filePath(u"missing.wav"_s));
+        bool reported = false;
+        for (int i = 0; i < 300 && !reported; ++i) {
+            for (const Notice& notice : engine.poll()) reported = reported || notice.text.contains(u"not found"_s);
+            if (!reported) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        QVERIFY(reported);
+    }
+
+    void aHeldChordRingsOnAcrossAPatchChange()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-90.0); // inaudible, measurable
+        const core::SongId song = core::SongId::generate();
+        const core::Patch verse = pianoPatch();
+        engine.applyPatch(song, verse);
+        QVERIFY(engine.poll().empty());
+        engine.injectNote(1, 60, 110);
+        engine.injectNote(1, 64, 110);
+        pump(engine, 300);
+
+        // The chorus has no piano: the held chord goes on until it is let go.
+        engine.applyPatch(song, core::makePatch(u"Chorus"_s));
+        pump(engine, 100);
+        (void)engine.masterLevel();
+        pump(engine, 300);
+        QVERIFY2(engine.masterLevel().peak > 0.0F, "the held chord stopped at the patch change");
+
+        engine.injectNote(1, 60, 0);
+        engine.injectNote(1, 64, 0);
+        pump(engine, 3000); // the piano's release, then a quiet second
+        (void)engine.masterLevel();
+        pump(engine, 300);
+        QCOMPARE(engine.masterLevel().peak, 0.0F);
+    }
+
+    void aPluginsParametersAreListedForKnobs()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+        const core::Patch patch = pianoPatch();
+        engine.applyPatch(patch);
+        const core::ChannelId& piano = patch.channels.front().id;
+        const std::vector<PluginParameter> parameters = engine.pluginParameters(piano, -1);
+        QVERIFY2(parameters.size() > 10, qPrintable(QString::number(parameters.size())));
+        QVERIFY(std::ranges::all_of(parameters, [](const PluginParameter& p) { return !p.name.isEmpty(); }));
+        QVERIFY(engine.pluginParameters(piano, 0).empty());                        // no effect there
+        QVERIFY(engine.pluginParameters(core::ChannelId::generate(), -1).empty()); // no such channel
+        QVERIFY(!engine.takeTouchedParameter(piano, -1).has_value());               // nothing moved
+    }
+
+    void bundledPluginsAreFoundWithTheInstalledOnes()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        // A "bundled" folder holding a copy of an installed plugin (same name
+        // and maker): the installed one is kept, not listed twice.
+        const QTemporaryDir bundled;
+        QVERIFY(QFile::copy(kPiano, bundled.filePath(u"Piano V2.vst3"_s)));
+        RealEngineOptions options;
+        options.bundledPluginFolder = bundled.path();
+        auto created = createRealEngine(options);
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        const auto plugins = (*created)->availablePlugins();
+        QCOMPARE(std::ranges::count_if(plugins, [](const PluginInfo& p) { return p.name == u"Piano V2"_s; }), 1);
+        const auto piano = std::ranges::find_if(plugins, [](const PluginInfo& p) { return p.name == u"Piano V2"_s; });
+        QCOMPARE(piano->id, kPiano);
     }
 };
 

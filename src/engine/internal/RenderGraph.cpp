@@ -18,6 +18,24 @@ void atomicMax(std::atomic<float>& target, float value) noexcept
     }
 }
 
+// Below this a tail counts as silent (-80 dB).
+constexpr float kQuietLevel = 1.0e-4F;
+// A tail stops after this long quiet with nothing held...
+constexpr double kQuietSeconds = 1.0;
+// ... or this long with nothing held at all (a drone that never fades).
+constexpr double kLongestTailSeconds = 30.0;
+
+bool isNoteOff(const MidiEvent& e)
+{
+    const int type = e.status & 0xF0;
+    return type == 0x80 || (type == 0x90 && e.data2 == 0);
+}
+
+bool isSustain(const MidiEvent& e)
+{
+    return (e.status & 0xF0) == 0xB0 && e.data1 == 64;
+}
+
 } // namespace
 
 float dbToGain(double volumeDb)
@@ -31,6 +49,9 @@ ChannelStrip::ChannelStrip(StripSpec spec, int maxBlock)
       m_route(spec.route),
       m_instrument(std::move(spec.instrument)),
       m_effects(std::move(spec.effects)),
+      m_mappings(std::move(spec.mappings)),
+      m_inputLeft(spec.inputLeft),
+      m_inputRight(spec.inputRight),
       m_left(static_cast<std::size_t>(maxBlock), 0.0F),
       m_right(static_cast<std::size_t>(maxBlock), 0.0F),
       m_routed(static_cast<std::size_t>(kMaxEventsPerBlock))
@@ -58,29 +79,44 @@ LevelReading ChannelStrip::takeLevel()
     return LevelReading{.peak = m_peak.exchange(0.0F, std::memory_order_relaxed), .rms = m_rms.load(std::memory_order_relaxed)};
 }
 
-void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& mix, bool anySolo) noexcept
+std::vector<const INode*> ChannelStrip::nodes() const
 {
-    std::size_t routedCount = 0;
-    for (const MidiEvent& event : events) {
-        if (routedCount == m_routed.size()) break;
-        if (const auto routed = routeEvent(event, m_route)) m_routed.at(routedCount++) = *routed; // room checked above
-    }
+    std::vector<const INode*> all;
+    if (m_instrument) all.push_back(m_instrument.get());
+    std::ranges::transform(m_effects, std::back_inserter(all), [](const auto& effect) { return effect.get(); });
+    return all;
+}
 
-    AudioBlock block{.left = m_left.data(), .right = m_right.data(), .frames = mix.frames};
-    const auto frames = static_cast<std::size_t>(mix.frames);
-    if (m_instrument) {
-        m_instrument->process(std::span<const MidiEvent>(m_routed.data(), routedCount), block);
+void ChannelStrip::produce(std::span<const MidiEvent> routed, int frames, const TimeInfo& time,
+                           const AudioInputs& inputs) noexcept
+{
+    AudioBlock block{.left = m_left.data(), .right = m_right.data(), .frames = frames};
+    const auto count = static_cast<std::size_t>(frames);
+    // An input channel's samples for this block, or nullptr when there is
+    // no such input (unplugged, or the device has fewer inputs).
+    const auto input = [&inputs, frames](int channel) -> const float* {
+        return channel >= 0 && std::cmp_less(channel, inputs.channels.size()) && inputs.frames >= frames
+                   ? inputs.channels.subspan(static_cast<std::size_t>(channel)).front()
+                   : nullptr;
+    };
+    if (const float* left = input(m_inputLeft); left != nullptr) {
+        const float* right = input(m_inputRight);
+        std::copy_n(left, count, block.left);
+        std::copy_n(right != nullptr ? right : left, count, block.right); // mono: on both sides
+    } else if (m_instrument) {
+        m_instrument->process(routed, block, time);
     } else {
-        std::fill_n(block.left, frames, 0.0F);
-        std::fill_n(block.right, frames, 0.0F);
+        std::fill_n(block.left, count, 0.0F);
+        std::fill_n(block.right, count, 0.0F);
     }
     for (const auto& effect : m_effects) {
-        effect->process({}, block);
+        effect->process({}, block, time);
     }
+}
 
-    // Silenced strips still process so instruments and effect tails keep state.
-    const bool audible = !m_mute.load(std::memory_order_relaxed) && (!anySolo || m_solo.load(std::memory_order_relaxed));
-    const float gain = audible ? m_gain.load(std::memory_order_relaxed) : 0.0F;
+float ChannelStrip::mixInto(const AudioBlock& mix, float gain) noexcept
+{
+    const auto frames = static_cast<std::size_t>(mix.frames);
     // Constant-power pan, normalised so the centre is unity on both sides.
     const double angle = (static_cast<double>(m_pan.load(std::memory_order_relaxed)) + 1.0) * std::numbers::pi / 4.0;
     const float leftGain = gain * static_cast<float>(std::cos(angle) * std::numbers::sqrt2);
@@ -88,9 +124,9 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
 
     float peak = 0.0F;
     double sumSquares = 0.0;
-    // The block's own buffers and the mix, each `frames` long (checked by the graph).
-    const std::span<const float> fromLeft(block.left, frames);
-    const std::span<const float> fromRight(block.right, frames);
+    // The strip's own buffers and the mix, each `frames` long (checked by the graph).
+    const std::span<const float> fromLeft(m_left.data(), frames);
+    const std::span<const float> fromRight(m_right.data(), frames);
     const std::span<float> toLeft(mix.left, frames);
     const std::span<float> toRight(mix.right, frames);
     auto inRight = fromRight.begin();
@@ -104,22 +140,82 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
         peak = std::max({peak, std::abs(left), std::abs(right)});
         sumSquares += 0.5 * (static_cast<double>(left) * left + static_cast<double>(right) * right);
     }
-    atomicMax(m_peak, peak);
     m_rms.store(frames > 0 ? static_cast<float>(std::sqrt(sumSquares / static_cast<double>(frames))) : 0.0F,
                 std::memory_order_relaxed);
+    return peak;
+}
+
+void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& mix, bool anySolo, const TimeInfo& time,
+                          const AudioInputs& inputs) noexcept
+{
+    std::size_t routedCount = 0;
+    for (const MidiEvent& event : events) {
+        // A controller mapped to a parameter moves it, and nothing else hears it.
+        bool mapped = false;
+        if ((event.status & 0xF0) == 0xB0) {
+            const int channel = (event.status & 0x0F) + 1;
+            for (const ParameterMapping& m : m_mappings) {
+                if (std::cmp_not_equal(m.controller, event.data1) || (m.midiChannel != 0 && m.midiChannel != channel)) continue;
+                INode* target = m.target < 0 ? m_instrument.get()
+                                : std::cmp_less(m.target, m_effects.size())
+                                    ? m_effects.at(static_cast<std::size_t>(m.target)).get()
+                                    : nullptr;
+                if (target == nullptr) continue;
+                const double value = m.minimum + ((m.maximum - m.minimum) * event.data2 / 127.0);
+                target->queueParameter(m.parameter, value, event.sampleOffset);
+                mapped = true;
+            }
+        }
+        if (mapped) continue;
+        if (routedCount == m_routed.size()) break;
+        if (const auto routed = routeEvent(event, m_route)) m_routed.at(routedCount++) = *routed; // room checked above
+    }
+    produce(std::span<const MidiEvent>(m_routed.data(), routedCount), mix.frames, time, inputs);
+
+    // Silenced strips still process so instruments and effect tails keep state.
+    const bool audible = !m_mute.load(std::memory_order_relaxed) && (!anySolo || m_solo.load(std::memory_order_relaxed));
+    atomicMax(m_peak, mixInto(mix, audible ? m_gain.load(std::memory_order_relaxed) : 0.0F));
+}
+
+void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBlock& mix, const TimeInfo& time) noexcept
+{
+    if (m_tailDone.load(std::memory_order_relaxed)) return;
+    std::size_t routedCount = 0;
+    for (const MidiEvent& event : events) {
+        if (!isNoteOff(event) && !isSustain(event)) continue; // new notes belong to the new patch
+        if (routedCount == m_routed.size()) break;
+        if (const auto routed = routeEvent(event, m_route)) m_routed.at(routedCount++) = *routed; // room checked above
+    }
+    produce(std::span<const MidiEvent>(m_routed.data(), routedCount), mix.frames, time, {});
+    const float gain = m_mute.load(std::memory_order_relaxed) ? 0.0F : m_gain.load(std::memory_order_relaxed);
+    const float peak = mixInto(mix, gain);
+
+    // Done after a second of silence with nothing held, or when it has
+    // droned on long after every key was let go.
+    if (m_instrument && m_instrument->holdsNotes()) {
+        m_quietSamples = 0;
+        m_releasedSamples = 0;
+        return;
+    }
+    m_releasedSamples += mix.frames;
+    m_quietSamples = peak < kQuietLevel ? m_quietSamples + mix.frames : 0;
+    const auto quietEnough = static_cast<int64_t>(kQuietSeconds * time.sampleRate);
+    const auto longest = static_cast<int64_t>(kLongestTailSeconds * time.sampleRate);
+    if (m_quietSamples >= quietEnough || m_releasedSamples >= longest) m_tailDone.store(true, std::memory_order_relaxed);
 }
 
 RenderGraph::RenderGraph(std::vector<StripSpec> specs, double sampleRate, int maxBlock,
-                         std::vector<std::shared_ptr<INode>> masterEffects)
-    : m_masterEffects(std::move(masterEffects)), m_sampleRate(sampleRate), m_maxBlock(maxBlock)
+                         std::vector<std::shared_ptr<INode>> masterEffects, std::vector<std::shared_ptr<ChannelStrip>> tails)
+    : m_tails(std::move(tails)), m_masterEffects(std::move(masterEffects)), m_sampleRate(sampleRate), m_maxBlock(maxBlock)
 {
     m_strips.reserve(specs.size());
     std::ranges::transform(specs, std::back_inserter(m_strips), [maxBlock](StripSpec& spec) {
-        return std::make_unique<ChannelStrip>(std::move(spec), maxBlock);
+        return std::make_shared<ChannelStrip>(std::move(spec), maxBlock);
     });
 }
 
-void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, float masterGain) noexcept
+void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, float masterGain, const TimeInfo& time,
+                         const AudioInputs& inputs) noexcept
 {
     const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
     std::fill_n(out.left, frames, 0.0F);
@@ -132,10 +228,13 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
 
     const bool anySolo = std::ranges::any_of(m_strips, [](const auto& s) { return s->solo(); });
     for (const auto& channel : m_strips) {
-        channel->render(events, out, anySolo);
+        channel->render(events, out, anySolo, time, inputs);
+    }
+    for (const auto& tail : m_tails) {
+        if (out.frames <= tail->maxBlock()) tail->renderTail(events, out, time);
     }
     for (const auto& effect : m_masterEffects) {
-        effect->process({}, out);
+        effect->process({}, out, time);
     }
     const auto gain = [masterGain](float sample) { return sample * masterGain; };
     const std::span<float> left(out.left, frames);

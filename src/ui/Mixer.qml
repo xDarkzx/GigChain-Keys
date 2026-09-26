@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -46,6 +48,7 @@ Rectangle {
                 doc: mixer.doc
                 pluginModel: mixer.pluginModel
                 effectWindows: mixer.effectWindows
+                inputChannels: mixer.engineStatus.audioInputChannels
             }
             footer: Item {
                 width: Theme.stripWidth + 8
@@ -55,7 +58,7 @@ Rectangle {
                     id: newChannelSlot
                     x: 4
                     width: Theme.stripWidth
-                    height: parent.height
+                    height: parent.height - newInputSlot.height - 4
                     text: ""
                     onClicked: newChannelPicker.popup(newChannelSlot, newChannelSlot.width / 2, newChannelSlot.height / 2)
                     Text {
@@ -70,6 +73,41 @@ Rectangle {
                     id: newChannelPicker
                     pluginModel: mixer.pluginModel
                     onPicked: (pluginId, name) => mixer.doc.addChannel(pluginId, name)
+                }
+                // Add a channel playing an audio input (a mic, a guitar).
+                EffectSlot {
+                    id: newInputSlot
+                    objectName: "addInputChannel"
+                    x: 4
+                    y: parent.height - height
+                    width: Theme.stripWidth
+                    height: 26
+                    text: qsTr("+ Audio input")
+                    onClicked: newInputMenu.popup(newInputSlot, 0, 0)
+                }
+                StageMenu {
+                    id: newInputMenu
+                    Instantiator {
+                        model: {
+                            const list = []
+                            const n = mixer.engineStatus.audioInputChannels
+                            for (let i = 1; i <= n; ++i) list.push({ l: i, r: 0 })
+                            for (let i = 1; i + 1 <= n; i += 2) list.push({ l: i, r: i + 1 })
+                            return list
+                        }
+                        delegate: StageMenuItem {
+                            required property var modelData
+                            text: modelData.r > 0 ? qsTr("Input %1+%2 (stereo)").arg(modelData.l).arg(modelData.r) : qsTr("Input %1").arg(modelData.l)
+                            onTriggered: mixer.doc.addInputChannel(modelData.l, modelData.r)
+                        }
+                        onObjectAdded: (i, object) => newInputMenu.insertItem(i, object)
+                        onObjectRemoved: (i, object) => newInputMenu.removeItem(object)
+                    }
+                    StageMenuItem {
+                        visible: mixer.engineStatus.audioInputChannels === 0
+                        text: qsTr("No inputs open: choose an input device in Settings > Audio")
+                        enabled: false
+                    }
                 }
             }
         }

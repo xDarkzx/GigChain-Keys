@@ -201,6 +201,33 @@ Result<int> addChannel(Setlist& setlist, Cursor cursor, const PluginSlot& instru
     return static_cast<int>(patch->channels.size()) - 1;
 }
 
+Result<int> addInputChannel(Setlist& setlist, Cursor cursor, const QString& name, int inputLeft, int inputRight)
+{
+    Patch* patch = patchAt(setlist, cursor);
+    if (patch == nullptr) return missing(u"Patch"_s);
+    if (patch->channels.size() >= toIndex(limits::kMaxChannelsPerPatch)) {
+        return fail(ErrorCode::LimitExceeded,
+                    u"A patch can hold at most %1 channels"_s.arg(limits::kMaxChannelsPerPatch));
+    }
+    if (inputLeft < 1) return fail(ErrorCode::OutOfRange, u"Choose which input the channel plays"_s);
+    Channel channel = makeChannel(name.trimmed());
+    channel.inputLeft = inputLeft;
+    channel.inputRight = inputRight;
+    if (auto valid = validateChannel(channel, u"New channel"_s); !valid) return tl::unexpected(valid.error());
+    patch->channels.push_back(std::move(channel));
+    return static_cast<int>(patch->channels.size()) - 1;
+}
+
+Result<void> setSongBackingTrack(Setlist& setlist, int songIndex, const QString& fileName)
+{
+    if (songIndex < 0 || static_cast<std::size_t>(songIndex) >= setlist.songs.size()) return missing(u"Song"_s);
+    if (!fileName.isEmpty()) {
+        if (auto valid = validateFileName(fileName, u"The backing track"_s); !valid) return valid;
+    }
+    setlist.songs.at(static_cast<std::size_t>(songIndex)).backingTrack = fileName;
+    return {};
+}
+
 Result<void> removeChannel(Setlist& setlist, Cursor cursor, int channelIndex)
 {
     Patch* patch = patchAt(setlist, cursor);

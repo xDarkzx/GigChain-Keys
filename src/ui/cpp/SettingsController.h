@@ -57,6 +57,15 @@ class SettingsController : public QObject
     Q_PROPERTY(QVariantList controls READ controls NOTIFY changed)
     // The control waiting for a press ("Learn"), -1 when none.
     Q_PROPERTY(int learning READ learning NOTIFY changed)
+    // Audio: the device whose inputs channels can play ("" = none), from
+    // those of the chosen driver.
+    Q_PROPERTY(QString inputDevice READ inputDevice WRITE setInputDevice NOTIFY changed)
+    Q_PROPERTY(QStringList inputDevices READ inputDevices NOTIFY changed)
+    // MIDI clock: the output it is sent to ("" = not sent), the outputs
+    // there are, and whether the tempo follows a clock coming in.
+    Q_PROPERTY(QString clockOutput READ clockOutput WRITE setClockOutput NOTIFY changed)
+    Q_PROPERTY(QStringList midiOutputs READ midiOutputs NOTIFY changed)
+    Q_PROPERTY(bool followClock READ followClock WRITE setFollowClock NOTIFY changed)
 
 public:
     SettingsController(engine::IEngine& engine, DocumentController& document, QSettings& settings,
@@ -98,6 +107,14 @@ public:
     void pollLearning();
     // "Try again": the plugin may load next time it is used (straight away, not on OK).
     Q_INVOKABLE void unblockPlugin(const QString& path);
+    [[nodiscard]] QString inputDevice() const { return m_pending.inputDevice; }
+    void setInputDevice(const QString& name);
+    [[nodiscard]] QStringList inputDevices() const;
+    [[nodiscard]] QString clockOutput() const { return m_clockOutput; }
+    void setClockOutput(const QString& name);
+    [[nodiscard]] QStringList midiOutputs() const { return m_midiOutputs; }
+    [[nodiscard]] bool followClock() const { return m_followClock; }
+    void setFollowClock(bool follow);
 
     // Probes the devices (ASIO drivers can take a moment) and shows what runs now.
     Q_INVOKABLE void load();
@@ -137,6 +154,10 @@ private:
     double m_limiterCeilingDb = -1.0;
     QString m_running;
     QString m_error;
+    std::vector<engine::AudioInputDevice> m_inputs;
+    QStringList m_midiOutputs;
+    QString m_clockOutput;
+    bool m_followClock = false;
 };
 
 } // namespace gigchain::ui

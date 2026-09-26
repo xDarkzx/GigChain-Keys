@@ -41,7 +41,7 @@ private slots:
         AudioDevice device;
         std::atomic<int> blocks{0};
         std::atomic<bool> sizesOk{true};
-        const auto opened = device.open(std::nullopt, 256, [&](AudioBlock out) {
+        const auto opened = device.open(std::nullopt, 256, [&](AudioBlock out, const AudioInputs&) {
             if (out.frames <= 0 || out.frames > device.maxBlock()) sizesOk = false;
             std::fill_n(out.left, out.frames, 0.0F);
             std::fill_n(out.right, out.frames, 0.0F);
@@ -75,7 +75,8 @@ private slots:
         }
         AudioDevice device;
         std::atomic<int> blocks{0};
-        const auto opened = device.open(DeviceChoice{AudioApi::Wasapi, system->name}, 256, [&](AudioBlock out) {
+        const auto opened = device.open(DeviceChoice{.api = AudioApi::Wasapi, .name = system->name}, 256,
+                                        [&](AudioBlock out, const AudioInputs&) {
             std::fill_n(out.left, out.frames, 0.0F);
             std::fill_n(out.right, out.frames, 0.0F);
             blocks.fetch_add(1);
@@ -102,7 +103,8 @@ private slots:
     {
         AudioDevice device;
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"No audio output named \"No Such Device\""_s));
-        const auto opened = device.open(DeviceChoice{AudioApi::Wasapi, u"No Such Device"_s}, 256, [](AudioBlock) {});
+        const auto opened =
+            device.open(DeviceChoice{.api = AudioApi::Wasapi, .name = u"No Such Device"_s}, 256, [](AudioBlock, const AudioInputs&) {});
         QVERIFY(!opened);
         QVERIFY(opened.error().code == core::ErrorCode::InvalidData);
         QVERIFY(!device.isOpen());

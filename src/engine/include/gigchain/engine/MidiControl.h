@@ -9,8 +9,17 @@ namespace gigchain::engine {
 
 // What a pedal, pad or button on the keyboard can do (MainStage's "assign
 // a controller"), learned in Settings.
-enum class ControlAction : int { NextSong = 0, PreviousSong, NextPatch, PreviousPatch, Panic };
-inline constexpr int kControlActionCount = 5;
+enum class ControlAction : int
+{
+    NextSong = 0,
+    PreviousSong,
+    NextPatch,
+    PreviousPatch,
+    Panic,
+    TapTempo,    // each press is a beat; a few presses set the tempo
+    PlayBacking, // starts or stops the song's backing track
+};
+inline constexpr int kControlActionCount = 7;
 
 // One MIDI control: a CC (a pedal or button), a note (a pad or key) or a
 // program change, on one channel.

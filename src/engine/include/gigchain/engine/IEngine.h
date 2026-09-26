@@ -12,7 +12,8 @@
 #include <QStringList>
 
 #include <memory>
-
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace gigchain::engine {
@@ -161,6 +162,45 @@ public:
 
     // One line describing the audio setup, e.g. "Scarlett Solo · WASAPI · 5.3 ms".
     [[nodiscard]] virtual QString statusText() const = 0;
+
+    // ---- Tempo and click
+    // The tempo plugins follow (arpeggiators, delays): 20-400 BPM; anything
+    // else is ignored. While a MIDI clock is followed (MidiSetup::followClock)
+    // the clock's tempo wins.
+    virtual void setTempo(double bpm) = 0;
+    // The tempo playing now (the followed clock's, when there is one).
+    [[nodiscard]] virtual double tempo() const = 0;
+    // The click on every beat (accented on the bar), at `volumeDb` (<= 0).
+    virtual void setClick(bool on, double volumeDb) = 0;
+    [[nodiscard]] virtual bool clickOn() const = 0;
+
+    // ---- Backing track (one at a time: the current song's)
+    // Reads the file in the background (problems come through poll()) and
+    // makes it the track; empty = none. Asking for the same file again keeps
+    // it (and where it is).
+    virtual void setBackingTrack(const QString& path) = 0;
+    // Plays from where it is, or pauses.
+    virtual void playBackingTrack(bool play) = 0;
+    virtual void rewindBackingTrack() = 0;
+    virtual void setBackingTrackVolume(double volumeDb) = 0;
+    [[nodiscard]] virtual BackingTrackState backingTrack() const = 0;
+
+    // ---- Knobs mapped to plugin parameters (MainStage's screen controls)
+    // The parameters of a channel's instrument (target -1) or effect in the
+    // current patch that a knob can move; empty when it is not loaded.
+    [[nodiscard]] virtual std::vector<PluginParameter> pluginParameters(const core::ChannelId& id, int target) const = 0;
+    // For "learn": the parameter last moved in that plugin's own window
+    // since the previous call, or nothing.
+    virtual std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId& id, int target) = 0;
+    // For "learn": the last keyboard knob, fader or pedal moved (any value)
+    // since the previous call, as {MIDI channel 1-16, controller 0-127}.
+    virtual std::optional<std::pair<int, int>> takeMovedController() = 0;
+
+    // ---- Audio inputs and MIDI outputs, for Settings
+    [[nodiscard]] virtual std::vector<AudioInputDevice> audioInputDevices() const = 0;
+    // Input channels open now (0 when no input device is chosen or it failed).
+    [[nodiscard]] virtual int audioInputChannels() const = 0;
+    [[nodiscard]] virtual QStringList midiOutputs() const = 0;
 
 protected:
     IEngine() = default;

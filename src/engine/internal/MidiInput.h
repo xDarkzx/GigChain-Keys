@@ -54,6 +54,13 @@ public:
     // Main thread: events dropped because a queue was full, since the last call.
     uint64_t takeDropped() { return m_dropped.exchange(0, std::memory_order_relaxed); }
 
+    // Any thread: the tempo of the MIDI clock coming in (a drum machine, a
+    // DAW), or 0 when no clock arrived in the last half second.
+    [[nodiscard]] double clockTempo() const;
+    // Any thread: true once after a MIDI Start (the clock's source started
+    // its song at bar 1).
+    bool takeClockStart() { return m_clockStart.exchange(false, std::memory_order_relaxed); }
+
 private:
     struct Port
     {
@@ -62,13 +69,24 @@ private:
         MidiInput* owner = nullptr;
         QString name;
         int channel = 0; // 0 = all channels
+        // MIDI clock (RtMidi's thread for this port): the last tick, and the
+        // smoothed time between ticks.
+        int64_t lastTickNs = 0;
+        double tickSeconds = 0.0;
     };
 
     static void callback(double timeStamp, std::vector<unsigned char>* message, void* user);
+    void onClockTick(Port& port);
 
     std::vector<std::unique_ptr<Port>> m_ports;
     std::atomic<bool> m_activity{false};
     std::atomic<uint64_t> m_dropped{0};
+    std::atomic<double> m_clockTempo{0.0};
+    std::atomic<int64_t> m_lastClockNs{0};
+    std::atomic<bool> m_clockStart{false};
 };
+
+// MIDI clock: 24 ticks per quarter note.
+inline constexpr int kClockTicksPerQuarter = 24;
 
 } // namespace gigchain::engine

@@ -18,9 +18,13 @@
 #include "gigchain/core/SetlistFile.h"
 #include "gigchain/engine/IEngine.h"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QLoggingCategory>
+#include <QScopedValueRollback>
 #include <QSettings>
+
+#include <utility>
 
 using namespace Qt::StringLiterals;
 
@@ -182,6 +186,7 @@ QString DocumentController::currentChart() const
 bool DocumentController::setSongChart(int song, const QString& chordPro)
 {
     if (auto r = core::setSongChart(m_setlist, song, chordPro); !r) return report(r.error());
+    m_coalesceKey = u"chart:%1"_s.arg(song);
     setDirty(true);
     emit chartChanged();
     return true;
@@ -572,6 +577,7 @@ bool DocumentController::setChannelVolume(int channel, double volumeDb)
         return report(r.error());
     }
     m_engine.setChannelVolume(currentPatch()->channels.at(static_cast<std::size_t>(channel)).id, volumeDb);
+    m_coalesceKey = u"volume:%1"_s.arg(channel);
     commitChannelField(channel, false);
     return true;
 }
@@ -582,6 +588,7 @@ bool DocumentController::setChannelPan(int channel, double pan)
         return report(r.error());
     }
     m_engine.setChannelPan(currentPatch()->channels.at(static_cast<std::size_t>(channel)).id, pan);
+    m_coalesceKey = u"pan:%1"_s.arg(channel);
     commitChannelField(channel, false);
     return true;
 }
@@ -606,6 +613,206 @@ bool DocumentController::setChannelSolo(int channel, bool solo)
     return true;
 }
 
+bool DocumentController::setChannelVelocityRange(int channel, int low, int high)
+{
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [low, high](core::Channel& c) {
+        c.velocityLow = low;
+        c.velocityHigh = high;
+    });
+    if (!r) return report(r.error());
+    m_coalesceKey = u"velocity:%1"_s.arg(channel);
+    commitChannelField(channel, true);
+    return true;
+}
+
+bool DocumentController::addInputChannel(int inputLeft, int inputRight)
+{
+    if (!m_hasSetlist) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("Start or open a setlist first")});
+    }
+    if (m_setlist.songs.empty() && !addSong()) return false;
+    const QString name = inputRight > 0 ? tr("Input %1+%2").arg(inputLeft).arg(inputRight) : tr("Input %1").arg(inputLeft);
+    const auto index = core::addInputChannel(m_setlist, m_cursor, name, inputLeft, inputRight);
+    if (!index) return report(index.error());
+    commitChannels(*index);
+    if (m_engine.audioInputChannels() < std::max(inputLeft, inputRight)) {
+        reportMessage(tr("%1 is not open: choose an input device in Settings > Audio").arg(name), Notifications::Warning);
+    }
+    return true;
+}
+
+bool DocumentController::setChannelInput(int channel, int inputLeft, int inputRight)
+{
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [inputLeft, inputRight](core::Channel& c) {
+        c.inputLeft = inputLeft;
+        c.inputRight = inputRight;
+    });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true);
+    return true;
+}
+
+bool DocumentController::addMapping(int channel, int midiChannel, int controller, int target, quint32 parameter,
+                                    const QString& parameterName)
+{
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [&](core::Channel& c) {
+        // One knob, one parameter per plugin: a knob learned again replaces its old job there.
+        std::erase_if(c.mappings, [&](const core::ControlMapping& m) {
+            return m.target == target && m.midiChannel == midiChannel && m.controller == controller;
+        });
+        c.mappings.push_back(core::ControlMapping{.midiChannel = midiChannel,
+                                                  .controller = controller,
+                                                  .target = target,
+                                                  .parameter = parameter,
+                                                  .parameterName = parameterName,
+                                                  .minimum = 0.0,
+                                                  .maximum = 1.0});
+    });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true);
+    qCInfo(lcUi).noquote() << "Knob CC" << controller << "(channel" << (midiChannel == 0 ? u"any"_s : QString::number(midiChannel))
+                           << ") now moves" << parameterName;
+    return true;
+}
+
+bool DocumentController::removeMapping(int channel, int mapping)
+{
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [mapping](core::Channel& c) {
+        if (mapping >= 0 && std::cmp_less(mapping, c.mappings.size())) {
+            c.mappings.erase(c.mappings.begin() + mapping);
+        }
+    });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true);
+    return true;
+}
+
+bool DocumentController::setMappingRange(int channel, int mapping, double minimum, double maximum)
+{
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size()) || mapping < 0 ||
+        std::cmp_greater_equal(mapping, patch->channels.at(static_cast<std::size_t>(channel)).mappings.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That knob mapping does not exist")});
+    }
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [mapping, minimum, maximum](core::Channel& c) {
+        core::ControlMapping& m = c.mappings.at(static_cast<std::size_t>(mapping));
+        m.minimum = minimum;
+        m.maximum = maximum;
+    });
+    if (!r) return report(r.error());
+    m_coalesceKey = u"mapping:%1:%2"_s.arg(channel).arg(mapping);
+    commitChannelField(channel, true);
+    return true;
+}
+
+QVariantList DocumentController::mappings(int channel) const
+{
+    QVariantList list;
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size())) return list;
+    const core::Channel& c = patch->channels.at(static_cast<std::size_t>(channel));
+    for (const core::ControlMapping& m : c.mappings) {
+        QString targetName;
+        if (m.target < 0) targetName = c.instrument ? c.instrument->displayName : tr("Instrument");
+        else if (std::cmp_less(m.target, c.effects.size())) targetName = c.effects.at(static_cast<std::size_t>(m.target)).displayName;
+        list << QVariantMap{{u"midiChannel"_s, m.midiChannel}, {u"controller"_s, m.controller},
+                            {u"target"_s, m.target},           {u"targetName"_s, targetName},
+                            {u"parameter"_s, m.parameter},     {u"parameterName"_s, m.parameterName},
+                            {u"minimum"_s, m.minimum},         {u"maximum"_s, m.maximum}};
+    }
+    return list;
+}
+
+void DocumentController::editChannel(int channel, const QString& page)
+{
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size())) return;
+    setSelectedChannel(channel);
+    emit channelEditRequested(channel, page);
+}
+
+// ---------------------------------------------------------------- song tempo and backing track
+
+const core::Song* DocumentController::currentSong() const
+{
+    const int song = m_cursor.song;
+    return song >= 0 && std::cmp_less(song, m_setlist.songs.size()) ? &m_setlist.songs.at(static_cast<std::size_t>(song))
+                                                                   : nullptr;
+}
+
+double DocumentController::songTempo() const
+{
+    const core::Song* song = currentSong();
+    return song != nullptr ? song->tempo : 0.0;
+}
+
+QString DocumentController::songBackingTrack() const
+{
+    const core::Song* song = currentSong();
+    return song != nullptr ? song->backingTrack : QString();
+}
+
+bool DocumentController::setSongTempo(int song, double bpm)
+{
+    if (song < 0 || std::cmp_greater_equal(song, m_setlist.songs.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That song does not exist")});
+    }
+    const QString key = m_setlist.songs.at(static_cast<std::size_t>(song)).key;
+    if (auto r = core::setSongKeyAndTempo(m_setlist, song, key, bpm); !r) return report(r.error());
+    m_coalesceKey = u"tempo:%1"_s.arg(song);
+    setDirty(true);
+    if (song == m_cursor.song) applyCurrentSongToEngine();
+    emit songChanged();
+    return true;
+}
+
+bool DocumentController::setSongBackingTrack(int song, const QUrl& file)
+{
+    if (song < 0 || std::cmp_greater_equal(song, m_setlist.songs.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That song does not exist")});
+    }
+    QString fileName;
+    if (!file.isEmpty()) {
+        if (m_filePath.isEmpty()) {
+            return report(core::Error{core::ErrorCode::FileWriteFailed,
+                                      tr("Save the setlist first: backing tracks are kept in the setlist's folder")});
+        }
+        if (!file.isLocalFile()) {
+            return report(core::Error{core::ErrorCode::FileNotFound, tr("Only local files can be used: %1").arg(file.toString())});
+        }
+        const QFileInfo source(file.toLocalFile());
+        const QDir folder = QFileInfo(m_filePath).absoluteDir();
+        fileName = source.fileName();
+        const QString target = folder.filePath(fileName);
+        if (QFileInfo(target).absoluteFilePath() != source.absoluteFilePath()) {
+            if (QFileInfo::exists(target)) {
+                if (QFileInfo(target).size() != source.size()) {
+                    return report(core::Error{core::ErrorCode::FileWriteFailed,
+                                              tr("The setlist's folder already has a different %1").arg(fileName)});
+                }
+            } else if (!QFile::copy(source.absoluteFilePath(), target)) {
+                return report(core::Error{core::ErrorCode::FileWriteFailed,
+                                          tr("Could not copy %1 into the setlist's folder").arg(fileName)});
+            }
+        }
+    }
+    if (auto r = core::setSongBackingTrack(m_setlist, song, fileName); !r) return report(r.error());
+    setDirty(true);
+    if (song == m_cursor.song) applyCurrentSongToEngine();
+    emit songChanged();
+    return true;
+}
+
+void DocumentController::applyCurrentSongToEngine()
+{
+    const core::Song* song = currentSong();
+    if (song != nullptr && song->tempo > 0.0) m_engine.setTempo(song->tempo); // a song without one keeps the tempo playing
+    const QString track = song != nullptr && !song->backingTrack.isEmpty() && !m_filePath.isEmpty()
+                              ? QFileInfo(m_filePath).absoluteDir().filePath(song->backingTrack)
+                              : QString();
+    m_engine.setBackingTrack(track);
+}
+
 // ---------------------------------------------------------------- files
 
 void DocumentController::newSetlist()
@@ -618,6 +825,7 @@ void DocumentController::newSetlist()
     setDirty(false);
     emit structureChanged();
     setCursor(core::firstPatch(m_setlist), true);
+    resetUndo();
 }
 
 bool DocumentController::open(const QString& path)
@@ -639,6 +847,7 @@ bool DocumentController::open(const QString& path)
     setDirty(false);
     emit structureChanged();
     setCursor(core::firstPatch(m_setlist), true);
+    resetUndo();
     qCInfo(lcUi).noquote() << "Opened setlist" << path;
     return true;
 }
@@ -729,7 +938,9 @@ void DocumentController::setCursor(core::Cursor to, bool force)
 {
     GC_ONLY_MAIN_THREAD();
     if (to == m_cursor && !force) return;
+    const bool newSong = to.song != m_cursor.song || force;
     m_cursor = to;
+    m_committedCursor = to;
     const core::Patch* patch = currentPatch();
     FreezeWatchdog::mark(u"switch to %1 / %2"_s.arg(currentSongName(), patch != nullptr ? patch->name : QString()));
     QElapsedTimer timer;
@@ -738,7 +949,9 @@ void DocumentController::setCursor(core::Cursor to, bool force)
     // The engine first: views react to these signals by asking the engine
     // about the new channels (e.g. for plugin editors).
     applyCurrentPatchToEngine();
+    if (newSong) applyCurrentSongToEngine();
     const qint64 sound = timer.elapsed();
+    if (newSong) emit songChanged();
     emit currentChanged();
     emit channelsChanged();
     emit selectedChannelChanged();
@@ -828,9 +1041,77 @@ void DocumentController::markPluginSettingsChanged()
 
 void DocumentController::setDirty(bool dirty)
 {
+    // Every edit ends here: it becomes an undo step. Saving and opening
+    // (not dirty) make the current setlist the one later edits start from.
+    if (dirty) {
+        recordEdit();
+    } else {
+        m_committed = m_setlist;
+        m_committedCursor = m_cursor;
+    }
     if (m_dirty == dirty) return;
     m_dirty = dirty;
     emit dirtyChanged();
+}
+
+void DocumentController::recordEdit()
+{
+    const QString key = std::exchange(m_coalesceKey, QString());
+    if (m_restoring) return;
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    constexpr qint64 kSameEditMs = 1500; // a fader dragged, a value typed: one step
+    const bool sameEdit = !key.isEmpty() && key == m_lastCoalesceKey && now - m_lastEditMs < kSameEditMs && !m_undo.empty();
+    m_lastCoalesceKey = key;
+    m_lastEditMs = now;
+    if (!sameEdit) {
+        if (m_setlist == m_committed) return; // nothing in the setlist changed (a plugin's own settings)
+        m_undo.push_back(UndoStep{.setlist = m_committed, .cursor = m_committedCursor});
+        constexpr std::size_t kMaxUndo = 100;
+        if (m_undo.size() > kMaxUndo) m_undo.erase(m_undo.begin());
+        m_redo.clear();
+        emit undoChanged();
+    }
+    m_committed = m_setlist;
+    m_committedCursor = m_cursor;
+}
+
+void DocumentController::resetUndo()
+{
+    m_undo.clear();
+    m_redo.clear();
+    m_committed = m_setlist;
+    m_committedCursor = m_cursor;
+    m_lastCoalesceKey.clear();
+    emit undoChanged();
+}
+
+bool DocumentController::undo()
+{
+    return restore(m_undo, m_redo);
+}
+
+bool DocumentController::redo()
+{
+    return restore(m_redo, m_undo);
+}
+
+bool DocumentController::restore(std::vector<UndoStep>& from, std::vector<UndoStep>& to)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (from.empty()) return false;
+    to.push_back(UndoStep{.setlist = m_setlist, .cursor = m_cursor});
+    UndoStep step = std::move(from.back());
+    from.pop_back();
+    const QScopedValueRollback restoring(m_restoring, true);
+    m_setlist = std::move(step.setlist);
+    m_committed = m_setlist;
+    clearPasteUndo();
+    emit structureChanged();
+    setCursor(core::clampCursor(m_setlist, step.cursor), true); // plays it and refreshes every view
+    m_committedCursor = m_cursor;
+    setDirty(true);
+    emit undoChanged();
+    return true;
 }
 
 void DocumentController::setFilePath(const QString& path)

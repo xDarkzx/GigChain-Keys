@@ -62,6 +62,8 @@ qt_add_qml_module(gigchain_ui
         ToggleChip.qml
         PerformView.qml
         NotificationWindow.qml
+        ChannelZoneDialog.qml
+        KnobDialog.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/bell.svg

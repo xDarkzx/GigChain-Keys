@@ -57,6 +57,44 @@ private slots:
         QCOMPARE(settings.sampleRate(), 48000); // still offered: kept
     }
 
+    void anInputDeviceAndTheMidiClockApplyAndAreRemembered()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QCOMPARE(settings.inputDevices(), (QStringList{u"Spy Mic"_s}));
+        QCOMPARE(settings.midiOutputs(), (QStringList{u"Spy Drum Machine"_s}));
+        settings.setInputDevice(u"No Such Mic"_s); // not offered: ignored
+        QVERIFY(settings.inputDevice().isEmpty());
+        settings.setInputDevice(u"Spy Mic"_s);
+        settings.setClockOutput(u"Spy Drum Machine"_s);
+        settings.setFollowClock(true);
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->setup.inputDevice, u"Spy Mic"_s);
+        QCOMPARE(m_engine->midi.clockOutput, u"Spy Drum Machine"_s);
+        QVERIFY(m_engine->midi.followClock);
+        const auto options = SettingsController::engineOptions(*m_settings); // next start
+        QCOMPARE(options.audio.inputDevice, u"Spy Mic"_s);
+        QCOMPARE(options.midi.clockOutput, u"Spy Drum Machine"_s);
+        QVERIFY(options.midi.followClock);
+
+        // The inputs share the output's driver: switching to ASIO drops a system input.
+        settings.load();
+        settings.setDriver(u"asio"_s);
+        QVERIFY(settings.inputDevice().isEmpty());
+    }
+
+    void theNewPedalActionsAreOffered()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        const QVariantList controls = settings.controls();
+        QCOMPARE(controls.size(), engine::kControlActionCount);
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::TapTempo)).toMap().value(u"label"_s).toString(),
+                 u"Tap tempo"_s);
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::PlayBacking)).toMap().value(u"label"_s).toString(),
+                 u"Backing track: play / stop"_s);
+    }
+
     void applyChangesTheEngineAndRemembers()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);

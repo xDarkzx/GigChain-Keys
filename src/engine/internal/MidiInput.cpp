@@ -9,8 +9,10 @@
 
 #include <rtmidi/RtMidi.h>
 
+#include <chrono>
 #include <exception>
 #include <span>
+#include <utility>
 
 using namespace Qt::StringLiterals;
 
@@ -90,7 +92,7 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
                 },
                 port.get());
             port->in->openPort(static_cast<unsigned int>(i), branding::name().toStdString());
-            port->in->ignoreTypes(true, true, true); // sysex, timing, active sensing
+            port->in->ignoreTypes(true, false, true); // sysex and active sensing; timing (MIDI clock) is read
             port->in->setCallback(&MidiInput::callback, port.get());
         } catch (const std::exception& e) {
             notices.push_back(u"Could not open MIDI input %1: %2"_s.arg(name, QString::fromUtf8(e.what())));
@@ -140,12 +142,54 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
 {
     auto* port = static_cast<Port*>(user);
     if (message == nullptr) return;
+    if (!message->empty()) {
+        switch (message->front()) {
+        case 0xF8: port->owner->onClockTick(*port); return; // MIDI clock
+        case 0xFA: port->owner->m_clockStart.store(true, std::memory_order_relaxed); return; // Start
+        case 0xFB:                                                                          // Continue
+        case 0xFC: return;                                                                  // Stop
+        default: break;
+        }
+    }
     const auto event = parseMidi(*message);
     if (!event || !passesChannelFilter(event->status, port->channel)) return;
     if ((event->status & 0xF0) == 0x90 && event->data2 > 0) {
         port->owner->m_activity.store(true, std::memory_order_relaxed);
     }
     if (!port->queue.push(*event)) port->owner->m_dropped.fetch_add(1, std::memory_order_relaxed);
+}
+
+namespace {
+
+int64_t nowNs()
+{
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+} // namespace
+
+void MidiInput::onClockTick(Port& port)
+{
+    const int64_t now = nowNs();
+    const int64_t previous = std::exchange(port.lastTickNs, now);
+    m_lastClockNs.store(now, std::memory_order_relaxed);
+    if (previous == 0) return;
+    const double seconds = static_cast<double>(now - previous) / 1e9;
+    // Ticks further apart than 20 BPM are a restart, not a tempo.
+    if (seconds <= 0.0 || seconds > 60.0 / (20.0 * kClockTicksPerQuarter)) {
+        port.tickSeconds = 0.0;
+        return;
+    }
+    // Smoothed over about a beat: single ticks jitter by a millisecond or so.
+    port.tickSeconds = port.tickSeconds <= 0.0 ? seconds : port.tickSeconds + ((seconds - port.tickSeconds) / 24.0);
+    m_clockTempo.store(60.0 / (port.tickSeconds * kClockTicksPerQuarter), std::memory_order_relaxed);
+}
+
+double MidiInput::clockTempo() const
+{
+    constexpr int64_t kStaleNs = 500'000'000; // half a second without a tick: the clock stopped
+    if (nowNs() - m_lastClockNs.load(std::memory_order_relaxed) > kStaleNs) return 0.0;
+    return m_clockTempo.load(std::memory_order_relaxed);
 }
 
 } // namespace gigchain::engine

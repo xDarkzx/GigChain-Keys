@@ -17,6 +17,10 @@ struct MidiSetup
     QStringList enabled;               // inputs switched on, by name
     std::map<QString, int> channels;   // per input: 0 = all channels, 1-16 = only that one
     bool configured = false;           // false: never chosen, use the default
+    // MIDI clock: the output it is sent to (empty = not sent), and whether
+    // the tempo follows a clock coming in (a drum machine or DAW leads).
+    QString clockOutput;
+    bool followClock = false;
 
     bool operator==(const MidiSetup&) const = default;
 };

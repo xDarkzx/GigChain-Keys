@@ -16,6 +16,12 @@ std::optional<MidiEvent> routeEvent(const MidiEvent& event, const RouteSettings&
     if (!isKeyed) return event;
 
     if (std::cmp_less(event.data1, route.keyLow) || std::cmp_greater(event.data1, route.keyHigh)) return std::nullopt;
+    // A velocity layer plays only the note-ons in its range; note-offs always
+    // pass (one for a note it never started is ignored).
+    if (type == 0x90 && event.data2 > 0 &&
+        (std::cmp_less(event.data2, route.velocityLow) || std::cmp_greater(event.data2, route.velocityHigh))) {
+        return std::nullopt;
+    }
     const int note = event.data1 + route.transpose;
     if (note < 0 || note > 127) return std::nullopt;
 

@@ -302,6 +302,64 @@ private slots:
         QVERIFY2(m_warnings.isEmpty(), qPrintable(m_warnings.join(u'\n')));
     }
 
+    // A channel's keyboard zone and knobs, from its menu, as a person uses them.
+    void zoneAndKnobDialogsEditTheChannel()
+    {
+        window()->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        settle();
+        QVERIFY(stripChild(u"zoneText"_s) != nullptr);
+        QVERIFY(!stripChild(u"zoneText"_s)->isVisible()); // the whole keyboard: nothing to say
+
+        doc.editChannel(0, u"zone"_s);
+        settle();
+        auto* zone = window()->findChild<QObject*>(u"zoneDialog"_s);
+        QVERIFY(zone != nullptr);
+        QTRY_VERIFY(zone->property("visible").toBool());
+        auto* high = window()->findChild<QQuickItem*>(u"velocityHighBox"_s);
+        QVERIFY(high != nullptr);
+        high->forceActiveFocus();
+        QTest::keyClick(window(), Qt::Key_Down); // one step down: a velocity layer of 1-126
+        settle();
+        QCOMPARE(doc.currentPatch()->channels.at(0).velocityHigh, 126);
+        QVERIFY(QMetaObject::invokeMethod(zone, "close"));
+        settle();
+        QTRY_VERIFY(stripChild(u"zoneText"_s)->isVisible());
+        QVERIFY(stripChild(u"zoneText"_s)->property("text").toString().contains(u"vel 1–126"_s));
+
+        doc.editChannel(0, u"knobs"_s);
+        settle();
+        auto* knobs = window()->findChild<QObject*>(u"knobDialog"_s);
+        QVERIFY(knobs != nullptr);
+        QTRY_VERIFY(knobs->property("visible").toBool());
+        auto* parameters = window()->findChild<QObject*>(u"parameterList"_s);
+        QVERIFY(parameters != nullptr);
+        QTRY_COMPARE(parameters->property("count").toInt(), 2); // the demo plugin's Cutoff and Resonance
+        QVERIFY(QMetaObject::invokeMethod(knobs, "close"));
+        settle();
+    }
+
+    // Tempo typed and the click switched on in the toolbar; an edit undone.
+    void toolbarTempoClickAndUndo()
+    {
+        window()->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        type(u"tempoField"_s, u"96"_s);
+        QCOMPARE(m_engine->tempo(), 96.0);
+        click(u"clickButton"_s);
+        QVERIFY(m_engine->clickOn());
+
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.renameSong(0, u"Renamed"_s));
+        settle();
+        click(u"undoButton"_s);
+        QCOMPARE(doc.currentSongName(), u"Song 1"_s);
+        QVERIFY(item(u"trackPlayButton"_s) == nullptr || !item(u"trackPlayButton"_s)->isVisible()); // no backing track
+        settle();
+    }
+
     // The old red bar is gone: messages are notifications now.
     void thereIsNoRedBar() { QVERIFY(window()->findChild<QQuickItem*>(u"messageBanner"_s) == nullptr); }
 

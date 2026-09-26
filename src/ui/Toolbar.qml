@@ -94,12 +94,141 @@ ToolBar {
             ToolTip.text: qsTr("Stop every sound now (stuck notes, runaway effects)")
         }
 
+        ToolButton {
+            objectName: "undoButton"
+            text: "↶"
+            visible: !bar.performMode
+            enabled: bar.doc.canUndo
+            focusPolicy: Qt.NoFocus
+            onClicked: bar.doc.undo()
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Undo (Ctrl+Z)")
+        }
+        ToolButton {
+            objectName: "redoButton"
+            text: "↷"
+            visible: !bar.performMode
+            enabled: bar.doc.canRedo
+            focusPolicy: Qt.NoFocus
+            onClicked: bar.doc.redo()
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Redo (Ctrl+Shift+Z)")
+        }
+
         Label {
             text: bar.doc.hasPatch ? bar.doc.currentSongName + "  ·  " + bar.doc.currentPatchName : ""
             color: Theme.textDim
             elide: Text.ElideRight
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
+        }
+
+        // Backing track of the song: rewind, play/pause, where it is.
+        RowLayout {
+            visible: bar.doc.songBackingTrack !== ""
+            spacing: 2
+            function clock(seconds) {
+                const s = Math.max(0, Math.floor(seconds))
+                return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0")
+            }
+            ToolButton {
+                text: "⏮"
+                focusPolicy: Qt.NoFocus
+                enabled: bar.engineStatus.trackLoaded
+                onClicked: bar.engineStatus.rewindTrack()
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Back to the start of the backing track")
+            }
+            ToolButton {
+                objectName: "trackPlayButton"
+                text: bar.engineStatus.trackPlaying ? "❚❚" : "▶"
+                focusPolicy: Qt.NoFocus
+                enabled: bar.engineStatus.trackLoaded
+                onClicked: bar.engineStatus.playPauseTrack()
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Play or pause the backing track (%1)").arg(bar.doc.songBackingTrack)
+            }
+            Label {
+                text: bar.engineStatus.trackLoading ? qsTr("Reading…")
+                                                    : parent.clock(bar.engineStatus.trackPosition) + " / " + parent.clock(bar.engineStatus.trackLength)
+                color: Theme.textDim
+                font.pixelSize: Theme.smallFontSize
+            }
+        }
+
+        // Tempo: the number (type a new one), TAP it in, and the click.
+        RowLayout {
+            spacing: 2
+            // Shows the tempo; click it, type a new one, Enter (Esc keeps it).
+            Rectangle {
+                id: tempoField
+                objectName: "tempoField"
+                implicitWidth: 52
+                implicitHeight: 26
+                radius: Theme.radius
+                color: Theme.readoutBackground
+                border.color: tempoInput.visible ? Theme.accentBlue : (tempoHover.hovered ? Theme.border : "transparent")
+                readonly property string shown: bar.engineStatus.tempo.toFixed(bar.engineStatus.tempo % 1 === 0 ? 0 : 1)
+                Text {
+                    anchors.centerIn: parent
+                    visible: !tempoInput.visible
+                    text: tempoField.shown
+                    color: Theme.text
+                    font.pixelSize: Theme.fontSize
+                    font.bold: true
+                }
+                TextInput {
+                    id: tempoInput
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    visible: false
+                    horizontalAlignment: TextInput.AlignHCenter
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: Theme.text
+                    selectionColor: Theme.accentBlue
+                    selectedTextColor: "white"
+                    font.pixelSize: Theme.fontSize
+                    selectByMouse: true
+                    validator: DoubleValidator { bottom: 20; top: 400; decimals: 1 }
+                    onAccepted: {
+                        visible = false
+                        bar.engineStatus.setTempo(parseFloat(text))
+                    }
+                    Keys.onEscapePressed: visible = false
+                    onActiveFocusChanged: if (!activeFocus) visible = false
+                }
+                HoverHandler { id: tempoHover; cursorShape: Qt.IBeamCursor }
+                TapHandler {
+                    enabled: !tempoInput.visible
+                    onTapped: {
+                        tempoInput.text = tempoField.shown
+                        tempoInput.visible = true
+                        tempoInput.forceActiveFocus()
+                        tempoInput.selectAll()
+                    }
+                }
+                ToolTip.visible: tempoHover.hovered && !tempoInput.visible
+                ToolTip.text: qsTr("Tempo for arpeggiators, delays and the click: click to type one. Songs can have their own (right-click a song).")
+            }
+            Label { text: qsTr("BPM"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
+            ToolButton {
+                objectName: "tapButton"
+                text: qsTr("TAP")
+                focusPolicy: Qt.NoFocus
+                onPressed: bar.engineStatus.tapTempo()
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Tap along: the tempo follows your taps")
+            }
+            ToolButton {
+                objectName: "clickButton"
+                text: qsTr("Click")
+                checkable: true
+                checked: bar.engineStatus.clickOn
+                focusPolicy: Qt.NoFocus
+                onClicked: bar.engineStatus.clickOn = checked
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("A click on every beat")
+            }
         }
 
         StatBox {
