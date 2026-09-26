@@ -54,6 +54,7 @@ public:
     void setMasterMute(bool mute) override;
     void setControlTriggers(const ControlTriggers& triggers) override;
     std::vector<ControlAction> takeControlActions() override;
+    int takeProgramChange() override;
     MidiTrigger takeLearnedTrigger() override;
     void panic() override;
     void setMasterEffects(const std::vector<core::PluginSlot>& effects) override;
@@ -164,6 +165,7 @@ private:
     std::array<std::atomic<uint32_t>, kControlActionCount> m_triggers{};
     std::atomic<uint32_t> m_pressedActions{0};
     std::atomic<uint32_t> m_learned{0};
+    std::atomic<int> m_program{-1}; // the last Program Change, -1 when none since taken
     // Audio thread: takes control messages out of `count` events (in place).
     std::size_t takeControlMessages(std::size_t count) noexcept;
 };

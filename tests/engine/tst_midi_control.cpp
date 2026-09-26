@@ -40,6 +40,16 @@ private slots:
         QVERIFY(!matchTrigger(program, 0xC0, 5, 0).belongs);
     }
 
+    // A keyboard's patch buttons send Program Change: read on any channel.
+    // cppcheck-suppress functionStatic ; a Qt Test slot, called through moc: cannot be static
+    void programChangesAreRead()
+    {
+        QCOMPARE(programOf(0xC0, 0), 0);
+        QCOMPARE(programOf(0xC3, 13), 13); // channel 4
+        QCOMPARE(programOf(0xB0, 13), -1); // a controller
+        QCOMPARE(programOf(0x90, 60), -1); // a note
+    }
+
     void nothingMatchesAnUnsetTrigger()
     {
         QVERIFY(!matchTrigger(MidiTrigger{}, 0xB0, 64, 127).belongs);

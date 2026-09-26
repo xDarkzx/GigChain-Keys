@@ -138,6 +138,9 @@ int main(int argc, char* argv[])
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-cache.json"_s;
     engineOptions.pluginGuardFolder =
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-guard"_s;
+    // Built next to the app (src/scanner): new plugins are read there.
+    engineOptions.pluginScanner =
+        QCoreApplication::applicationDirPath() + u"/"_s + branding::executable() + u"Scan.exe"_s;
     engineOptions.progress = [&startup, &quips](engine::LoadStage stage, const QString& what, int done, int total) {
         if (stage == engine::LoadStage::ScanningPlugins) {
             if (done < total) startup.addPlugin(what);

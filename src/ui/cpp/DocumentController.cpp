@@ -118,6 +118,29 @@ bool DocumentController::selectPatch(int song, int patch)
     return true;
 }
 
+bool DocumentController::selectProgram(int program)
+{
+    if (!m_hasSetlist) {
+        qCInfo(lcUi) << "Program change" << program + 1 << "ignored: no setlist is open";
+        return false;
+    }
+    const core::Cursor target{.song = m_cursor.song, .patch = program};
+    if (program < 0 || core::patchAt(m_setlist, target) == nullptr) {
+        const core::Song* song = m_cursor.song >= 0 && static_cast<std::size_t>(m_cursor.song) < m_setlist.songs.size()
+                                     ? &m_setlist.songs.at(static_cast<std::size_t>(m_cursor.song))
+                                     : nullptr;
+        const QString text = tr("Program %1: %2 has %3 patches")
+                                 .arg(program + 1)
+                                 .arg(song != nullptr ? song->name : tr("this song"))
+                                 .arg(song != nullptr ? song->patches.size() : 0);
+        qCInfo(lcUi).noquote() << text;
+        reportMessage(text, Notifications::Warning);
+        return false;
+    }
+    setCursor(target);
+    return true;
+}
+
 // ---------------------------------------------------------------- structure
 
 bool DocumentController::addSong()

@@ -64,7 +64,7 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     }
     engine->m_plugins = PluginCatalog::scan(
         options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder, options.pluginCacheFile,
-        nullptr, scanProgress, &engine->m_guard);
+        nullptr, scanProgress, &engine->m_guard, options.pluginScanner);
     return engine;
 }
 
@@ -651,6 +651,11 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
                 if (match.pressed) m_pressedActions.fetch_or(1U << i, std::memory_order_relaxed);
             }
         }
+        // A patch button: it picks a patch (a learned trigger above wins).
+        if (const int program = programOf(event.status, event.data1); !consumed && program >= 0) {
+            m_program.store(program, std::memory_order_relaxed);
+            consumed = true;
+        }
         if (!consumed) m_events[kept++] = event;
     }
     return kept;
@@ -671,6 +676,12 @@ std::vector<ControlAction> RealEngine::takeControlActions()
         if ((pressed & (1U << i)) != 0) actions.push_back(static_cast<ControlAction>(i));
     }
     return actions;
+}
+
+int RealEngine::takeProgramChange()
+{
+    GC_ONLY_MAIN_THREAD();
+    return m_program.exchange(-1, std::memory_order_relaxed);
 }
 
 MidiTrigger RealEngine::takeLearnedTrigger()

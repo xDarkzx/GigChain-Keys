@@ -353,6 +353,22 @@ private slots:
         QVERIFY(shown.text(last).contains(u"Panic"_s));
         QCOMPARE(shown.level(last), Notifications::Info);
 
+        // A keyboard's patch buttons (Program Change N) pick patch N+1 of the
+        // song; one the song does not have is said, and nothing changes.
+        QVERIFY(m_doc->addPatch(m_doc->songIndex()));
+        QVERIFY(m_doc->addPatch(m_doc->songIndex()));
+        m_engine->pendingProgram = 1;
+        status.poll();
+        QCOMPARE(m_doc->patchIndex(), 1);
+        m_engine->pendingProgram = 0;
+        status.poll();
+        QCOMPARE(m_doc->patchIndex(), 0);
+        m_engine->pendingProgram = 9;
+        status.poll();
+        QCOMPARE(m_doc->patchIndex(), 0);
+        QVERIFY2(shown.text(shown.rowCount() - 1).contains(u"Program 10"_s), qPrintable(shown.text(shown.rowCount() - 1)));
+        QCOMPARE(shown.level(shown.rowCount() - 1), Notifications::Warning);
+
         status.setMasterVolumeDb(-6.0);
         QCOMPARE(m_engine->master, -6.0);
         status.playNote(60, true);

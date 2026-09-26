@@ -71,6 +71,13 @@ struct TriggerMatch
     return {};
 }
 
+// Real-time safe. The program (0-127) of a Program Change on any channel,
+// or -1 for any other message: what a keyboard's patch buttons send.
+[[nodiscard]] constexpr int programOf(uint8_t status, uint8_t data1) noexcept
+{
+    return (status & 0xF0) == 0xC0 ? static_cast<int>(data1 & 0x7F) : -1;
+}
+
 // Real-time safe. The control a pressed message would be learned as, or an
 // unset trigger (note-offs, pedal releases and other messages are not).
 [[nodiscard]] constexpr MidiTrigger learnable(uint8_t status, uint8_t data1, uint8_t data2) noexcept

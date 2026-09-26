@@ -18,6 +18,7 @@ public:
     void setProgressHandler(LoadProgress) override {}
     void setControlTriggers(const ControlTriggers&) override {}
     std::vector<ControlAction> takeControlActions() override { return {}; }
+    int takeProgramChange() override { return -1; } // no MIDI input
     MidiTrigger takeLearnedTrigger() override { return {}; }
     void panic() override {}
     [[nodiscard]] QStringList blockedPlugins() const override { return {}; }

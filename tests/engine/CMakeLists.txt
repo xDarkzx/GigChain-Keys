@@ -27,3 +27,13 @@ target_include_directories(tst_safety_limiter PRIVATE ${PROJECT_SOURCE_DIR}/src/
 gigchain_add_test(tst_plugin_load_guard SOURCES tst_plugin_load_guard.cpp LIBS gigchain::engine)
 target_include_directories(tst_plugin_load_guard PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_midi_control SOURCES tst_midi_control.cpp LIBS gigchain::engine)
+# A fake plugin that crashes whoever reads it, and the scanner that must survive it.
+add_library(tst_crashing_plugin MODULE crashing_plugin.cpp)
+set_target_properties(tst_crashing_plugin PROPERTIES PREFIX "" SUFFIX ".vst3")
+gigchain_target_defaults(tst_crashing_plugin)
+gigchain_add_test(tst_plugin_scanner SOURCES tst_plugin_scanner.cpp LIBS gigchain::engine)
+target_include_directories(tst_plugin_scanner PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+add_dependencies(tst_plugin_scanner tst_crashing_plugin gigchain_scanner)
+target_compile_definitions(tst_plugin_scanner PRIVATE
+    GIGCHAIN_CRASHING_PLUGIN="$<TARGET_FILE:tst_crashing_plugin>"
+    GIGCHAIN_PLUGIN_SCANNER="$<TARGET_FILE:gigchain_scanner>")

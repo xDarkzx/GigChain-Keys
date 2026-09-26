@@ -87,6 +87,9 @@ public:
     Q_INVOKABLE void nextSong();
     Q_INVOKABLE void previousSong();
     Q_INVOKABLE bool selectPatch(int song, int patch);
+    // A keyboard's patch button (Program Change, 0-based): that patch of the
+    // current song, as MainStage does; one the song does not have is said.
+    bool selectProgram(int program);
 
     // Structure
     Q_INVOKABLE bool addSong();

@@ -146,6 +146,10 @@ public:
     // sustains); a press is an action, returned once by takeControlActions().
     virtual void setControlTriggers(const ControlTriggers& triggers) = 0;
     virtual std::vector<ControlAction> takeControlActions() = 0;
+    // The last Program Change (0-127) received since the previous call, or
+    // -1: a keyboard's patch buttons. Taken out of what the instruments hear
+    // (it picks a patch, not a plugin preset); a learned trigger wins.
+    virtual int takeProgramChange() = 0;
     // For "Learn": the last control pressed (a pedal down, a pad or key hit,
     // a program change) since the previous call; unset when none.
     virtual MidiTrigger takeLearnedTrigger() = 0;

@@ -15,12 +15,22 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QProcess>
 #include <QSaveFile>
+#include <QTemporaryDir>
+
+#include <windows.h>
 
 #include <algorithm>
+#include <atomic>
+#include <condition_variable>
 #include <exception>
 #include <map>
+#include <mutex>
 #include <optional>
+#include <thread>
+#include <utility>
+#include <vector>
 
 using namespace Qt::StringLiterals;
 
@@ -77,6 +87,7 @@ struct CacheEntry
     Fingerprint fingerprint;
     std::optional<PluginInfo> info; // nullopt: it failed to load
     QString error;
+    bool retry = false; // not remembered: read again at the next scan (it hung, or the scanner failed)
 };
 
 QJsonObject toJson(const QString& bundle, const CacheEntry& entry)
@@ -208,10 +219,128 @@ CacheEntry openAndRead(const QString& bundle)
     return entry;
 }
 
+// The scanner program's exit codes (src/scanner/main.cpp); anything else is
+// the plugin crashing it.
+constexpr int kScannerRead = 0;
+constexpr int kScannerUsage = 2;
+constexpr int kScannerCannotWrite = 3;
+
+// Reads one plugin in a scanner process (Audacity 4's --register-audio-plugin):
+// what it found comes back in `resultFile`.
+CacheEntry readInScanner(const QString& scanner, const QString& bundle, const QString& resultFile)
+{
+    CacheEntry entry;
+    entry.fingerprint = fingerprintOf(bundle);
+    QProcess process;
+    process.setProgram(scanner);
+    process.setArguments({bundle, resultFile});
+    process.setProcessChannelMode(QProcess::ForwardedErrorChannel); // its own log lines, if any
+    process.setCreateProcessArgumentsModifier(
+        [](QProcess::CreateProcessArguments* arguments) { arguments->flags |= CREATE_NO_WINDOW; });
+    process.start();
+    if (!process.waitForStarted(PluginCatalog::kScanTimeoutMs)) {
+        entry.error = u"the plugin scanner did not start (%1)"_s.arg(process.errorString());
+        entry.retry = true;
+        return entry;
+    }
+    if (!process.waitForFinished(PluginCatalog::kScanTimeoutMs)) {
+        process.kill();
+        process.waitForFinished();
+        entry.error = u"it did not finish being read within %1 s (tried again next start)"_s.arg(PluginCatalog::kScanTimeoutMs / 1000);
+        entry.retry = true;
+        return entry;
+    }
+    const auto code = static_cast<uint32_t>(process.exitCode());
+    if (process.exitStatus() == QProcess::NormalExit && code == kScannerRead) {
+        QFile file(resultFile);
+        const QJsonDocument doc = file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()) : QJsonDocument();
+        if (doc.isObject()) return fromJson(doc.object());
+        entry.error = u"the plugin scanner's result was unreadable"_s;
+        entry.retry = true;
+        return entry;
+    }
+    if (process.exitStatus() == QProcess::NormalExit && (code == kScannerUsage || code == kScannerCannotWrite)) {
+        entry.error = u"the plugin scanner failed (exit code %1; see its log lines)"_s.arg(code);
+        entry.retry = true;
+        return entry;
+    }
+    entry.error = u"it crashed while being read (exit code 0x%1)"_s.arg(code, 8, 16, QLatin1Char('0'));
+    return entry;
+}
+
+// Reads `bundles` in scanner processes, as many at once as the machine has
+// cores. `finished(i)` is called here (the calling thread), as each is read.
+std::vector<CacheEntry> readAllInScanner(const QString& scanner, const QStringList& bundles,
+                                         const std::function<void(int)>& finished)
+{
+    const auto count = static_cast<int>(bundles.size());
+    std::vector<CacheEntry> results(static_cast<std::size_t>(count));
+    if (count == 0) return results; // everything came from the cache
+    const QTemporaryDir work;
+    if (!work.isValid()) {
+        for (int i = 0; i < count; ++i) {
+            CacheEntry& entry = results.at(static_cast<std::size_t>(i));
+            entry.fingerprint = fingerprintOf(bundles.at(i));
+            entry.error = u"no folder for the plugin scanner's results (%1)"_s.arg(work.errorString());
+            entry.retry = true;
+            finished(i);
+        }
+        return results;
+    }
+    std::atomic<int> next{0};
+    std::mutex mutex;
+    std::condition_variable changed;
+    std::vector<int> done;
+    const int workers = std::clamp(static_cast<int>(std::thread::hardware_concurrency()), 1, count);
+    int running = workers;
+    std::vector<std::thread> threads;
+    threads.reserve(static_cast<std::size_t>(workers));
+    for (int w = 0; w < workers; ++w) {
+        threads.emplace_back([&] {
+            for (int i = next++; i < count; i = next++) {
+                CacheEntry entry = readInScanner(scanner, bundles.at(i), work.filePath(QString::number(i) + u".json"_s));
+                const std::scoped_lock lock(mutex);
+                results.at(static_cast<std::size_t>(i)) = std::move(entry);
+                done.push_back(i);
+                changed.notify_one();
+            }
+            const std::scoped_lock lock(mutex);
+            --running;
+            changed.notify_one();
+        });
+    }
+    for (int reported = 0; reported < count;) {
+        std::vector<int> ready;
+        {
+            std::unique_lock lock(mutex);
+            changed.wait(lock, [&] { return !done.empty() || running == 0; });
+            ready.swap(done);
+            if (ready.empty() && running == 0) break;
+        }
+        for (const int i : ready) {
+            finished(i);
+            ++reported;
+        }
+    }
+    for (std::thread& thread : threads) thread.join();
+    return results;
+}
+
 } // namespace
 
+bool PluginCatalog::readToFile(const QString& bundle, const QString& resultFile)
+{
+    const QJsonDocument doc(toJson(bundle, openAndRead(bundle)));
+    QSaveFile out(resultFile);
+    if (!out.open(QIODevice::WriteOnly) || out.write(doc.toJson(QJsonDocument::Compact)) < 0 || !out.commit()) {
+        qCWarning(lcEngine).noquote() << "Cannot write the scan result" << resultFile << ":" << out.errorString();
+        return false;
+    }
+    return true;
+}
+
 std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString& cacheFile, ScanStats* stats,
-                                            const Progress& progress, PluginLoadGuard* guard)
+                                            const Progress& progress, const PluginLoadGuard* guard, const QString& scanner)
 {
     ScanStats local;
     ScanStats& counts = stats != nullptr ? *stats : local;
@@ -228,37 +357,73 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString
     findBundles(folder, 0, bundles);
 
     const std::map<QString, CacheEntry> cached = readCache(cacheFile);
-    std::map<QString, CacheEntry> fresh; // only plugins that exist now
     const int total = static_cast<int>(bundles.size());
-    for (int done = 0; done < total; ++done) {
-        const QString& bundle = bundles[done];
-        if (progress) progress(QFileInfo(bundle).completeBaseName(), done, total);
-        const auto hit = cached.find(bundle);
-        const bool unchanged = hit != cached.end() && hit->second.fingerprint == fingerprintOf(bundle);
-        if (!unchanged && guard != nullptr && guard->isBlocked(bundle)) {
-            // It crashed the app while loading: not opened again until the user says so.
-            ++counts.failed;
-            qCWarning(lcEngine).noquote() << "Skipping plugin" << bundle << ": it crashed the app before (switched off)";
-            continue;
-        }
-        CacheEntry entry;
-        if (unchanged) {
-            entry = hit->second;
-        } else {
-            const auto loading = guard != nullptr ? guard->loading(bundle) : PluginLoadGuard().loading(bundle);
-            entry = openAndRead(bundle);
-        }
-        if (unchanged) ++counts.fromCache;
-        else ++counts.opened;
+    int reported = 0;
+    auto report = [&](const QString& bundle) {
+        if (progress) progress(QFileInfo(bundle).completeBaseName(), reported, total);
+        ++reported;
+    };
 
-        if (entry.info) {
-            plugins.push_back(*entry.info);
+    // Each plugin: known already, switched off, or to be read.
+    struct Found
+    {
+        QString bundle;
+        std::optional<CacheEntry> entry; // nullopt: switched off
+        bool unchanged = false;
+    };
+    std::vector<Found> found;
+    found.reserve(static_cast<std::size_t>(total));
+    std::vector<Found*> toRead;
+    for (const QString& bundle : std::as_const(bundles)) {
+        Found& f = found.emplace_back(Found{.bundle = bundle, .entry = std::nullopt, .unchanged = false});
+        const auto hit = cached.find(bundle);
+        if (hit != cached.end() && hit->second.fingerprint == fingerprintOf(bundle)) {
+            f.entry = hit->second;
+            f.unchanged = true;
+            ++counts.fromCache;
+            report(bundle);
+        } else if (guard != nullptr && guard->isBlocked(bundle)) {
+            // It crashed the app while loading: not opened again until the user says so.
+            qCWarning(lcEngine).noquote() << "Skipping plugin" << bundle << ": it crashed the app before (switched off)";
+            ++counts.failed;
+            report(bundle);
+        } else {
+            toRead.push_back(&f);
+        }
+    }
+    counts.opened = static_cast<int>(toRead.size());
+
+    // New and changed plugins: each in a scanner process, or here.
+    const bool outOfProcess = !scanner.isEmpty() && QFileInfo(scanner).isFile();
+    if (!scanner.isEmpty() && !outOfProcess && !toRead.empty()) {
+        qCWarning(lcEngine).noquote() << "The plugin scanner" << scanner
+                                      << "was not found: reading plugins in this process (one that crashes takes the app with it)";
+    }
+    if (outOfProcess) {
+        QStringList paths;
+        for (const Found* f : toRead) paths << f->bundle;
+        std::vector<CacheEntry> read =
+            readAllInScanner(scanner, paths, [&](int j) { report(toRead.at(static_cast<std::size_t>(j))->bundle); });
+        for (std::size_t j = 0; j < read.size(); ++j) toRead.at(j)->entry = std::move(read.at(j));
+    } else {
+        for (Found* f : toRead) {
+            report(f->bundle);
+            const auto loading = guard != nullptr ? guard->loading(f->bundle) : PluginLoadGuard().loading(f->bundle);
+            f->entry = openAndRead(f->bundle);
+        }
+    }
+
+    std::map<QString, CacheEntry> fresh; // only plugins that exist now, and not those to try again
+    for (Found& f : found) {
+        if (!f.entry) continue; // switched off (said above)
+        if (f.entry->info) {
+            plugins.push_back(*f.entry->info);
         } else {
             ++counts.failed;
-            qCWarning(lcEngine).noquote() << "Skipping plugin" << bundle << ":" << entry.error
-                                          << (unchanged ? u"(failed before; retried when the file changes)"_s : QString());
+            qCWarning(lcEngine).noquote() << "Skipping plugin" << f.bundle << ":" << f.entry->error
+                                          << (f.unchanged ? u"(failed before; retried when the file changes)"_s : QString());
         }
-        fresh.emplace(bundle, std::move(entry));
+        if (!f.entry->retry) fresh.emplace(f.bundle, std::move(*f.entry));
     }
     if (counts.opened > 0 || fresh.size() != cached.size()) writeCache(cacheFile, fresh);
 
