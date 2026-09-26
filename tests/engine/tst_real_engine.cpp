@@ -77,6 +77,9 @@ private slots:
         IEngine& engine = **created;
         engine.setMasterVolume(core::limits::kMinVolumeDb); // silent test
         QVERIFY(!engine.statusText().isEmpty());
+        // Parts separated by a middle dot (U+00B7), not its garbled UTF-8 bytes "Â·".
+        QVERIFY2(engine.statusText().contains(u" · "_s) && !engine.statusText().contains(u'Â'),
+                 qPrintable(engine.statusText()));
 
         const core::Patch patch = pianoPatch();
         engine.applyPatch(patch);

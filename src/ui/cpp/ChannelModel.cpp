@@ -20,7 +20,7 @@ ChannelModel::ChannelModel(const DocumentController& document, engine::IEngine& 
     for (const auto& plugin : m_engine.availablePlugins()) {
         m_plugins.insert(plugin.id, plugin);
         const PluginArtwork art = artwork.find(plugin);
-        if (!art.icon.isEmpty()) m_officialIcons.insert(plugin.id, QUrl::fromLocalFile(art.icon).toString());
+        if (!art.icon.isEmpty()) m_officialIcons.insert(plugin.id, PluginIconProvider::url(art.icon));
     }
     connect(&m_document, &DocumentController::channelsChanged, this, &ChannelModel::reset);
     connect(&m_document, &DocumentController::channelUpdated, this, [this](int row) {

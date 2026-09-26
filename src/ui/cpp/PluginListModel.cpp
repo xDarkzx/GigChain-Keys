@@ -37,9 +37,11 @@ PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialAr
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
     });
     m_images.reserve(m_all.size());
+    m_icons.reserve(m_all.size());
     for (const auto& plugin : m_all) {
-        const QString banner = artwork.find(plugin).banner; // reads installed files only
-        m_images.push_back(banner.isEmpty() ? QString() : QUrl::fromLocalFile(banner).toString());
+        const PluginArtwork art = artwork.find(plugin); // reads installed files only
+        m_images.push_back(art.banner.isEmpty() ? QString() : QUrl::fromLocalFile(art.banner).toString());
+        m_icons.push_back(PluginIconProvider::url(art.icon));
     }
     applyFilter();
 }
@@ -64,7 +66,8 @@ QVariant PluginListModel::data(const QModelIndex& index, int role) const
         const QStringList parts = plugin.subCategories.split(u'|', Qt::SkipEmptyParts);
         return parts.size() > 1 ? parts.last() : QString();
     }
-    case IconRole: return iconUrl(iconFor(plugin));
+    case IconRole: return m_icons.at(at).isEmpty() ? iconUrl(iconFor(plugin)) : m_icons.at(at);
+    case OfficialIconRole: return !m_icons.at(at).isEmpty();
     case ImageUrlRole: return m_images.at(at);
     case FavoriteRole: return m_favorites.contains(plugin.id);
     case RatingRole: return m_ratings.value(plugin.id, 0).toInt();
@@ -92,7 +95,7 @@ QHash<int, QByteArray> PluginListModel::roleNames() const
             {IconRole, "icon"},             {ImageUrlRole, "imageUrl"}, {FavoriteRole, "favorite"},
             {RatingRole, "rating"},         {WebsiteRole, "website"},   {EmailRole, "email"},
             {SdkVersionRole, "sdkVersion"}, {TagsRole, "tags"},         {LocationRole, "location"},
-            {SizeRole, "size"},             {InstalledRole, "installed"}};
+            {SizeRole, "size"},             {InstalledRole, "installed"}, {OfficialIconRole, "officialIcon"}};
 }
 
 void PluginListModel::setFavorite(const QString& pluginId, bool favorite)

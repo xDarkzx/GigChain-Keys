@@ -72,7 +72,7 @@ private:
     int m_rowCount = 0;
     std::vector<engine::LevelReading> m_levels;
     QHash<QString, engine::PluginInfo> m_plugins; // by plugin id, for icons
-    QHash<QString, QString> m_officialIcons;      // by plugin id: file URL of the maker's icon
+    QHash<QString, QString> m_officialIcons;      // by plugin id: image URL of the plugin's own icon
 };
 
 } // namespace gigchain::ui

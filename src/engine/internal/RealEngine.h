@@ -42,6 +42,7 @@ public:
     std::vector<QString> storePluginStates(core::Setlist& setlist) override;
     bool takePluginEdits() override;
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override { return m_plugins; }
+    [[nodiscard]] QString pluginFolder() const override { return m_pluginFolder; }
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
     [[nodiscard]] LevelReading masterLevel() override;
     [[nodiscard]] float cpuLoad() const override { return m_cpuLoad.load(std::memory_order_relaxed); }
@@ -114,6 +115,7 @@ private:
     MidiQueue m_injected; // main thread -> audio thread
     GraphExchange m_exchange;
     std::vector<PluginInfo> m_plugins;
+    QString m_pluginFolder; // where m_plugins were found
     PluginLoadGuard m_guard; // plugins that crashed the app while loading
 
     // Main thread: every plugin instance created so far, by channel slot.

@@ -42,8 +42,8 @@ public:
         KindRole,     // "instrument" or "effect"
         VersionRole,
         CategoryRole, // the most specific VST3 sub-category, e.g. "Piano"
-        IconRole,     // qrc URL
-        ImageUrlRole, // file: URL of the plugin's own art (installed by its maker), or empty
+        IconRole,     // the plugin's own icon, else a qrc URL of a category icon
+        ImageUrlRole, // file: URL of the plugin's own banner (its VST3 snapshot), or empty
         FavoriteRole, // starred by the user: listed first
         RatingRole,   // the user's 1-5 stars, 0 = not rated
         WebsiteRole,  // the maker's website, from the plugin
@@ -52,7 +52,8 @@ public:
         TagsRole,     // every VST3 sub-category, e.g. ["Instrument", "Piano"]
         LocationRole, // the installed plugin file
         SizeRole,     // "12.4 MB", or empty when the file cannot be read
-        InstalledRole // the file's date, "2026-03-14", or empty
+        InstalledRole, // the file's date, "2026-03-14", or empty
+        OfficialIconRole // true when IconRole is the plugin's own icon
     };
     Q_ENUM(Role)
 
@@ -104,7 +105,8 @@ private:
     void applyFilter();
 
     std::vector<engine::PluginInfo> m_all;
-    std::vector<QString> m_images; // parallel to m_all: file URL of the maker's art, or empty
+    std::vector<QString> m_images; // parallel to m_all: file URL of the plugin's banner, or empty
+    std::vector<QString> m_icons;  // parallel to m_all: image URL of the plugin's own icon, or empty
     std::vector<std::size_t> m_visible;
     QSettings* m_settings = nullptr; // not owned
     QStringList m_hidden;

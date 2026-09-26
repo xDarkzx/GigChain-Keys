@@ -1,11 +1,11 @@
 #include "OfficialArtwork.h"
 
 #include <QDir>
-#include <QFile>
 #include <QFileInfo>
+#include <QImageReader>
 #include <QLoggingCategory>
-#include <QSettings>
-#include <QXmlStreamReader>
+#include <QQmlEngine>
+#include <QUrl>
 
 #include <algorithm>
 #include <utility>
@@ -17,13 +17,21 @@ using namespace Qt::StringLiterals;
 namespace gigchain::ui {
 namespace {
 
+// The VST3 bundle's folder icon (Windows): the name the VST3 format gives it.
+const QString& kFolderIcon()
+{
+    static const QString name = u"PlugIn.ico"_s;
+    return name;
+}
+
 // The first existing file among `names` in `folder`, matched without regard
-// to case (vendors differ: MST_Artwork.png vs MST_artwork.png).
+// to case (makers differ: PlugIn.ico vs Plugin.ico). Hidden and system files
+// count: installers hide a folder's icon.
 QString firstExisting(const QString& folder, const QStringList& names)
 {
     const QDir dir(folder);
     if (!dir.exists()) return {};
-    const QStringList files = dir.entryList(QDir::Files);
+    const QStringList files = dir.entryList(QDir::Files | QDir::Hidden | QDir::System);
     for (const QString& wanted : names) {
         const auto found = std::ranges::find_if(files, [&wanted](const QString& file) {
             return file.compare(wanted, Qt::CaseInsensitive) == 0;
@@ -33,131 +41,78 @@ QString firstExisting(const QString& folder, const QStringList& names)
     return {};
 }
 
-// Native Instruments "ProductHints" (Service Center XML): the first
-// <Product>'s own Name/Company/RegKey/BinName; nested blocks are skipped.
-struct NiProductHints
-{
-    QString name;
-    QString company;
-    QString regKey;
-    QString binName;
-};
-
-NiProductHints parseProductHints(const QByteArray& xmlText, const QString& origin)
-{
-    NiProductHints product;
-    QXmlStreamReader xml(xmlText);
-    if (xml.readNextStartElement() && xml.name() == "ProductHints"_L1) {
-        while (xml.readNextStartElement()) {
-            if (xml.name() != "Product"_L1) {
-                xml.skipCurrentElement();
-                continue;
-            }
-            while (xml.readNextStartElement()) {
-                const auto element = xml.name();
-                if (element == "Name"_L1) product.name = xml.readElementText();
-                else if (element == "Company"_L1) product.company = xml.readElementText();
-                else if (element == "RegKey"_L1) product.regKey = xml.readElementText();
-                else if (element == "BinName"_L1) product.binName = xml.readElementText();
-                else xml.skipCurrentElement();
-            }
-            break;
-        }
-    }
-    if (xml.hasError() && product.name.isEmpty()) {
-        qCWarning(lcUi).noquote() << "Malformed NI product information in" << origin << ":" << xml.errorString();
-    }
-    return product;
-}
-
 } // namespace
 
-OfficialArtwork::Sources OfficialArtwork::defaultSources()
+OfficialArtwork::OfficialArtwork(const QString& pluginFolder)
+    : m_pluginFolder(pluginFolder.isEmpty() ? QString() : QDir::cleanPath(QFileInfo(pluginFolder).absoluteFilePath()))
 {
-    Sources sources;
-    sources.arturiaRoot = u"C:/ProgramData/Arturia"_s;
-    sources.niServiceCenter = u"C:/Program Files/Common Files/Native Instruments/Service Center"_s;
-    sources.niResources = u"C:/Users/Public/Documents/NI Resources"_s;
-    sources.niContentDir = [](const QString& regKey) {
-        const QSettings key(u"HKEY_LOCAL_MACHINE\\SOFTWARE\\Native Instruments\\"_s + regKey, QSettings::NativeFormat);
-        return key.value(u"ContentDir"_s).toString();
-    };
-    return sources;
-}
-
-OfficialArtwork::OfficialArtwork(Sources sources) : m_sources(std::move(sources))
-{
-    const QDir serviceCenter(m_sources.niServiceCenter);
-    if (!serviceCenter.exists()) return;
-    for (const QString& file : serviceCenter.entryList({u"*.xml"_s}, QDir::Files)) {
-        const QString path = serviceCenter.filePath(file);
-        QFile xml(path);
-        if (!xml.open(QIODevice::ReadOnly)) {
-            qCWarning(lcUi).noquote() << "Cannot read" << path << ":" << xml.errorString();
-            continue;
-        }
-        const NiProductHints product = parseProductHints(xml.readAll(), path);
-        if (product.binName.isEmpty()) continue;
-        m_niProducts.insert(product.binName.toLower(),
-                            NiProduct{.name = product.name, .company = product.company, .regKey = product.regKey});
-    }
 }
 
 PluginArtwork OfficialArtwork::find(const engine::PluginInfo& plugin) const
 {
-    if (PluginArtwork art = fromSnapshot(plugin); !art.isEmpty()) return art;
-    if (PluginArtwork art = fromNks(plugin); !art.isEmpty()) return art;
-    return fromArturia(plugin);
+    return PluginArtwork{.banner = snapshot(plugin), .icon = icon(plugin)};
 }
 
-PluginArtwork OfficialArtwork::fromSnapshot(const engine::PluginInfo& plugin)
+QString OfficialArtwork::snapshot(const engine::PluginInfo& plugin)
 {
     if (plugin.classId.isEmpty()) return {};
     const QString folder = plugin.id + u"/Contents/Resources/Snapshots"_s;
-    const QString banner = firstExisting(folder, {plugin.classId + u"_snapshot_2.0x.png"_s,
-                                                  plugin.classId + u"_snapshot.png"_s});
-    if (banner.isEmpty()) return {};
-    return PluginArtwork{.banner = banner, .icon = {}, .logo = {}, .source = u"VST3 snapshot"_s};
+    return firstExisting(folder, {plugin.classId + u"_snapshot_2.0x.png"_s, plugin.classId + u"_snapshot.png"_s});
 }
 
-PluginArtwork OfficialArtwork::fromNks(const engine::PluginInfo& plugin) const
+QString OfficialArtwork::icon(const engine::PluginInfo& plugin) const
 {
-    const QString binName = QFileInfo(plugin.id).completeBaseName().toLower();
-    const auto it = m_niProducts.constFind(binName);
-    if (it == m_niProducts.constEnd()) return {};
-    const NiProduct& product = *it;
-
-    QStringList folders;
-    const QString contentDir = m_sources.niContentDir ? m_sources.niContentDir(product.regKey) : QString();
-    if (!contentDir.isEmpty()) {
-        folders << contentDir + u"/PAResources/image/"_s + product.company + u'/' + product.name;
+    const QFileInfo bundle(plugin.id);
+    if (bundle.isDir()) {
+        if (QString own = firstExisting(bundle.absoluteFilePath(), {kFolderIcon()}); !own.isEmpty()) return own;
     }
-    folders << m_sources.niResources + u"/image/"_s + product.company + u'/' + product.name
-            << m_sources.niResources + u"/image/"_s + product.company.toLower() + u'/' + product.name.toLower();
-
-    for (const QString& folder : folders) {
-        PluginArtwork art;
-        art.banner = firstExisting(folder, {u"MST_Artwork.png"_s, u"VB_Artwork.png"_s});
-        art.logo = firstExisting(folder, {u"MST_Logo.png"_s, u"OSO_Logo.png"_s, u"VB_Logo.png"_s});
-        art.icon = firstExisting(folder, {u"MST_Plugin.png"_s});
-        if (!art.isEmpty()) {
-            art.source = u"NKS"_s;
-            return art;
-        }
+    if (m_pluginFolder.isEmpty()) return {};
+    // The folders around the plugin, nearest first, up to the plugin folder
+    // (never the plugin folder itself: an icon there belongs to no plugin).
+    const QString inside = m_pluginFolder.endsWith(u'/') ? m_pluginFolder : m_pluginFolder + u'/';
+    for (QString dir = QDir::cleanPath(bundle.absolutePath()); dir.startsWith(inside, Qt::CaseInsensitive);
+         dir = QFileInfo(dir).absolutePath()) {
+        if (QString shared = firstExisting(dir, {kFolderIcon()}); !shared.isEmpty()) return shared;
     }
     return {};
 }
 
-PluginArtwork OfficialArtwork::fromArturia(const engine::PluginInfo& plugin) const
+void PluginIconProvider::install(QQmlEngine& engine)
 {
-    if (!plugin.vendor.contains(u"Arturia"_s, Qt::CaseInsensitive)) return {};
-    const QString folder = m_sources.arturiaRoot + u'/' + plugin.name + u"/resources/images"_s;
-    PluginArtwork art;
-    art.banner = firstExisting(folder, {u"banner_browser.png"_s});
-    art.icon = firstExisting(folder, {u"desktop-icon.png"_s});
-    if (art.isEmpty()) return {};
-    art.source = u"Arturia"_s;
-    return art;
+    // The engine takes ownership of the provider (QQmlEngine::addImageProvider).
+    engine.addImageProvider(QLatin1StringView(kName), std::make_unique<PluginIconProvider>().release());
+}
+
+QString PluginIconProvider::url(const QString& iconPath)
+{
+    if (iconPath.isEmpty()) return {};
+    return u"image://"_s + QLatin1StringView(kName) + u'/' + QString::fromLatin1(QUrl::toPercentEncoding(iconPath));
+}
+
+QImage PluginIconProvider::requestImage(const QString& id, QSize* size, const QSize& requestedSize)
+{
+    const QString path = QUrl::fromPercentEncoding(id.toLatin1());
+    QImageReader reader(path);
+    QImage largest;
+    // imageCount() is 0 for a single image; the loop still reads that one.
+    const int count = std::max(reader.imageCount(), 1);
+    for (int i = 0; i < count; ++i) {
+        if (i > 0 && !reader.jumpToImage(i)) break;
+        QImage image = reader.read();
+        if (!image.isNull() && image.width() * image.height() > largest.width() * largest.height()) {
+            largest = std::move(image);
+        }
+    }
+    if (largest.isNull()) {
+        qCWarning(lcUi).noquote() << "Cannot read the plugin icon" << path << ":" << reader.errorString();
+        return {};
+    }
+    // Only when both sides are asked for (0 means "any"); QML scales the rest.
+    if (!requestedSize.isEmpty() && (largest.width() > requestedSize.width() || largest.height() > requestedSize.height())) {
+        largest = largest.scaled(requestedSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    }
+    if (size != nullptr) *size = largest.size();
+    return largest;
 }
 
 } // namespace gigchain::ui

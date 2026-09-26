@@ -103,6 +103,7 @@ private slots:
         m_session->document().newSetlist();
         QVERIFY(m_session->document().addSong());
         m_qml = std::make_unique<QQmlApplicationEngine>();
+        ui::PluginIconProvider::install(*m_qml); // as main() does
         m_warnings.clear();
         connect(m_qml.get(), &QQmlEngine::warnings, this, [this](const QList<QQmlError>& warnings) {
             for (const QQmlError& w : warnings) m_warnings << w.toString();
