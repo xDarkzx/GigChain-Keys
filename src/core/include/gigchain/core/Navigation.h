@@ -9,6 +9,9 @@ namespace gigchain::core {
 // A position in a setlist. Invalid (-1, -1) when the setlist has no patches.
 struct Cursor
 {
+    constexpr Cursor() = default;
+    constexpr Cursor(int songIndex, int patchIndex) : song(songIndex), patch(patchIndex) {}
+
     int song = -1;
     int patch = -1;
 

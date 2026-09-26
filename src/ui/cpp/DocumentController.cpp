@@ -53,7 +53,7 @@ const core::Patch* DocumentController::currentPatch() const
 
 QString DocumentController::currentSongName() const
 {
-    return hasPatch() ? m_setlist.songs[static_cast<std::size_t>(m_cursor.song)].name : QString();
+    return hasPatch() ? m_setlist.songs.at(static_cast<std::size_t>(m_cursor.song)).name : QString();
 }
 
 QString DocumentController::currentPatchName() const
@@ -68,7 +68,7 @@ QString DocumentController::nextPatchLabel() const
     const core::Patch* patch = core::patchAt(m_setlist, next);
     if (patch == nullptr || next == m_cursor) return {};
     if (next.song == m_cursor.song) return patch->name;
-    return u"%1 — %2"_s.arg(m_setlist.songs[static_cast<std::size_t>(next.song)].name, patch->name);
+    return u"%1 — %2"_s.arg(m_setlist.songs.at(static_cast<std::size_t>(next.song)).name, patch->name);
 }
 
 void DocumentController::setSelectedChannel(int index)
@@ -124,7 +124,7 @@ bool DocumentController::selectProgram(int program)
         qCInfo(lcUi) << "Program change" << program + 1 << "ignored: no setlist is open";
         return false;
     }
-    const core::Cursor target{.song = m_cursor.song, .patch = program};
+    const core::Cursor target(m_cursor.song, program);
     if (program < 0 || core::patchAt(m_setlist, target) == nullptr) {
         const core::Song* song = m_cursor.song >= 0 && static_cast<std::size_t>(m_cursor.song) < m_setlist.songs.size()
                                      ? &m_setlist.songs.at(static_cast<std::size_t>(m_cursor.song))
@@ -156,7 +156,7 @@ bool DocumentController::addSong()
 bool DocumentController::addPatch(int song)
 {
     const bool validSong = song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size();
-    const auto count = validSong ? m_setlist.songs[static_cast<std::size_t>(song)].patches.size() : 0;
+    const auto count = validSong ? m_setlist.songs.at(static_cast<std::size_t>(song)).patches.size() : 0;
     const auto current = currentPatchId();
     const auto index = core::addPatch(m_setlist, song, tr("Patch %1").arg(count + 1));
     if (!index) return report(index.error());
@@ -175,7 +175,7 @@ QString DocumentController::currentChart() const
 {
     const int song = songIndex();
     return song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size()
-               ? m_setlist.songs[static_cast<std::size_t>(song)].chart
+               ? m_setlist.songs.at(static_cast<std::size_t>(song)).chart
                : QString();
 }
 
@@ -203,8 +203,8 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
         commitStructure(core::Cursor{*index, 0}, current);
         song = *index;
     }
-    const core::Song& before = m_setlist.songs[static_cast<std::size_t>(song)];
-    PasteUndo undo{before.id, before.name, before.key, before.tempo, pasted};
+    const core::Song& before = m_setlist.songs.at(static_cast<std::size_t>(song));
+    PasteUndo undo{.song = before.id, .name = before.name, .key = before.key, .tempo = before.tempo, .pasted = pasted};
 
     if (!setSongChart(song, sheet.chart)) return false; // reported
     // A placeholder name ("Song 3") takes the sheet's title; a name the user
@@ -214,7 +214,7 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
         if (auto r = core::renameSong(m_setlist, song, sheet.title); !r) return report(r.error());
         commitRename();
     }
-    const core::Song& now = m_setlist.songs[static_cast<std::size_t>(song)];
+    const core::Song& now = m_setlist.songs.at(static_cast<std::size_t>(song));
     const QString key = now.key.isEmpty() ? sheet.key : now.key;
     const double tempo = now.tempo > 0.0 ? now.tempo : sheet.tempo;
     if (key != now.key || tempo != now.tempo) {
@@ -230,8 +230,7 @@ bool DocumentController::undoPaste()
     if (!m_pasteUndo) return false;
     const PasteUndo undo = *m_pasteUndo;
     clearPasteUndo();
-    const auto it = std::find_if(m_setlist.songs.begin(), m_setlist.songs.end(),
-                                 [&](const core::Song& s) { return s.id == undo.song; });
+    const auto it = std::ranges::find_if(m_setlist.songs, [&](const core::Song& s) { return s.id == undo.song; });
     if (it == m_setlist.songs.end()) {
         return report(core::Error{core::ErrorCode::OutOfRange, tr("The pasted song no longer exists")});
     }
@@ -391,10 +390,10 @@ bool DocumentController::duplicateSong(int song)
     // they were last saved.
     if (song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size()) {
         core::Setlist one;
-        one.songs = {m_setlist.songs[static_cast<std::size_t>(song)]};
+        one.songs = {m_setlist.songs.at(static_cast<std::size_t>(song))};
         const std::vector<QString> problems = m_engine.storePluginStates(one); // each logged
         if (!problems.empty()) reportMessage(problems.back(), Notifications::Warning);
-        m_setlist.songs[static_cast<std::size_t>(song)] = std::move(one.songs.front());
+        m_setlist.songs.at(static_cast<std::size_t>(song)) = std::move(one.songs.front());
     }
     const auto index = core::duplicateSong(m_setlist, song);
     if (!index) return report(index.error());
@@ -491,7 +490,7 @@ bool DocumentController::setEffectBypass(int channel, int effect, bool bypass)
         return report(core::Error{core::ErrorCode::OutOfRange, tr("That effect does not exist")});
     }
     auto r = core::updateChannel(m_setlist, m_cursor, channel, [effect, bypass](core::Channel& c) {
-        c.effects[static_cast<std::size_t>(effect)].bypass = bypass;
+        c.effects.at(static_cast<std::size_t>(effect)).bypass = bypass;
     });
     if (!r) return report(r.error());
     commitChannelField(channel, true); // the engine rebuilds the chain without (or with) it
@@ -571,7 +570,7 @@ bool DocumentController::setChannelVolume(int channel, double volumeDb)
         !r) {
         return report(r.error());
     }
-    m_engine.setChannelVolume(currentPatch()->channels[static_cast<std::size_t>(channel)].id, volumeDb);
+    m_engine.setChannelVolume(currentPatch()->channels.at(static_cast<std::size_t>(channel)).id, volumeDb);
     commitChannelField(channel, false);
     return true;
 }
@@ -581,7 +580,7 @@ bool DocumentController::setChannelPan(int channel, double pan)
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [pan](core::Channel& c) { c.pan = pan; }); !r) {
         return report(r.error());
     }
-    m_engine.setChannelPan(currentPatch()->channels[static_cast<std::size_t>(channel)].id, pan);
+    m_engine.setChannelPan(currentPatch()->channels.at(static_cast<std::size_t>(channel)).id, pan);
     commitChannelField(channel, false);
     return true;
 }
@@ -591,7 +590,7 @@ bool DocumentController::setChannelMute(int channel, bool mute)
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [mute](core::Channel& c) { c.mute = mute; }); !r) {
         return report(r.error());
     }
-    m_engine.setChannelMute(currentPatch()->channels[static_cast<std::size_t>(channel)].id, mute);
+    m_engine.setChannelMute(currentPatch()->channels.at(static_cast<std::size_t>(channel)).id, mute);
     commitChannelField(channel, false);
     return true;
 }
@@ -601,7 +600,7 @@ bool DocumentController::setChannelSolo(int channel, bool solo)
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [solo](core::Channel& c) { c.solo = solo; }); !r) {
         return report(r.error());
     }
-    m_engine.setChannelSolo(currentPatch()->channels[static_cast<std::size_t>(channel)].id, solo);
+    m_engine.setChannelSolo(currentPatch()->channels.at(static_cast<std::size_t>(channel)).id, solo);
     commitChannelField(channel, false);
     return true;
 }
@@ -809,7 +808,7 @@ void DocumentController::applyCurrentPatchToEngine()
     const core::Patch* patch = currentPatch();
     const int song = m_cursor.song;
     const core::SongId songId =
-        song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size() ? m_setlist.songs[static_cast<std::size_t>(song)].id
+        song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size() ? m_setlist.songs.at(static_cast<std::size_t>(song)).id
                                                                             : core::SongId{};
     m_engine.applyPatch(songId, patch != nullptr ? *patch : core::Patch{});
 }
@@ -818,7 +817,7 @@ bool DocumentController::effectExists(int channel, int effect) const
 {
     const core::Patch* patch = currentPatch();
     return patch != nullptr && channel >= 0 && static_cast<std::size_t>(channel) < patch->channels.size() && effect >= 0 &&
-           static_cast<std::size_t>(effect) < patch->channels[static_cast<std::size_t>(channel)].effects.size();
+           static_cast<std::size_t>(effect) < patch->channels.at(static_cast<std::size_t>(channel)).effects.size();
 }
 
 void DocumentController::markPluginSettingsChanged()

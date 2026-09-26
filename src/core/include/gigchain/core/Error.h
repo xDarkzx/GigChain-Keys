@@ -25,7 +25,9 @@ enum class ErrorCode
 // A failure the user can be told about: `message` is ready to show in the UI.
 struct Error
 {
-    ErrorCode code;
+    Error(ErrorCode errorCode, QString text) : code(errorCode), message(std::move(text)) {}
+
+    ErrorCode code; // always set: an Error is made with its code
     QString message;
 };
 
