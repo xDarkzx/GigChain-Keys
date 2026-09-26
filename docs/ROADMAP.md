@@ -101,8 +101,7 @@ front of the player.
   network.
 - Should adding instruments from the tablet be allowed at all (see Live
   lock)?
-- **Shared:** a Mac version of the app for "setup on Mac or PC" (the app is
-  Windows-only today).
+- **Shared:** Mac and Linux versions of the app (7).
 
 ## 5. Charts that follow the song
 
@@ -114,4 +113,34 @@ being played (MIDI) and the lyrics, and scroll along.
 
 Build the app as an .exe plus module DLLs and package it into a Windows
 installer, as Audacity 4 does. The core, engine and ui modules are kept
-separate for this.
+separate for this. With 7: a macOS app bundle and Linux packages.
+
+## 7. Windows, macOS and Linux
+
+**The goal:** the same app on all three. It is Windows-only today, but most
+of it is already built on cross-platform parts: Qt, RtAudio, RtMidi and the
+VST3 SDK all run on macOS and Linux, and core (setlists, charts) has no
+Windows code at all.
+
+What is Windows-only now, and what each needs:
+- **Audio:** WASAPI and ASIO. RtAudio also speaks Core Audio (macOS) and
+  ALSA, PulseAudio and JACK (Linux); the device settings must offer those.
+- **MIDI:** RtMidi's Windows backend; the macOS and Linux backends come with
+  it.
+- **Plugin windows:** embedded by their Windows handle (HWND). macOS needs
+  an NSView and Linux an X11 window, each with its own resizing and focus
+  rules.
+- **Plugin folders:** the standard VST3 folders differ
+  (`/Library/Audio/Plug-Ins/VST3` and `~/Library/...` on macOS;
+  `~/.vst3` and `/usr/lib/vst3` on Linux).
+- **Plugin artwork:** `PlugIn.ico` is the Windows folder icon; macOS bundles
+  carry their icon inside the bundle.
+- **Crash safety:** crash reports (minidumps), the no-error-dialog set-up
+  and the out-of-process scanner's window flags are Windows code; each needs
+  its macOS/Linux counterpart.
+
+**Open:**
+- Audio Units on macOS: many Mac players have plugins as AU; is VST3 enough
+  there?
+- Build and test on real Macs and Linux machines (CI), since the gate's
+  real-plugin tests need each system.
