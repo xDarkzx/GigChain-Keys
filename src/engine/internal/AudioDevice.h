@@ -3,6 +3,7 @@
 #include "INode.h"
 
 #include "gigchain/core/Error.h"
+#include "gigchain/engine/Notice.h"
 
 #include <QString>
 
@@ -77,7 +78,7 @@ public:
 
     // Main thread, regularly: logs what went wrong since the last call,
     // recovers from a lost device, and returns user-facing notices.
-    std::vector<QString> poll();
+    std::vector<Notice> poll();
 
     [[nodiscard]] bool isOpen() const;
     [[nodiscard]] double sampleRate() const { return m_sampleRate; }

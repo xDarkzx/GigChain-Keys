@@ -190,30 +190,6 @@ ApplicationWindow {
         anchors.fill: parent
         spacing: 0
 
-        // Errors and engine notices: never silent.
-        Rectangle {
-            objectName: "messageBanner"
-            Layout.fillWidth: true
-            Layout.preferredHeight: visible ? 34 : 0
-            visible: root.doc.lastError !== ""
-            color: Theme.danger
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: Theme.spacing * 2
-                anchors.rightMargin: Theme.spacing
-                Label {
-                    text: root.doc.lastError
-                    color: "white"
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-                ToolButton {
-                    text: "✕"
-                    onClicked: root.doc.clearError()
-                }
-            }
-        }
-
         StackLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -288,5 +264,11 @@ ApplicationWindow {
                 font.pixelSize: Theme.smallFontSize
             }
         }
+    }
+
+    // Errors and engine notices: never silent, never in the way.
+    NotificationWindow {
+        notifications: root.doc.notifications
+        owner: root
     }
 }

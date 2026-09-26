@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -282,7 +284,8 @@ Item {
                                 focusPolicy: Qt.NoFocus
                                 font.pixelSize: Theme.smallFontSize
                                 onClicked: if (!Qt.openUrlExternally(card.website))
-                                               browser.doc.reportMessage(qsTr("Could not open %1").arg(card.website))
+                                               browser.doc.reportMessage(qsTr("Could not open %1").arg(card.website),
+                                                                         Notifications.Warning)
                             }
                             Button {
                                 text: qsTr("Show in folder")
@@ -290,7 +293,7 @@ Item {
                                 font.pixelSize: Theme.smallFontSize
                                 onClicked: {
                                     const problem = browser.pluginModel.showInFolder(card.pluginId)
-                                    if (problem !== "") browser.doc.reportMessage(problem)
+                                    if (problem !== "") browser.doc.reportMessage(problem, Notifications.Warning)
                                 }
                             }
                             Item { Layout.fillWidth: true }

@@ -106,7 +106,7 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
         return false;
     }
     if (!*created) {
-        m_document.reportMessage(tr("%1 has no window of its own").arg(slot.displayName));
+        m_document.reportMessage(tr("%1 has no window of its own").arg(slot.displayName), Notifications::Info);
         return false;
     }
 
@@ -144,7 +144,7 @@ bool EffectWindows::openMaster(int effect, const std::vector<core::PluginSlot>& 
         return false;
     }
     if (!*created) {
-        m_document.reportMessage(tr("%1 has no window of its own").arg(slot.displayName));
+        m_document.reportMessage(tr("%1 has no window of its own").arg(slot.displayName), Notifications::Info);
         return false;
     }
     auto entry = std::make_unique<Entry>();

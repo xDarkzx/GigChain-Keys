@@ -138,7 +138,7 @@ void FakeEngine::injectNote(int, int, int)
     // The fake engine makes no sound; notes are accepted and dropped by design.
 }
 
-std::vector<QString> FakeEngine::poll()
+std::vector<Notice> FakeEngine::poll()
 {
     return {};
 }

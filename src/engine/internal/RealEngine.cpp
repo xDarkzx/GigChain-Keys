@@ -13,6 +13,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <iterator>
 #include <optional>
 #include <set>
 #include <utility>
@@ -36,8 +37,8 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     const AudioSetup systemAudio{AudioDriver::System, {}, 0, options.audio.bufferFrames};
     if (!opened && options.audio != systemAudio) {
         // The saved setup failed: fall back to system audio (logged by open()).
-        engine->m_pendingNotices.push_back(u"%1 could not be used (%2); using system audio instead"_s.arg(
-            options.audio.device.isEmpty() ? u"The saved audio setup"_s : options.audio.device, opened.error().message));
+        engine->m_pendingNotices.push_back(Notice::warning(u"%1 could not be used (%2); using system audio instead"_s.arg(
+            options.audio.device.isEmpty() ? u"The saved audio setup"_s : options.audio.device, opened.error().message)));
         opened = engine->openAudio(systemAudio);
     }
     if (!opened) {
@@ -47,13 +48,13 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_preparedRate = engine->m_audio.sampleRate();
     engine->m_preparedBlock = engine->m_audio.maxBlock();
     engine->m_midiSetup = options.midi;
-    for (QString& notice : engine->openMidi()) engine->m_pendingNotices.push_back(std::move(notice));
+    std::ranges::transform(engine->openMidi(), std::back_inserter(engine->m_pendingNotices), &Notice::warning);
     engine->m_progress = options.progress;
     engine->m_guard = PluginLoadGuard(options.pluginGuardFolder);
     for (const QString& crashed : engine->m_guard.takeCrashed()) {
-        engine->m_pendingNotices.push_back(
+        engine->m_pendingNotices.push_back(Notice::warning(
             u"%1 crashed the app while loading last time, so it is switched off (Settings > Plugins to try it again)"_s.arg(
-                QFileInfo(crashed).completeBaseName()));
+                QFileInfo(crashed).completeBaseName())));
     }
     PluginCatalog::Progress scanProgress;
     if (options.progress) {
@@ -176,7 +177,7 @@ std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& s
             u"%1 is switched off: it crashed the app while loading before (Settings > Plugins to try it again)"_s.arg(
                 slot.displayName);
         qCWarning(lcEngine).noquote() << problem;
-        m_pendingNotices.push_back(problem);
+        m_pendingNotices.push_back(Notice::warning(problem));
         return nullptr;
     }
     QElapsedTimer timer;
@@ -186,7 +187,7 @@ std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& s
     auto node = Vst3Node::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());
     if (!node) {
         // Already logged by Vst3Node::load; tell the user too.
-        m_pendingNotices.push_back(u"Could not load %1: %2"_s.arg(slot.displayName, node.error().message));
+        m_pendingNotices.push_back(Notice::error(u"Could not load %1: %2"_s.arg(slot.displayName, node.error().message)));
         return nullptr;
     }
     if (!slot.state.isEmpty()) {
@@ -197,7 +198,7 @@ std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& s
             const QString problem = u"%1 could not take its saved settings (%2); it plays with its defaults"_s.arg(
                 slot.displayName, restored.error().message);
             qCWarning(lcEngine).noquote() << problem;
-            m_pendingNotices.push_back(problem);
+            m_pendingNotices.push_back(Notice::warning(problem));
         }
     }
     (void)(*node)->takeEdited(); // loading and restoring are not edits
@@ -247,8 +248,9 @@ core::Result<void> RealEngine::setAudioSetup(const AudioSetup& setup)
     if (auto opened = openAudio(setup); !opened) {
         // Logged by open(). Put the working setup back.
         if (auto restored = openAudio(previous); !restored) {
-            m_pendingNotices.push_back(u"Could not go back to %1 either: %2"_s.arg(before.device, restored.error().message));
-            qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+            m_pendingNotices.push_back(
+                Notice::error(u"Could not go back to %1 either: %2"_s.arg(before.device, restored.error().message)));
+            qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         }
         syncPluginsToDevice();
         return opened;
@@ -267,14 +269,14 @@ void RealEngine::syncPluginsToDevice()
 
     // No render callback may touch a plugin while it is re-prepared.
     if (auto paused = m_audio.pause(); !paused) {
-        m_pendingNotices.push_back(paused.error().message);
-        qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+        m_pendingNotices.push_back(Notice::error(paused.error().message));
+        qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         return; // plugins stay as they were; the graph skips blocks larger than they expect
     }
     for (const auto* nodes : {&m_nodes, &m_masterNodes}) {
         for (const auto& [key, node] : *nodes) {
             if (auto prepared = node->prepare(rate, block); !prepared) { // logged by prepare()
-                m_pendingNotices.push_back(prepared.error().message);
+                m_pendingNotices.push_back(Notice::error(prepared.error().message));
             }
         }
     }
@@ -282,8 +284,8 @@ void RealEngine::syncPluginsToDevice()
     m_preparedBlock = block;
     applyPatch(m_song, m_patch); // a graph sized for the new block
     if (auto resumed = m_audio.resume(); !resumed) {
-        m_pendingNotices.push_back(resumed.error().message);
-        qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+        m_pendingNotices.push_back(Notice::error(resumed.error().message));
+        qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
     }
 }
 
@@ -328,7 +330,7 @@ core::Result<void> RealEngine::setMidiSetup(const MidiSetup& setup)
     return {};
 }
 
-void RealEngine::watchMidiPorts(std::vector<QString>& notices)
+void RealEngine::watchMidiPorts(std::vector<Notice>& notices)
 {
     constexpr auto kInterval = std::chrono::seconds(2);
     const auto now = std::chrono::steady_clock::now();
@@ -344,11 +346,9 @@ void RealEngine::watchMidiPorts(std::vector<QString>& notices)
     for (const QString& name : m_midiPorts) {
         if (!present.contains(name)) changes.push_back(u"MIDI input disconnected: %1"_s.arg(name));
     }
-    for (QString& change : changes) {
-        qCInfo(lcEngine).noquote() << change;
-        notices.push_back(std::move(change));
-    }
-    for (QString& problem : openMidi()) notices.push_back(std::move(problem));
+    for (const QString& change : changes) qCInfo(lcEngine).noquote() << change;
+    std::ranges::transform(changes, std::back_inserter(notices), &Notice::info); // news, not a problem
+    std::ranges::transform(openMidi(), std::back_inserter(notices), &Notice::warning);
 }
 
 void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
@@ -470,18 +470,18 @@ void RealEngine::injectNote(int midiChannel, int note, int velocity)
     }
 }
 
-std::vector<QString> RealEngine::poll()
+std::vector<Notice> RealEngine::poll()
 {
     GC_ONLY_MAIN_THREAD();
-    std::vector<QString> notices;
+    std::vector<Notice> notices;
     notices.swap(m_pendingNotices);
 
     m_exchange.collectGarbage();
-    for (QString& notice : m_audio.poll()) notices.push_back(std::move(notice));
+    std::ranges::move(m_audio.poll(), std::back_inserter(notices));
     // A lost device may have come back at another rate or block size.
     syncPluginsToDevice();
     watchMidiPorts(notices);
-    for (QString& notice : m_pendingNotices) notices.push_back(std::move(notice));
+    std::ranges::move(m_pendingNotices, std::back_inserter(notices));
     m_pendingNotices.clear();
 
     if (const uint64_t dropped = m_midi.takeDropped() + m_droppedInjected.exchange(0); dropped > 0) {
@@ -686,8 +686,8 @@ void RealEngine::panic()
     timer.start();
     // No render callback may touch a plugin while it is reset.
     if (auto paused = m_audio.pause(); !paused) {
-        m_pendingNotices.push_back(paused.error().message);
-        qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+        m_pendingNotices.push_back(Notice::error(paused.error().message));
+        qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
     }
     const double rate = m_audio.sampleRate();
     const int block = m_audio.maxBlock();
@@ -695,13 +695,15 @@ void RealEngine::panic()
         for (const auto& [key, node] : *nodes) {
             node->releaseAllNotes();
             // Deactivate + activate: VST3's reset, clearing voices and tails.
-            if (auto prepared = node->prepare(rate, block); !prepared) m_pendingNotices.push_back(prepared.error().message);
+            if (auto prepared = node->prepare(rate, block); !prepared) {
+                m_pendingNotices.push_back(Notice::error(prepared.error().message));
+            }
         }
     }
     if (m_audio.isOpen()) {
         if (auto resumed = m_audio.resume(); !resumed) {
-            m_pendingNotices.push_back(resumed.error().message);
-            qCWarning(lcEngine).noquote() << m_pendingNotices.back();
+            m_pendingNotices.push_back(Notice::error(resumed.error().message));
+            qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         }
     }
     qCWarning(lcEngine) << "Panic: every sound stopped (" << m_nodes.size() + m_masterNodes.size() << "plugins reset in"

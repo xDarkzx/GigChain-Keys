@@ -48,7 +48,7 @@ public:
     bool takeLimiterActivity() override { return false; }
     [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
     void injectNote(int midiChannel, int note, int velocity) override;
-    std::vector<QString> poll() override;
+    std::vector<Notice> poll() override;
     [[nodiscard]] QString statusText() const override;
     [[nodiscard]] std::vector<AudioOutput> audioOutputs() const override;
     [[nodiscard]] AudioSetup audioSetup() const override { return m_setup; }

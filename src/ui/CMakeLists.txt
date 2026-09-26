@@ -11,6 +11,7 @@ qt_add_qml_module(gigchain_ui
         cpp/SelectedChannel.h cpp/SelectedChannel.cpp
         cpp/PluginListModel.h cpp/PluginListModel.cpp
         cpp/EngineStatus.h cpp/EngineStatus.cpp
+        cpp/Notifications.h cpp/Notifications.cpp
         cpp/SettingsController.h cpp/SettingsController.cpp
         cpp/StartupProgress.h cpp/StartupProgress.cpp
         cpp/StageQuips.h cpp/StageQuips.cpp
@@ -60,6 +61,7 @@ qt_add_qml_module(gigchain_ui
         Readout.qml
         ToggleChip.qml
         PerformView.qml
+        NotificationWindow.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/bell.svg

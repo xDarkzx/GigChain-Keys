@@ -204,9 +204,9 @@ bool AudioDevice::isOpen() const
     return m_rtaudio && m_rtaudio->isStreamOpen();
 }
 
-std::vector<QString> AudioDevice::poll()
+std::vector<Notice> AudioDevice::poll()
 {
-    std::vector<QString> notices;
+    std::vector<Notice> notices;
     std::vector<QString> errors;
     {
         const std::lock_guard lock(m_errorMutex);
@@ -228,8 +228,8 @@ std::vector<QString> AudioDevice::poll()
     if (lost.api == AudioApi::Asio && !m_asioRetried) {
         m_asioRetried = true;
         if (auto reopened = openUnlogged(lost, m_requestedFrames, m_requestedRate)) {
-            notices.push_back(u"%1 restarted after the driver asked for a reset"_s.arg(lost.name));
-            qCInfo(lcEngine).noquote() << notices.back();
+            notices.push_back(Notice::info(u"%1 restarted after the driver asked for a reset"_s.arg(lost.name)));
+            qCInfo(lcEngine).noquote() << notices.back().text;
             return notices;
         } else {
             qCWarning(lcEngine).noquote() << reopened.error().message;
@@ -239,11 +239,11 @@ std::vector<QString> AudioDevice::poll()
     // System audio at its own rate: the chosen rate may not exist there. The
     // engine re-prepares plugins for whatever rate this ends up at.
     if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0)) {
-        notices.push_back(u"%1 stopped working; switched to system audio (%2)"_s.arg(lost.name, m_choice.name));
-        qCWarning(lcEngine).noquote() << notices.back();
+        notices.push_back(Notice::warning(u"%1 stopped working; switched to system audio (%2)"_s.arg(lost.name, m_choice.name)));
+        qCWarning(lcEngine).noquote() << notices.back().text;
     } else {
-        notices.push_back(u"No audio output is available: %1"_s.arg(fallback.error().message));
-        qCWarning(lcEngine).noquote() << notices.back();
+        notices.push_back(Notice::error(u"No audio output is available: %1"_s.arg(fallback.error().message)));
+        qCWarning(lcEngine).noquote() << notices.back().text;
     }
     return notices;
 }
