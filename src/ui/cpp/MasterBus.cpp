@@ -68,8 +68,10 @@ void MasterBus::load()
     const QVariantList saved = m_settings.value(kEffectsKey).toList();
     for (const QVariant& item : saved) {
         const QVariantMap map = item.toMap();
-        core::PluginSlot slot{map.value(u"pluginId"_s).toString(), map.value(u"displayName"_s).toString(),
-                              map.value(u"bypass"_s).toBool(), map.value(u"state"_s).toByteArray()};
+        core::PluginSlot slot{.pluginId = map.value(u"pluginId"_s).toString(),
+                              .displayName = map.value(u"displayName"_s).toString(),
+                              .bypass = map.value(u"bypass"_s).toBool(),
+                              .state = map.value(u"state"_s).toByteArray()};
         // Settings are a file too: anything unusable is skipped and said.
         if (slot.pluginId.isEmpty() || slot.pluginId.size() > core::limits::kMaxPluginIdLength
             || slot.displayName.size() > core::limits::kMaxNameLength
@@ -108,7 +110,7 @@ bool MasterBus::addEffect(const QString& pluginId, const QString& name)
                                  Notifications::Warning);
         return false;
     }
-    m_effects.push_back(core::PluginSlot{pluginId, name, false, {}});
+    m_effects.push_back(core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = false, .state = {}});
     commit();
     return true;
 }
@@ -132,7 +134,8 @@ bool MasterBus::replaceEffect(int effect, const QString& pluginId, const QString
         return false;
     }
     (void)m_engine.storeMasterEffectStates(m_effects);
-    m_effects[static_cast<std::size_t>(effect)] = core::PluginSlot{pluginId, name, false, {}};
+    m_effects.at(static_cast<std::size_t>(effect)) =
+        core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = false, .state = {}};
     commit();
     return true;
 }
@@ -143,7 +146,7 @@ bool MasterBus::setEffectBypass(int effect, bool bypass)
     if (!validIndex(effect)) return false;
     // Switching off unloads it: keep its settings for when it comes back.
     (void)m_engine.storeMasterEffectStates(m_effects);
-    m_effects[static_cast<std::size_t>(effect)].bypass = bypass;
+    m_effects.at(static_cast<std::size_t>(effect)).bypass = bypass;
     commit();
     return true;
 }

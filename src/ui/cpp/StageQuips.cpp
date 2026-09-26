@@ -102,7 +102,7 @@ QStringList StageQuips::lines(Step step)
 
 QString StageQuips::line(Step step)
 {
-    auto& picked = m_picked[static_cast<std::size_t>(step)];
+    auto& picked = m_picked.at(static_cast<std::size_t>(step));
     if (!picked) {
         const QStringList all = lines(step);
         picked = all.isEmpty() ? QString() : all.at(QRandomGenerator::global()->bounded(all.size()));

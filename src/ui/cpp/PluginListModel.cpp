@@ -32,7 +32,7 @@ PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialAr
         m_favorites = m_settings->value(u"plugins/favorites"_s).toStringList();
         m_ratings = m_settings->value(u"plugins/ratings"_s).toMap();
     }
-    std::stable_sort(m_all.begin(), m_all.end(), [](const engine::PluginInfo& a, const engine::PluginInfo& b) {
+    std::ranges::stable_sort(m_all, [](const engine::PluginInfo& a, const engine::PluginInfo& b) {
         if (a.kind != b.kind) return a.kind == engine::PluginKind::Instrument;
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
     });
@@ -52,8 +52,8 @@ int PluginListModel::rowCount(const QModelIndex& parent) const
 QVariant PluginListModel::data(const QModelIndex& index, int role) const
 {
     if (!checkIndex(index, CheckIndexOption::IndexIsValid | CheckIndexOption::ParentIsInvalid)) return {};
-    const std::size_t at = m_visible[static_cast<std::size_t>(index.row())];
-    const engine::PluginInfo& plugin = m_all[at];
+    const std::size_t at = m_visible.at(static_cast<std::size_t>(index.row()));
+    const engine::PluginInfo& plugin = m_all.at(at);
     switch (role) {
     case PluginIdRole: return plugin.id;
     case NameRole: return plugin.name;
@@ -65,7 +65,7 @@ QVariant PluginListModel::data(const QModelIndex& index, int role) const
         return parts.size() > 1 ? parts.last() : QString();
     }
     case IconRole: return iconUrl(iconFor(plugin));
-    case ImageUrlRole: return m_images[at];
+    case ImageUrlRole: return m_images.at(at);
     case FavoriteRole: return m_favorites.contains(plugin.id);
     case RatingRole: return m_ratings.value(plugin.id, 0).toInt();
     case WebsiteRole: return plugin.website;
@@ -106,7 +106,7 @@ void PluginListModel::setFavorite(const QString& pluginId, bool favorite)
 
 QString PluginListModel::showInFolder(const QString& pluginId) const
 {
-    const auto plugin = std::find_if(m_all.begin(), m_all.end(), [&](const auto& p) { return p.id == pluginId; });
+    const auto plugin = std::ranges::find_if(m_all, [&](const auto& p) { return p.id == pluginId; });
     if (plugin == m_all.end() || !QFileInfo::exists(pluginId)) {
         qCWarning(lcUi).noquote() << "Show in folder: no plugin" << pluginId;
         return tr("No installed plugin %1").arg(pluginId);
@@ -127,7 +127,7 @@ void PluginListModel::setRating(const QString& pluginId, int stars)
     else m_ratings.insert(pluginId, stars);
     if (m_settings != nullptr) m_settings->setValue(u"plugins/ratings"_s, m_ratings);
     for (std::size_t row = 0; row < m_visible.size(); ++row) {
-        if (m_all[m_visible[row]].id != pluginId) continue;
+        if (m_all.at(m_visible.at(row)).id != pluginId) continue;
         const QModelIndex at = index(static_cast<int>(row));
         emit dataChanged(at, at, {RatingRole});
     }
@@ -259,7 +259,7 @@ void PluginListModel::applyFilter()
     m_visible.clear();
     const QString needle = m_filterText.trimmed();
     for (std::size_t i = 0; i < m_all.size(); ++i) {
-        const auto& plugin = m_all[i];
+        const auto& plugin = m_all.at(i);
         if (m_instrumentsOnly && plugin.kind != engine::PluginKind::Instrument) continue;
         if (m_hidden.contains(plugin.id)) continue;
         if (needle.isEmpty() || plugin.name.contains(needle, Qt::CaseInsensitive) ||
@@ -268,8 +268,7 @@ void PluginListModel::applyFilter()
         }
     }
     // Favourites first, each group keeping its order.
-    std::stable_partition(m_visible.begin(), m_visible.end(),
-                          [this](std::size_t i) { return m_favorites.contains(m_all[i].id); });
+    std::ranges::stable_partition(m_visible, [this](std::size_t i) { return m_favorites.contains(m_all.at(i).id); });
     endResetModel();
 }
 

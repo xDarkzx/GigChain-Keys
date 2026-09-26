@@ -48,7 +48,7 @@ void carryOverPreviousSettings(QSettings& current)
                                       << "is not organization/application";
             continue;
         }
-        QSettings previous(parts[0], parts[1]);
+        QSettings previous(parts.at(0), parts.at(1));
         if (carryOverSettings(previous, current)) return;
     }
 }
