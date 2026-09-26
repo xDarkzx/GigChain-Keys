@@ -6,6 +6,7 @@
 #include "gigchain/engine/IPluginEditor.h"
 #include "gigchain/engine/MidiControl.h"
 #include "gigchain/engine/MidiSetup.h"
+#include "gigchain/engine/Notice.h"
 
 #include <QSize>
 #include <QStringList>
@@ -105,8 +106,8 @@ public:
 
     // Main thread, regularly (the UI polls ~30 Hz): housekeeping, logging of
     // anything the audio thread counted, device recovery. Returns messages the
-    // user should see (each is also logged).
-    virtual std::vector<QString> poll() = 0;
+    // user should see, each with its level (each is also logged).
+    virtual std::vector<Notice> poll() = 0;
 
     // The instrument plugin's own editor for a channel of the current patch.
     // nullptr when the channel has no instrument or the plugin has no editor;

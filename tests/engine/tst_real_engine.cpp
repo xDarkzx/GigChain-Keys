@@ -263,7 +263,8 @@ private slots:
         engine.preload(broken);
         const auto notices = engine.poll();
         QCOMPARE(notices.size(), std::size_t{1});
-        QVERIFY2(notices[0].contains(u"Kotelnikov"_s), qPrintable(notices[0]));
+        QVERIFY2(notices.front().text.contains(u"Kotelnikov"_s), qPrintable(notices.front().text));
+        QVERIFY(notices.front().level == Notice::Level::Warning); // it still plays
         QCOMPARE(engine.loadedPluginCount(), std::size_t{1}); // still playing, at its defaults
 
         engine.preload(setlist); // good settings: reloaded with them, quietly
@@ -354,7 +355,8 @@ private slots:
         QCOMPARE(engine.blockedPlugins(), QStringList{kSmall});
         auto notices = engine.poll();
         QVERIFY(!notices.empty());
-        QVERIFY2(notices.back().contains(u"TDR Kotelnikov"_s), qPrintable(notices.back()));
+        QVERIFY2(notices.back().text.contains(u"TDR Kotelnikov"_s), qPrintable(notices.back().text));
+        QVERIFY(notices.back().level == Notice::Level::Warning);
 
         core::Patch patch = core::makePatch(u"Verse"_s);
         core::Channel channel = core::makeChannel(u"Keys"_s);
@@ -364,7 +366,8 @@ private slots:
         engine.applyPatch(patch);
         notices = engine.poll();
         QCOMPARE(notices.size(), std::size_t{1}); // said, not silently missing
-        QVERIFY(notices[0].contains(u"switched off"_s));
+        QVERIFY(notices.front().text.contains(u"switched off"_s));
+        QVERIFY(notices.front().level == Notice::Level::Warning);
         QCOMPARE(engine.loadedPluginCount(), std::size_t{0});
 
         engine.unblockPlugin(kSmall); // "Try again"
@@ -459,7 +462,8 @@ private slots:
         engine.applyPatch(patch);
         const auto notices = engine.poll();
         QCOMPARE(notices.size(), std::size_t{1});
-        QVERIFY(notices[0].contains(u"Ghost"_s));
+        QVERIFY(notices.front().text.contains(u"Ghost"_s));
+        QVERIFY(notices.front().level == Notice::Level::Error); // it does not play
     }
 };
 

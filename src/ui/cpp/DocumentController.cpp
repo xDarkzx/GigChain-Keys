@@ -370,7 +370,7 @@ bool DocumentController::duplicateSong(int song)
         core::Setlist one;
         one.songs = {m_setlist.songs[static_cast<std::size_t>(song)]};
         const std::vector<QString> problems = m_engine.storePluginStates(one); // each logged
-        if (!problems.empty()) reportMessage(problems.back());
+        if (!problems.empty()) reportMessage(problems.back(), Notifications::Warning);
         m_setlist.songs[static_cast<std::size_t>(song)] = std::move(one.songs.front());
     }
     const auto index = core::duplicateSong(m_setlist, song);
@@ -650,7 +650,8 @@ bool DocumentController::saveAs(const QString& path)
     qCInfo(lcUi).noquote() << "Saved setlist" << target;
     if (!problems.empty()) {
         reportMessage(tr("Saved, but %1").arg(problems.size() == 1 ? problems.front()
-                                                                  : tr("%n plugins' settings could not be saved (see the log)", nullptr, static_cast<int>(problems.size()))));
+                                                                  : tr("%n plugins' settings could not be saved (see the log)", nullptr, static_cast<int>(problems.size()))),
+                      Notifications::Warning);
     }
     return true;
 }
@@ -683,8 +684,10 @@ void DocumentController::clearError()
     emit lastErrorChanged();
 }
 
-void DocumentController::reportMessage(const QString& message)
+void DocumentController::reportMessage(const QString& message, Notifications::Level level)
 {
+    m_notifications.post(message, level);
+    if (level != Notifications::Error) return;
     m_lastError = message;
     emit lastErrorChanged();
 }
@@ -694,8 +697,7 @@ void DocumentController::reportMessage(const QString& message)
 bool DocumentController::report(const core::Error& error)
 {
     qCWarning(lcUi).noquote() << error.message;
-    m_lastError = error.message;
-    emit lastErrorChanged();
+    reportMessage(error.message, Notifications::Error);
     return false;
 }
 

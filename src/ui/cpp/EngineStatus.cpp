@@ -17,6 +17,19 @@ Q_DECLARE_LOGGING_CATEGORY(lcUi)
 using namespace Qt::StringLiterals;
 
 namespace gigchain::ui {
+namespace {
+
+Notifications::Level toLevel(engine::Notice::Level level)
+{
+    switch (level) {
+    case engine::Notice::Level::Info: return Notifications::Info;
+    case engine::Notice::Level::Warning: return Notifications::Warning;
+    case engine::Notice::Level::Error: return Notifications::Error;
+    }
+    return Notifications::Error; // a level added later is shown as the worst until mapped
+}
+
+} // namespace
 
 EngineStatus::EngineStatus(engine::IEngine& engine, DocumentController& document, QObject* parent)
     : QObject(parent), m_engine(engine), m_document(document), m_statusText(engine.statusText())
@@ -54,7 +67,7 @@ void EngineStatus::panic()
 {
     FreezeWatchdog::mark(u"panic"_s);
     m_engine.panic(); // logged by the engine
-    m_document.reportMessage(tr("Panic: every sound stopped"));
+    m_document.reportMessage(tr("Panic: every sound stopped"), Notifications::Info);
 }
 
 void EngineStatus::playNote(int note, bool on)
@@ -79,9 +92,8 @@ double EngineStatus::readMemoryMb()
 
 void EngineStatus::poll()
 {
-    // Notices are already logged by the engine; show the latest to the user.
-    const auto notices = m_engine.poll();
-    if (!notices.empty()) m_document.reportMessage(notices.back());
+    // Notices are already logged by the engine; each is shown at its level.
+    for (const engine::Notice& notice : m_engine.poll()) m_document.reportMessage(notice.text, toLevel(notice.level));
     if (m_engine.takePluginEdits()) m_document.markPluginSettingsChanged();
     // Pedals, pads and buttons learned in Settings.
     for (const engine::ControlAction action : m_engine.takeControlActions()) {

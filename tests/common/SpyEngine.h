@@ -21,7 +21,7 @@ public:
     std::map<QString, bool> solos;
     double master = 0.0;
     std::vector<std::array<int, 3>> notes;
-    std::vector<QString> pendingNotices;
+    std::vector<engine::Notice> pendingNotices;
 
     using engine::IEngine::applyPatch;
     int preloadCount = 0;
@@ -115,9 +115,9 @@ public:
     void setMasterMute(bool mute) override { muted = mute; }
     [[nodiscard]] bool masterMuted() const override { return muted; }
     void injectNote(int channel, int note, int velocity) override { notes.push_back({channel, note, velocity}); }
-    std::vector<QString> poll() override
+    std::vector<engine::Notice> poll() override
     {
-        std::vector<QString> out;
+        std::vector<engine::Notice> out;
         out.swap(pendingNotices);
         return out;
     }

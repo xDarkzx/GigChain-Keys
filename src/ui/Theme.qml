@@ -13,6 +13,9 @@ QtObject {
     readonly property color accent: "#e0a526"
     readonly property color accentText: "#14161a"
     readonly property color danger: "#e5484d"
+    // Notifications, by level (errors use danger).
+    readonly property color info: "#4a8fe7"
+    readonly property color warning: "#e0a526"
     readonly property color selection: "#2f3b52"
     readonly property color meterLow: "#3fb950"
     readonly property color meterHigh: "#e5484d"

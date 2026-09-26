@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Notifications.h"
+
 #include "gigchain/core/Error.h"
 #include "gigchain/core/Model.h"
 #include "gigchain/core/Navigation.h"
@@ -22,7 +24,8 @@ namespace gigchain::ui {
 
 // Owns the open setlist, the current position in it and the file state. Every
 // edit from the UI goes through here, and the engine is kept in sync with the
-// current patch. Failures set lastError (shown in the UI) and are logged.
+// current patch. Messages for the user are posted to notifications, each
+// with its level; errors also set lastError. All are logged.
 //
 // The engine and settings are owned by the application and must outlive this.
 class DocumentController : public QObject
@@ -43,6 +46,7 @@ class DocumentController : public QObject
     Q_PROPERTY(QString filePath READ filePath NOTIFY filePathChanged)
     Q_PROPERTY(QString displayName READ displayName NOTIFY filePathChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+    Q_PROPERTY(gigchain::ui::Notifications* notifications READ notifications CONSTANT)
     // False until a setlist is created or opened: nothing exists by default.
     Q_PROPERTY(bool hasSetlist READ hasSetlist NOTIFY hasSetlistChanged)
     // The last setlists opened or saved, newest first (at most 5).
@@ -153,8 +157,11 @@ public:
     void markPluginSettingsChanged();
 
     Q_INVOKABLE void clearError();
-    // Shows a message from elsewhere (e.g. the engine) the same way as errors.
-    Q_INVOKABLE void reportMessage(const QString& message);
+    // Shows a message from elsewhere (the engine, a window) at its level; an
+    // error also becomes lastError. The caller has logged it.
+    Q_INVOKABLE void reportMessage(const QString& message,
+                                   gigchain::ui::Notifications::Level level = Notifications::Error);
+    [[nodiscard]] Notifications* notifications() { return &m_notifications; }
 
 signals:
     void currentChanged();
@@ -208,6 +215,7 @@ private:
     bool m_dirty = false;
     QString m_filePath;
     QString m_lastError;
+    Notifications m_notifications;
 };
 
 } // namespace gigchain::ui

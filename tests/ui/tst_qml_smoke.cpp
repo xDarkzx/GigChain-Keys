@@ -1,4 +1,5 @@
 // Loads the real Main.qml with the demo engine and fails on any QML warning.
+#include "Notifications.h"
 #include "Session.h"
 #include "StartupProgress.h"
 
@@ -144,7 +145,8 @@ private slots:
         auto* panic = root->findChild<QObject*>(u"performPanic"_s);
         QVERIFY(panic != nullptr);
         QVERIFY(QMetaObject::invokeMethod(panic, "clicked"));
-        QVERIFY(m_session->document().lastError().contains(u"Panic"_s));
+        const ui::Notifications& shown = *m_session->document().notifications();
+        QVERIFY(shown.rowCount() > 0 && shown.text(shown.rowCount() - 1).contains(u"Panic"_s));
         QVERIFY(root->setProperty("performMode", false));
         settle();
     }
@@ -265,6 +267,41 @@ private slots:
         QVERIFY(plugins != nullptr);
         QVERIFY(plugins->property("count").toInt() > 0);
     }
+
+    // A message is shown in its level's colour, in its own window (above a
+    // plugin's window), and goes away by itself; worse news stays longer.
+    void notificationsShowInTheirColourAndGoAwayByThemselves()
+    {
+        auto* toasts = window()->findChild<QQuickWindow*>(u"notificationWindow"_s);
+        QVERIFY(toasts != nullptr);
+        QVERIFY(!toasts->isVisible()); // nothing to say yet
+        ui::Notifications& n = *m_session->document().notifications();
+        n.post(u"MIDI input connected: Impact GXP61"_s, ui::Notifications::Info);
+        n.post(u"Could not load Broken Synth"_s, ui::Notifications::Error);
+        QTRY_VERIFY2_WITH_TIMEOUT(toasts->isVisible(), qPrintable(m_warnings.join(u'\n')), 2000);
+        QCOMPARE(toasts->transientParent(), window()); // stays with the main window
+        auto* list = toasts->findChild<QObject*>(u"notificationList"_s);
+        QVERIFY(list != nullptr);
+        QTRY_COMPARE(list->property("count").toInt(), 2);
+        auto colourOf = [list](int row) {
+            QQuickItem* item = nullptr;
+            QMetaObject::invokeMethod(list, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, item), Q_ARG(int, row));
+            return item != nullptr ? item->property("levelColour").value<QColor>() : QColor();
+        };
+        auto* theme = m_qml->singletonInstance<QObject*>("GigChain.Ui", "Theme");
+        QVERIFY(theme != nullptr);
+        QTRY_COMPARE(colourOf(0), theme->property("info").value<QColor>()); // once the rows are laid out
+        QTRY_COMPARE(colourOf(1), theme->property("danger").value<QColor>());
+        // The info goes first, by itself; the error is still there then.
+        QTRY_COMPARE_WITH_TIMEOUT(n.rowCount(), 1, ui::Notifications::shownFor(ui::Notifications::Info) + 1000);
+        QCOMPARE(n.level(0), ui::Notifications::Error);
+        QTRY_COMPARE_WITH_TIMEOUT(n.rowCount(), 0, ui::Notifications::shownFor(ui::Notifications::Error) + 1000);
+        QTRY_VERIFY_WITH_TIMEOUT(!toasts->isVisible(), 2000);
+        QVERIFY2(m_warnings.isEmpty(), qPrintable(m_warnings.join(u'\n')));
+    }
+
+    // The old red bar is gone: messages are notifications now.
+    void thereIsNoRedBar() { QVERIFY(window()->findChild<QQuickItem*>(u"messageBanner"_s) == nullptr); }
 
     // Dropping an instrument on the mixer loads it and shows it.
     void droppingAnInstrumentOnTheMixerShowsTheInstrumentTab()

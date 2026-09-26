@@ -3,6 +3,7 @@ add_library(gigchain_engine STATIC
     include/gigchain/engine/IEngine.h
     include/gigchain/engine/MidiSetup.h
     include/gigchain/engine/MidiControl.h
+    include/gigchain/engine/Notice.h
     include/gigchain/engine/FakeEngineFactory.h
     internal/FakeEngine.h
     internal/FakeEngine.cpp

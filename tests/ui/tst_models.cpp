@@ -3,6 +3,7 @@
 #include "EditorService.h"
 #include "OfficialArtwork.h"
 #include "EngineStatus.h"
+#include "Notifications.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
@@ -319,7 +320,8 @@ private slots:
     {
         EngineStatus status(*m_engine, *m_doc);
         QSignalSpy polled(&status, &EngineStatus::polled);
-        m_engine->pendingNotices.push_back(u"Audio device restarted"_s);
+        m_engine->pendingNotices.push_back(engine::Notice::info(u"MIDI input connected: Impact GXP61"_s));
+        m_engine->pendingNotices.push_back(engine::Notice::error(u"No audio output is available"_s));
         status.poll();
         QCOMPARE(polled.count(), 1);
         QCOMPARE(status.cpuLoad(), 0.25F);
@@ -327,7 +329,15 @@ private slots:
         QVERIFY(status.midiActivity());
         QCOMPARE(status.statusText(), u"Spy engine"_s);
         QCOMPARE(status.masterPeak(), 0.4F); // the master strip's meter
-        QCOMPARE(m_doc->lastError(), u"Audio device restarted"_s);
+        // Every notice is shown, each at its own level: a keyboard plugged in
+        // is news, not an error.
+        const Notifications& shown = *m_doc->notifications();
+        QCOMPARE(shown.rowCount(), 2);
+        QCOMPARE(shown.text(0), u"MIDI input connected: Impact GXP61"_s);
+        QCOMPARE(shown.level(0), Notifications::Info);
+        QCOMPARE(shown.text(1), u"No audio output is available"_s);
+        QCOMPARE(shown.level(1), Notifications::Error);
+        QCOMPARE(m_doc->lastError(), u"No audio output is available"_s); // the last error, only errors
 
         // A learned pedal and pad switch songs; the panic button stops the sound.
         QVERIFY(m_doc->addSong());
@@ -339,7 +349,9 @@ private slots:
         status.poll();
         QCOMPARE(m_doc->songIndex(), song);
         QCOMPARE(m_engine->panics, 1);
-        QVERIFY(m_doc->lastError().contains(u"Panic"_s));
+        const int last = shown.rowCount() - 1;
+        QVERIFY(shown.text(last).contains(u"Panic"_s));
+        QCOMPARE(shown.level(last), Notifications::Info);
 
         status.setMasterVolumeDb(-6.0);
         QCOMPARE(m_engine->master, -6.0);

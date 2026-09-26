@@ -66,7 +66,8 @@ void MasterBus::load()
             || slot.state.size() > core::limits::kMaxPluginStateBytes
             || static_cast<int>(m_effects.size()) >= core::limits::kMaxEffectsPerChannel) {
             qCWarning(lcUi).noquote() << "Skipped an unusable master effect in the settings:" << slot.displayName;
-            m_document.reportMessage(tr("A saved master effect could not be used and was left out (see the log)"));
+            m_document.reportMessage(tr("A saved master effect could not be used and was left out (see the log)"),
+                                     Notifications::Warning);
             continue;
         }
         m_effects.push_back(std::move(slot));
@@ -93,7 +94,8 @@ bool MasterBus::addEffect(const QString& pluginId, const QString& name)
         return false;
     }
     if (static_cast<int>(m_effects.size()) >= core::limits::kMaxEffectsPerChannel) {
-        m_document.reportMessage(tr("The master already has %1 effects").arg(core::limits::kMaxEffectsPerChannel));
+        m_document.reportMessage(tr("The master already has %1 effects").arg(core::limits::kMaxEffectsPerChannel),
+                                 Notifications::Warning);
         return false;
     }
     m_effects.push_back(core::PluginSlot{pluginId, name, false, {}});
@@ -153,7 +155,9 @@ void MasterBus::commit()
 void MasterBus::save()
 {
     GC_ONLY_MAIN_THREAD();
-    for (const QString& problem : m_engine.storeMasterEffectStates(m_effects)) m_document.reportMessage(problem);
+    for (const QString& problem : m_engine.storeMasterEffectStates(m_effects)) {
+        m_document.reportMessage(problem, Notifications::Warning);
+    }
     QVariantList list;
     for (const core::PluginSlot& slot : m_effects) {
         list << QVariantMap{{u"pluginId"_s, slot.pluginId},

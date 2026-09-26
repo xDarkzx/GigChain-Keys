@@ -65,7 +65,7 @@ public:
     [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
     [[nodiscard]] double masterVolume() const override { return m_masterDb; }
     void injectNote(int midiChannel, int note, int velocity) override;
-    std::vector<QString> poll() override;
+    std::vector<Notice> poll() override;
     [[nodiscard]] QString statusText() const override;
     [[nodiscard]] std::vector<AudioOutput> audioOutputs() const override;
     [[nodiscard]] AudioSetup audioSetup() const override;
@@ -106,7 +106,7 @@ private:
     // Opens the inputs plugged in now as m_midiSetup says; problems returned (each logged).
     std::vector<QString> openMidi();
     // Every couple of seconds: notices a keyboard plugged in or pulled out.
-    void watchMidiPorts(std::vector<QString>& notices);
+    void watchMidiPorts(std::vector<Notice>& notices);
 
     AudioDevice m_audio;
     MidiInput m_midi;
@@ -124,7 +124,7 @@ private:
     bool m_unreportedEdit = false;
     // Collects the plugins' edit reports into m_editedNodes.
     void collectEdits();
-    std::vector<QString> m_pendingNotices;
+    std::vector<Notice> m_pendingNotices;
     core::Patch m_patch;         // the sounding patch, rebuilt after a device change
     core::SongId m_song;         // the song it belongs to
     double m_preparedRate = 0.0; // what the plugins are prepared for
