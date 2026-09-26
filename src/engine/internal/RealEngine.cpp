@@ -16,6 +16,7 @@
 #include <iterator>
 #include <optional>
 #include <set>
+#include <span>
 #include <utility>
 
 using namespace Qt::StringLiterals;
@@ -34,7 +35,7 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     std::unique_ptr<RealEngine> engine(new RealEngine()); // private constructor; owned immediately
 
     auto opened = engine->openAudio(options.audio);
-    const AudioSetup systemAudio{AudioDriver::System, {}, 0, options.audio.bufferFrames};
+    const AudioSetup systemAudio{.driver = AudioDriver::System, .device = {}, .sampleRate = 0, .bufferFrames = options.audio.bufferFrames};
     if (!opened && options.audio != systemAudio) {
         // The saved setup failed: fall back to system audio (logged by open()).
         engine->m_pendingNotices.push_back(Notice::warning(u"%1 could not be used (%2); using system audio instead"_s.arg(
@@ -86,15 +87,20 @@ std::vector<RealEngine::PlannedSlot> RealEngine::planPatch(const core::SongId& s
         return song.value() + u'|' + role + u'|' + pluginId + u'#' + QString::number(n);
     };
     for (std::size_t c = 0; c < patch.channels.size(); ++c) {
-        const core::Channel& channel = patch.channels[c];
+        const core::Channel& channel = patch.channels.at(c);
         if (channel.instrument) {
-            plan.push_back(PlannedSlot{keyFor(u"i"_s, channel.instrument->pluginId), &*channel.instrument,
-                                       static_cast<int>(c), -1});
+            plan.push_back(PlannedSlot{.key = keyFor(u"i"_s, channel.instrument->pluginId),
+                                       .slot = &*channel.instrument,
+                                       .channel = static_cast<int>(c),
+                                       .effect = -1});
         }
         for (std::size_t e = 0; e < channel.effects.size(); ++e) {
-            if (channel.effects[e].bypass) continue;
-            plan.push_back(PlannedSlot{keyFor(u"fx"_s, channel.effects[e].pluginId), &channel.effects[e],
-                                       static_cast<int>(c), static_cast<int>(e)});
+            const core::PluginSlot& effect = channel.effects.at(e);
+            if (effect.bypass) continue;
+            plan.push_back(PlannedSlot{.key = keyFor(u"fx"_s, effect.pluginId),
+                                       .slot = &effect,
+                                       .channel = static_cast<int>(c),
+                                       .effect = static_cast<int>(e)});
         }
     }
     return plan;
@@ -151,15 +157,21 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
     GC_ONLY_MAIN_THREAD();
     if (const auto it = m_nodes.find(key); it != m_nodes.end()) return it->second;
     if (announce && m_progress) m_progress(LoadStage::LoadingSounds, slot.displayName, 0, 1);
+    // Says "done" on every way out.
     struct AnnounceDone
     {
         const LoadProgress& progress;
         bool on;
+        AnnounceDone(const LoadProgress& onProgress, bool announcing) : progress(onProgress), on(announcing) {}
+        AnnounceDone(const AnnounceDone&) = delete;
+        AnnounceDone& operator=(const AnnounceDone&) = delete;
+        AnnounceDone(AnnounceDone&&) = delete;
+        AnnounceDone& operator=(AnnounceDone&&) = delete;
         ~AnnounceDone()
         {
             if (on && progress) progress(LoadStage::LoadingSounds, {}, 1, 1);
         }
-    } announceDone{m_progress, announce};
+    } announceDone(m_progress, announce);
 
     auto node = loadWithSettings(slot);
     if (!node) return nullptr;
@@ -210,7 +222,7 @@ core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
 {
     std::optional<DeviceChoice> choice;
     if (!setup.device.isEmpty()) {
-        choice = DeviceChoice{setup.driver == AudioDriver::Asio ? AudioApi::Asio : AudioApi::Wasapi, setup.device};
+        choice = DeviceChoice{.api = setup.driver == AudioDriver::Asio ? AudioApi::Asio : AudioApi::Wasapi, .name = setup.device};
     } else if (setup.driver == AudioDriver::Asio) {
         return core::fail(core::ErrorCode::InvalidData, u"Choose an ASIO device"_s);
     }
@@ -220,22 +232,27 @@ core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
 std::vector<AudioOutput> RealEngine::audioOutputs() const
 {
     std::vector<AudioOutput> outputs;
-    constexpr std::array<unsigned int, 4> kLiveRates{44100, 48000, 88200, 96000};
+    // Static: one array, the same one the lambda below searches and ends at.
+    static constexpr std::array<unsigned int, 4> kLiveRates{44100, 48000, 88200, 96000};
     for (const AudioDeviceInfo& info : AudioDevice::listOutputs()) {
         std::vector<unsigned int> rates;
-        for (const unsigned int rate : info.sampleRates) {
-            if (std::find(kLiveRates.begin(), kLiveRates.end(), rate) != kLiveRates.end()) rates.push_back(rate);
-        }
-        outputs.push_back(AudioOutput{info.api == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System, info.name,
-                                      std::move(rates), info.preferredSampleRate, info.isDefault});
+        std::ranges::copy_if(info.sampleRates, std::back_inserter(rates),
+                             [](unsigned int rate) { return std::ranges::find(kLiveRates, rate) != kLiveRates.end(); });
+        outputs.push_back(AudioOutput{.driver = info.api == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
+                                      .name = info.name,
+                                      .sampleRates = std::move(rates),
+                                      .preferredSampleRate = info.preferredSampleRate,
+                                      .isDefault = info.isDefault});
     }
     return outputs;
 }
 
 AudioSetup RealEngine::audioSetup() const
 {
-    return AudioSetup{m_audio.api() == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System, m_audio.deviceName(),
-                      static_cast<unsigned int>(m_audio.sampleRate()), static_cast<unsigned int>(m_audio.maxBlock())};
+    return AudioSetup{.driver = m_audio.api() == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
+                      .device = m_audio.deviceName(),
+                      .sampleRate = static_cast<unsigned int>(m_audio.sampleRate()),
+                      .bufferFrames = static_cast<unsigned int>(m_audio.maxBlock())};
 }
 
 core::Result<void> RealEngine::setAudioSetup(const AudioSetup& setup)
@@ -365,10 +382,13 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     std::vector<StripSpec> specs;
     specs.reserve(patch.channels.size());
     for (std::size_t c = 0; c < patch.channels.size(); ++c) {
-        const core::Channel& channel = patch.channels[c];
+        const core::Channel& channel = patch.channels.at(c);
         StripSpec spec;
         spec.id = channel.id;
-        spec.route = RouteSettings{channel.keyLow, channel.keyHigh, channel.transpose, channel.midiChannel};
+        spec.route = RouteSettings{.keyLow = channel.keyLow,
+                                   .keyHigh = channel.keyHigh,
+                                   .transpose = channel.transpose,
+                                   .midiChannel = channel.midiChannel};
         spec.volumeDb = channel.volumeDb;
         spec.pan = channel.pan;
         spec.mute = channel.mute;
@@ -385,7 +405,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
             } else {
                 auto& effects = m_currentEffects[channel.id.value()];
                 effects.resize(channel.effects.size());
-                effects[static_cast<std::size_t>(planned.effect)] = node;
+                effects.at(static_cast<std::size_t>(planned.effect)) = node;
                 spec.effects.push_back(std::move(node));
             }
         }
@@ -416,8 +436,8 @@ LevelReading RealEngine::channelLevel(const core::ChannelId& id)
 
 LevelReading RealEngine::masterLevel()
 {
-    return LevelReading{m_masterPeak.exchange(0.0F, std::memory_order_relaxed),
-                        m_masterRms.load(std::memory_order_relaxed)};
+    return LevelReading{.peak = m_masterPeak.exchange(0.0F, std::memory_order_relaxed),
+                        .rms = m_masterRms.load(std::memory_order_relaxed)};
 }
 
 void RealEngine::setChannelVolume(const core::ChannelId& id, double volumeDb)
@@ -465,7 +485,10 @@ void RealEngine::injectNote(int midiChannel, int note, int velocity)
 {
     if (midiChannel < 1 || midiChannel > 16 || note < 0 || note > 127 || velocity < 0 || velocity > 127) return;
     const auto status = static_cast<uint8_t>((velocity > 0 ? 0x90 : 0x80) | (midiChannel - 1));
-    if (!m_injected.push(MidiEvent{status, static_cast<uint8_t>(note), static_cast<uint8_t>(velocity), 0})) {
+    if (!m_injected.push(MidiEvent{.status = status,
+                                   .data1 = static_cast<uint8_t>(note),
+                                   .data2 = static_cast<uint8_t>(velocity),
+                                   .sampleOffset = 0})) {
         m_droppedInjected.fetch_add(1, std::memory_order_relaxed);
     }
 }
@@ -525,16 +548,16 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(cons
     if (channel == nullptr || effect < 0 || static_cast<std::size_t>(effect) >= channel->effects.size()) {
         return core::fail(core::ErrorCode::OutOfRange, u"That effect is no longer in this patch"_s);
     }
-    const core::PluginSlot& slot = channel->effects[static_cast<std::size_t>(effect)];
+    const core::PluginSlot& slot = channel->effects.at(static_cast<std::size_t>(effect));
     if (slot.bypass) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
     }
     const auto effects = m_currentEffects.find(id.value());
     if (effects == m_currentEffects.end() || static_cast<std::size_t>(effect) >= effects->second.size()
-        || !effects->second[static_cast<std::size_t>(effect)]) {
+        || !effects->second.at(static_cast<std::size_t>(effect))) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
     }
-    return Vst3Node::createEditor(effects->second[static_cast<std::size_t>(effect)]);
+    return Vst3Node::createEditor(effects->second.at(static_cast<std::size_t>(effect)));
 }
 
 std::vector<QString> RealEngine::masterKeys() const
@@ -562,12 +585,11 @@ void RealEngine::setMasterEffects(const std::vector<core::PluginSlot>& effects)
     // Take edits made to instances that are going away before they go.
     (void)takeMasterEdits();
     m_masterEdited = false;
-    std::erase_if(m_masterNodes, [&](const auto& entry) {
-        return std::find(keys.begin(), keys.end(), entry.first) == keys.end();
-    });
+    std::erase_if(m_masterNodes, [&](const auto& entry) { return std::ranges::find(keys, entry.first) == keys.end(); });
     for (std::size_t i = 0; i < keys.size(); ++i) {
-        if (keys[i].isEmpty() || m_masterNodes.count(keys[i]) != 0) continue;
-        if (auto node = loadWithSettings(m_masterSlots[i])) m_masterNodes.emplace(keys[i], std::move(node));
+        const QString& key = keys.at(i);
+        if (key.isEmpty() || m_masterNodes.contains(key)) continue;
+        if (auto node = loadWithSettings(m_masterSlots.at(i))) m_masterNodes.emplace(key, std::move(node));
     }
     applyPatch(m_song, m_patch); // the graph now plays them
     qCInfo(lcEngine) << "Master effects:" << m_masterNodes.size() << "loaded in" << timer.elapsed() << "ms";
@@ -579,16 +601,17 @@ std::vector<QString> RealEngine::storeMasterEffectStates(std::vector<core::Plugi
     std::vector<QString> problems;
     const std::vector<QString> keys = masterKeys();
     for (std::size_t i = 0; i < effects.size() && i < keys.size(); ++i) {
-        const auto node = m_masterNodes.find(keys[i]);
-        if (node == m_masterNodes.end() || effects[i].pluginId != m_masterSlots[i].pluginId) continue;
+        core::PluginSlot& effect = effects.at(i);
+        const auto node = m_masterNodes.find(keys.at(i));
+        if (node == m_masterNodes.end() || effect.pluginId != m_masterSlots.at(i).pluginId) continue;
         auto state = node->second->saveState();
         if (!state) {
-            problems.push_back(u"The settings of %1 could not be saved: %2"_s.arg(effects[i].displayName, state.error().message));
+            problems.push_back(u"The settings of %1 could not be saved: %2"_s.arg(effect.displayName, state.error().message));
             qCWarning(lcEngine).noquote() << problems.back();
             continue;
         }
-        effects[i].state = state->encode();
-        m_masterSlots[i].state = effects[i].state;
+        effect.state = state->encode();
+        m_masterSlots.at(i).state = effect.state;
     }
     return problems;
 }
@@ -609,11 +632,11 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createMasterEffectEdito
     if (effect < 0 || static_cast<std::size_t>(effect) >= keys.size()) {
         return core::fail(core::ErrorCode::OutOfRange, u"That master effect is no longer there"_s);
     }
-    const core::PluginSlot& slot = m_masterSlots[static_cast<std::size_t>(effect)];
+    const core::PluginSlot& slot = m_masterSlots.at(static_cast<std::size_t>(effect));
     if (slot.bypass) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
     }
-    const auto node = m_masterNodes.find(keys[static_cast<std::size_t>(effect)]);
+    const auto node = m_masterNodes.find(keys.at(static_cast<std::size_t>(effect)));
     if (node == m_masterNodes.end()) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
     }
@@ -630,25 +653,27 @@ void RealEngine::setOutputLimiter(bool enabled, double ceilingDb)
 std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
 {
     std::array<MidiTrigger, kControlActionCount> triggers;
-    bool any = false;
-    for (int i = 0; i < kControlActionCount; ++i) {
-        triggers[static_cast<std::size_t>(i)] = MidiTrigger::unpack(m_triggers[static_cast<std::size_t>(i)].load(std::memory_order_relaxed));
-        any = any || triggers[static_cast<std::size_t>(i)].isSet();
-    }
-    std::size_t kept = 0;
-    for (std::size_t e = 0; e < count; ++e) {
-        const MidiEvent& event = m_events[e];
+    std::ranges::transform(m_triggers, triggers.begin(),
+                           [](const auto& packed) { return MidiTrigger::unpack(packed.load(std::memory_order_relaxed)); });
+    const bool any = std::ranges::any_of(triggers, [](const MidiTrigger& t) { return t.isSet(); });
+
+    // The block's events, filtered in place: what is not a control stays.
+    const std::span<MidiEvent> events(m_events.data(), count);
+    auto kept = events.begin();
+    for (const MidiEvent event : events) { // a copy: `kept` may write over it
         if (const MidiTrigger press = learnable(event.status, event.data1, event.data2); press.isSet()) {
             m_learned.store(press.pack(), std::memory_order_relaxed);
         }
         bool consumed = false;
         if (any) {
-            for (int i = 0; i < kControlActionCount; ++i) {
-                const TriggerMatch match =
-                    matchTrigger(triggers[static_cast<std::size_t>(i)], event.status, event.data1, event.data2);
-                if (!match.belongs) continue;
-                consumed = true; // the instruments never hear a control
-                if (match.pressed) m_pressedActions.fetch_or(1U << i, std::memory_order_relaxed);
+            uint32_t action = 1U;
+            for (const MidiTrigger& trigger : triggers) {
+                const TriggerMatch match = matchTrigger(trigger, event.status, event.data1, event.data2);
+                if (match.belongs) {
+                    consumed = true; // the instruments never hear a control
+                    if (match.pressed) m_pressedActions.fetch_or(action, std::memory_order_relaxed);
+                }
+                action <<= 1U;
             }
         }
         // A patch button: it picks a patch (a learned trigger above wins).
@@ -656,15 +681,15 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
             m_program.store(program, std::memory_order_relaxed);
             consumed = true;
         }
-        if (!consumed) m_events[kept++] = event;
+        if (!consumed) *kept++ = event;
     }
-    return kept;
+    return static_cast<std::size_t>(kept - events.begin());
 }
 
 void RealEngine::setControlTriggers(const ControlTriggers& triggers)
 {
     GC_ONLY_MAIN_THREAD();
-    for (std::size_t i = 0; i < triggers.size(); ++i) m_triggers[i].store(triggers[i].pack(), std::memory_order_relaxed);
+    for (std::size_t i = 0; i < triggers.size(); ++i) m_triggers.at(i).store(triggers.at(i).pack(), std::memory_order_relaxed);
 }
 
 std::vector<ControlAction> RealEngine::takeControlActions()
@@ -765,12 +790,12 @@ std::vector<QString> RealEngine::storePluginStates(core::Setlist& setlist)
             for (const PlannedSlot& planned : planPatch(song.id, patch)) {
                 const auto bytes = stateOf(planned.key);
                 if (!bytes) continue;
-                core::Channel& channel = patch.channels[static_cast<std::size_t>(planned.channel)];
+                core::Channel& channel = patch.channels.at(static_cast<std::size_t>(planned.channel));
                 // planPatch only plans an instrument slot for a channel with one.
                 GC_IF_FAILED(planned.effect >= 0 || channel.instrument.has_value()) { continue; }
                 core::PluginSlot& slot = planned.effect < 0
                                              ? *channel.instrument
-                                             : channel.effects[static_cast<std::size_t>(planned.effect)];
+                                             : channel.effects.at(static_cast<std::size_t>(planned.effect));
                 slot.state = *bytes;
             }
         }
@@ -818,7 +843,7 @@ void RealEngine::render(AudioBlock out) noexcept
 
     std::size_t count = m_midi.drain(m_events);
     MidiEvent injected;
-    while (count < m_events.size() && m_injected.pop(injected)) m_events[count++] = injected;
+    while (count < m_events.size() && m_injected.pop(injected)) m_events.at(count++) = injected; // room checked
     count = takeControlMessages(count);
 
     RenderGraph* graph = m_exchange.acquire();
@@ -840,9 +865,14 @@ void RealEngine::render(AudioBlock out) noexcept
     // The master meter: what leaves the app.
     float peak = 0.0F;
     double sumSquares = 0.0;
-    for (int i = 0; i < out.frames; ++i) {
-        peak = std::max({peak, std::abs(out.left[i]), std::abs(out.right[i])});
-        sumSquares += 0.5 * (static_cast<double>(out.left[i]) * out.left[i] + static_cast<double>(out.right[i]) * out.right[i]);
+    const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
+    const std::span<const float> left(out.left, frames);
+    const std::span<const float> right(out.right, frames);
+    auto r = right.begin();
+    for (const float l : left) {
+        const float rr = *r++;
+        peak = std::max({peak, std::abs(l), std::abs(rr)});
+        sumSquares += 0.5 * (static_cast<double>(l) * l + static_cast<double>(rr) * rr);
     }
     float held = m_masterPeak.load(std::memory_order_relaxed);
     while (peak > held && !m_masterPeak.compare_exchange_weak(held, peak, std::memory_order_relaxed)) {
