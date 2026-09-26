@@ -62,6 +62,7 @@ public:
         ++applyCount;
         lastPatch = patch;
     }
+    [[nodiscard]] QString pluginFolder() const override { return {}; } // its plugins are not on disk
     [[nodiscard]] std::vector<engine::PluginInfo> availablePlugins() const override
     {
         return {

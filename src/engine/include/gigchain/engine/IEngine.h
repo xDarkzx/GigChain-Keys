@@ -58,6 +58,8 @@ public:
     [[nodiscard]] virtual std::size_t loadedPluginCount() const = 0;
 
     [[nodiscard]] virtual std::vector<PluginInfo> availablePlugins() const = 0;
+    // The folder the plugins were found in (empty when none was scanned).
+    [[nodiscard]] virtual QString pluginFolder() const = 0;
     // Plugins that crashed the app while loading: not loaded again (a patch
     // using one says so) until unblocked ("Try again" in Settings).
     [[nodiscard]] virtual QStringList blockedPlugins() const = 0;

@@ -27,6 +27,7 @@ public:
     bool takePluginEdits() override { return false; }
     [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override;
+    [[nodiscard]] QString pluginFolder() const override { return {}; } // its plugins are not on disk
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
     [[nodiscard]] LevelReading masterLevel() override;
     [[nodiscard]] float cpuLoad() const override;

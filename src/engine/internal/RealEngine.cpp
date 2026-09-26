@@ -63,9 +63,9 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
             options.progress(LoadStage::ScanningPlugins, plugin, done, total);
         };
     }
-    engine->m_plugins = PluginCatalog::scan(
-        options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder, options.pluginCacheFile,
-        nullptr, scanProgress, &engine->m_guard, options.pluginScanner);
+    engine->m_pluginFolder = options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder;
+    engine->m_plugins = PluginCatalog::scan(engine->m_pluginFolder, options.pluginCacheFile, nullptr, scanProgress,
+                                            &engine->m_guard, options.pluginScanner);
     return engine;
 }
 
@@ -832,7 +832,7 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(c
 QString RealEngine::statusText() const
 {
     const QStringList ports = m_midi.openPortNames();
-    return u"%1 Â· %2 Â· %3 kHz Â· %4 ms Â· MIDI: %5"_s.arg(m_audio.deviceName(), apiName(m_audio.api()))
+    return u"%1 · %2 · %3 kHz · %4 ms · MIDI: %5"_s.arg(m_audio.deviceName(), apiName(m_audio.api()))
         .arg(m_audio.sampleRate() / 1000.0, 0, 'f', 1)
         .arg(m_audio.latencyMs(), 0, 'f', 1)
         .arg(ports.isEmpty() ? u"none"_s : ports.join(u", "_s));

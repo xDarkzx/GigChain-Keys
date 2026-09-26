@@ -6,9 +6,10 @@ import QtQuick.Layouts
 
 // The installed VST instruments, as a Kontakt-style stacked list of cards:
 // name and maker on top with favourite (★) and details (ⓘ) buttons, the
-// instrument's own art (installed by its maker) as the banner, then the
-// user's star rating. Favourites are listed first. Instruments whose maker installs no art get a
-// banner with the maker's name and a category icon.
+// instrument's own banner (its VST3 snapshot) when it has one, then the
+// user's star rating. Favourites are listed first. Other instruments get a
+// banner in the maker's colour with the maker's name and the plugin's own
+// icon from its folder (PlugIn.ico), else a category icon.
 // Double-click (or drag onto the mixer) to add the instrument as a channel.
 Item {
     id: browser
@@ -76,6 +77,7 @@ Item {
                 required property string version
                 required property string category
                 required property string icon
+                required property bool officialIcon
                 required property string imageUrl
                 required property bool favorite
                 required property int rating
@@ -181,19 +183,25 @@ Item {
                             asynchronous: true
                             visible: status === Image.Ready
                         }
+                        // The plugin's own icon (from its folder), else a category icon.
                         Image {
+                            id: cardIcon
                             visible: art.status !== Image.Ready
                             anchors.verticalCenter: parent.verticalCenter
-                            x: 12
+                            x: card.officialIcon ? 8 : 12
                             source: card.icon
-                            sourceSize: Qt.size(26, 26)
-                            opacity: 0.9
+                            width: card.officialIcon ? 40 : 26
+                            height: width
+                            sourceSize: card.officialIcon ? Qt.size(80, 80) : Qt.size(26, 26)
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            opacity: card.officialIcon ? 1.0 : 0.9
                         }
                         Text {
                             visible: art.status !== Image.Ready
                             anchors.verticalCenter: parent.verticalCenter
-                            x: 50
-                            width: parent.width - 58
+                            x: cardIcon.x + cardIcon.width + 12
+                            width: parent.width - x - 8
                             text: card.vendor.toUpperCase()
                             color: "white"
                             font.pixelSize: 15

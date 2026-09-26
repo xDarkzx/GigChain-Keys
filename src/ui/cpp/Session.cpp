@@ -5,7 +5,7 @@ using namespace Qt::StringLiterals;
 namespace gigchain::ui {
 
 Session::Session(engine::IEngine& engine, QSettings& settings)
-    : m_artwork(OfficialArtwork::defaultSources()),
+    : m_artwork(engine.pluginFolder()),
       m_document(engine, settings),
       m_setlistModel(m_document),
       m_channelModel(m_document, engine, m_artwork),

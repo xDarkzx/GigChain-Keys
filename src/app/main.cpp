@@ -182,6 +182,7 @@ int runApp(int argc, char** argv)
 
     startup.report(quips.line(Quip::SoundGuy)); // opening the main window
     QQmlApplicationEngine qml;
+    ui::PluginIconProvider::install(qml);
     QObject::connect(&qml, &QQmlApplicationEngine::warnings, &app, [](const QList<QQmlError>& warnings) {
         for (const QQmlError& warning : warnings) qCWarning(lcApp).noquote() << warning.toString();
     });

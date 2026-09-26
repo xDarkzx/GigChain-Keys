@@ -23,15 +23,10 @@ using namespace Qt::StringLiterals;
 
 namespace {
 
-// Art sources that exist nowhere, so these tests never read the real machine.
-OfficialArtwork::Sources noArtwork()
+// A plugin folder that exists nowhere, so these tests never read the real machine.
+QString noArtwork()
 {
-    OfficialArtwork::Sources sources;
-    sources.arturiaRoot = u"Z:/none/Arturia"_s;
-    sources.niServiceCenter = u"Z:/none/ServiceCenter"_s;
-    sources.niResources = u"Z:/none/NI Resources"_s;
-    sources.niContentDir = [](const QString&) { return QString(); };
-    return sources;
+    return u"Z:/none/VST3"_s;
 }
 
 QVariant roleData(const QAbstractItemModel& model, int row, const QByteArray& roleName)
@@ -145,6 +140,7 @@ private slots:
         QCOMPARE(roleData(model, 0, "version").toString(), u"1.0"_s);
         QCOMPARE(roleData(model, 0, "category").toString(), u"Synth"_s);
         QVERIFY(roleData(model, 0, "icon").toString().endsWith(u"wave-sine.svg"_s));
+        QCOMPARE(roleData(model, 0, "officialIcon").toBool(), false); // no icon in its folder: a category icon
 
         model.setInstrumentsOnly(true); // the browser list: installed instruments only
         QCOMPARE(model.rowCount(), 2);
