@@ -10,6 +10,7 @@
 #include <QVariantMap>
 
 #include <algorithm>
+#include <array>
 #include <iterator>
 #include <cmath>
 #include <utility>
@@ -38,7 +39,7 @@ engine::ControlTriggers savedControls(QSettings& settings)
     engine::ControlTriggers triggers{};
     const QVariantList saved = settings.value(kControlsKey).toList();
     for (qsizetype i = 0; i < saved.size() && i < engine::kControlActionCount; ++i) {
-        triggers[static_cast<std::size_t>(i)] = engine::MidiTrigger::unpack(saved[i].toUInt());
+        triggers.at(static_cast<std::size_t>(i)) = engine::MidiTrigger::unpack(saved.at(i).toUInt());
     }
     return triggers;
 }
@@ -121,15 +122,14 @@ void SettingsController::setLimiterCeilingDb(double ceilingDb)
 
 QVariantList SettingsController::controls() const
 {
-    static const char* const kLabels[] = {QT_TR_NOOP("Next song"), QT_TR_NOOP("Previous song"),
-                                          QT_TR_NOOP("Next part"), QT_TR_NOOP("Previous part"),
-                                          QT_TR_NOOP("Panic (stop all sound)")};
-    static_assert(std::size(kLabels) == engine::kControlActionCount);
+    static constexpr std::array<const char*, engine::kControlActionCount> kLabels{
+        QT_TR_NOOP("Next song"), QT_TR_NOOP("Previous song"), QT_TR_NOOP("Next part"), QT_TR_NOOP("Previous part"),
+        QT_TR_NOOP("Panic (stop all sound)")};
     QVariantList list;
     for (int i = 0; i < engine::kControlActionCount; ++i) {
-        const engine::MidiTrigger& trigger = m_controls[static_cast<std::size_t>(i)];
+        const engine::MidiTrigger& trigger = m_controls.at(static_cast<std::size_t>(i));
         list << QVariantMap{{u"action"_s, i},
-                            {u"label"_s, tr(kLabels[i])},
+                            {u"label"_s, tr(kLabels.at(static_cast<std::size_t>(i)))},
                             {u"trigger"_s, trigger.isSet() ? trigger.describe() : QString()}};
     }
     return list;
@@ -152,7 +152,7 @@ void SettingsController::clearControl(int action)
         qCWarning(lcUi) << "Ignored: no control action" << action;
         return;
     }
-    m_controls[static_cast<std::size_t>(action)] = {};
+    m_controls.at(static_cast<std::size_t>(action)) = {};
     if (m_learning == action) m_learning = -1;
     m_controlsTouched = true;
     emit changed();
@@ -167,7 +167,7 @@ void SettingsController::pollLearning()
     for (auto& trigger : m_controls) {
         if (trigger == pressed) trigger = {};
     }
-    m_controls[static_cast<std::size_t>(m_learning)] = pressed;
+    m_controls.at(static_cast<std::size_t>(m_learning)) = pressed;
     qCInfo(lcUi).noquote() << "Learned" << pressed.describe() << "for control" << m_learning;
     m_learning = -1;
     m_controlsTouched = true;
@@ -241,8 +241,7 @@ QStringList SettingsController::devices() const
 
 bool SettingsController::asioAvailable() const
 {
-    return std::any_of(m_outputs.begin(), m_outputs.end(),
-                       [](const engine::AudioOutput& o) { return o.driver == engine::AudioDriver::Asio; });
+    return std::ranges::any_of(m_outputs, [](const engine::AudioOutput& o) { return o.driver == engine::AudioDriver::Asio; });
 }
 
 const engine::AudioOutput* SettingsController::chosenOutput() const
@@ -258,13 +257,13 @@ void SettingsController::keepRateValid()
     const engine::AudioOutput* output = chosenOutput();
     if (output == nullptr || output->sampleRates.empty()) return;
     const auto& rates = output->sampleRates;
-    if (std::find(rates.begin(), rates.end(), m_pending.sampleRate) != rates.end()) return;
+    if (std::ranges::find(rates, m_pending.sampleRate) != rates.end()) return;
     // The device's own rate if offered, else the nearest to 48 kHz.
-    if (std::find(rates.begin(), rates.end(), output->preferredSampleRate) != rates.end()) {
+    if (std::ranges::find(rates, output->preferredSampleRate) != rates.end()) {
         m_pending.sampleRate = output->preferredSampleRate;
         return;
     }
-    m_pending.sampleRate = *std::min_element(rates.begin(), rates.end(), [](unsigned int a, unsigned int b) {
+    m_pending.sampleRate = *std::ranges::min_element(rates, [](unsigned int a, unsigned int b) {
         return std::abs(static_cast<int>(a) - 48000) < std::abs(static_cast<int>(b) - 48000);
     });
 }
@@ -341,8 +340,7 @@ void SettingsController::refreshMidi()
     std::vector<engine::MidiPort> present = m_engine.midiInputs();
     for (auto& port : present) {
         // Keep what this page already shows (and maybe changed) for known inputs.
-        const auto shown = std::find_if(m_midi.begin(), m_midi.end(),
-                                        [&](const engine::MidiPort& p) { return p.name == port.name; });
+        const auto shown = std::ranges::find_if(m_midi, [&](const engine::MidiPort& p) { return p.name == port.name; });
         if (shown != m_midi.end()) port = *shown;
     }
     if (present == m_midi) return;
@@ -374,9 +372,9 @@ void SettingsController::resetToDefaults()
     m_pending.sampleRate = 0;
     m_pending.bufferFrames = kDefaultBuffer;
     keepRateValid();
-    for (std::size_t i = 0; i < m_midi.size(); ++i) {
-        m_midi[i].enabled = i == 0; // the default: only the first port
-        m_midi[i].channel = 0;
+    for (engine::MidiPort& port : m_midi) {
+        port.enabled = &port == &m_midi.front(); // the default: only the first port
+        port.channel = 0;
     }
     m_midiTouched = true;
     m_reopenLast = false;
