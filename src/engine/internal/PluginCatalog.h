@@ -37,11 +37,24 @@ public:
     // done, how many in all. For a splash screen.
     using Progress = std::function<void(const QString& plugin, int done, int total)>;
 
-    // No cacheFile: every plugin is opened. `guard`: new plugins are opened
-    // under it, and plugins it blocked are not opened.
+    // No cacheFile: every plugin is opened. `guard`: plugins it blocked are
+    // not opened, and plugins read in this process are read under it.
+    // `scanner`: the plugin scanner program (src/scanner). New and changed
+    // plugins are then read each in a process of its own, several at once,
+    // as Audacity 4 does: one that crashes while being read ends only that
+    // process (remembered, not opened again until its file changes); one that
+    // hangs is stopped after kScanTimeoutMs (tried again next scan). Empty:
+    // read in this process; set but missing: the same, and logged.
     static std::vector<PluginInfo> scan(const QString& folder, const QString& cacheFile = {},
                                         ScanStats* stats = nullptr, const Progress& progress = {},
-                                        PluginLoadGuard* guard = nullptr);
+                                        const PluginLoadGuard* guard = nullptr, const QString& scanner = {});
+
+    // The scanner program's work: reads one plugin and writes what it found
+    // (or why it could not) to `resultFile`. False, logged, when the file
+    // cannot be written.
+    static bool readToFile(const QString& bundle, const QString& resultFile);
+
+    static constexpr int kScanTimeoutMs = 15000; // Audacity 4's AUDIO_PLUGIN_REGISTRATION_TIMEOUT_MS
 };
 
 } // namespace gigchain::engine

@@ -21,6 +21,10 @@ struct RealEngineOptions
     QString pluginFolder;      // empty: the standard VST3 folder
     QString pluginCacheFile;   // what the plugin scan learned; empty: open every plugin
     QString pluginGuardFolder; // remembers plugins that crashed the app while loading; empty: off
+    // The plugin scanner program: new plugins are read in a process of their
+    // own, so one that crashes while being read cannot take the app down.
+    // Empty or missing: read in the app (a missing one is logged).
+    QString pluginScanner;
     // Start-up progress (plugin scan) for a splash screen; also becomes the
     // engine's progress handler (see IEngine::setProgressHandler).
     LoadProgress progress;

@@ -105,6 +105,8 @@ void EngineStatus::poll()
         case engine::ControlAction::Panic: panic(); break;
         }
     }
+    // A keyboard's patch buttons (Program Change).
+    if (const int program = m_engine.takeProgramChange(); program >= 0) m_document.selectProgram(program);
 
     if (const float peak = m_engine.masterLevel().peak; peak != m_masterPeak) {
         m_masterPeak = peak;

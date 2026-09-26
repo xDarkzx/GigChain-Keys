@@ -35,6 +35,8 @@ public:
     void setControlTriggers(const engine::ControlTriggers& chosen) override { triggers = chosen; }
     std::vector<engine::ControlAction> pendingActions;
     std::vector<engine::ControlAction> takeControlActions() override { return std::exchange(pendingActions, {}); }
+    int pendingProgram = -1;
+    int takeProgramChange() override { return std::exchange(pendingProgram, -1); }
     engine::MidiTrigger learned;
     engine::MidiTrigger takeLearnedTrigger() override { return std::exchange(learned, {}); }
     int panics = 0;

@@ -3,7 +3,7 @@
 # DLLs through PATH and render QML off-screen.
 function(gigchain_add_test name)
     cmake_parse_arguments(ARG "" "" "SOURCES;LIBS" ${ARGN})
-    add_executable(${name} ${ARG_SOURCES})
+    add_executable(${name} ${ARG_SOURCES} ${PROJECT_SOURCE_DIR}/tests/common/NoErrorDialogs.cpp)
     target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/tests/common)
     target_link_libraries(${name} PRIVATE Qt6::Test ${ARG_LIBS})
     gigchain_target_defaults(${name})
