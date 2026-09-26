@@ -55,7 +55,7 @@ void handler(QtMsgType type, const QMessageLogContext& context, const QString& m
     QtMessageHandler previous = nullptr;
     {
         LogState& s = state();
-        const std::lock_guard lock(s.mutex);
+        const std::scoped_lock lock(s.mutex);
         previous = s.previous;
         if (s.file) {
             const QString line = u"%1 %2 %3: %4"_s.arg(
@@ -95,7 +95,7 @@ Result<void> FileLog::install(const QString& path)
 
     LogState& s = state();
     {
-        const std::lock_guard lock(s.mutex);
+        const std::scoped_lock lock(s.mutex);
         s.file = std::move(file);
         s.installed = true;
     }
@@ -108,7 +108,7 @@ void FileLog::uninstall()
     LogState& s = state();
     if (!s.installed) return;
     qInstallMessageHandler(s.previous);
-    const std::lock_guard lock(s.mutex);
+    const std::scoped_lock lock(s.mutex);
     s.file.reset();
     s.previous = nullptr;
     s.installed = false;

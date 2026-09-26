@@ -73,7 +73,7 @@ Result<void> validateChannel(const Channel& channel, const QString& path)
                     u"%1 has more than %2 effects"_s.arg(path).arg(limits::kMaxEffectsPerChannel));
     }
     for (std::size_t i = 0; i < channel.effects.size(); ++i) {
-        if (auto r = validateSlot(channel.effects[i], u"%1.effects[%2]"_s.arg(path).arg(i)); !r) return r;
+        if (auto r = validateSlot(channel.effects.at(i), u"%1.effects[%2]"_s.arg(path).arg(i)); !r) return r;
     }
     if (!std::isfinite(channel.volumeDb) || channel.volumeDb < limits::kMinVolumeDb ||
         channel.volumeDb > limits::kMaxVolumeDb) {
@@ -114,7 +114,7 @@ Result<void> validateChart(const Song& song, const QString& path)
     }
     for (std::size_t i = 0; i < song.links.size(); ++i) {
         const QString linkPath = u"%1.links[%2]"_s.arg(path).arg(i);
-        const SongLink& link = song.links[i];
+        const SongLink& link = song.links.at(i);
         if (auto r = validateLength(link.title, limits::kMaxNameLength, linkPath + ".title"_L1); !r) return r;
         if (auto r = validateLength(link.url, limits::kMaxUrlLength, linkPath + ".url"_L1); !r) return r;
         // Links are opened in the browser: a setlist must not be able to
@@ -129,7 +129,7 @@ Result<void> validateChart(const Song& song, const QString& path)
                     u"%1 has more than %2 attachments"_s.arg(path).arg(limits::kMaxAttachmentsPerSong));
     }
     for (std::size_t i = 0; i < song.attachments.size(); ++i) {
-        const QString name = song.attachments[i];
+        const QString& name = song.attachments.at(i);
         const QString attachmentPath = u"%1.attachments[%2]"_s.arg(path).arg(i);
         if (auto r = validateLength(name, limits::kMaxFileNameLength, attachmentPath); !r) return r;
         // A plain file name inside the setlist's folder: no folders, drives
@@ -157,7 +157,7 @@ Result<void> validate(const Setlist& setlist)
     };
 
     for (std::size_t s = 0; s < setlist.songs.size(); ++s) {
-        const Song& song = setlist.songs[s];
+        const Song& song = setlist.songs.at(s);
         const QString songPath = u"songs[%1]"_s.arg(s);
         if (auto r = validateId(song.id.value(), songPath + ".id"_L1); !r) return r;
         if (auto r = unique(song.id.value(), songPath + ".id"_L1); !r) return r;
@@ -171,7 +171,7 @@ Result<void> validate(const Setlist& setlist)
                         u"%1 has more than %2 patches"_s.arg(songPath).arg(limits::kMaxPatchesPerSong));
         }
         for (std::size_t p = 0; p < song.patches.size(); ++p) {
-            const Patch& patch = song.patches[p];
+            const Patch& patch = song.patches.at(p);
             const QString patchPath = u"%1.patches[%2]"_s.arg(songPath).arg(p);
             if (auto r = validateId(patch.id.value(), patchPath + ".id"_L1); !r) return r;
             if (auto r = unique(patch.id.value(), patchPath + ".id"_L1); !r) return r;
@@ -182,8 +182,8 @@ Result<void> validate(const Setlist& setlist)
             }
             for (std::size_t c = 0; c < patch.channels.size(); ++c) {
                 const QString channelPath = u"%1.channels[%2]"_s.arg(patchPath).arg(c);
-                if (auto r = validateChannel(patch.channels[c], channelPath); !r) return r;
-                if (auto r = unique(patch.channels[c].id.value(), channelPath + ".id"_L1); !r) return r;
+                if (auto r = validateChannel(patch.channels.at(c), channelPath); !r) return r;
+                if (auto r = unique(patch.channels.at(c).id.value(), channelPath + ".id"_L1); !r) return r;
             }
         }
     }

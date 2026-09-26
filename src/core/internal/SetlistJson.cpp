@@ -258,8 +258,8 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
     for (qsizetype i = 0; i < links.size() && !r.failed(); ++i) {
         const QString linkPath = u"%1.links[%2]"_s.arg(path).arg(i);
         const QJsonObject link = r.object(links.at(i), linkPath);
-        song.links.push_back(SongLink{r.string(link, "title"_L1, linkPath, limits::kMaxNameLength),
-                                      r.string(link, "url"_L1, linkPath, limits::kMaxUrlLength)});
+        song.links.push_back(SongLink{.title = r.string(link, "title"_L1, linkPath, limits::kMaxNameLength),
+                                      .url = r.string(link, "url"_L1, linkPath, limits::kMaxUrlLength)});
     }
     const QJsonArray attachments = r.optionalArray(obj, "attachments"_L1, path, limits::kMaxAttachmentsPerSong);
     for (qsizetype i = 0; i < attachments.size() && !r.failed(); ++i) {

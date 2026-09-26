@@ -10,6 +10,7 @@
 #include <rtmidi/RtMidi.h>
 
 #include <exception>
+#include <span>
 
 using namespace Qt::StringLiterals;
 
@@ -18,15 +19,17 @@ namespace gigchain::engine {
 std::optional<MidiEvent> parseMidi(std::span<const unsigned char> bytes) noexcept
 {
     if (bytes.empty()) return std::nullopt;
-    const unsigned char status = bytes[0];
+    const unsigned char status = bytes.front();
     if (status < 0x80 || status >= 0xF0) return std::nullopt; // data byte first, or a system message
     const int type = status & 0xF0;
     const std::size_t length = (type == 0xC0 || type == 0xD0) ? 2 : 3;
     if (bytes.size() < length) return std::nullopt;
-    for (std::size_t i = 1; i < length; ++i) {
-        if (bytes[i] > 0x7F) return std::nullopt;
-    }
-    return MidiEvent{status, bytes[1], length == 3 ? bytes[2] : static_cast<uint8_t>(0), 0};
+    const std::span<const unsigned char> data = bytes.subspan(1, length - 1);
+    if (std::ranges::any_of(data, [](unsigned char b) { return b > 0x7F; })) return std::nullopt;
+    return MidiEvent{.status = status,
+                     .data1 = data.front(),
+                     .data2 = length == 3 ? data.back() : static_cast<uint8_t>(0),
+                     .sampleOffset = 0};
 }
 
 MidiInput::MidiInput() = default;
@@ -68,14 +71,15 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
         return notices;
     }
     for (qsizetype i = 0; i < names.size(); ++i) {
-        const auto wanted = std::find_if(ports.begin(), ports.end(), [&](const MidiPort& p) { return p.name == names[i]; });
+        const QString& name = names.at(i);
+        const auto wanted = std::ranges::find_if(ports, [&](const MidiPort& p) { return p.name == name; });
         if (wanted == ports.end() || !wanted->enabled) {
-            qCInfo(lcEngine).noquote() << "MIDI input off:" << names[i];
+            qCInfo(lcEngine).noquote() << "MIDI input off:" << name;
             continue;
         }
         auto port = std::make_unique<Port>();
         port->owner = this;
-        port->name = names[i];
+        port->name = name;
         port->channel = wanted->channel;
         try {
             port->in = std::make_unique<RtMidiIn>();
@@ -89,11 +93,11 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
             port->in->ignoreTypes(true, true, true); // sysex, timing, active sensing
             port->in->setCallback(&MidiInput::callback, port.get());
         } catch (const std::exception& e) {
-            notices.push_back(u"Could not open MIDI input %1: %2"_s.arg(names[i], QString::fromUtf8(e.what())));
+            notices.push_back(u"Could not open MIDI input %1: %2"_s.arg(name, QString::fromUtf8(e.what())));
             qCWarning(lcEngine).noquote() << notices.back();
             continue;
         }
-        qCInfo(lcEngine).noquote() << "MIDI input opened:" << names[i]
+        qCInfo(lcEngine).noquote() << "MIDI input opened:" << name
                                    << (port->channel == 0 ? u"(all channels)"_s : u"(channel %1 only)"_s.arg(port->channel));
         m_ports.push_back(std::move(port));
     }
@@ -122,12 +126,12 @@ QStringList MidiInput::openPortNames() const
 
 std::size_t MidiInput::drain(std::span<MidiEvent> out) noexcept
 {
-    std::size_t count = 0;
+    auto next = out.begin();
     for (const auto& port : m_ports) {
         MidiEvent event;
-        while (count < out.size() && port->queue.pop(event)) out[count++] = event;
+        while (next != out.end() && port->queue.pop(event)) *next++ = event;
     }
-    return count;
+    return static_cast<std::size_t>(next - out.begin());
 }
 
 void MidiInput::callback(double, std::vector<unsigned char>* message, void* user)

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <span>
 
 namespace gigchain::engine {
 namespace {
@@ -53,7 +54,7 @@ void ChannelStrip::setPan(double pan)
 
 LevelReading ChannelStrip::takeLevel()
 {
-    return LevelReading{m_peak.exchange(0.0F, std::memory_order_relaxed), m_rms.load(std::memory_order_relaxed)};
+    return LevelReading{.peak = m_peak.exchange(0.0F, std::memory_order_relaxed), .rms = m_rms.load(std::memory_order_relaxed)};
 }
 
 void ChannelStrip::render(std::span<const MidiEvent> events, AudioBlock mix, bool anySolo) noexcept
@@ -61,10 +62,10 @@ void ChannelStrip::render(std::span<const MidiEvent> events, AudioBlock mix, boo
     std::size_t routedCount = 0;
     for (const MidiEvent& event : events) {
         if (routedCount == m_routed.size()) break;
-        if (const auto routed = routeEvent(event, m_route)) m_routed[routedCount++] = *routed;
+        if (const auto routed = routeEvent(event, m_route)) m_routed.at(routedCount++) = *routed; // room checked above
     }
 
-    AudioBlock block{m_left.data(), m_right.data(), mix.frames};
+    AudioBlock block{.left = m_left.data(), .right = m_right.data(), .frames = mix.frames};
     const auto frames = static_cast<std::size_t>(mix.frames);
     if (m_instrument) {
         m_instrument->process(std::span<const MidiEvent>(m_routed.data(), routedCount), block);
@@ -86,11 +87,19 @@ void ChannelStrip::render(std::span<const MidiEvent> events, AudioBlock mix, boo
 
     float peak = 0.0F;
     double sumSquares = 0.0;
-    for (std::size_t i = 0; i < frames; ++i) {
-        const float left = block.left[i] * leftGain;
-        const float right = block.right[i] * rightGain;
-        mix.left[i] += left;
-        mix.right[i] += right;
+    // The block's own buffers and the mix, each `frames` long (checked by the graph).
+    const std::span<const float> fromLeft(block.left, frames);
+    const std::span<const float> fromRight(block.right, frames);
+    const std::span<float> toLeft(mix.left, frames);
+    const std::span<float> toRight(mix.right, frames);
+    auto inRight = fromRight.begin();
+    auto outLeft = toLeft.begin();
+    auto outRight = toRight.begin();
+    for (auto inLeft = fromLeft.begin(); inLeft != fromLeft.end(); ++inLeft, ++inRight, ++outLeft, ++outRight) {
+        const float left = *inLeft * leftGain;
+        const float right = *inRight * rightGain;
+        *outLeft += left;
+        *outRight += right;
         peak = std::max({peak, std::abs(left), std::abs(right)});
         sumSquares += 0.5 * (static_cast<double>(left) * left + static_cast<double>(right) * right);
     }
@@ -120,27 +129,28 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
     }
     if (out.frames <= 0) return;
 
-    const bool anySolo = std::any_of(m_strips.begin(), m_strips.end(), [](const auto& s) { return s->solo(); });
+    const bool anySolo = std::ranges::any_of(m_strips, [](const auto& s) { return s->solo(); });
     for (const auto& strip : m_strips) {
         strip->render(events, out, anySolo);
     }
     for (const auto& effect : m_masterEffects) {
         effect->process({}, out);
     }
-    for (std::size_t i = 0; i < frames; ++i) {
-        out.left[i] *= masterGain;
-        out.right[i] *= masterGain;
-    }
+    const auto gain = [masterGain](float sample) { return sample * masterGain; };
+    const std::span<float> left(out.left, frames);
+    const std::span<float> right(out.right, frames);
+    std::ranges::transform(left, left.begin(), gain);
+    std::ranges::transform(right, right.begin(), gain);
 }
 
 ChannelStrip* RenderGraph::strip(std::size_t index)
 {
-    return index < m_strips.size() ? m_strips[index].get() : nullptr;
+    return index < m_strips.size() ? m_strips.at(index).get() : nullptr;
 }
 
 ChannelStrip* RenderGraph::findStrip(const core::ChannelId& id)
 {
-    const auto it = std::find_if(m_strips.begin(), m_strips.end(), [&id](const auto& s) { return s->id() == id; });
+    const auto it = std::ranges::find_if(m_strips, [&id](const auto& s) { return s->id() == id; });
     return it == m_strips.end() ? nullptr : it->get();
 }
 
