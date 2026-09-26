@@ -245,12 +245,11 @@ QVariantList PluginListModel::instruments() const
 
 QVariantMap PluginListModel::findInstrument(const QString& text) const
 {
-    for (const auto& plugin : m_all) {
-        if (plugin.kind == engine::PluginKind::Instrument && plugin.name.contains(text, Qt::CaseInsensitive)) {
-            return QVariantMap{{u"pluginId"_s, plugin.id}, {u"name"_s, plugin.name}};
-        }
-    }
-    return {};
+    const auto found = std::ranges::find_if(m_all, [&text](const auto& plugin) {
+        return plugin.kind == engine::PluginKind::Instrument && plugin.name.contains(text, Qt::CaseInsensitive);
+    });
+    if (found == m_all.end()) return {};
+    return QVariantMap{{u"pluginId"_s, found->id}, {u"name"_s, found->name}};
 }
 
 void PluginListModel::applyFilter()

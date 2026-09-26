@@ -74,11 +74,11 @@ std::vector<AudioDeviceInfo> AudioDevice::listOutputs()
 }
 
 core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigned int bufferFrames, RenderCallback render,
-                                     unsigned int sampleRate)
+                                     unsigned int wantedRate)
 {
     m_render = std::move(render);
     m_asioRetried = false;
-    auto opened = openUnlogged(std::move(choice), bufferFrames, sampleRate);
+    auto opened = openUnlogged(std::move(choice), bufferFrames, wantedRate);
     if (opened) {
         qCInfo(lcEngine).noquote() << "Audio output:" << m_choice.name << "(" << apiName(m_choice.api) << ")"
                                    << m_sampleRate << "Hz," << m_maxBlock << "frames, latency" << m_latencyMs << "ms";
@@ -89,14 +89,14 @@ core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigne
 }
 
 core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames,
-                                             unsigned int sampleRate)
+                                             unsigned int wantedRate)
 {
     close();
     m_requestedFrames = bufferFrames;
-    m_requestedRate = sampleRate;
-    const AudioApi api = choice ? choice->api : AudioApi::Wasapi;
+    m_requestedRate = wantedRate;
+    const AudioApi driver = choice ? choice->api : AudioApi::Wasapi;
     auto rt = std::make_unique<RtAudio>(
-        toRtApi(api), [this](RtAudioErrorType type, const std::string& text) { onError(type, text); });
+        toRtApi(driver), [this](RtAudioErrorType type, const std::string& text) { onError(type, text); });
 
     std::optional<unsigned int> deviceId;
     if (!choice) {
@@ -113,7 +113,7 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     }
     if (!deviceId) {
         return core::fail(core::ErrorCode::InvalidData,
-                          choice ? u"No audio output named \"%1\" (%2)"_s.arg(choice->name, apiName(api))
+                          choice ? u"No audio output named \"%1\" (%2)"_s.arg(choice->name, apiName(driver))
                                  : u"This computer has no default audio output"_s);
     }
     const RtAudio::DeviceInfo info = rt->getDeviceInfo(*deviceId);
@@ -126,11 +126,11 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
     options.streamName = branding::name().toStdString(); // what Windows shows for our audio
     const unsigned int ownRate = info.preferredSampleRate != 0 ? info.preferredSampleRate : 48000;
-    const unsigned int rate = sampleRate != 0 ? sampleRate : ownRate;
-    if (sampleRate != 0 && sampleRate != info.preferredSampleRate &&
-        std::ranges::find(info.sampleRates, sampleRate) == info.sampleRates.end()) {
+    const unsigned int rate = wantedRate != 0 ? wantedRate : ownRate;
+    if (wantedRate != 0 && wantedRate != info.preferredSampleRate &&
+        std::ranges::find(info.sampleRates, wantedRate) == info.sampleRates.end()) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 (%2) cannot run at %3 Hz"_s.arg(
-                                                            QString::fromStdString(info.name), apiName(api)).arg(sampleRate));
+                                                            QString::fromStdString(info.name), apiName(driver)).arg(wantedRate));
     }
     unsigned int frames = bufferFrames;
 
@@ -144,7 +144,7 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     if (rt->openStream(&output, nullptr, RTAUDIO_FLOAT32, rate, &frames, &AudioDevice::callback, this, &options) !=
         RTAUDIO_NO_ERROR) {
         return core::fail(core::ErrorCode::DeviceUnavailable,
-                          u"Could not open %1 (%2): %3"_s.arg(QString::fromStdString(info.name), apiName(api),
+                          u"Could not open %1 (%2): %3"_s.arg(QString::fromStdString(info.name), apiName(driver),
                                                              takeLastError(u"unknown error"_s)));
     }
     m_maxBlock = static_cast<int>(frames);
@@ -152,12 +152,12 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     if (rt->startStream() != RTAUDIO_NO_ERROR) {
         rt->closeStream();
         return core::fail(core::ErrorCode::DeviceUnavailable,
-                          u"Could not start %1 (%2): %3"_s.arg(QString::fromStdString(info.name), apiName(api),
+                          u"Could not start %1 (%2): %3"_s.arg(QString::fromStdString(info.name), apiName(driver),
                                                               takeLastError(u"unknown error"_s)));
     }
     const auto latencyFrames = static_cast<double>(rt->getStreamLatency());
     m_latencyMs = m_sampleRate > 0.0 ? 1000.0 * std::max(latencyFrames, static_cast<double>(frames)) / m_sampleRate : 0.0;
-    m_choice = DeviceChoice{.api = api, .name = QString::fromStdString(info.name)};
+    m_choice = DeviceChoice{.api = driver, .name = QString::fromStdString(info.name)};
     m_rtaudio = std::move(rt);
     return {};
 }

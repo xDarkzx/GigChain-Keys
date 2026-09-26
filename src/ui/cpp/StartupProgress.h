@@ -39,15 +39,15 @@ public:
     [[nodiscard]] QString listingStep() const { return m_listingStep; }
     [[nodiscard]] bool active() const { return m_active; }
     // Engine progress after start-up: shows the overlay while loading.
-    void loading(const QString& step, const QString& what, int done, int total);
+    void loading(const QString& title, const QString& what, int done, int total);
     void addPlugin(const QString& name) { m_plugins << name; }
 
     // Updates the splash and lets it repaint (startup work runs on this thread).
-    void report(const QString& step, const QString& detail = {}, double progress = -1.0);
+    void report(const QString& title, const QString& text = {}, double fraction = -1.0);
     // Everything is loaded. The splash still stays up for `remainingMs`: it
     // steps through every plugin found, the bar filling left to right, then
-    // shows `readyStep`. `listingStep` is shown while it names them.
-    void finish(int remainingMs, const QString& listingStep, const QString& readyStep);
+    // shows `readyStep`. `listingTitle` is shown while it names them.
+    void finish(int remainingMs, const QString& listingTitle, const QString& readyStep);
 
 signals:
     void changed();

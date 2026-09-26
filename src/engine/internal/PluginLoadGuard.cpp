@@ -10,6 +10,8 @@
 #include <QJsonDocument>
 #include <QSaveFile>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 namespace gigchain::engine {
@@ -94,10 +96,7 @@ QStringList PluginLoadGuard::takeCrashed()
 bool PluginLoadGuard::isBlocked(const QString& pluginPath) const
 {
     const QString wanted = normalised(pluginPath);
-    for (const QString& path : m_blocked) {
-        if (normalised(path) == wanted) return true;
-    }
-    return false;
+    return std::ranges::any_of(m_blocked, [&wanted](const QString& path) { return normalised(path) == wanted; });
 }
 
 void PluginLoadGuard::unblock(const QString& pluginPath)

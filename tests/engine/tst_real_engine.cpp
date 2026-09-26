@@ -12,6 +12,7 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
+#include <algorithm>
 #include <chrono>
 #include <thread>
 
@@ -119,21 +120,17 @@ private slots:
         for (const unsigned int rate : current->sampleRates) {
             QVERIFY2(rate >= 44100 && rate <= 96000, "only live-safe rates are offered"); // 192 kHz crashed Piano V2
         }
-        unsigned int other = 0;
-        for (const unsigned int rate : current->sampleRates) {
-            if (rate != before.sampleRate) {
-                other = rate; // the lowest other rate: 44.1 kHz when running at 48
-                break;
-            }
-        }
-        if (other == 0) QSKIP("The system output offers only one sample rate");
+        // The lowest other rate: 44.1 kHz when running at 48.
+        const auto other = std::ranges::find_if(current->sampleRates,
+                                                [&](unsigned int rate) { return rate != before.sampleRate; });
+        if (other == current->sampleRates.end()) QSKIP("The system output offers only one sample rate");
 
         AudioSetup wanted = before;
-        wanted.sampleRate = other;
+        wanted.sampleRate = *other;
         wanted.bufferFrames = 512;
         const auto changed = engine.setAudioSetup(wanted);
         QVERIFY2(changed.has_value(), changed ? "" : qPrintable(changed.error().message));
-        QCOMPARE(engine.audioSetup().sampleRate, other);
+        QCOMPARE(engine.audioSetup().sampleRate, *other);
 
         // The same plugin, re-prepared for the new rate, still plays.
         engine.injectNote(1, 64, 110);

@@ -12,7 +12,7 @@ using namespace Qt::StringLiterals;
 
 namespace gigchain::ui {
 
-bool carryOverSettings(QSettings& previous, QSettings& current)
+bool carryOverSettings(const QSettings& previous, QSettings& current)
 {
     if (!current.allKeys().isEmpty()) return false; // the current name already has settings
     const QStringList keys = previous.allKeys();

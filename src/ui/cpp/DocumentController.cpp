@@ -355,7 +355,8 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
 {
     using Kind = core::ChartLine::Kind;
     QVariantList lines;
-    for (const core::ChartLine& line : core::parseChordPro(chordPro).lines) {
+    const auto chart = core::parseChordPro(chordPro);
+    for (const core::ChartLine& line : chart.lines) {
         QString kind;
         switch (line.kind) {
         case Kind::Lyrics: kind = u"lyrics"_s; break;
@@ -724,11 +725,11 @@ bool DocumentController::report(const core::Error& error)
     return false;
 }
 
-void DocumentController::setCursor(core::Cursor cursor, bool force)
+void DocumentController::setCursor(core::Cursor to, bool force)
 {
     GC_ONLY_MAIN_THREAD();
-    if (cursor == m_cursor && !force) return;
-    m_cursor = cursor;
+    if (to == m_cursor && !force) return;
+    m_cursor = to;
     const core::Patch* patch = currentPatch();
     FreezeWatchdog::mark(u"switch to %1 / %2"_s.arg(currentSongName(), patch != nullptr ? patch->name : QString()));
     QElapsedTimer timer;

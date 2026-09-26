@@ -65,10 +65,10 @@ public:
     // probing drivers are logged.
     static std::vector<AudioDeviceInfo> listOutputs();
 
-    // std::nullopt = the default system (WASAPI) output. sampleRate 0 = the
+    // std::nullopt = the default system (WASAPI) output. wantedRate 0 = the
     // device's own rate; any other rate the device does not list is an error.
     core::Result<void> open(std::optional<DeviceChoice> choice, unsigned int bufferFrames, RenderCallback render,
-                            unsigned int sampleRate = 0);
+                            unsigned int wantedRate = 0);
     void close();
 
     // Stop / restart the running stream without closing it. When pause()
@@ -93,7 +93,7 @@ private:
     static int callback(void* output, void* input, unsigned int frames, double streamTime, unsigned int status,
                         void* user);
     void onError(int type, const std::string& text);
-    core::Result<void> openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames, unsigned int sampleRate);
+    core::Result<void> openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames, unsigned int wantedRate);
 
     std::unique_ptr<RtAudio> m_rtaudio;
     RenderCallback m_render;

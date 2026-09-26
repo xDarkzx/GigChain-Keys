@@ -57,7 +57,7 @@ private:
         QString regKey;
     };
 
-    [[nodiscard]] PluginArtwork fromSnapshot(const engine::PluginInfo& plugin) const;
+    [[nodiscard]] static PluginArtwork fromSnapshot(const engine::PluginInfo& plugin);
     [[nodiscard]] PluginArtwork fromNks(const engine::PluginInfo& plugin) const;
     [[nodiscard]] PluginArtwork fromArturia(const engine::PluginInfo& plugin) const;
 

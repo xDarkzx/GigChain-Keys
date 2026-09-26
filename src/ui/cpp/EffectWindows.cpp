@@ -29,10 +29,10 @@ public:
     std::function<void()> onClose;
 
 protected:
-    bool event(QEvent* event) override
+    bool event(QEvent* e) override
     {
-        if (event->type() == QEvent::Close && onClose) onClose();
-        return QWindow::event(event);
+        if (e->type() == QEvent::Close && onClose) onClose();
+        return QWindow::event(e);
     }
 };
 
@@ -64,7 +64,7 @@ EffectWindows::EffectWindows(engine::IEngine& engine, DocumentController& docume
 
 EffectWindows::~EffectWindows()
 {
-    for (auto& entry : m_open) {
+    for (const auto& entry : m_open) {
         entry->editor->detach(); // before its window goes
         delete entry->window.data();
     }
@@ -87,7 +87,7 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
     }
     const core::PluginSlot& slot = strip.effects.at(static_cast<std::size_t>(effect));
 
-    for (auto& entry : m_open) {
+    for (const auto& entry : m_open) {
         if (entry->channel == strip.id && entry->effect == effect && entry->pluginId == slot.pluginId) {
             GC_IF_FAILED(entry->window) { break; } // an open entry always has its window
             entry->window->raise();
@@ -129,7 +129,7 @@ bool EffectWindows::openMaster(int effect, const std::vector<core::PluginSlot>& 
         return false;
     }
     const core::PluginSlot& slot = masterSlots.at(static_cast<std::size_t>(effect));
-    for (auto& entry : m_open) {
+    for (const auto& entry : m_open) {
         if (entry->master && entry->effect == effect && entry->pluginId == slot.pluginId) {
             GC_IF_FAILED(entry->window) { break; } // an open entry always has its window
             entry->window->raise();

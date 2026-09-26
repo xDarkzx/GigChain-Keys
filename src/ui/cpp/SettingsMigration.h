@@ -9,7 +9,7 @@ namespace gigchain::ui {
 // set up again. A remembered setlist whose file was renamed to the current
 // extension is found again. Returns true when anything was copied (logged).
 // Never overwrites existing settings.
-bool carryOverSettings(QSettings& previous, QSettings& current);
+bool carryOverSettings(const QSettings& previous, QSettings& current);
 
 // Tries every earlier name listed in branding.cmake, newest first.
 void carryOverPreviousSettings(QSettings& current);

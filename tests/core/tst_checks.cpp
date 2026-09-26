@@ -18,6 +18,7 @@ private slots:
     {
         int fallbacks = 0;
         const int value = 3;
+        // cppcheck-suppress knownConditionTrueFalse ; the test needs a check that holds
         GC_IF_FAILED(value == 3) { ++fallbacks; }
         QCOMPARE(fallbacks, 0);
     }

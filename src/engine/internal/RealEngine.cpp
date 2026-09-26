@@ -113,7 +113,9 @@ void RealEngine::preload(const core::Setlist& setlist)
     std::map<QString, const core::PluginSlot*> wanted;
     for (const core::Song& song : setlist.songs) {
         for (const core::Patch& patch : song.patches) {
-            for (const PlannedSlot& planned : planPatch(song.id, patch)) wanted.emplace(planned.key, planned.slot);
+            // The first of each key is kept (a map insert never replaces).
+            std::ranges::transform(planPatch(song.id, patch), std::inserter(wanted, wanted.end()),
+                                   [](const PlannedSlot& planned) { return std::pair{planned.key, planned.slot}; });
         }
     }
     // Unload what this setlist does not use, and what must load again with
@@ -226,7 +228,7 @@ core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
     } else if (setup.driver == AudioDriver::Asio) {
         return core::fail(core::ErrorCode::InvalidData, u"Choose an ASIO device"_s);
     }
-    return m_audio.open(choice, setup.bufferFrames, [this](AudioBlock out) { render(out); }, setup.sampleRate);
+    return m_audio.open(choice, setup.bufferFrames, [this](const AudioBlock& out) { render(out); }, setup.sampleRate);
 }
 
 std::vector<AudioOutput> RealEngine::audioOutputs() const

@@ -16,9 +16,9 @@ SelectedChannel::SelectedChannel(const DocumentController& document, QObject* pa
 const core::Channel* SelectedChannel::channel() const
 {
     const core::Patch* patch = m_document.currentPatch();
-    const int index = m_document.selectedChannel();
-    if (patch == nullptr || index < 0 || static_cast<std::size_t>(index) >= patch->channels.size()) return nullptr;
-    return &patch->channels.at(static_cast<std::size_t>(index));
+    const int selected = m_document.selectedChannel();
+    if (patch == nullptr || selected < 0 || static_cast<std::size_t>(selected) >= patch->channels.size()) return nullptr;
+    return &patch->channels.at(static_cast<std::size_t>(selected));
 }
 
 int SelectedChannel::index() const
