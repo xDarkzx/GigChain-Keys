@@ -17,6 +17,7 @@
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 #include "pluginterfaces/vst/ivstevents.h"
+#include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/gui/iplugviewcontentscalesupport.h"
@@ -27,10 +28,12 @@
 #include <QtEndian>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <bitset>
 #include <cmath>
 #include <exception>
+#include <set>
 #include <string>
 
 using namespace Qt::StringLiterals;
@@ -38,6 +41,10 @@ using namespace Steinberg;
 
 namespace gigchain::engine {
 namespace {
+
+// Points each parameter queue holds without allocating: the SDK's
+// ParameterValueQueue reserves 5 (kQueueReservedPoints, parameterchanges.cpp).
+constexpr int32 kMaxPointsPerBlock = 5;
 
 // One host context for the whole process, installed before the first plugin
 // loads (the SDK's PlugProvider reads it from PluginContextFactory).
@@ -115,6 +122,55 @@ struct Vst3Node::Impl
     // main-thread request to release them on the next block.
     std::bitset<16 * 128> heldNotes;
     std::atomic<bool> releaseRequested{false};
+    // MIDI controllers (sustain pedal, mod wheel, pitch bend, aftertouch) as
+    // the plugin's own parameters, per MIDI channel: VST3 plugins take no raw
+    // controllers, the host translates them (IMidiMapping). Built at load.
+    std::array<std::array<Vst::ParamID, Vst::kCountCtrlNumber>, 16> midiMapping{};
+
+    // Main thread, at load: asks the plugin which parameter each controller
+    // moves, and reserves a queue for each so the audio thread never allocates.
+    void mapMidiControllers()
+    {
+        for (auto& channel : midiMapping) channel.fill(Vst::kNoParamId);
+        FUnknownPtr<Vst::IMidiMapping> mapping(controller);
+        if (!mapping || component->getBusCount(Vst::kEvent, Vst::kInput) == 0) return;
+        std::set<Vst::ParamID> used;
+        for (int16 channel = 0; channel < 16; ++channel) {
+            for (Vst::CtrlNumber number = 0; number < Vst::kCountCtrlNumber; ++number) {
+                Vst::ParamID id = Vst::kNoParamId;
+                if (mapping->getMidiControllerAssignment(0, channel, number, id) == kResultTrue && id != Vst::kNoParamId) {
+                    midiMapping.at(static_cast<std::size_t>(channel)).at(static_cast<std::size_t>(number)) = id;
+                    used.insert(id);
+                }
+            }
+        }
+        parameterChanges.setMaxParameters(static_cast<int32>(used.size()));
+        const Vst::ParamID sustain = midiMapping.front().at(Vst::kCtrlSustainOnOff);
+        qCInfo(lcEngine).noquote() << name << "maps" << used.size() << "parameters to MIDI controllers; sustain pedal"
+                                   << (sustain != Vst::kNoParamId ? u"mapped"_s : u"not used"_s);
+    }
+
+    // Audio thread: a controller move as a change of the parameter it is
+    // mapped to (nothing when the plugin does not use that controller).
+    void sendController(int channel, Vst::CtrlNumber number, Vst::ParamValue value, int32 sampleOffset) noexcept
+    {
+        if (channel < 0 || channel >= 16 || number < 0 || number >= Vst::kCountCtrlNumber) return;
+        const Vst::ParamID id = midiMapping.at(static_cast<std::size_t>(channel)).at(static_cast<std::size_t>(number));
+        if (id == Vst::kNoParamId) return;
+        int32 index = 0;
+        Vst::IParamValueQueue* queue = parameterChanges.addParameterData(id, index);
+        if (queue == nullptr) {
+            droppedEvents.fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
+        // Each queue has room for kMaxPointsPerBlock without allocating; a
+        // further move in the same block replaces the last one.
+        if (const int32 points = queue->getPointCount(); points >= kMaxPointsPerBlock) {
+            Vst::ParamValue previous = 0.0;
+            queue->getPoint(points - 1, sampleOffset, previous);
+        }
+        queue->addPoint(sampleOffset, value, index);
+    }
 
     core::Result<void> activate(double sampleRate, int block)
     {
@@ -229,6 +285,7 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
                 }
             }
         }
+        impl->mapMidiControllers();
 
         if (auto activated = impl->activate(sampleRate, maxBlock); !activated) {
             return tl::unexpected(activated.error());
@@ -292,6 +349,7 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
     }
 
     impl.events.clear();
+    impl.parameterChanges.clearQueue();
     if (impl.releaseRequested.exchange(false, std::memory_order_acquire) && impl.heldNotes.any()) {
         for (std::size_t i = 0; i < impl.heldNotes.size(); ++i) {
             if (!impl.heldNotes.test(i)) continue;
@@ -329,8 +387,18 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io)
             event.polyPressure.pitch = e.data1;
             event.polyPressure.pressure = static_cast<float>(e.data2) / 127.0F;
             event.polyPressure.noteId = -1;
+        } else if (type == 0xB0) { // controller: sustain pedal (64), mod wheel (1), ...
+            impl.sendController(e.status & 0x0F, e.data1, static_cast<double>(e.data2) / 127.0, e.sampleOffset);
+            continue;
+        } else if (type == 0xD0) { // channel pressure
+            impl.sendController(e.status & 0x0F, Vst::kAfterTouch, static_cast<double>(e.data1) / 127.0, e.sampleOffset);
+            continue;
+        } else if (type == 0xE0) { // pitch bend: 14 bits, centre 8192
+            const int bend = (e.data2 << 7) | e.data1;
+            impl.sendController(e.status & 0x0F, Vst::kPitchBend, static_cast<double>(bend) / 16383.0, e.sampleOffset);
+            continue;
         } else {
-            continue; // controllers need IMidiMapping (not in v1)
+            continue; // program change: not a note or controller
         }
         if (impl.events.addEvent(event) != kResultOk) impl.droppedEvents.fetch_add(1, std::memory_order_relaxed);
     }
