@@ -508,6 +508,14 @@ private slots:
         QVERIFY2(qAbs(centre - chartCentre) <= 1.0, qPrintable(u"%1 vs %2"_s.arg(centre).arg(chartCentre)));
         const int titleSize = title->property("font").value<QFont>().pixelSize();
         QVERIFY2(titleSize >= 26, qPrintable(QString::number(titleSize))); // lyrics are 20 px here
+        // The lyrics are centred like the titles (each line as a whole).
+        const QList<QQuickItem*> lyrics = findAll(chart, u"chartLyricFlow"_s);
+        QVERIFY(!lyrics.isEmpty());
+        for (QQuickItem* line : lyrics) {
+            QVERIFY(line->width() > 0 && line->width() < chart->width()); // a short line: narrower than the chart...
+            const double lineCentre = line->mapToScene(QPointF(line->width() / 2, 0)).x();
+            QVERIFY2(qAbs(lineCentre - chartCentre) <= 1.0, qPrintable(u"%1 vs %2"_s.arg(lineCentre).arg(chartCentre))); // ... in its middle
+        }
 
         // Each plays the first instrument until told otherwise.
         const auto chipNames = [](QQuickItem* header) {

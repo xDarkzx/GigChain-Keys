@@ -77,6 +77,7 @@ qt_add_qml_module(gigchain_ui
         WindowControls.qml
         WindowResizeEdges.qml
         SectionHeader.qml
+        ChartSegment.qml
         LooperCell.qml
         LoopsPill.qml
         LoopControlsDialog.qml
