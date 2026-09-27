@@ -269,6 +269,44 @@ public:
     }
     engine::SongPosition position;
     [[nodiscard]] engine::SongPosition songPosition() const override { return position; }
+
+    // Loops: what was asked, and what the test says there is.
+    std::vector<std::pair<core::ChannelId, engine::LoopCommand>> loopCommands;
+    void loopCommand(const core::ChannelId& channel, engine::LoopCommand command) override
+    {
+        loopCommands.emplace_back(channel, command);
+    }
+    std::optional<bool> loopSync;
+    void setLoopSync(bool sync) override { loopSync = sync; }
+    std::optional<bool> tempoFromLoop;
+    void setTempoFromFirstLoop(bool take) override { tempoFromLoop = take; }
+    int loopStops = 0;
+    void stopAllLoops() override { ++loopStops; }
+    int loopClears = 0;
+    void clearAllLoops() override { ++loopClears; }
+    std::vector<engine::ChannelLoop> channelLoops;
+    [[nodiscard]] std::vector<engine::ChannelLoop> loops() const override { return channelLoops; }
+    engine::LoopTriggers loopButtons{};
+    engine::SelectorKnob selector;
+    int loopControlsSet = 0;
+    void setLoopControls(const engine::LoopTriggers& buttons, const engine::SelectorKnob& knob) override
+    {
+        ++loopControlsSet;
+        loopButtons = buttons;
+        selector = knob;
+    }
+    std::vector<engine::LoopAction> pendingLoopActions;
+    std::vector<engine::LoopAction> takeLoopActions() override { return std::exchange(pendingLoopActions, {}); }
+    engine::SelectorMove selectorMove;
+    engine::SelectorMove takeSelectorMove() override { return std::exchange(selectorMove, engine::SelectorMove{}); }
+    std::vector<std::array<int, 3>> controllerMoves; // taken one per call, first first
+    std::optional<std::array<int, 3>> takeControllerMove() override
+    {
+        if (controllerMoves.empty()) return std::nullopt;
+        const auto move = controllerMoves.front();
+        controllerMoves.erase(controllerMoves.begin());
+        return move;
+    }
 };
 
 } // namespace gigchain::test

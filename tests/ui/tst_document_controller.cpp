@@ -1,6 +1,7 @@
 #include "DocumentController.h"
 #include "EffectWindows.h"
 #include "EngineStatus.h"
+#include "LoopController.h"
 #include "MasterBus.h"
 #include "LeakCheck.h"
 #include "SpyEngine.h"
@@ -886,6 +887,159 @@ private slots:
         QVERIFY(!m_doc->setSongTimeSignature(0, 3, 5));
         QVERIFY(m_doc->setSongSwitchEarly(0, true));
         QVERIFY(m_doc->songSwitchEarly());
+    }
+
+    // ---- The loop pedal
+
+    void loopButtonsActOnTheirChannel()
+    {
+        addSectionsSong(); // Piano, Strings
+        LoopController loops(*m_engine, *m_doc, *m_settings);
+        loops.record(1);
+        loops.playStop(1);
+        loops.undo(0);
+        loops.clear(0);
+        using C = engine::LoopCommand;
+        const std::vector<std::pair<core::ChannelId, C>> asked{
+            {channelId(1), C::Record}, {channelId(1), C::PlayStop}, {channelId(0), C::Undo}, {channelId(0), C::Clear}};
+        QVERIFY(m_engine->loopCommands == asked);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Loop button for channel 6 ignored"_s));
+        loops.record(5);
+        QCOMPARE(m_engine->loopCommands.size(), std::size_t{4});
+
+        // What the engine says the loops are doing.
+        m_engine->channelLoops = {engine::ChannelLoop{.channel = channelId(1), .state = engine::LoopState::Playing,
+                                                      .progress = 0.5, .bar = 3, .bars = 4, .layers = 1}};
+        QSignalSpy changed(&loops, &LoopController::loopsChanged);
+        loops.poll();
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(loops.channelLoops().at(0).toMap().value(u"state"_s).toString(), u"empty"_s);
+        const QVariantMap strings = loops.channelLoops().at(1).toMap();
+        QCOMPARE(strings.value(u"state"_s).toString(), u"playing"_s);
+        QCOMPARE(strings.value(u"bar"_s).toInt(), 3);
+        QCOMPARE(loops.playingCount(), 1);
+        QCOMPARE(loops.allLoops().at(0).toMap().value(u"name"_s).toString(), u"Strings"_s);
+        loops.poll();
+        QCOMPARE(changed.count(), 1); // nothing new: no signal
+    }
+
+    void theKeyboardChoosesTheInstrumentAndLoopsIt()
+    {
+        addSectionsSong();
+        QVERIFY(m_doc->addChannel(u"spy/Lead.vst3"_s, u"Lead"_s)); // three channels
+        m_doc->setSelectedChannel(-1);
+        LoopController loops(*m_engine, *m_doc, *m_settings);
+        using A = engine::LoopAction;
+        m_engine->pendingLoopActions = {A::Record};
+        loops.poll();
+        QCOMPARE(m_doc->selectedChannel(), 0); // none chosen: the first, shown
+        QCOMPARE(m_engine->loopCommands.back().first, channelId(0));
+        m_engine->pendingLoopActions = {A::NextChannel};
+        loops.poll();
+        m_engine->pendingLoopActions = {A::PlayStop};
+        loops.poll();
+        QCOMPARE(m_doc->selectedChannel(), 1);
+        QCOMPARE(m_engine->loopCommands.back(), (std::pair{channelId(1), engine::LoopCommand::PlayStop}));
+        m_engine->pendingLoopActions = {A::Clear}; // Record + Loop held
+        loops.poll();
+        QCOMPARE(m_engine->loopCommands.back(), (std::pair{channelId(1), engine::LoopCommand::Clear}));
+        // A knob with a range: split among the three.
+        m_engine->selectorMove = engine::SelectorMove{.value = 127, .steps = 0};
+        loops.poll();
+        QCOMPARE(m_doc->selectedChannel(), 2);
+        m_engine->selectorMove = engine::SelectorMove{.value = 0, .steps = 0};
+        loops.poll();
+        QCOMPARE(m_doc->selectedChannel(), 0);
+        // An encoder: steps, stopping at the ends.
+        m_engine->selectorMove = engine::SelectorMove{.value = -1, .steps = 5};
+        loops.poll();
+        QCOMPARE(m_doc->selectedChannel(), 2);
+        m_engine->selectorMove = engine::SelectorMove{.value = -1, .steps = -1};
+        loops.poll();
+        QCOMPARE(m_doc->selectedChannel(), 1);
+        m_engine->pendingLoopActions = {A::PreviousChannel};
+        loops.poll();
+        m_engine->pendingLoopActions = {A::PreviousChannel};
+        loops.poll();
+        QCOMPARE(m_doc->selectedChannel(), 0);
+        m_engine->pendingLoopActions = {A::StopAll};
+        const int stops = m_engine->loopStops;
+        loops.poll();
+        QCOMPARE(m_engine->loopStops, stops + 1);
+    }
+
+    void looperControlsAreLearnedAndKeptWithTheSetlist()
+    {
+        addSectionsSong();
+        LoopController loops(*m_engine, *m_doc, *m_settings);
+        const engine::MidiTrigger pad{.kind = engine::MidiTrigger::Note, .channel = 9, .number = 36};
+        loops.learn(static_cast<int>(engine::LoopAction::Record));
+        QCOMPARE(loops.learning(), 0);
+        loops.poll(); // nothing pressed yet
+        QCOMPARE(loops.learning(), 0);
+        m_engine->learned = pad;
+        loops.poll();
+        QCOMPARE(loops.learning(), -1);
+        QCOMPARE(m_doc->loopControls().buttons.at(core::LoopControls::Record),
+                 (core::LearnedControl{.kind = 0x90, .channel = 10, .number = 36}));
+        QVERIFY(m_engine->loopButtons.at(0) == pad); // playing at once
+        QCOMPARE(loops.controls().at(0).toMap().value(u"trigger"_s).toString(), pad.describe());
+        QVERIFY(m_doc->isDirty());
+        // The same pad for Loop: it moves there.
+        loops.learn(1);
+        m_engine->learned = pad;
+        loops.poll();
+        QVERIFY(!m_doc->loopControls().buttons.at(core::LoopControls::Record).isSet());
+        QVERIFY(m_doc->loopControls().buttons.at(core::LoopControls::PlayStop).isSet());
+
+        // A knob turned a little: an endless encoder (small steps)...
+        loops.learn(LoopController::kLearnSelector);
+        m_engine->controllerMoves = {{1, 21, 1}, {1, 21, 1}, {1, 21, 2}};
+        loops.poll();
+        QCOMPARE(loops.learning(), LoopController::kLearnSelector); // three moves: not enough yet
+        m_engine->controllerMoves = {{1, 21, 127}};
+        loops.poll();
+        QCOMPARE(loops.learning(), -1);
+        QCOMPARE(m_doc->loopControls().selector, (core::LearnedControl{.kind = 0xB0, .channel = 1, .number = 21}));
+        QCOMPARE(loops.selectorMode(), int(core::LoopControls::Relative));
+        QCOMPARE(m_engine->selector.mode, engine::SelectorKnob::Relative);
+        // ... or one with a range.
+        loops.learn(LoopController::kLearnSelector);
+        m_engine->controllerMoves = {{2, 74, 10}, {2, 74, 30}, {2, 74, 50}, {2, 74, 70}};
+        loops.poll();
+        QCOMPARE(m_doc->loopControls().selector.number, 74);
+        QCOMPARE(loops.selectorMode(), int(core::LoopControls::Absolute));
+
+        // Saved with the setlist and read back.
+        QVERIFY(m_doc->saveAs(path(u"loops.gigchain"_s)));
+        const QString saved = m_doc->filePath(); // (with the setlist ending)
+        m_doc->newSetlist();
+        QVERIFY(!m_doc->loopControls().selector.isSet());
+        QVERIFY2(m_doc->open(saved), qPrintable(m_doc->lastError()));
+        QCOMPARE(m_doc->loopControls().selector.number, 74);
+        QCOMPARE(m_engine->selector.knob.number, uint8_t{74}); // and to the engine
+        // Undone like any edit.
+        loops.forget(LoopController::kLearnSelector);
+        QVERIFY(!m_doc->loopControls().selector.isSet());
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->loopControls().selector.number, 74);
+    }
+
+    void loopsStopWithTheSongAndGoWithIt()
+    {
+        addSectionsSong();
+        QVERIFY(m_doc->setSongLoopSync(0, false));
+        QVERIFY(m_engine->loopSync.has_value() && !*m_engine->loopSync);
+        const int stops = m_engine->loopStops;
+        m_doc->stopSong();
+        QCOMPARE(m_engine->loopStops, stops + 1);
+        const int clears = m_engine->loopClears;
+        QVERIFY(m_doc->addSong()); // another song is chosen
+        QCOMPARE(m_engine->loopClears, clears + 1);
+        QVERIFY(m_engine->loopSync.value_or(false)); // its own setting: synced
+        const int after = m_engine->loopClears;
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s)); // an edit in the same song: loops stay
+        QCOMPARE(m_engine->loopClears, after);
     }
 
     void pedalsTapTheTempoAndStartTheBackingTrack()

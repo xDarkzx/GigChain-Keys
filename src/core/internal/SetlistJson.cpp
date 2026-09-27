@@ -317,6 +317,7 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
         song.timeDenominator = denominator;
     }
     song.switchEarly = obj.contains("switchEarly"_L1) && r.boolean(obj, "switchEarly"_L1, path);
+    song.loopSync = !obj.contains("loopSync"_L1) || r.boolean(obj, "loopSync"_L1, path);
     const QJsonArray sections = r.optionalArray(obj, "sections"_L1, path, limits::kMaxSectionsPerSong);
     for (qsizetype i = 0; i < sections.size() && !r.failed(); ++i) {
         const QString where = u"%1.sections[%2]"_s.arg(path).arg(i);
@@ -429,6 +430,7 @@ QJsonObject writeSong(const Song& song)
                        {u"backingTrack"_s, song.backingTrack},
                        {u"timeSignature"_s, u"%1/%2"_s.arg(song.timeNumerator).arg(song.timeDenominator)},
                        {u"switchEarly"_s, song.switchEarly},
+                       {u"loopSync"_s, song.loopSync},
                        {u"sections"_s, sections}};
 }
 
@@ -440,7 +442,15 @@ QByteArray toJson(const Setlist& setlist)
     for (const Song& song : setlist.songs) {
         songs.append(writeSong(song));
     }
-    const QJsonObject root{{u"formatVersion"_s, kSetlistFormatVersion}, {u"songs"_s, songs}};
+    const auto control = [](const LearnedControl& c) {
+        return QJsonObject{{u"kind"_s, c.kind}, {u"channel"_s, c.channel}, {u"number"_s, c.number}};
+    };
+    QJsonArray buttons;
+    for (const LearnedControl& button : setlist.loopControls.buttons) buttons.append(control(button));
+    const QJsonObject loopControls{{u"buttons"_s, buttons},
+                                   {u"selector"_s, control(setlist.loopControls.selector)},
+                                   {u"selectorMode"_s, setlist.loopControls.selectorMode}};
+    const QJsonObject root{{u"formatVersion"_s, kSetlistFormatVersion}, {u"songs"_s, songs}, {u"loopControls"_s, loopControls}};
     return QJsonDocument(root).toJson(QJsonDocument::Indented);
 }
 
@@ -479,6 +489,25 @@ Result<Setlist> fromJson(const QByteArray& bytes)
         setlist.songs.push_back(readSong(reader, reader.object(songs.at(i), songPath), songPath));
     }
     if (reader.failed()) return tl::unexpected(reader.error());
+    // Format 4: the looper's keyboard controls (absent: none learned).
+    if (root.contains("loopControls"_L1)) {
+        const QString path = rootPath + u".loopControls"_s;
+        const QJsonObject controls = reader.object(root.value("loopControls"_L1), path);
+        const auto control = [&reader](const QJsonObject& obj, const QString& where) {
+            return LearnedControl{.kind = reader.integer(obj, "kind"_L1, where, 0, 0xC0),
+                                  .channel = reader.integer(obj, "channel"_L1, where, 0, 16),
+                                  .number = reader.integer(obj, "number"_L1, where, 0, 127)};
+        };
+        const QJsonArray buttons = reader.array(controls, "buttons"_L1, path, LoopControls::ButtonCount);
+        for (qsizetype i = 0; i < buttons.size() && !reader.failed(); ++i) {
+            const QString where = u"%1.buttons[%2]"_s.arg(path).arg(i);
+            setlist.loopControls.buttons.at(static_cast<std::size_t>(i)) = control(reader.object(buttons.at(i), where), where);
+        }
+        const QString selectorPath = path + u".selector"_s;
+        setlist.loopControls.selector = control(reader.object(controls.value("selector"_L1), selectorPath), selectorPath);
+        setlist.loopControls.selectorMode = reader.integer(controls, "selectorMode"_L1, path, 0, LoopControls::RelativeOffset);
+        if (reader.failed()) return tl::unexpected(reader.error());
+    }
 
     if (auto valid = validate(setlist); !valid) return tl::unexpected(valid.error());
     return setlist;

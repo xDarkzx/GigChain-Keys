@@ -10,6 +10,7 @@
 #include "MidiQueue.h"
 #include "PluginLoadGuard.h"
 #include "SafetyLimiter.h"
+#include "LoopStation.h"
 #include "SongTransport.h"
 #include "Vst3Node.h"
 
@@ -97,6 +98,16 @@ public:
     void stopSong() override { m_transport.stop(); }
     void jumpToSection(int section) override;
     [[nodiscard]] SongPosition songPosition() const override { return m_transport.position(); }
+    void loopCommand(const core::ChannelId& channel, LoopCommand command) override;
+    void setLoopSync(bool sync) override { m_loops.setSync(sync); }
+    void setTempoFromFirstLoop(bool take) override { m_tempoFromLoop = take; }
+    void stopAllLoops() override;
+    void clearAllLoops() override;
+    [[nodiscard]] std::vector<ChannelLoop> loops() const override;
+    void setLoopControls(const LoopTriggers& buttons, const SelectorKnob& selector) override;
+    std::vector<LoopAction> takeLoopActions() override;
+    SelectorMove takeSelectorMove() override;
+    std::optional<std::array<int, 3>> takeControllerMove() override;
     void setClick(bool on, double volumeDb) override;
     [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
     void setBackingTrack(const QString& path) override;
@@ -157,6 +168,15 @@ private:
     // Main thread: which sections each strip of `graph` plays in (all, when
     // the sections were worked out for another patch).
     void applySectionMasks(RenderGraph& graph) const;
+    // Main thread: each strip of `graph` records into its channel's loop slot.
+    void applyLoopSlots(RenderGraph& graph) const;
+    // Main thread, from poll(): layers for loops just closed, room freed
+    // for loops cleared, and what the loops have to say.
+    void serviceLoops(std::vector<Notice>& notices);
+    // The slot a channel's loop is in; -1 when none.
+    [[nodiscard]] int loopSlot(const core::ChannelId& channel) const;
+    // Frames in a bar at the tempo and time now.
+    [[nodiscard]] double barFrames() const;
 
     AudioDevice m_audio;
     MidiInput m_midi;
@@ -216,7 +236,17 @@ private:
     std::atomic<uint32_t> m_pressedActions{0};
     std::atomic<uint32_t> m_learned{0};
     std::atomic<int> m_program{-1}; // the last Program Change, -1 when none since taken
-    std::atomic<int> m_movedController{-1}; // the last CC moved: channel (0-15) * 128 + number; -1 = none since taken
+    // The last CC moved: (channel (0-15) * 128 + number) * 128 + value; -1 = none since taken.
+    std::atomic<int> m_movedController{-1};
+    // The looper's buttons (packed triggers), their presses (one bit per
+    // LoopAction), which are held (audio thread), and the instrument knob.
+    std::array<std::atomic<uint32_t>, kLoopButtonCount> m_loopTriggers{};
+    std::atomic<uint32_t> m_loopPressed{0};
+    uint32_t m_loopHeld = 0;
+    std::atomic<uint32_t> m_selectorKnob{0};
+    std::atomic<int> m_selectorMode{0};
+    std::atomic<int> m_selectorValue{-1};
+    std::atomic<int> m_selectorSteps{0};
     // Audio thread: takes control messages out of `count` events (in place).
     std::size_t takeControlMessages(std::size_t count) noexcept;
 
@@ -234,6 +264,14 @@ private:
     SongSections m_sections;
     HazardExchange<SongTimeline> m_timeline;
     SongTransport m_transport;
+    // The loop station: which channel owns each slot (main thread), and the
+    // first free loop setting the tempo.
+    LoopStation m_loops;
+    std::array<core::ChannelId, LoopStation::kSlots> m_loopOwners{};
+    bool m_tempoFromLoop = false;
+    bool m_freeTempoTaken = false;
+    // Audio thread: bar 1 is moved to this sample (-1: nothing to do).
+    std::atomic<int64_t> m_barOriginAt{-1};
     MidiClockOut m_clockOut;
     MidiMonitor m_keyboard; // what is being played, for the on-screen keyboard
 

@@ -199,6 +199,29 @@ public:
     virtual void jumpToSection(int section) = 0;
     [[nodiscard]] virtual SongPosition songPosition() const = 0;
 
+    // ---- The loop station (one audio loop per channel, see LoopCommand)
+    // Record on a channel without a loop makes room for one (at most 2
+    // minutes or 64 bars; problems come through poll()).
+    virtual void loopCommand(const core::ChannelId& channel, LoopCommand command) = 0;
+    // Synced: loops start and stop on the bars. Free: the first loop is
+    // recorded press to press and the others keep to it.
+    virtual void setLoopSync(bool sync) = 0;
+    // Free mode: the first loop also sets the tempo (1, 2 or 4 bars long,
+    // whichever is nearest 60-180 BPM) and bar 1 starts with it.
+    virtual void setTempoFromFirstLoop(bool take) = 0;
+    virtual void stopAllLoops() = 0;  // at once, keeping them
+    virtual void clearAllLoops() = 0; // at once
+    // Every channel with a loop (of any patch).
+    [[nodiscard]] virtual std::vector<ChannelLoop> loops() const = 0;
+    // The looper's keyboard buttons and instrument knob (never heard by the
+    // instruments), and what they did since last asked.
+    virtual void setLoopControls(const LoopTriggers& buttons, const SelectorKnob& selector) = 0;
+    virtual std::vector<LoopAction> takeLoopActions() = 0;
+    virtual SelectorMove takeSelectorMove() = 0;
+    // For learning a knob: the last controller moved, with its value
+    // {MIDI channel 1-16, controller, value}, since the previous call.
+    virtual std::optional<std::array<int, 3>> takeControllerMove() = 0;
+
     // ---- Backing track (one at a time: the current song's)
     // Reads the file in the background (problems come through poll()) and
     // makes it the track; empty = none. Asking for the same file again keeps

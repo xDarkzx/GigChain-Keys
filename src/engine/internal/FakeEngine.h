@@ -128,7 +128,60 @@ public:
     }
     [[nodiscard]] SongPosition songPosition() const override { return m_position; }
 
+    // The demo's loops change state at once (no sound, no bars): a 4-bar loop.
+    void loopCommand(const core::ChannelId& channel, LoopCommand command) override
+    {
+        auto it = std::ranges::find_if(m_loops, [&channel](const ChannelLoop& l) { return l.channel == channel; });
+        if (it == m_loops.end()) {
+            if (command != LoopCommand::Record) return;
+            m_loops.push_back(ChannelLoop{.channel = channel});
+            it = std::prev(m_loops.end());
+        }
+        ChannelLoop& loop = *it;
+        using S = LoopState;
+        switch (command) {
+        case LoopCommand::Record:
+            if (loop.state == S::Empty) loop.state = S::Recording;
+            else if (loop.state == S::Recording) loop = ChannelLoop{.channel = channel, .state = S::Playing, .progress = 0.0, .bar = 1, .bars = 4, .layers = 0};
+            else if (loop.state == S::Playing) loop.state = S::Overdubbing;
+            else if (loop.state == S::Overdubbing) {
+                loop.state = S::Playing;
+                ++loop.layers;
+            }
+            break;
+        case LoopCommand::PlayStop:
+            if (loop.state == S::Playing || loop.state == S::Overdubbing) loop.state = S::Stopped;
+            else if (loop.state == S::Stopped) loop.state = S::Playing;
+            else if (loop.state == S::Recording) loop = ChannelLoop{.channel = channel, .state = S::Playing, .progress = 0.0, .bar = 1, .bars = 4, .layers = 0};
+            break;
+        case LoopCommand::Undo:
+            if (loop.state == S::Overdubbing) loop.state = S::Playing;
+            else if (loop.layers > 0) --loop.layers;
+            break;
+        case LoopCommand::Stop:
+            if (loop.state == S::Recording) m_loops.erase(it);
+            else loop.state = S::Stopped;
+            break;
+        case LoopCommand::Clear: m_loops.erase(it); break;
+        }
+    }
+    void setLoopSync(bool) override {}
+    void setTempoFromFirstLoop(bool) override {}
+    void stopAllLoops() override
+    {
+        std::erase_if(m_loops, [](const ChannelLoop& l) { return l.state == LoopState::Recording; });
+        for (ChannelLoop& loop : m_loops) loop.state = LoopState::Stopped;
+    }
+    void clearAllLoops() override { m_loops.clear(); }
+    [[nodiscard]] std::vector<ChannelLoop> loops() const override { return m_loops; }
+    // The demo has no MIDI input: nothing is ever pressed or turned.
+    void setLoopControls(const LoopTriggers&, const SelectorKnob&) override {}
+    std::vector<LoopAction> takeLoopActions() override { return {}; }
+    SelectorMove takeSelectorMove() override { return {}; }
+    std::optional<std::array<int, 3>> takeControllerMove() override { return std::nullopt; }
+
 private:
+    std::vector<ChannelLoop> m_loops;
     SongSections m_sections;
     SongPosition m_position;
     double m_tempo = 120.0;

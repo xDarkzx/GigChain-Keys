@@ -80,6 +80,17 @@ and off with one easy toggle.
 
 ## 2. Loop station
 
+**First version built (2026-09-28)**, see
+`docs/superpowers/specs/2026-09-28-loop-station-design.md`: a looper strip
+above the mixer (● record, ⟳ loop with a progress ring and bar count), one
+audio loop per channel with up to 8 layers and undo, synced to the bars or
+free (the first loop can set the tempo), loops playing on through sections
+and patches and cleared with the song, a Loops menu, a toolbar pill while
+the strip is out of sight, and keyboard buttons, pads and an instrument
+knob learned per setlist (Record + Loop held = clear). **Next: plan 2,
+headphone monitoring** (headphone output or second device, Live/Monitor,
+cue per channel).
+
 **The idea:** like a street performer's loop pedal. Record a phrase, let it
 loop, and build atmosphere live: an arp looping on one instrument and pads
 on another, while playing piano or drums on top.

@@ -11,6 +11,7 @@ qt_add_qml_module(gigchain_ui
         cpp/SelectedChannel.h cpp/SelectedChannel.cpp
         cpp/PluginListModel.h cpp/PluginListModel.cpp
         cpp/EngineStatus.h cpp/EngineStatus.cpp
+        cpp/LoopController.h cpp/LoopController.cpp
         cpp/Notifications.h cpp/Notifications.cpp
         cpp/SettingsController.h cpp/SettingsController.cpp
         cpp/StartupProgress.h cpp/StartupProgress.cpp
@@ -76,6 +77,9 @@ qt_add_qml_module(gigchain_ui
         WindowControls.qml
         WindowResizeEdges.qml
         SectionHeader.qml
+        LooperCell.qml
+        LoopsPill.qml
+        LoopControlsDialog.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/alert-octagon.svg
@@ -90,6 +94,7 @@ qt_add_qml_module(gigchain_ui
         icons/player-pause.svg
         icons/player-play.svg
         icons/player-stop.svg
+        icons/loop.svg
         icons/player-skip-back.svg
         icons/redo.svg
         icons/star.svg

@@ -52,7 +52,12 @@ Setlist richSetlist()
                                          .channels = {piano.id, mic.id}});
     song.sections.push_back(SectionSetup{.name = QStringLiteral("Chorus"), .occurrence = 2, .bars = 0, .assigned = true,
                                          .channels = {}}); // a silent break
+    song.loopSync = false;
     setlist.songs.push_back(song);
+    setlist.loopControls.buttons.at(LoopControls::Record) = LearnedControl{.kind = 0xB0, .channel = 1, .number = 64};
+    setlist.loopControls.buttons.at(LoopControls::NextChannel) = LearnedControl{.kind = 0x90, .channel = 10, .number = 36};
+    setlist.loopControls.selector = LearnedControl{.kind = 0xB0, .channel = 1, .number = 21};
+    setlist.loopControls.selectorMode = LoopControls::Relative;
     setlist.songs.push_back(makeSong(QStringLiteral("Second")));
     return setlist;
 }
@@ -216,7 +221,7 @@ private slots:
         root.insert(u"formatVersion", 3);
         QJsonArray songs = root.value(u"songs").toArray();
         QJsonObject song = songs.at(0).toObject();
-        for (const auto& key : {u"timeSignature", u"switchEarly", u"sections"}) song.remove(key);
+        for (const auto& key : {u"timeSignature", u"switchEarly", u"sections", u"loopSync"}) song.remove(key);
         songs.replace(0, song);
         root.insert(u"songs", songs);
         const auto parsed = fromJson(QJsonDocument(root).toJson());
@@ -226,6 +231,7 @@ private slots:
         QCOMPARE(s.timeDenominator, 4);
         QVERIFY(!s.switchEarly);
         QVERIFY(s.sections.empty());
+        QVERIFY(s.loopSync);
     }
 
     void rejectsBadSections()
@@ -246,6 +252,33 @@ private slots:
         for (int i = 0; i <= limits::kMaxSectionsPerSong; ++i) many.append(section(4, u"x"_s).at(0));
         QVERIFY(!fromJson(withFirstSongField(u"sections"_s, many)));
         QVERIFY(fromJson(withFirstSongField(u"sections"_s, section(0, u"x"_s)))); // 0 = guessed
+    }
+
+    void rejectsBadLoopControls()
+    {
+        const auto withSelector = [](const QJsonObject& selector, int mode) {
+            QJsonObject root = richJson();
+            QJsonObject controls = root.value(u"loopControls").toObject();
+            controls.insert(u"selector", selector);
+            controls.insert(u"selectorMode", mode);
+            root.insert(u"loopControls", controls);
+            return QJsonDocument(root).toJson();
+        };
+        const QJsonObject knob{{u"kind"_s, 0xB0}, {u"channel"_s, 1}, {u"number"_s, 21}};
+        QVERIFY(fromJson(withSelector(knob, 2)));
+        QVERIFY(!fromJson(withSelector(knob, 3)));
+        const QJsonObject note{{u"kind"_s, 0x90}, {u"channel"_s, 1}, {u"number"_s, 21}};
+        const auto notAKnob = fromJson(withSelector(note, 0));
+        QVERIFY(!notAKnob);
+        QVERIFY2(notAKnob.error().message.contains(u"selector"_s), qPrintable(notAKnob.error().message));
+        const QJsonObject noChannel{{u"kind"_s, 0xB0}, {u"channel"_s, 0}, {u"number"_s, 21}};
+        QVERIFY(!fromJson(withSelector(noChannel, 0)));
+        // Files from before: no controls learned, loops synced.
+        QJsonObject root = richJson();
+        root.remove(u"loopControls");
+        const auto old = fromJson(QJsonDocument(root).toJson());
+        QVERIFY(old);
+        QVERIFY(old->loopControls == LoopControls{});
     }
 
     void rejectsNonJson()

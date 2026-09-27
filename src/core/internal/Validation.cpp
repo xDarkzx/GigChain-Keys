@@ -221,8 +221,33 @@ Result<void> validateSections(const Song& song, const QString& path)
     return {};
 }
 
+Result<void> validateLoopControls(const LoopControls& controls)
+{
+    const auto check = [](const LearnedControl& c, const QString& where, bool knob) -> Result<void> {
+        if (!c.isSet()) return {};
+        const bool known = knob ? c.kind == 0xB0 : (c.kind == 0xB0 || c.kind == 0x90 || c.kind == 0xC0);
+        if (!known) {
+            return fail(ErrorCode::InvalidData,
+                        u"%1 is not a %2"_s.arg(where, knob ? u"keyboard knob"_s : u"keyboard button, pad or pedal"_s));
+        }
+        if (c.channel < 1 || c.channel > 16 || c.number < 0 || c.number > 127) {
+            return fail(ErrorCode::OutOfRange, u"%1 needs a MIDI channel 1-16 and a number 0-127"_s.arg(where));
+        }
+        return {};
+    };
+    for (std::size_t i = 0; i < controls.buttons.size(); ++i) {
+        if (auto r = check(controls.buttons.at(i), u"loopControls.buttons[%1]"_s.arg(i), false); !r) return r;
+    }
+    if (auto r = check(controls.selector, u"loopControls.selector"_s, true); !r) return r;
+    if (controls.selectorMode < LoopControls::Absolute || controls.selectorMode > LoopControls::RelativeOffset) {
+        return fail(ErrorCode::OutOfRange, u"loopControls.selectorMode must be 0, 1 or 2"_s);
+    }
+    return {};
+}
+
 Result<void> validate(const Setlist& setlist)
 {
+    if (auto r = validateLoopControls(setlist.loopControls); !r) return r;
     if (setlist.songs.size() > static_cast<std::size_t>(limits::kMaxSongs)) {
         return fail(ErrorCode::LimitExceeded, u"A setlist can hold at most %1 songs"_s.arg(limits::kMaxSongs));
     }
