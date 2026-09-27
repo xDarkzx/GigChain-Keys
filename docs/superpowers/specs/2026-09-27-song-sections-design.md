@@ -83,8 +83,11 @@ in the patch plays at once, exactly as today.
   the sample of the section's first beat: channels leaving let their held
   notes and reverb tails ring out (as on a patch change); channels arriving
   start from the next note, never mid-note.
+- The switch happens a sixteenth note before the downbeat ("right before
+  it"), so a chord struck a hair early already plays the new sound.
 - **One beat early** (per song, off by default): switch a beat before the
-  section, for pads that swell in.
+  section instead, for pads that swell in.
+- The count-in plays when the click is on.
 - The chart highlights the section playing and shows "Chorus · bar 3 of 8";
   after the last section the count stops and the last sound stays.
 - **Next section pedal/button** (learnable like the other pedal actions):
