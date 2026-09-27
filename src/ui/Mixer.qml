@@ -16,7 +16,11 @@ Rectangle {
     property EffectWindows effectWindows: null
     property MasterBus masterBus: null
 
-    color: Theme.mixerBackground
+    // The console's floor: darker at the bottom, strips standing on it.
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: Theme.panelBottom }
+        GradientStop { position: 1.0; color: Theme.mixerBackground }
+    }
 
     DropArea {
         objectName: "mixerDrop"
@@ -25,7 +29,7 @@ Rectangle {
         function acceptDrop(payload) { mixer.doc.addChannel(payload.pluginId, payload.name) }
     }
 
-    Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.border }
+    StageDivider { anchors.top: parent.top; width: parent.width }
 
     RowLayout {
         anchors.fill: parent
@@ -127,9 +131,13 @@ Rectangle {
             Layout.alignment: Qt.AlignTop
             Layout.preferredHeight: Math.min(strips.height, Theme.stripHeight)
             Layout.preferredWidth: Theme.stripWidth
-            radius: Theme.radius
-            color: Theme.stripBackground
+            radius: Theme.radiusCard
             border.color: Theme.stripBorder
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.stripTop }
+                GradientStop { position: 1.0; color: Theme.stripBottom }
+            }
+            Rectangle { x: 3; y: 1; width: parent.width - 6; height: 1; color: Theme.bevelLight }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -287,8 +295,12 @@ Rectangle {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 22
-                    radius: 3
-                    color: Theme.panelRaised
+                    radius: Theme.radiusSmall
+                    border.color: Theme.outline
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: Theme.buttonHoverTop }
+                        GradientStop { position: 1.0; color: Theme.buttonBottom }
+                    }
                     Text {
                         anchors.centerIn: parent
                         text: qsTr("Master")

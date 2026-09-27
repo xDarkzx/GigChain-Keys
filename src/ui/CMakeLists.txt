@@ -64,9 +64,32 @@ qt_add_qml_module(gigchain_ui
         NotificationWindow.qml
         ChannelZoneDialog.qml
         KnobDialog.qml
+        StageButton.qml
+        StageDivider.qml
+        StagePanel.qml
+        StageDialog.qml
+        StageTabButton.qml
+        StageTextField.qml
+        StageSpinBox.qml
+        StageSplitHandle.qml
     RESOURCES
         icons/adjustments-horizontal.svg
+        icons/alert-octagon.svg
         icons/bell.svg
+        icons/chevron-down.svg
+        icons/chevron-left.svg
+        icons/chevron-right.svg
+        icons/chevron-up.svg
+        icons/search.svg
+        icons/info-circle.svg
+        icons/metronome.svg
+        icons/player-pause.svg
+        icons/player-play.svg
+        icons/player-skip-back.svg
+        icons/redo.svg
+        icons/star.svg
+        icons/star-filled.svg
+        icons/undo.svg
         icons/guitar-pick.svg
         icons/keyboard.svg
         icons/microphone.svg

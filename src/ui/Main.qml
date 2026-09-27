@@ -219,6 +219,7 @@ ApplicationWindow {
 
             SplitView {
                 orientation: Qt.Horizontal
+                handle: StageSplitHandle { vertical: true }
 
                 SidePanel {
                     visible: root.sidePanelOpen
@@ -234,6 +235,7 @@ ApplicationWindow {
                 SplitView {
                     SplitView.fillWidth: true
                     orientation: Qt.Vertical
+                    handle: StageSplitHandle {}
 
                     MainArea {
                         SplitView.fillHeight: true
@@ -274,10 +276,10 @@ ApplicationWindow {
         }
 
         // Status line: the audio setup the engine is using.
-        Rectangle {
+        StagePanel {
             Layout.fillWidth: true
             Layout.preferredHeight: 24
-            color: Theme.panelRaised
+            bar: true
             Label {
                 anchors.verticalCenter: parent.verticalCenter
                 x: Theme.spacing

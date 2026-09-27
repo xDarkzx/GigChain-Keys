@@ -32,7 +32,11 @@ MenuItem {
     background: Rectangle {
         anchors.fill: parent
         anchors.margins: 1
-        radius: 4
-        color: item.highlighted ? Theme.accentBlue : "transparent"
+        radius: Theme.radiusSmall
+        border.color: item.highlighted ? Theme.outline : "transparent"
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: item.highlighted ? Theme.accentTop : "transparent" }
+            GradientStop { position: 1.0; color: item.highlighted ? Theme.accentBottom : "transparent" }
+        }
     }
 }

@@ -27,6 +27,8 @@ Item {
             clip: true
             model: view.setlistModel
             boundsBehavior: Flickable.StopAtBounds
+            spacing: Theme.spacingSmall
+            topMargin: Theme.spacing
             ScrollBar.vertical: ScrollBar {}
 
             delegate: Rectangle {
@@ -41,11 +43,19 @@ Item {
                 required property bool isCurrentSong
                 readonly property bool isSong: kind === "song"
 
-                width: ListView.view.width
+                width: ListView.view.width - 2 * Theme.spacing
+                x: Theme.spacing
                 visible: isSong
-                height: isSong ? 40 : 0
-                color: isCurrentSong ? Theme.accent : (hoverArea.hovered ? Theme.slotHover : Theme.panelRaised)
+                height: isSong ? 42 : 0
+                radius: Theme.radiusCard
+                border.color: isCurrentSong ? Qt.darker(Theme.accentBottom, 1.3) : Theme.outline
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: row.isCurrentSong ? Theme.accentTop : (hoverArea.hovered ? Theme.buttonHoverTop : Theme.buttonTop) }
+                    GradientStop { position: 1.0; color: row.isCurrentSong ? Theme.accentBottom : (hoverArea.hovered ? Theme.buttonHoverBottom : Theme.buttonBottom) }
+                }
                 HoverHandler { id: hoverArea }
+                // The lit top edge.
+                Rectangle { x: 2; y: 1; width: parent.width - 4; height: 1; color: row.isCurrentSong ? "#40ffffff" : Theme.bevelLight }
 
                 function startRename() {
                     if (!view.editable) return
@@ -78,7 +88,7 @@ Item {
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
-                    TextField {
+                    StageTextField {
                         id: renameField
                         visible: false
                         Layout.fillWidth: true
@@ -150,13 +160,14 @@ Item {
             }
         }
 
+        StageDivider { Layout.fillWidth: true; visible: view.editable }
         RowLayout {
             visible: view.editable
             Layout.fillWidth: true
             Layout.margins: Theme.spacing
-            Button {
-                text: qsTr("+ Song")
-                focusPolicy: Qt.NoFocus
+            StageButton {
+                text: qsTr("Song")
+                iconSource: "icons/plus.svg"
                 Layout.fillWidth: true
                 onClicked: view.doc.addSong()
             }
@@ -165,32 +176,42 @@ Item {
 
     // A song's tempo: it plays whenever the song is chosen (0 = none: the
     // tempo stays as it is).
-    Popup {
+    StageDialog {
         id: tempoPopup
         property int song: -1
-        anchors.centerIn: Overlay.overlay
-        modal: true
-        padding: 16
+        title: qsTr("Song tempo")
+        width: 300
         onAboutToShow: {
             view.doc.selectPatch(song, 0)
             tempoBox.value = Math.round(view.doc.songTempo)
         }
-        background: Rectangle { color: Theme.panel; border.color: Theme.border; radius: 8 }
         ColumnLayout {
-            spacing: 10
-            Label { text: qsTr("Song tempo (0 = none)"); font.bold: true }
-            SpinBox {
+            width: parent.width
+            spacing: Theme.spacing
+            Label {
+                Layout.fillWidth: true
+                Layout.margins: Theme.spacingLarge
+                Layout.bottomMargin: 0
+                text: qsTr("Beats per minute, played whenever the song is chosen (0 = none: the tempo stays as it is).")
+                color: Theme.textDim
+                wrapMode: Text.Wrap
+            }
+            StageSpinBox {
                 id: tempoBox
                 objectName: "songTempoBox"
+                Layout.leftMargin: Theme.spacingLarge
                 from: 0; to: 400
                 editable: true
             }
+            StageDivider { Layout.fillWidth: true; Layout.topMargin: Theme.spacing }
             RowLayout {
-                Button { text: qsTr("Cancel"); focusPolicy: Qt.NoFocus; onClicked: tempoPopup.close() }
-                Button {
+                Layout.fillWidth: true
+                Layout.margins: Theme.spacing
+                Item { Layout.fillWidth: true }
+                StageButton { text: qsTr("Cancel"); onClicked: tempoPopup.close() }
+                StageButton {
                     text: qsTr("Set")
-                    highlighted: true
-                    focusPolicy: Qt.NoFocus
+                    tone: "accent"
                     onClicked: {
                         view.doc.setSongTempo(tempoPopup.song, tempoBox.value)
                         tempoPopup.close()

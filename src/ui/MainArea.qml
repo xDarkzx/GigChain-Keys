@@ -43,10 +43,12 @@ Rectangle {
             id: tabs
             objectName: "mainTabs"
             Layout.fillWidth: true
-            TabButton { text: qsTr("Chart"); focusPolicy: Qt.NoFocus; width: implicitWidth + 24 }
-            TabButton { text: qsTr("Instrument"); focusPolicy: Qt.NoFocus; width: implicitWidth + 24 }
-            background: Rectangle { color: Theme.panelRaised }
+            spacing: 0
+            StageTabButton { text: qsTr("Chart"); width: implicitWidth + 40 }
+            StageTabButton { text: qsTr("Instrument"); width: implicitWidth + 40 }
+            background: Rectangle { color: Theme.barBottom }
         }
+        StageDivider { Layout.fillWidth: true }
 
         StackLayout {
             Layout.fillWidth: true

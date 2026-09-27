@@ -53,26 +53,22 @@ Rectangle {
                 font.bold: true
                 elide: Text.ElideRight
             }
-            Button {
+            StageButton {
                 objectName: "pasteChartButton"
                 text: qsTr("Paste chords")
                 visible: !panel.editing
-                focusPolicy: Qt.NoFocus
                 onClicked: panel.doc.pasteChartFromClipboard(panel.doc.songIndex)
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Copy a song's chords and lyrics from any site or file, then paste (Ctrl+V)")
+                tip: qsTr("Copy a song's chords and lyrics from any site or file, then paste (Ctrl+V)")
             }
-            Button {
+            StageButton {
                 text: qsTr("Import file…")
                 visible: !panel.editing
-                focusPolicy: Qt.NoFocus
                 onClicked: importDialog.open()
             }
-            Button {
+            StageButton {
                 objectName: "editChartButton"
                 text: panel.editing ? qsTr("Done") : qsTr("Edit")
                 highlighted: panel.editing
-                focusPolicy: Qt.NoFocus
                 onClicked: {
                     if (panel.editing) panel.doc.setSongChart(panel.doc.songIndex, editor.text)
                     else editor.text = panel.doc.currentChart
@@ -81,15 +77,21 @@ Rectangle {
             }
         }
 
+        StageDivider { Layout.fillWidth: true }
+
         // Just pasted: the site's clutter was removed; one click brings back
         // exactly what was pasted.
         Rectangle {
             objectName: "pasteUndoBar"
             visible: panel.doc.canUndoPaste && !panel.editing
             Layout.fillWidth: true
-            Layout.preferredHeight: 36
-            radius: Theme.radius
-            color: Theme.panelRaised
+            Layout.preferredHeight: 38
+            radius: Theme.radiusCard
+            border.color: Theme.outline
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.barTop }
+                GradientStop { position: 1.0; color: Theme.barBottom }
+            }
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 12
@@ -100,11 +102,10 @@ Rectangle {
                     color: Theme.textDim
                     elide: Text.ElideRight
                 }
-                Button {
+                StageButton {
                     objectName: "undoPasteButton"
                     text: qsTr("Undo")
-                    flat: true
-                    focusPolicy: Qt.NoFocus
+                    iconSource: "icons/undo.svg"
                     onClicked: panel.doc.undoPaste()
                 }
             }
@@ -158,7 +159,12 @@ Rectangle {
                 font.pixelSize: Theme.fontSize + 2
                 wrapMode: TextEdit.NoWrap
                 placeholderText: qsTr("[Dm]I love [C#m7]you so much[D/E]\n\nPut a chord in [brackets] right before the word it changes on.")
-                background: Rectangle { color: Theme.panel; border.color: Theme.border; radius: Theme.radius }
+                background: Rectangle {
+                    color: Theme.readoutBackground
+                    border.color: editor.activeFocus ? Theme.accent : Theme.outline
+                    radius: Theme.radiusSmall
+                    Rectangle { x: 1; y: 1; width: parent.width - 2; height: 1; color: Theme.bevelDark }
+                }
             }
         }
         Label {
