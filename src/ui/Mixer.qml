@@ -32,18 +32,14 @@ Rectangle {
 
     StageDivider { anchors.top: parent.top; width: parent.width }
 
-    RowLayout {
+    ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.spacing
-        spacing: Theme.spacing
+        spacing: 4
 
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            spacing: 4
-
-        // The looper strip: a loop's buttons above each channel, scrolling
-        // with the strips.
+        // The loop station: a strip right across the mixer, its name in
+        // the middle, and a loop's buttons above each channel (scrolling
+        // with the strips).
         Rectangle {
             id: looperBand
             objectName: "looperBand"
@@ -51,14 +47,45 @@ Rectangle {
             Layout.preferredHeight: Theme.looperHeight - 4 // (the gap under it: the column's spacing)
             visible: mixer.loops !== null && mixer.loops.stripVisible
             radius: Theme.radiusCard
-            color: Theme.panelBottom
             border.color: Theme.outline
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.panelTop }
+                GradientStop { position: 1.0; color: Theme.panelBottom }
+            }
+            Rectangle { x: 2; y: 1; width: parent.width - 4; height: 1; color: Theme.bevelLight }
+
+            // Its name, engraved between two grooves, like a hardware unit.
+            RowLayout {
+                id: looperTitle
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.leftMargin: Theme.spacingLarge
+                anchors.rightMargin: Theme.spacingLarge
+                anchors.topMargin: 4
+                height: 14
+                spacing: Theme.spacing
+                StageDivider { Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter }
+                Text {
+                    objectName: "looperTitle"
+                    text: qsTr("LOOP STATION")
+                    color: Theme.textDim
+                    font.pixelSize: Theme.tinyFontSize
+                    font.bold: true
+                    font.letterSpacing: 3
+                }
+                StageDivider { Layout.fillWidth: true; Layout.alignment: Qt.AlignVCenter }
+            }
+
             ListView {
                 id: looperCells
                 objectName: "looperCells"
-                anchors.fill: parent
-                anchors.topMargin: 4
+                anchors.left: parent.left
+                anchors.top: looperTitle.bottom
+                anchors.bottom: parent.bottom
+                anchors.topMargin: 3
                 anchors.bottomMargin: 4
+                width: strips.width // over the strips exactly
                 orientation: ListView.Horizontal
                 spacing: strips.spacing
                 interactive: false
@@ -78,6 +105,11 @@ Rectangle {
                 }
             }
         }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: Theme.spacing
 
         ListView {
             id: strips
@@ -166,15 +198,12 @@ Rectangle {
             }
         }
 
-        }
-
         // Master strip: the rig's own effects on everything (not saved in the
         // setlist), the master fader, mute, and the safety limiter's light.
         Rectangle {
             id: masterStrip
             property int menuEffect: -1
             Layout.alignment: Qt.AlignTop
-            Layout.topMargin: looperBand.visible ? looperBand.height + 4 : 0 // level with the strips
             Layout.preferredHeight: Math.min(strips.height, Theme.stripHeight)
             Layout.preferredWidth: Theme.stripWidth
             radius: Theme.radiusCard
@@ -356,6 +385,7 @@ Rectangle {
                     }
                 }
             }
+        }
         }
     }
 }

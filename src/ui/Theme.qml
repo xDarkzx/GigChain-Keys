@@ -105,7 +105,7 @@ QtObject {
     readonly property int sidePanelWidth: 270
     readonly property int stripWidth: 88
     readonly property int mixerHeight: 360
-    readonly property int looperHeight: 70 // the looper strip over the mixer (and its gap)
+    readonly property int looperHeight: 88 // the loop station strip over the mixer (its name, its buttons, its gap)
     // A channel strip's fixed height (REAPER/Audacity size): never stretched to the window.
     readonly property int stripHeight: 470
 
