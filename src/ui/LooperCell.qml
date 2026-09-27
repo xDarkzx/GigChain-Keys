@@ -22,6 +22,8 @@ Rectangle {
     readonly property int layers: loop ? loop.layers : 0
     readonly property int bar: loop ? loop.bar : 0
     readonly property int bars: loop ? loop.bars : 0
+    readonly property int beatsToGo: loop && loop.beatsToGo !== undefined ? loop.beatsToGo : 0
+    readonly property real progress: loop ? loop.progress : 0
     readonly property bool recordingBase: loopState === "recording" || loopState === "closing"
     readonly property bool layering: loopState === "overdubbing"
     readonly property bool waiting: loopState === "armed" || loopState === "overdubArmed" || loopState === "startArmed" || loopState === "stopArmed"
@@ -62,6 +64,27 @@ Rectangle {
                 radius: 6
                 color: cell.recordingBase || cell.layering ? "white" : recordButton.lit
                 opacity: recordArea.containsMouse || cell.recordingBase || cell.layering || cell.waiting ? 1.0 : 0.75
+            }
+            // Recording: a white ring filling through each bar, so its end
+            // (where the loop can close) is seen coming.
+            Canvas {
+                id: barRing
+                objectName: "recordBarRing"
+                anchors.fill: parent
+                visible: cell.recordingBase
+                readonly property real progress: cell.progress
+                onProgressChanged: requestPaint()
+                onVisibleChanged: requestPaint()
+                onPaint: {
+                    const ctx = getContext("2d")
+                    ctx.reset()
+                    ctx.lineWidth = 3
+                    ctx.lineCap = "round"
+                    ctx.strokeStyle = "white"
+                    ctx.beginPath()
+                    ctx.arc(width / 2, height / 2, width / 2 - 2, -Math.PI / 2, -Math.PI / 2 + Math.max(0.02, progress) * 2 * Math.PI)
+                    ctx.stroke()
+                }
             }
             MouseArea {
                 id: recordArea
@@ -151,14 +174,21 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 4
-        text: cell.loopState === "armed" ? qsTr("next bar")
-              : cell.recordingBase ? qsTr("REC")
+        // Waiting for the bar: the beats left, counting down.
+        readonly property string inBeats: cell.beatsToGo > 0 ? qsTr("in %1").arg(cell.beatsToGo) : qsTr("next bar")
+        text: cell.loopState === "armed" ? qsTr("REC %1").arg(inBeats)
+              : cell.loopState === "closing" ? qsTr("REC %1 · ends").arg(cell.bar)
+              : cell.recordingBase ? (cell.bar > 0 ? qsTr("REC %1").arg(cell.bar) : qsTr("REC"))
+              : cell.loopState === "startArmed" ? qsTr("starts %1").arg(inBeats)
+              : cell.loopState === "overdubArmed" ? qsTr("layer %1").arg(inBeats)
               : cell.layering ? qsTr("LAYER %1").arg(cell.layers + 1)
               : cell.sounding && cell.bars > 0 ? cell.bar + "/" + cell.bars
               : cell.sounding ? qsTr("playing")
               : cell.hasLoop ? qsTr("stopped")
               : ""
-        color: cell.recordingBase ? cell.recordRed : cell.layering ? cell.layerOrange : cell.sounding ? cell.playGreen : Theme.textDim
+        color: cell.recordingBase || cell.loopState === "armed" ? cell.recordRed
+               : cell.layering || cell.loopState === "overdubArmed" ? cell.layerOrange
+               : cell.sounding || cell.loopState === "startArmed" ? cell.playGreen : Theme.textDim
         font.pixelSize: Theme.tinyFontSize
         font.bold: true
     }

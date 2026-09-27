@@ -28,6 +28,9 @@ struct LoopData
 {
     std::shared_ptr<LoopTake> base;
     std::vector<std::shared_ptr<LoopTake>> layers; // empty until the length is known
+    // Layers (bit n = layer n) replaced here by fresh, silent buffers after
+    // an undo (LoopStation::dirtyLayers).
+    uint32_t freshMask = 0;
 };
 
 // Where loops may start and stop: grid lines at origin + k * unit (samples).
@@ -39,6 +42,8 @@ struct LoopGrid
     [[nodiscard]] bool valid() const { return unit >= 1.0; }
     // The first grid line at or after `sample`.
     [[nodiscard]] int64_t next(int64_t sample) const;
+    // The last grid line at or before `sample`.
+    [[nodiscard]] int64_t previous(int64_t sample) const;
 };
 
 // One loop's state for the main thread.
@@ -48,6 +53,7 @@ struct LoopReading
     int64_t length = 0;   // frames, 0 until the loop is closed
     int64_t position = 0; // where it plays (or how much is recorded, while recording)
     int layers = 0;
+    int64_t wait = 0; // frames until what it waits for (a start, a close) happens; 0 = nothing
 };
 
 // The loop pedal: up to kSlots loops, one per channel, each recording a
@@ -83,6 +89,10 @@ public:
     bool takeNeedsLayers(int slot);
     bool takeFull(int slot);
     bool takeNoLayerLeft(int slot);
+    // Layers undone (bit n = layer n) whose buffers still hold their sound:
+    // the main thread gives fresh ones (LoopData::freshMask) before they are
+    // recorded on again.
+    [[nodiscard]] uint32_t dirtyLayers(int slot) const;
     // The grid free loops keep to (for the tempo taken from the first loop).
     [[nodiscard]] LoopGrid freeGrid() const;
     void collectGarbage();
@@ -133,6 +143,8 @@ private:
         int64_t overdubDone = 0;             // frames of the layer being recorded
         bool recordedThisBlock = false;
         bool closed = false; // the loop closed in this block
+        uint32_t dirty = 0;  // undone layers still holding their sound
+        const LoopData* seen = nullptr; // the buffers last acquired
         LoopData* current = nullptr;         // acquired for the block
         std::array<Segment, 2> segments{};
         int segmentCount = 0;
@@ -144,6 +156,8 @@ private:
         std::atomic<bool> needsLayers{false};
         std::atomic<bool> full{false};
         std::atomic<bool> noLayerLeft{false};
+        std::atomic<int64_t> outWait{0};
+        std::atomic<uint32_t> outDirty{0};
     };
 
     // Audio thread.
@@ -152,6 +166,8 @@ private:
     // The grid in force: the bars (synced) or the first free loop's.
     [[nodiscard]] LoopGrid gridFor(const LoopGrid& bars) const noexcept;
     [[nodiscard]] static bool layersReady(const Slot& slot) noexcept;
+    // A layer can be recorded now: its buffer is there and silent.
+    [[nodiscard]] static bool canLayer(const Slot& slot) noexcept;
     [[nodiscard]] static int64_t capacity(const Slot& slot) noexcept;
 
     std::array<Slot, kSlots> m_slots;

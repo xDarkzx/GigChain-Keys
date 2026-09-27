@@ -171,10 +171,11 @@ struct ChannelLoop
 {
     core::ChannelId channel;
     LoopState state = LoopState::Empty;
-    double progress = 0.0; // where the loop is, 0-1 (while recording: 0)
-    int bar = 0;           // 1-based bar of the loop playing (0 when not playing)
+    double progress = 0.0; // where the loop is, 0-1; while recording: how far into the bar
+    int bar = 0;           // 1-based bar playing, or being recorded (0 otherwise)
     int bars = 0;          // its length in bars (0 until known)
     int layers = 0;        // layers recorded on top
+    int beatsToGo = 0;     // waiting for the bar (to record, close, start): beats left
 
     bool operator==(const ChannelLoop&) const = default;
 };
