@@ -10,6 +10,7 @@
 #include "MidiQueue.h"
 #include "PluginLoadGuard.h"
 #include "SafetyLimiter.h"
+#include "SongTransport.h"
 #include "Vst3Node.h"
 
 #include "gigchain/engine/IEngine.h"
@@ -90,6 +91,12 @@ public:
 
     void setTempo(double bpm) override;
     [[nodiscard]] double tempo() const override;
+    void setTimeSignature(int numerator, int denominator) override;
+    void setSongSections(const SongSections& sections) override;
+    void playSong(int fromSection, bool countIn) override;
+    void stopSong() override { m_transport.stop(); }
+    void jumpToSection(int section) override;
+    [[nodiscard]] SongPosition songPosition() const override { return m_transport.position(); }
     void setClick(bool on, double volumeDb) override;
     [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
     void setBackingTrack(const QString& path) override;
@@ -144,6 +151,12 @@ private:
     // Follows m_midiSetup's clock choices: whether the tempo follows an
     // incoming clock, and where the clock is sent. Problems returned (logged).
     std::vector<QString> applyClockSetup();
+    // Main thread: the song's sections as a timeline for the audio thread,
+    // from m_sections and the time signature.
+    void publishTimeline();
+    // Main thread: which sections each strip of `graph` plays in (all, when
+    // the sections were worked out for another patch).
+    void applySectionMasks(RenderGraph& graph) const;
 
     AudioDevice m_audio;
     MidiInput m_midi;
@@ -213,7 +226,14 @@ private:
     std::atomic<bool> m_followClock{false};
     int64_t m_samplePosition = 0; // audio thread
     double m_ppq = 0.0;           // audio thread
+    std::atomic<int> m_timeNumerator{4};
+    std::atomic<int> m_timeDenominator{4};
     Metronome m_click;
+    // The song's sections: as set (main thread), as a timeline (to the audio
+    // thread), and the play/stop/jump counting through them.
+    SongSections m_sections;
+    HazardExchange<SongTimeline> m_timeline;
+    SongTransport m_transport;
     MidiClockOut m_clockOut;
     MidiMonitor m_keyboard; // what is being played, for the on-screen keyboard
 

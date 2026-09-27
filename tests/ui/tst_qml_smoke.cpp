@@ -34,6 +34,20 @@ QQuickItem* findItem(QQuickItem* item, const QString& name)
     return nullptr;
 }
 
+// Every item with that name, in the visual tree's order.
+void findAll(QQuickItem* item, const QString& name, QList<QQuickItem*>& found)
+{
+    if (item == nullptr) return;
+    if (item->objectName() == name) found << item;
+    for (QQuickItem* child : item->childItems()) findAll(child, name, found);
+}
+QList<QQuickItem*> findAll(QQuickItem* item, const QString& name)
+{
+    QList<QQuickItem*> found;
+    findAll(item, name, found);
+    return found;
+}
+
 class TestQmlSmoke : public QObject
 {
     Q_OBJECT
@@ -446,6 +460,101 @@ private slots:
         w->removeEventFilter(&catcher);
         QCOMPARE(catcher.closes, 1);
         QVERIFY(w->isVisible());
+        settle();
+    }
+
+    // Song sections in the chart: centred, large titles with what each
+    // section plays; assigned by clicking, counted when played.
+    void sectionsInTheChartAreAssignedByClicking()
+    {
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
+        QVERIFY(doc.addChannel(u"demo.strings"_s, u"Strings"_s));
+        QVERIFY(doc.setSongChart(0, u"{comment: Verse}\n[C]words [G]more\n{comment: Chorus}\n[F]la la\n"_s));
+        // Adding an instrument showed its tab: back to the chart.
+        auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(tabs != nullptr);
+        QVERIFY(tabs->setProperty("currentIndex", 0));
+        settle();
+
+        auto* chart = w->findChild<QQuickItem*>(u"chartView"_s);
+        QVERIFY(chart != nullptr);
+        QTRY_COMPARE(findAll(chart, u"sectionHeader"_s).size(), 2);
+        const QList<QQuickItem*> headers = findAll(chart, u"sectionHeader"_s);
+        QVERIFY(chart->isVisible());
+
+        // Centred and larger than the lyrics.
+        QQuickItem* title = findItem(headers.value(0), u"sectionTitle"_s);
+        QVERIFY(title != nullptr);
+        const double centre = title->mapToScene(QPointF(title->width() / 2, 0)).x();
+        const double chartCentre = chart->mapToScene(QPointF(chart->width() / 2, 0)).x();
+        QVERIFY2(qAbs(centre - chartCentre) <= 1.0, qPrintable(u"%1 vs %2"_s.arg(centre).arg(chartCentre)));
+        const int titleSize = title->property("font").value<QFont>().pixelSize();
+        QVERIFY2(titleSize >= 26, qPrintable(QString::number(titleSize))); // lyrics are 20 px here
+
+        // Each plays the first instrument until told otherwise.
+        const auto chipNames = [](QQuickItem* header) {
+            QStringList names;
+            for (QQuickItem* chip : findAll(header, u"sectionChip"_s)) {
+                for (QQuickItem* text : chip->childItems().value(0)->childItems()) {
+                    if (text->objectName().isEmpty()) names << text->property("text").toString();
+                }
+            }
+            return names;
+        };
+        QCOMPARE(chipNames(headers.value(0)), QStringList{u"Piano"_s});
+        QCOMPARE(chipNames(headers.value(1)), QStringList{u"Piano"_s});
+        // The header of section `n`, as the chart shows it now.
+        const auto header = [chart](int n) { return findAll(chart, u"sectionHeader"_s).value(n); };
+
+        // [+] on the chorus: the menu offers Strings; picking it adds it.
+        QQuickItem* add = findItem(headers.value(1), u"sectionAdd"_s);
+        QVERIFY(add != nullptr && add->isEnabled());
+        QTest::mouseClick(w, Qt::LeftButton, {}, add->mapToScene(QPointF(add->width() / 2, add->height() / 2)).toPoint());
+        auto* menu = add->findChild<QObject*>(u"sectionAddMenu"_s);
+        QVERIFY(menu != nullptr);
+        QTRY_VERIFY(menu->property("visible").toBool());
+        QQuickItem* strings = nullptr;
+        QVERIFY(QMetaObject::invokeMethod(menu, "itemAt", Q_RETURN_ARG(QQuickItem*, strings), Q_ARG(int, 0)));
+        QVERIFY(strings != nullptr);
+        QCOMPARE(strings->property("text").toString(), u"Strings"_s);
+        QTRY_VERIFY(strings->isVisible() && strings->width() > 0);
+        QTest::mouseClick(w, Qt::LeftButton, {}, strings->mapToScene(QPointF(strings->width() / 2, strings->height() / 2)).toPoint());
+        QTRY_COMPARE(chipNames(header(1)), (QStringList{u"Piano"_s, u"Strings"_s}));
+        QVERIFY(!findItem(header(1), u"sectionAdd"_s)->isEnabled()); // nothing left to add
+        shoot(u"sections"_s);
+
+        // ✕ takes one out.
+        QQuickItem* remove = findAll(header(1), u"sectionChipRemove"_s).value(0);
+        QVERIFY(remove != nullptr);
+        QTest::mouseClick(w, Qt::LeftButton, {}, remove->mapToScene(QPointF(remove->width() / 2, remove->height() / 2)).toPoint());
+        QTRY_COMPARE(chipNames(header(1)), QStringList{u"Strings"_s});
+
+        // The length: click, type, Enter.
+        QQuickItem* bars = findItem(header(0), u"sectionBars"_s);
+        QVERIFY(bars != nullptr);
+        QTest::mouseClick(w, Qt::LeftButton, {}, bars->mapToScene(QPointF(bars->width() / 2, bars->height() / 2)).toPoint());
+        QTest::keyClick(w, Qt::Key_8);
+        QTest::keyClick(w, Qt::Key_Return);
+        QTRY_COMPARE(doc.currentSections().at(0).toMap().value(u"bars"_s).toInt(), 8);
+
+        // Play: the toolbar shows where the song is, the chart lights the section.
+        auto* play = w->findChild<QQuickItem*>(u"songPlayButton"_s);
+        QVERIFY(play != nullptr && play->isVisible());
+        click(u"songPlayButton"_s);
+        auto* where = w->findChild<QQuickItem*>(u"songWhere"_s);
+        QVERIFY(where != nullptr);
+        QTRY_COMPARE(where->property("text").toString(), u"Verse · 1/8"_s);
+        // The verse's own count, under its lit title.
+        QQuickItem* verseBars = findItem(header(0), u"sectionBars"_s);
+        QVERIFY(verseBars != nullptr && !verseBars->childItems().isEmpty());
+        QTRY_COMPARE(verseBars->childItems().at(0)->property("text").toString(), u"bar 1 of 8"_s);
+        shoot(u"sections-playing"_s);
+        click(u"songPlayButton"_s); // stops
+        QTRY_VERIFY(!m_engine->songPosition().playing);
         settle();
     }
 

@@ -54,8 +54,31 @@ struct Chart
     QString artist;
     QString key;
     double tempo = 0.0; // 0 = not given
+    int timeNumerator = 0; // {time: 6/8}; 0 = not given
+    int timeDenominator = 0;
     std::vector<ChartLine> lines;
 };
+
+// A section of a song (Intro, Verse 1, Chorus...) as its chart shows it.
+struct ChartSection
+{
+    QString name;       // "Verse 1", "Chorus": the label without a note after it
+    QString label;      // as written, e.g. "Chorus (x2)"
+    int occurrence = 1; // 2 = the second section with this name (the second chorus)
+    int guessedBars = 4;
+    int line = 0; // its title's index in Chart::lines
+};
+
+// Whether a comment's text names a section: "Verse", "Pre-Chorus 2",
+// "Chorus (x2)", "Outro"... ("Capo 2" or "play softly" do not).
+[[nodiscard]] bool isSectionName(const QString& label);
+// The chart's sections in order: ChordPro sections ({start_of_chorus},
+// {sov: Verse 2}) and comments that name one (a pasted "[Verse 1]"). Bars
+// are guessed as one per chord, a repeat mark ("x2") on a line or title
+// multiplying it; a section without chords guesses 4.
+[[nodiscard]] std::vector<ChartSection> chartSections(const Chart& chart);
+// A time signature a player could mean: 1-32 beats of a 1, 2, 4, 8, 16 or 32.
+[[nodiscard]] bool isTimeSignature(int numerator, int denominator);
 
 // Never fails: anything not understood stays as text on a lyric line.
 [[nodiscard]] Chart parseChordPro(const QString& text);
@@ -93,6 +116,8 @@ struct ImportedSheet
     QString key;
     int capo = 0;   // fret; 0 = none (kept as a comment in the chart too)
     double tempo = 0.0;
+    int timeNumerator = 0; // 0 = not given
+    int timeDenominator = 0;
 };
 [[nodiscard]] ImportedSheet importChordSheet(const QString& text);
 

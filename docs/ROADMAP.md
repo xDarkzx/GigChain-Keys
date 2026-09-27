@@ -45,6 +45,17 @@ rely on come before the new ideas below. First audited against the code on
 
 ## 1. Instrument toggles and song sections
 
+**First version built (2026-09-27)** — see
+`docs/superpowers/specs/2026-09-27-song-sections-design.md`. The chart's
+sections (pasted `[Verse 1]`, `[Chorus]`...) show centred and large, each
+with the patch's instruments it plays (click [+] / ✕), and its length in
+bars. Play counts the bars at the song's tempo and time signature (with a
+count-in on the click) and switches the instruments by themselves a
+sixteenth before each section (or a beat early), sample-exactly; the
+backing track plays along; a pedal moves on to the next section. Songs
+without sections play everything, as before. Still open below: following
+the player by ear, tempo changes inside a song, fades between sections.
+
 **The idea:** within one song, switch sounds for the verse, chorus, drop and
 so on without building a separate patch for each, and turn instruments on
 and off with one easy toggle.

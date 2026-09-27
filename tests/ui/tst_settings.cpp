@@ -92,7 +92,18 @@ private slots:
         QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::TapTempo)).toMap().value(u"label"_s).toString(),
                  u"Tap tempo"_s);
         QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::PlayBacking)).toMap().value(u"label"_s).toString(),
-                 u"Backing track: play / stop"_s);
+                 u"Song / backing track: play / stop"_s);
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::NextSection)).toMap().value(u"label"_s).toString(),
+                 u"Next section"_s);
+        // Learnable like the others, and kept.
+        settings.learnControl(static_cast<int>(engine::ControlAction::NextSection));
+        QCOMPARE(settings.learning(), static_cast<int>(engine::ControlAction::NextSection));
+        const engine::MidiTrigger pedal{.kind = engine::MidiTrigger::ControlChange, .channel = 0, .number = 67};
+        m_engine->learned = pedal;
+        settings.pollLearning();
+        QCOMPARE(settings.learning(), -1);
+        QCOMPARE(settings.controls().at(static_cast<int>(engine::ControlAction::NextSection)).toMap().value(u"trigger"_s).toString(),
+                 pedal.describe());
     }
 
     void applyChangesTheEngineAndRemembers()

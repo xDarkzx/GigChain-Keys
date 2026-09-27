@@ -19,6 +19,14 @@ Result<void> setSongChart(Setlist& setlist, int songIndex, const QString& chart)
 // The song's key ("" = not set) and tempo in BPM (0 = not set).
 Result<void> setSongKeyAndTempo(Setlist& setlist, int songIndex, const QString& key, double tempo);
 
+// The song's time signature (numerator beats of a 1/denominator note).
+Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator, int denominator);
+// Sections switch a beat early (true) or just before their first beat.
+Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early);
+// Stores what one section plays and how long it is, replacing the setup of
+// the same section (same name ignoring case, same occurrence).
+Result<void> setSectionSetup(Setlist& setlist, int songIndex, const SectionSetup& setup);
+
 // Inserts the copy directly after the original and returns its index.
 Result<int> duplicateSong(Setlist& setlist, int songIndex);
 Result<int> duplicatePatch(Setlist& setlist, Cursor cursor);

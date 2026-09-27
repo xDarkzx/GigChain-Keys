@@ -12,6 +12,7 @@
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
+#include <functional>
 #include <optional>
 
 class QSettings;
@@ -64,6 +65,15 @@ class DocumentController : public QObject
     // The current song's tempo (0 = not set) and backing track file name ("" = none).
     Q_PROPERTY(double songTempo READ songTempo NOTIFY songChanged)
     Q_PROPERTY(QString songBackingTrack READ songBackingTrack NOTIFY songChanged)
+    // The current song's time signature and whether its sections switch a beat early.
+    Q_PROPERTY(int songTimeNumerator READ songTimeNumerator NOTIFY songChanged)
+    Q_PROPERTY(int songTimeDenominator READ songTimeDenominator NOTIFY songChanged)
+    Q_PROPERTY(bool songSwitchEarly READ songSwitchEarly NOTIFY songChanged)
+    // The current song's sections (from its chart) with what each plays in
+    // the current patch: [{index, name, label, bars, guessed, assigned,
+    // channels: [{channel, name}], choices: [{channel, name}] (the patch's
+    // other instruments)}]. Empty: the song has none (all plays).
+    Q_PROPERTY(QVariantList currentSections READ currentSections NOTIFY sectionsChanged)
 
 public:
     DocumentController(engine::IEngine& engine, QSettings& settings, QObject* parent = nullptr);
@@ -174,6 +184,29 @@ public:
     [[nodiscard]] QString songBackingTrack() const;
     Q_INVOKABLE bool setSongBackingTrack(int song, const QUrl& file);
 
+    [[nodiscard]] int songTimeNumerator() const;
+    [[nodiscard]] int songTimeDenominator() const;
+    [[nodiscard]] bool songSwitchEarly() const;
+    Q_INVOKABLE bool setSongTimeSignature(int song, int numerator, int denominator);
+    Q_INVOKABLE bool setSongSwitchEarly(int song, bool early);
+
+    // Song sections: what each section of the current song's chart plays in
+    // the current patch, and how long it is.
+    [[nodiscard]] QVariantList currentSections() const;
+    // The patch's instruments a section does not play yet: [{channel, name}].
+    Q_INVOKABLE QVariantList sectionChoices(int section) const;
+    Q_INVOKABLE bool addSectionChannel(int section, int channel);
+    Q_INVOKABLE bool removeSectionChannel(int section, int channel);
+    Q_INVOKABLE bool setSectionBars(int section, int bars);
+    // The song's count: Play from the section in force (a bar of click
+    // first when the click is on), Stop, and moving between sections
+    // (stopped: where Play starts; playing: at once).
+    Q_INVOKABLE void playSong();
+    Q_INVOKABLE void stopSong();
+    Q_INVOKABLE void selectSection(int section);
+    Q_INVOKABLE void nextSection();
+    [[nodiscard]] bool hasSections() const { return m_sectionCount > 0; }
+
     [[nodiscard]] bool canUndo() const { return !m_undo.empty(); }
     [[nodiscard]] bool canRedo() const { return !m_redo.empty(); }
     Q_INVOKABLE bool undo();
@@ -218,7 +251,8 @@ signals:
     void pasteUndoChanged();
     void recentFilesChanged();
     void undoChanged();
-    void songChanged(); // the current song, or its tempo or backing track
+    void songChanged(); // the current song, or its tempo, time, backing track
+    void sectionsChanged(); // the current song's sections or what they play
     void channelEditRequested(int channel, const QString& page);
 
 private:
@@ -238,8 +272,20 @@ private:
     void setDirty(bool dirty);
     [[nodiscard]] bool effectExists(int channel, int effect) const;
     void setFilePath(const QString& path);
-    // The current song's tempo and backing track, to the engine.
+    // The current song's tempo, time signature and backing track, to the engine.
     void applyCurrentSongToEngine();
+    // The current song's sections for the current patch, to the engine
+    // (before the patch itself, so the new patch plays them from its first
+    // note). A different song than last time stops the count and starts
+    // again at its first section.
+    void applySectionsToEngine();
+    // The channels a section of the current song plays in the current
+    // patch; nothing when there is no such section.
+    [[nodiscard]] std::optional<std::vector<core::ChannelId>> sectionLive(int section) const;
+    // Stores one section's setup (an undoable edit) and plays it.
+    bool storeSection(int section, const std::function<void(core::SectionSetup&)>& edit);
+    core::SongId m_sectionsSong; // the song whose sections the engine has
+    int m_sectionCount = 0;
     [[nodiscard]] const core::Song* currentSong() const;
     // Undo: the setlist as it was before each edit. Called whenever an edit
     // is committed; edits in a row with the same `m_coalesceKey` within a
@@ -264,6 +310,8 @@ private:
         QString name;
         QString key;
         double tempo = 0.0;
+        int timeNumerator = 4;
+        int timeDenominator = 4;
         QString pasted; // restored as the chart, exactly as pasted
     };
     std::optional<PasteUndo> m_pasteUndo;

@@ -2,6 +2,8 @@
 
 #include <QRegularExpression>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 namespace gigchain::core {
@@ -33,6 +35,37 @@ const QRegularExpression& kSectionLabel()
 {
     static const QRegularExpression pattern(uR"(^\[([A-Za-z][A-Za-z0-9 \-']*)\]\s*(.*?)\s*$)"_s);
     return pattern;
+}
+
+// "x2", "(x3)", "2x": play this twice (three times...).
+const QRegularExpression& kRepeatMark()
+{
+    static const QRegularExpression pattern(uR"(^\(?(?:x\s*(\d+)|(\d+)\s*x)\)?$)"_s, QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
+// A repeat mark somewhere in a section title: "Chorus (x2)", "Outro x4".
+const QRegularExpression& kRepeatInLabel()
+{
+    static const QRegularExpression pattern(uR"((?:^|[\s(])(?:x\s*(\d+)|(\d+)\s*x)(?=[\s)]|$))"_s,
+                                            QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
+// A section's name, maybe numbered, maybe with a note after it:
+// "Verse 2", "Pre-Chorus", "Chorus (x2)", "Bridge - quiet".
+const QRegularExpression& kSectionName()
+{
+    static const QRegularExpression pattern(
+        uR"(^\s*((?:intro|verse|pre[- ]?chorus|post[- ]?chorus|chorus|bridge|solo|instrumental|interlude|breakdown|break|build(?:[- ]?up)?|drop|hook|refrain|tag|outro|coda|ending)\b(?:\s*\d+(?![\dx]))?)(?:[\s:(\-–].*)?$)"_s,
+        QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
+
+// How many times a repeat mark says to play something; 1 without one.
+int repeatCount(const QRegularExpressionMatch& match)
+{
+    if (!match.hasMatch()) return 1;
+    const int count = (match.captured(1).isEmpty() ? match.captured(2) : match.captured(1)).toInt();
+    return std::clamp(count, 1, 16);
 }
 
 bool isChord(const QString& word)
@@ -96,6 +129,15 @@ ChartLine parseLine(const QString& raw, Chart& chart)
     else if (name == u"subtitle"_s || name == u"st"_s || name == u"artist"_s) chart.artist = value;
     else if (name == u"key"_s) chart.key = value;
     else if (name == u"tempo"_s) chart.tempo = value.toDouble();
+    else if (name == u"time"_s) {
+        const QStringList parts = value.split(u'/');
+        const int numerator = parts.size() == 2 ? parts.at(0).trimmed().toInt() : 0;
+        const int denominator = parts.size() == 2 ? parts.at(1).trimmed().toInt() : 0;
+        if (isTimeSignature(numerator, denominator)) {
+            chart.timeNumerator = numerator;
+            chart.timeDenominator = denominator;
+        }
+    }
 
     if (name == u"comment"_s || name == u"c"_s || name == u"ci"_s || name == u"cb"_s ||
         name == u"comment_italic"_s || name == u"comment_box"_s || name == u"highlight"_s) {
@@ -131,6 +173,56 @@ QString ChartLine::lyrics() const
     QString result;
     for (const ChartSegment& segment : segments) result += segment.text;
     return result;
+}
+
+bool isSectionName(const QString& label)
+{
+    return kSectionName().match(label).hasMatch();
+}
+
+bool isTimeSignature(int numerator, int denominator)
+{
+    return numerator >= 1 && numerator <= 32 && denominator >= 1 && denominator <= 32 &&
+           (denominator & (denominator - 1)) == 0;
+}
+
+std::vector<ChartSection> chartSections(const Chart& chart)
+{
+    using Kind = ChartLine::Kind;
+    std::vector<ChartSection> sections;
+    // Where each starts; its bars are counted up to the next one (or the
+    // end of a ChordPro section).
+    for (std::size_t i = 0; i < chart.lines.size(); ++i) {
+        const ChartLine& line = chart.lines.at(i);
+        const bool named = line.kind == Kind::Comment && isSectionName(line.label);
+        // A tab or chord grid block ({start_of_tab}) is notation, not a part of the song.
+        const bool block = line.kind == Kind::Section && (line.label == u"Tab"_s || line.label == u"Grid"_s);
+        if ((line.kind != Kind::Section || block) && !named) continue;
+        ChartSection section;
+        section.label = line.label.trimmed();
+        const auto match = kSectionName().match(section.label);
+        section.name = match.hasMatch() ? match.captured(1).simplified() : section.label;
+        section.occurrence = 1 + static_cast<int>(std::ranges::count_if(sections, [&section](const ChartSection& s) {
+            return s.name.compare(section.name, Qt::CaseInsensitive) == 0;
+        }));
+        section.line = static_cast<int>(i);
+
+        int bars = 0;
+        for (std::size_t j = i + 1; j < chart.lines.size(); ++j) {
+            const ChartLine& inside = chart.lines.at(j);
+            if (inside.kind == Kind::SectionEnd || inside.kind == Kind::Section ||
+                (inside.kind == Kind::Comment && isSectionName(inside.label))) {
+                break;
+            }
+            if (inside.kind != Kind::Lyrics) continue;
+            const auto chords = static_cast<int>(inside.chords().size());
+            bars += chords * repeatCount(kRepeatMark().match(inside.lyrics().trimmed()));
+        }
+        bars *= repeatCount(kRepeatInLabel().match(section.label));
+        section.guessedBars = bars == 0 ? 4 : std::clamp(bars, 1, 999);
+        sections.push_back(section);
+    }
+    return sections;
 }
 
 Chart parseChordPro(const QString& text)
@@ -202,8 +294,12 @@ QString chordSheetToChordPro(const QString& sheet)
         const bool lyricsBelow = i + 1 < lines.size() && !lines.at(i + 1).trimmed().isEmpty() &&
                                  !isChordLine(lines.at(i + 1)) && !kSectionLabel().match(lines.at(i + 1).trimmed()).hasMatch();
         if (!lyricsBelow) {
+            // Chords in brackets; a repeat mark ("x2") stays, it counts bars.
             QStringList bracketed;
-            for (const auto& chord : chords) bracketed << u'[' + chord.second + u']';
+            for (const QString& word : line.simplified().split(u' ', Qt::SkipEmptyParts)) {
+                if (isChord(word)) bracketed << u'[' + word + u']';
+                else if (kRepeatMark().match(word).hasMatch()) bracketed << word;
+            }
             out << bracketed.join(u' ');
             continue;
         }
@@ -394,7 +490,14 @@ const QRegularExpression& kCapoFret()
 }
 const QRegularExpression& kTempoLine()
 {
-    static const QRegularExpression pattern(uR"(^\s*(?:bpm|tempo)\s*:?\s*(\d+(?:\.\d+)?))"_s,
+    static const QRegularExpression pattern(uR"(^\s*(?:(?:bpm|tempo)\s*:?\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*bpm\b))"_s,
+                                            QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
+// "Time: 6/8", "Time signature: 3/4".
+const QRegularExpression& kTimeLine()
+{
+    static const QRegularExpression pattern(uR"(^\s*time(?:\s+signature)?\s*:?\s*(\d+)\s*/\s*(\d+)\s*$)"_s,
                                             QRegularExpression::CaseInsensitiveOption);
     return pattern;
 }
@@ -429,6 +532,8 @@ ImportedSheet importChordSheet(const QString& text)
         sheet.artist = chart.artist;
         sheet.key = chart.key;
         sheet.tempo = chart.tempo;
+        sheet.timeNumerator = chart.timeNumerator;
+        sheet.timeDenominator = chart.timeDenominator;
         sheet.chart = tidyChordSheet(cleaned);
         return sheet;
     }
@@ -461,8 +566,16 @@ ImportedSheet importChordSheet(const QString& text)
         }
         if (const auto key = kKeyLine().match(line); key.hasMatch()) sheet.key = key.captured(1);
         else if (const auto capo = kCapoFret().match(line); capo.hasMatch()) sheet.capo = capo.captured(1).toInt();
-        else if (const auto tempo = kTempoLine().match(line); tempo.hasMatch()) sheet.tempo = tempo.captured(1).toDouble();
-        else if (!titleSeen) {
+        else if (const auto tempo = kTempoLine().match(line); tempo.hasMatch()) {
+            sheet.tempo = (tempo.captured(1).isEmpty() ? tempo.captured(2) : tempo.captured(1)).toDouble();
+        } else if (const auto time = kTimeLine().match(line); time.hasMatch()) {
+            const int numerator = time.captured(1).toInt();
+            const int denominator = time.captured(2).toInt();
+            if (isTimeSignature(numerator, denominator)) {
+                sheet.timeNumerator = numerator;
+                sheet.timeDenominator = denominator;
+            }
+        } else if (!titleSeen) {
             titleSeen = true;
             if (const auto site = kSiteTitle().match(line); site.hasMatch()) {
                 sheet.title = site.captured(1).trimmed();

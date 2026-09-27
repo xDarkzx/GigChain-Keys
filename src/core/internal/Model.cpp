@@ -1,5 +1,6 @@
 #include "gigchain/core/Model.h"
 
+#include <algorithm>
 #include <utility>
 
 using namespace Qt::StringLiterals;
@@ -49,8 +50,20 @@ Patch withFreshIds(Patch patch)
 Song withFreshIds(Song song)
 {
     song.id = SongId::generate();
+    // The sections follow their channels to the copies' new ids.
+    std::vector<std::pair<ChannelId, ChannelId>> renamed;
     for (Patch& patch : song.patches) {
+        const Patch before = patch;
         patch = withFreshIds(std::move(patch));
+        for (std::size_t c = 0; c < patch.channels.size(); ++c) {
+            renamed.emplace_back(before.channels.at(c).id, patch.channels.at(c).id);
+        }
+    }
+    for (SectionSetup& section : song.sections) {
+        for (ChannelId& id : section.channels) {
+            const auto it = std::ranges::find_if(renamed, [&id](const auto& pair) { return pair.first == id; });
+            if (it != renamed.end()) id = it->second;
+        }
     }
     return song;
 }

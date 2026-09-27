@@ -9,6 +9,7 @@ Rectangle {
 
     required property DocumentController doc
     required property EditorService editorService
+    required property EngineStatus engineStatus
     property bool suspended: false
     property alias currentTab: tabs.currentIndex
 
@@ -58,6 +59,7 @@ Rectangle {
             ChartPanel {
                 objectName: "chartPanel"
                 doc: area.doc
+                engineStatus: area.engineStatus
             }
             PluginArea {
                 doc: area.doc

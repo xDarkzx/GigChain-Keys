@@ -126,6 +126,13 @@ void EngineStatus::setClickVolumeDb(double volumeDb)
 
 void EngineStatus::playPauseTrack()
 {
+    // A song with sections plays as a whole: its count, and the track with it.
+    if (m_document.hasSections()) {
+        if (m_engine.songPosition().playing) m_document.stopSong();
+        else m_document.playSong();
+        pollTransport();
+        return;
+    }
     m_track = m_engine.backingTrack(); // as it is now, not as the last poll saw it (a pedal can come first)
     if (!m_track.loaded) {
         m_document.reportMessage(m_track.loading ? tr("The backing track is still being read")
@@ -153,6 +160,10 @@ void EngineStatus::pollTransport()
     m_tempo = bpm;
     m_track = track;
     if (changed) emit transportChanged();
+    if (const engine::SongPosition song = m_engine.songPosition(); song != m_song) {
+        m_song = song;
+        emit songPositionChanged();
+    }
 }
 
 std::optional<core::ChannelId> EngineStatus::channelId(int channel) const
@@ -269,6 +280,7 @@ void EngineStatus::poll()
         case engine::ControlAction::Panic: panic(); break;
         case engine::ControlAction::TapTempo: tapTempo(); break;
         case engine::ControlAction::PlayBacking: playPauseTrack(); break;
+        case engine::ControlAction::NextSection: m_document.nextSection(); break;
         }
     }
     // A keyboard's patch buttons (Program Change).

@@ -15,6 +15,8 @@
 #include <QRegularExpression>
 
 #include "gigchain/core/Editing.h"
+#include "gigchain/core/Limits.h"
+#include "gigchain/core/Sections.h"
 #include "gigchain/core/SetlistFile.h"
 #include "gigchain/engine/IEngine.h"
 
@@ -24,6 +26,9 @@
 #include <QScopedValueRollback>
 #include <QSettings>
 
+#include <algorithm>
+#include <iterator>
+#include <map>
 #include <utility>
 
 using namespace Qt::StringLiterals;
@@ -188,6 +193,7 @@ bool DocumentController::setSongChart(int song, const QString& chordPro)
     if (auto r = core::setSongChart(m_setlist, song, chordPro); !r) return report(r.error());
     m_coalesceKey = u"chart:%1"_s.arg(song);
     setDirty(true);
+    if (song == m_cursor.song) applySectionsToEngine(); // its sections come from the chart
     emit chartChanged();
     return true;
 }
@@ -209,7 +215,13 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
         song = *index;
     }
     const core::Song& before = m_setlist.songs.at(static_cast<std::size_t>(song));
-    PasteUndo undo{.song = before.id, .name = before.name, .key = before.key, .tempo = before.tempo, .pasted = pasted};
+    PasteUndo saved{.song = before.id,
+                    .name = before.name,
+                    .key = before.key,
+                    .tempo = before.tempo,
+                    .timeNumerator = before.timeNumerator,
+                    .timeDenominator = before.timeDenominator,
+                    .pasted = pasted};
 
     if (!setSongChart(song, sheet.chart)) return false; // reported
     // A placeholder name ("Song 3") takes the sheet's title; a name the user
@@ -222,10 +234,34 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
     const core::Song& now = m_setlist.songs.at(static_cast<std::size_t>(song));
     const QString key = now.key.isEmpty() ? sheet.key : now.key;
     const double tempo = now.tempo > 0.0 ? now.tempo : sheet.tempo;
-    if (key != now.key || tempo != now.tempo) {
+    const bool tempoTaken = tempo != now.tempo;
+    if (key != now.key || tempoTaken) {
         if (auto r = core::setSongKeyAndTempo(m_setlist, song, key, tempo); !r) return report(r.error());
     }
-    m_pasteUndo = undo;
+    // A time signature from the chart, when the song has the default (4/4).
+    const core::Song& updated = m_setlist.songs.at(static_cast<std::size_t>(song));
+    const bool timeTaken = sheet.timeNumerator > 0 && updated.timeNumerator == 4 && updated.timeDenominator == 4 &&
+                           (sheet.timeNumerator != 4 || sheet.timeDenominator != 4);
+    if (timeTaken) {
+        if (auto r = core::setSongTimeSignature(m_setlist, song, sheet.timeNumerator, sheet.timeDenominator); !r) {
+            return report(r.error());
+        }
+    }
+    const auto tell = [this](const QString& message) {
+        qCInfo(lcUi).noquote() << message;
+        reportMessage(message, Notifications::Info);
+    };
+    if (tempoTaken) tell(tr("Tempo %1 BPM taken from the chart").arg(tempo));
+    if (timeTaken) tell(tr("Time signature %1/%2 taken from the chart").arg(sheet.timeNumerator).arg(sheet.timeDenominator));
+    if (tempoTaken || timeTaken) {
+        setDirty(true);
+        if (song == m_cursor.song) {
+            applyCurrentSongToEngine();
+            applySectionsToEngine();
+        }
+        emit songChanged();
+    }
+    m_pasteUndo = saved;
     emit pasteUndoChanged();
     return true;
 }
@@ -242,8 +278,14 @@ bool DocumentController::undoPaste()
     const int song = static_cast<int>(it - m_setlist.songs.begin());
     if (auto r = core::renameSong(m_setlist, song, undo.name); !r) return report(r.error());
     if (auto r = core::setSongKeyAndTempo(m_setlist, song, undo.key, undo.tempo); !r) return report(r.error());
+    if (auto r = core::setSongTimeSignature(m_setlist, song, undo.timeNumerator, undo.timeDenominator); !r) {
+        return report(r.error());
+    }
     commitRename();
-    return setSongChart(song, undo.pasted);
+    if (!setSongChart(song, undo.pasted)) return false; // reported
+    if (song == m_cursor.song) applyCurrentSongToEngine();
+    emit songChanged();
+    return true;
 }
 
 void DocumentController::clearPasteUndo()
@@ -361,7 +403,12 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
     using Kind = core::ChartLine::Kind;
     QVariantList lines;
     const auto chart = core::parseChordPro(chordPro);
-    for (const core::ChartLine& line : chart.lines) {
+    // Which lines are section titles (they carry the section's instruments).
+    std::map<int, int> sectionAt;
+    const auto sections = core::chartSections(chart);
+    for (std::size_t s = 0; s < sections.size(); ++s) sectionAt[sections.at(s).line] = static_cast<int>(s);
+    for (std::size_t i = 0; i < chart.lines.size(); ++i) {
+        const core::ChartLine& line = chart.lines.at(i);
         QString kind;
         switch (line.kind) {
         case Kind::Lyrics: kind = u"lyrics"_s; break;
@@ -375,7 +422,11 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
         for (const core::ChartSegment& segment : line.segments) {
             segments << QVariantMap{{u"chord"_s, segment.chord}, {u"text"_s, segment.text}};
         }
-        lines << QVariantMap{{u"kind"_s, kind}, {u"label"_s, line.label}, {u"segments"_s, segments}};
+        const auto section = sectionAt.find(static_cast<int>(i));
+        lines << QVariantMap{{u"kind"_s, kind},
+                             {u"label"_s, line.label},
+                             {u"segments"_s, segments},
+                             {u"sectionIndex"_s, section != sectionAt.end() ? section->second : -1}};
     }
     // No empty space after the last line (a chart usually ends with a newline).
     while (!lines.isEmpty() && lines.last().toMap().value(u"kind"_s).toString() == u"blank"_s) lines.removeLast();
@@ -535,6 +586,7 @@ bool DocumentController::setChannelName(int channel, const QString& name)
         return report(r.error());
     }
     commitChannelField(channel, false);
+    emit sectionsChanged(); // they show the channels' names
     return true;
 }
 
@@ -740,6 +792,216 @@ const core::Song* DocumentController::currentSong() const
                                                                    : nullptr;
 }
 
+int DocumentController::songTimeNumerator() const
+{
+    const core::Song* song = currentSong();
+    return song != nullptr ? song->timeNumerator : 4;
+}
+
+int DocumentController::songTimeDenominator() const
+{
+    const core::Song* song = currentSong();
+    return song != nullptr ? song->timeDenominator : 4;
+}
+
+bool DocumentController::songSwitchEarly() const
+{
+    const core::Song* song = currentSong();
+    return song != nullptr && song->switchEarly;
+}
+
+bool DocumentController::setSongTimeSignature(int song, int numerator, int denominator)
+{
+    if (auto r = core::setSongTimeSignature(m_setlist, song, numerator, denominator); !r) return report(r.error());
+    setDirty(true);
+    if (song == m_cursor.song) {
+        applyCurrentSongToEngine();
+        applySectionsToEngine();
+    }
+    emit songChanged();
+    return true;
+}
+
+bool DocumentController::setSongSwitchEarly(int song, bool early)
+{
+    if (auto r = core::setSongSwitchEarly(m_setlist, song, early); !r) return report(r.error());
+    setDirty(true);
+    if (song == m_cursor.song) applySectionsToEngine();
+    emit songChanged();
+    return true;
+}
+
+QVariantList DocumentController::currentSections() const
+{
+    const core::Song* song = currentSong();
+    const core::Patch* patch = currentPatch();
+    if (song == nullptr || patch == nullptr) return {};
+    QVariantList list;
+    int index = 0;
+    for (const core::ResolvedSection& section : core::resolveSections(*song, *patch)) {
+        QVariantList channels;
+        for (const core::ChannelId& id : section.live) {
+            const auto it = std::ranges::find_if(patch->channels, [&id](const core::Channel& c) { return c.id == id; });
+            if (it == patch->channels.end()) continue;
+            channels << QVariantMap{{u"channel"_s, static_cast<int>(it - patch->channels.begin())}, {u"name"_s, it->name}};
+        }
+        // The patch's other instruments, for [+].
+        QVariantList choices;
+        for (std::size_t c = 0; c < patch->channels.size(); ++c) {
+            const core::Channel& channel = patch->channels.at(c);
+            if (!channel.instrument || std::ranges::find(section.live, channel.id) != section.live.end()) continue;
+            choices << QVariantMap{{u"channel"_s, static_cast<int>(c)}, {u"name"_s, channel.name}};
+        }
+        list << QVariantMap{{u"index"_s, index++},
+                            {u"choices"_s, choices},
+                            {u"name"_s, section.chart.name},
+                            {u"label"_s, section.chart.label},
+                            {u"bars"_s, section.bars},
+                            {u"guessed"_s, section.guessed},
+                            {u"assigned"_s, section.assigned},
+                            {u"channels"_s, channels}};
+    }
+    return list;
+}
+
+QVariantList DocumentController::sectionChoices(int section) const
+{
+    const QVariantList sections = currentSections();
+    return section >= 0 && section < sections.size() ? sections.at(section).toMap().value(u"choices"_s).toList()
+                                                     : QVariantList{};
+}
+
+std::optional<std::vector<core::ChannelId>> DocumentController::sectionLive(int section) const
+{
+    const core::Song* song = currentSong();
+    const core::Patch* patch = currentPatch();
+    if (song == nullptr || patch == nullptr) return std::nullopt;
+    const auto sections = core::resolveSections(*song, *patch);
+    if (section < 0 || std::cmp_greater_equal(section, sections.size())) return std::nullopt;
+    return sections.at(static_cast<std::size_t>(section)).live;
+}
+
+bool DocumentController::storeSection(int section, const std::function<void(core::SectionSetup&)>& edit)
+{
+    const core::Song* song = currentSong();
+    const core::Patch* patch = currentPatch();
+    const auto sections = song != nullptr && patch != nullptr ? core::resolveSections(*song, *patch)
+                                                              : std::vector<core::ResolvedSection>{};
+    if (section < 0 || std::cmp_greater_equal(section, sections.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("Section %1 does not exist in this song's chart").arg(section + 1)});
+    }
+    const core::ChartSection& chart = sections.at(static_cast<std::size_t>(section)).chart;
+    core::SectionSetup setup{.name = chart.name, .occurrence = chart.occurrence, .bars = 0, .assigned = false, .channels = {}};
+    if (const core::SectionSetup* stored = core::findSectionSetup(*song, chart)) setup = *stored;
+    edit(setup);
+    if (auto r = core::setSectionSetup(m_setlist, m_cursor.song, setup); !r) return report(r.error());
+    setDirty(true);
+    applySectionsToEngine();
+    return true;
+}
+
+bool DocumentController::addSectionChannel(int section, int channel)
+{
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("Channel %1 does not exist in this patch").arg(channel + 1)});
+    }
+    const core::ChannelId id = patch->channels.at(static_cast<std::size_t>(channel)).id;
+    std::optional<std::vector<core::ChannelId>> live = sectionLive(section);
+    if (!live) return storeSection(section, {}); // reports it
+    if (std::ranges::find(*live, id) != live->end()) return true; // already plays there
+    live->push_back(id);
+    return storeSection(section, [&live](core::SectionSetup& setup) {
+        setup.assigned = true;
+        setup.channels = *live;
+    });
+}
+
+bool DocumentController::removeSectionChannel(int section, int channel)
+{
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("Channel %1 does not exist in this patch").arg(channel + 1)});
+    }
+    std::optional<std::vector<core::ChannelId>> live = sectionLive(section);
+    if (!live) return storeSection(section, {}); // reports it
+    std::erase(*live, patch->channels.at(static_cast<std::size_t>(channel)).id);
+    return storeSection(section, [&live](core::SectionSetup& setup) {
+        setup.assigned = true; // none left: a silent section
+        setup.channels = *live;
+    });
+}
+
+bool DocumentController::setSectionBars(int section, int bars)
+{
+    if (bars < 1 || bars > core::limits::kMaxSectionBars) {
+        return report(core::Error{core::ErrorCode::OutOfRange,
+                                  tr("A section is 1 to %1 bars long").arg(core::limits::kMaxSectionBars)});
+    }
+    m_coalesceKey = u"bars:%1"_s.arg(section);
+    return storeSection(section, [bars](core::SectionSetup& setup) { setup.bars = bars; });
+}
+
+void DocumentController::playSong()
+{
+    if (m_sectionCount == 0) {
+        const QString message = tr("This song has no sections to play: give its chart section titles like [Verse] or [Chorus]");
+        qCInfo(lcUi).noquote() << message;
+        reportMessage(message, Notifications::Info);
+        return;
+    }
+    const int from = std::clamp(m_engine.songPosition().section, 0, m_sectionCount - 1);
+    m_engine.playSong(from, m_engine.clickOn()); // the click counts in when it is on
+}
+
+void DocumentController::stopSong()
+{
+    m_engine.stopSong();
+}
+
+void DocumentController::selectSection(int section)
+{
+    if (section < 0 || section >= m_sectionCount) {
+        report(core::Error{core::ErrorCode::OutOfRange, tr("Section %1 does not exist in this song's chart").arg(section + 1)});
+        return;
+    }
+    m_engine.jumpToSection(section);
+}
+
+void DocumentController::nextSection()
+{
+    if (m_sectionCount == 0) return; // a pedal pressed in a song without sections: nothing to move to
+    const int next = m_engine.songPosition().section + 1;
+    if (next >= m_sectionCount) {
+        qCInfo(lcUi) << "Next section: already at the last one";
+        return;
+    }
+    m_engine.jumpToSection(next);
+}
+
+void DocumentController::applySectionsToEngine()
+{
+    const core::Song* song = currentSong();
+    const core::Patch* patch = currentPatch();
+    engine::SongSections sections;
+    if (song != nullptr && patch != nullptr) {
+        sections.patch = patch->id;
+        sections.switchEarly = song->switchEarly;
+        std::ranges::transform(core::resolveSections(*song, *patch), std::back_inserter(sections.sections),
+                               [](const core::ResolvedSection& section) {
+                                   return engine::SongSections::Section{.bars = section.bars, .live = section.live};
+                               });
+    }
+    const core::SongId songId = song != nullptr ? song->id : core::SongId{};
+    const bool newSong = songId != m_sectionsSong;
+    if (newSong) m_engine.stopSong();
+    m_engine.setSongSections(sections);
+    m_sectionCount = static_cast<int>(sections.sections.size());
+    if (newSong && m_sectionCount > 0) m_engine.jumpToSection(0); // a new song starts at its beginning
+    m_sectionsSong = songId;
+    emit sectionsChanged();
+}
+
 double DocumentController::songTempo() const
 {
     const core::Song* song = currentSong();
@@ -807,6 +1069,7 @@ void DocumentController::applyCurrentSongToEngine()
 {
     const core::Song* song = currentSong();
     if (song != nullptr && song->tempo > 0.0) m_engine.setTempo(song->tempo); // a song without one keeps the tempo playing
+    if (song != nullptr) m_engine.setTimeSignature(song->timeNumerator, song->timeDenominator);
     const QString track = song != nullptr && !song->backingTrack.isEmpty() && !m_filePath.isEmpty()
                               ? QFileInfo(m_filePath).absoluteDir().filePath(song->backingTrack)
                               : QString();
@@ -1019,6 +1282,7 @@ void DocumentController::resetSelectedChannel()
 
 void DocumentController::applyCurrentPatchToEngine()
 {
+    applySectionsToEngine(); // first: the new patch plays its sections from its first note
     const core::Patch* patch = currentPatch();
     const int song = m_cursor.song;
     const core::SongId songId =

@@ -1,14 +1,24 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 
 // A song's chart as the musician reads it: each chord above the syllable it
 // changes on, section headings, notes. `lines` comes from
 // DocumentController.chartLines(). `size` scales everything (1 in the
 // editor, bigger on stage).
+//
+// With `doc` set, each section title is a SectionHeader: centred and large,
+// with the instruments the section plays; `currentSection`, `playing` and
+// `bar` light the one in force (from EngineStatus).
 Column {
     id: chart
 
     property var lines: []
     property real size: 1.0
+    property DocumentController doc: null
+    readonly property var sections: doc !== null ? doc.currentSections : []
+    property int currentSection: -1
+    property bool playing: false
+    property int bar: 0
 
     spacing: 2 * size
 
@@ -18,11 +28,27 @@ Column {
         delegate: Loader {
             id: lineLoader
             required property var modelData
+            readonly property int sectionIndex: modelData.sectionIndex !== undefined ? modelData.sectionIndex : -1
             width: chart.width
-            sourceComponent: modelData.kind === "lyrics" ? lyricLine
+            sourceComponent: lineLoader.sectionIndex >= 0 ? sectionHeader
+                           : modelData.kind === "lyrics" ? lyricLine
                            : modelData.kind === "section" ? sectionLine
                            : modelData.kind === "comment" ? commentLine
                            : blankLine
+            Component {
+                id: sectionHeader
+                SectionHeader {
+                    width: lineLoader.width
+                    label: lineLoader.modelData.label
+                    sectionIndex: lineLoader.sectionIndex
+                    section: lineLoader.sectionIndex < chart.sections.length ? chart.sections[lineLoader.sectionIndex] : undefined
+                    doc: chart.doc
+                    size: chart.size
+                    current: lineLoader.sectionIndex === chart.currentSection
+                    playing: chart.playing
+                    bar: chart.bar
+                }
+            }
             Component {
                 id: lyricLine
                 // Each segment: its chord above its words.

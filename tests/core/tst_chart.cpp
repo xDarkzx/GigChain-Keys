@@ -242,6 +242,104 @@ private slots:
         QVERIFY(sheet.chart.trimmed().endsWith(u"I don't be[G]long here"_s)); // the last G sits over "long"
     }
 
+    // Sections: what each gets called, which one it is, and how many bars.
+    void sectionsFromAPastedSheet()
+    {
+        const ImportedSheet sheet = importChordSheet(u"[Intro]\n"
+                                                     "C  G\n"
+                                                     "[Verse 1]\n"
+                                                     "C        G\n"
+                                                     "Hello there\n"
+                                                     "Am       F\n"
+                                                     "Goodbye now\n"
+                                                     "[Chorus] (x2)\n"
+                                                     "F  G  C\n"_s);
+        const auto sections = chartSections(parseChordPro(sheet.chart));
+        QCOMPARE(sections.size(), std::size_t{3});
+        QCOMPARE(sections.at(0).name, u"Intro"_s);
+        QCOMPARE(sections.at(0).guessedBars, 2);
+        QCOMPARE(sections.at(1).name, u"Verse 1"_s);
+        QCOMPARE(sections.at(1).guessedBars, 4);
+        QCOMPARE(sections.at(2).name, u"Chorus"_s);
+        QCOMPARE(sections.at(2).label, u"Chorus (x2)"_s);
+        QCOMPARE(sections.at(2).guessedBars, 6); // three chords, twice
+        for (const ChartSection& s : sections) QCOMPARE(s.occurrence, 1);
+        // Each points at its own title line.
+        const Chart chart = parseChordPro(sheet.chart);
+        QCOMPARE(chart.lines.at(static_cast<std::size_t>(sections.at(1).line)).label, u"Verse 1"_s);
+    }
+
+    void sectionsFromChordPro()
+    {
+        const auto sections = chartSections(parseChordPro(u"{soc}\n[C]la [G]la\n{eoc}\n"
+                                                          "{sov: Verse 2}\n[Am]words\n{eov}\n"
+                                                          "{start_of_chorus}\n[C]la [G]la\n{end_of_chorus}\n"_s));
+        QCOMPARE(sections.size(), std::size_t{3});
+        QCOMPARE(sections.at(0).name, u"Chorus"_s);
+        QCOMPARE(sections.at(0).occurrence, 1);
+        QCOMPARE(sections.at(1).name, u"Verse 2"_s);
+        QCOMPARE(sections.at(1).guessedBars, 1);
+        QCOMPARE(sections.at(2).name, u"Chorus"_s);
+        QCOMPARE(sections.at(2).occurrence, 2); // the second chorus is its own section
+
+        // A tab block is notation, not a part of the song.
+        const auto withTab = chartSections(parseChordPro(u"{sov}\n[C]la\n{eov}\n{sot}\ne|--3--|\n{eot}\n"_s));
+        QCOMPARE(withTab.size(), std::size_t{1});
+        QCOMPARE(withTab.at(0).name, u"Verse"_s);
+    }
+
+    void commentsThatAreNotSections()
+    {
+        QVERIFY(isSectionName(u"Verse"_s));
+        QVERIFY(isSectionName(u"pre-chorus"_s));
+        QVERIFY(isSectionName(u"Pre Chorus 2"_s));
+        QVERIFY(isSectionName(u"Chorus (x2)"_s));
+        QVERIFY(isSectionName(u"Outro"_s));
+        QVERIFY(isSectionName(u"Drop"_s));
+        QVERIFY(!isSectionName(u"Capo 2"_s));
+        QVERIFY(!isSectionName(u"play softly"_s));
+        QVERIFY(!isSectionName(u"Versed in song"_s));
+        const auto sections = chartSections(parseChordPro(u"{comment: Capo 2}\n{comment: Verse}\n[C]words\n"_s));
+        QCOMPARE(sections.size(), std::size_t{1});
+        QCOMPARE(sections.at(0).name, u"Verse"_s);
+    }
+
+    void aSectionWithoutChordsGuessesFourBars()
+    {
+        const auto sections = chartSections(parseChordPro(u"{comment: Intro}\n{comment: Verse}\njust words\n"_s));
+        QCOMPARE(sections.size(), std::size_t{2});
+        QCOMPARE(sections.at(0).guessedBars, 4);
+        QCOMPARE(sections.at(1).guessedBars, 4);
+    }
+
+    void aRepeatedLineCountsTwice()
+    {
+        const auto chordPro = chartSections(parseChordPro(u"{comment: Intro}\n[Am] [F] x2\n[C]\n"_s));
+        QCOMPARE(chordPro.at(0).guessedBars, 5);
+        // The repeat mark survives a pasted sheet's chord-only line.
+        const ImportedSheet sheet = importChordSheet(u"[Intro]\nAm  F  x2\n"_s);
+        const auto pasted = chartSections(parseChordPro(sheet.chart));
+        QCOMPARE(pasted.size(), std::size_t{1});
+        QCOMPARE(pasted.at(0).guessedBars, 4);
+    }
+
+    void tempoAndTimeFromASheet()
+    {
+        const ImportedSheet a = importChordSheet(u"My Song Chords by Someone\nTempo: 96\nTime: 6/8\n[Verse]\nC G\n"_s);
+        QCOMPARE(a.tempo, 96.0);
+        QCOMPARE(a.timeNumerator, 6);
+        QCOMPARE(a.timeDenominator, 8);
+        const ImportedSheet b = importChordSheet(u"Other Song\n88 BPM\n[Verse]\nC G\n"_s);
+        QCOMPARE(b.tempo, 88.0);
+        QCOMPARE(b.timeNumerator, 0); // not given
+        const ImportedSheet c = importChordSheet(u"{title: X}\n{tempo: 120}\n{time: 3/4}\n[C]la\n"_s);
+        QCOMPARE(c.tempo, 120.0);
+        QCOMPARE(c.timeNumerator, 3);
+        QCOMPARE(c.timeDenominator, 4);
+        const ImportedSheet bad = importChordSheet(u"{time: 5/5}\n[C]la\n"_s);
+        QCOMPARE(bad.timeNumerator, 0); // not a time signature
+    }
+
     void writingBackGivesTheSameChart()
     {
         const QString text = u"{title: Test}\n{key: G}\n[G]One [D]two\nlyrics\n"_s;

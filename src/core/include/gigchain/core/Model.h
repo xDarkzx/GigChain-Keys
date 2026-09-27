@@ -79,6 +79,21 @@ struct Patch
     friend bool operator==(const Patch&, const Patch&) = default;
 };
 
+// The instruments one section of a song plays (the chart's Intro, Verse 1,
+// Chorus...), found by the section's name and which occurrence it is.
+struct SectionSetup
+{
+    QString name;       // as the chart names it, e.g. "Verse 1" (matched ignoring case)
+    int occurrence = 1; // 2 = the second section with this name
+    int bars = 0;       // its length; 0 = guessed from the chart
+    // false: the default (the patch's first instrument). true: `channels`,
+    // which may be empty (a silent break).
+    bool assigned = false;
+    std::vector<ChannelId> channels;
+
+    friend bool operator==(const SectionSetup&, const SectionSetup&) = default;
+};
+
 // A web page for a song (a chord sheet, a video...). Opened in the browser.
 struct SongLink
 {
@@ -108,6 +123,13 @@ struct Song
     // An audio file played along (WAV, MP3, FLAC...), by file name in the
     // setlist's folder like attachments; empty = none.
     QString backingTrack;
+    // For counting the song's bars: beats per bar and the beat's note value.
+    int timeNumerator = 4;
+    int timeDenominator = 4;
+    // Sections switch a beat before their first beat instead of just before it.
+    bool switchEarly = false;
+    // What the chart's sections play; a section not listed plays the default.
+    std::vector<SectionSetup> sections;
 
     friend bool operator==(const Song&, const Song&) = default;
 };

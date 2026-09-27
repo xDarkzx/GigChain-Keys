@@ -148,7 +148,50 @@ ToolBar {
             }
         }
 
-        // Backing track of the song: rewind, play/pause, where it is.
+        // A song with sections: Play/Stop its count (the backing track goes
+        // with it), and where it is.
+        Row {
+            objectName: "songTransport"
+            visible: bar.doc.currentSections.length > 0
+            spacing: -1
+            StageButton {
+                objectName: "songPlayButton"
+                iconSource: bar.engineStatus.songPlaying ? "icons/player-stop.svg" : "icons/player-play.svg"
+                checked: bar.engineStatus.songPlaying
+                tip: bar.engineStatus.songPlaying ? qsTr("Stop the song")
+                                                  : qsTr("Play the song from the section lit in the chart: its instruments change by themselves at each section")
+                onClicked: bar.engineStatus.songPlaying ? bar.doc.stopSong() : bar.doc.playSong()
+            }
+            Rectangle {
+                width: 170
+                height: Theme.controlHeight
+                radius: Theme.radiusSmall
+                color: Theme.readoutBackground
+                border.color: Theme.outline
+                readonly property var section: bar.engineStatus.songSection >= 0
+                                               && bar.engineStatus.songSection < bar.doc.currentSections.length
+                                               ? bar.doc.currentSections[bar.engineStatus.songSection] : null
+                Text {
+                    objectName: "songWhere"
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    text: parent.section === null ? ""
+                          : bar.engineStatus.songCountingIn ? qsTr("Count-in…")
+                          : bar.engineStatus.songPlaying ? qsTr("%1 · %2/%3").arg(parent.section.name).arg(bar.engineStatus.songBar).arg(bar.engineStatus.songBars)
+                          : parent.section.name
+                    color: bar.engineStatus.songPlaying ? Theme.chord : Theme.readoutText
+                    font.pixelSize: Theme.smallFontSize
+                    font.bold: true
+                    font.family: "Consolas"
+                }
+            }
+        }
+
+        // Backing track of the song: rewind, play/pause, where it is (a song
+        // with sections plays it from its own Play).
         Row {
             id: transport
             visible: bar.doc.songBackingTrack !== ""
@@ -159,12 +202,14 @@ ToolBar {
             }
             StageButton {
                 iconSource: "icons/player-skip-back.svg"
+                visible: bar.doc.currentSections.length === 0
                 enabled: bar.engineStatus.trackLoaded
                 tip: qsTr("Back to the start of the backing track")
                 onClicked: bar.engineStatus.rewindTrack()
             }
             StageButton {
                 objectName: "trackPlayButton"
+                visible: bar.doc.currentSections.length === 0
                 iconSource: bar.engineStatus.trackPlaying ? "icons/player-pause.svg" : "icons/player-play.svg"
                 checked: bar.engineStatus.trackPlaying
                 enabled: bar.engineStatus.trackLoaded

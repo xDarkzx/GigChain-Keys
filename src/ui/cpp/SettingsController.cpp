@@ -167,7 +167,7 @@ QVariantList SettingsController::controls() const
     static constexpr std::array<const char*, engine::kControlActionCount> kLabels{
         QT_TR_NOOP("Next song"),     QT_TR_NOOP("Previous song"), QT_TR_NOOP("Next part"),
         QT_TR_NOOP("Previous part"), QT_TR_NOOP("Panic (stop all sound)"), QT_TR_NOOP("Tap tempo"),
-        QT_TR_NOOP("Backing track: play / stop")};
+        QT_TR_NOOP("Song / backing track: play / stop"), QT_TR_NOOP("Next section")};
     QVariantList list;
     for (int i = 0; i < engine::kControlActionCount; ++i) {
         const engine::MidiTrigger& trigger = m_controls.at(static_cast<std::size_t>(i));

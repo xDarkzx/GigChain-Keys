@@ -179,11 +179,18 @@ Item {
     StageDialog {
         id: tempoPopup
         property int song: -1
-        title: qsTr("Song tempo")
-        width: 300
+        title: qsTr("Song tempo and time")
+        width: 340
+        // Time signatures a song is likely to have; the song's own is added when it is another.
+        readonly property var commonTimes: ["2/4", "3/4", "4/4", "5/4", "6/8", "7/8", "9/8", "12/8"]
+        property var times: commonTimes
         onAboutToShow: {
             view.doc.selectPatch(song, 0)
             tempoBox.value = Math.round(view.doc.songTempo)
+            const now = view.doc.songTimeNumerator + "/" + view.doc.songTimeDenominator
+            times = commonTimes.indexOf(now) >= 0 ? commonTimes : commonTimes.concat([now])
+            timeBox.currentIndex = times.indexOf(now)
+            earlyBox.checked = view.doc.songSwitchEarly
         }
         ColumnLayout {
             width: parent.width
@@ -203,6 +210,28 @@ Item {
                 from: 0; to: 400
                 editable: true
             }
+            Label {
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.spacingLarge
+                Layout.rightMargin: Theme.spacingLarge
+                text: qsTr("Time signature: how the song's bars are counted for its sections, the click and plugins.")
+                color: Theme.textDim
+                wrapMode: Text.Wrap
+            }
+            StageComboBox {
+                id: timeBox
+                objectName: "songTimeBox"
+                Layout.leftMargin: Theme.spacingLarge
+                implicitWidth: 120
+                model: tempoPopup.times
+            }
+            CheckBox {
+                id: earlyBox
+                objectName: "songSwitchEarlyBox"
+                Layout.leftMargin: Theme.spacing
+                text: qsTr("Change sections a beat early (for pads that swell in)")
+                focusPolicy: Qt.NoFocus
+            }
             StageDivider { Layout.fillWidth: true; Layout.topMargin: Theme.spacing }
             RowLayout {
                 Layout.fillWidth: true
@@ -214,6 +243,9 @@ Item {
                     tone: "accent"
                     onClicked: {
                         view.doc.setSongTempo(tempoPopup.song, tempoBox.value)
+                        const time = tempoPopup.times[timeBox.currentIndex].split("/")
+                        view.doc.setSongTimeSignature(tempoPopup.song, parseInt(time[0]), parseInt(time[1]))
+                        view.doc.setSongSwitchEarly(tempoPopup.song, earlyBox.checked)
                         tempoPopup.close()
                     }
                 }

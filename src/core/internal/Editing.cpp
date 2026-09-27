@@ -1,5 +1,6 @@
 #include "gigchain/core/Editing.h"
 
+#include "gigchain/core/Chart.h"
 #include "gigchain/core/Limits.h"
 
 #include <cmath>
@@ -121,6 +122,42 @@ Result<void> renamePatch(Setlist& setlist, Cursor cursor, const QString& name)
     auto clean = cleanName(name, u"Patch name"_s);
     if (!clean) return tl::unexpected(clean.error());
     patch->name = *clean;
+    return {};
+}
+
+Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator, int denominator)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!isTimeSignature(numerator, denominator)) {
+        return fail(ErrorCode::OutOfRange,
+                    u"%1/%2 is not a time signature (1-32 beats of a 1, 2, 4, 8, 16 or 32 note)"_s.arg(numerator).arg(denominator));
+    }
+    Song& song = setlist.songs.at(toIndex(songIndex));
+    song.timeNumerator = numerator;
+    song.timeDenominator = denominator;
+    return {};
+}
+
+Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    setlist.songs.at(toIndex(songIndex)).switchEarly = early;
+    return {};
+}
+
+Result<void> setSectionSetup(Setlist& setlist, int songIndex, const SectionSetup& setup)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    Song edited = setlist.songs.at(toIndex(songIndex));
+    SectionSetup clean = setup;
+    clean.name = clean.name.simplified();
+    const auto same = std::ranges::find_if(edited.sections, [&clean](const SectionSetup& s) {
+        return s.occurrence == clean.occurrence && s.name.compare(clean.name, Qt::CaseInsensitive) == 0;
+    });
+    if (same != edited.sections.end()) *same = clean;
+    else edited.sections.push_back(clean);
+    if (auto r = validateSections(edited, u"Song %1"_s.arg(songIndex + 1)); !r) return r;
+    setlist.songs.at(toIndex(songIndex)) = std::move(edited);
     return {};
 }
 
