@@ -77,6 +77,14 @@ void EngineStatus::playNote(int note, bool on)
     m_engine.injectNote(1, note, on ? 100 : 0);
 }
 
+QVariantList EngineStatus::keyVelocities() const
+{
+    QVariantList list;
+    list.reserve(static_cast<qsizetype>(m_keyboard.velocity.size()));
+    for (const uint8_t v : m_keyboard.velocity) list << int{v};
+    return list;
+}
+
 void EngineStatus::setTempo(double bpm)
 {
     m_engine.setTempo(bpm); // out-of-range values are refused and logged there
@@ -267,6 +275,10 @@ void EngineStatus::poll()
     if (const int program = m_engine.takeProgramChange(); program >= 0) m_document.selectProgram(program);
     pollTransport();
     pollMappingLearn();
+    if (const engine::MidiActivity keyboard = m_engine.keyboardActivity(); keyboard != m_keyboard) {
+        m_keyboard = keyboard;
+        emit keyboardChanged();
+    }
 
     if (const float peak = m_engine.masterLevel().peak; peak != m_masterPeak) {
         m_masterPeak = peak;

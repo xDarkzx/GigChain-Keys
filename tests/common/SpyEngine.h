@@ -80,6 +80,8 @@ public:
     [[nodiscard]] engine::LevelReading masterLevel() override { return {0.4F, 0.2F}; }
     [[nodiscard]] float cpuLoad() const override { return 0.25F; }
     [[nodiscard]] bool midiActivity() const override { return true; }
+    engine::MidiActivity keyboard;
+    [[nodiscard]] engine::MidiActivity keyboardActivity() const override { return keyboard; }
     void setChannelVolume(const core::ChannelId& id, double db) override { volumes[id.value()] = db; }
     void setChannelPan(const core::ChannelId& id, double pan) override { pans[id.value()] = pan; }
     void setChannelMute(const core::ChannelId& id, bool mute) override { mutes[id.value()] = mute; }

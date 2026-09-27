@@ -12,7 +12,9 @@ ToolBar {
     required property bool performMode
     required property bool sidePanelOpen
     required property bool mixerOpen
+    required property bool keyboardOpen
 
+    signal toggleKeyboard()
     signal toggleMode()
     signal toggleSidePanel()
     signal toggleMixer()
@@ -278,6 +280,15 @@ ToolBar {
 
         StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8 }
 
+        StageButton {
+            objectName: "keyboardButton"
+            text: qsTr("Keys")
+            iconSource: "icons/keyboard.svg"
+            checkable: true
+            checked: bar.keyboardOpen
+            tip: qsTr("Show or hide the keyboard: the keys light up as you play")
+            onClicked: bar.toggleKeyboard()
+        }
         StageButton {
             text: qsTr("Mixer")
             iconSource: "icons/adjustments-horizontal.svg"

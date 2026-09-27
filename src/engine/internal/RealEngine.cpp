@@ -854,6 +854,7 @@ void RealEngine::panic()
     }
     const double rate = m_audio.sampleRate();
     const int block = m_audio.maxBlock();
+    m_keyboard.clear(); // every key shown up again
     for (const auto* nodes : {&m_nodes, &m_masterNodes}) {
         for (const auto& [key, node] : *nodes) {
             node->releaseAllNotes();
@@ -1121,6 +1122,7 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     MidiEvent injected;
     while (count < m_events.size() && m_injected.pop(injected)) m_events.at(count++) = injected; // room checked
     count = takeControlMessages(count);
+    m_keyboard.apply(std::span<const MidiEvent>(m_events.data(), count));
 
     // The clock: the set tempo, or a followed MIDI clock's (whose Start
     // begins bar 1 here too).

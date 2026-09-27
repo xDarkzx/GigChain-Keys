@@ -27,6 +27,8 @@ target_include_directories(tst_safety_limiter PRIVATE ${PROJECT_SOURCE_DIR}/src/
 gigchain_add_test(tst_plugin_load_guard SOURCES tst_plugin_load_guard.cpp LIBS gigchain::engine)
 target_include_directories(tst_plugin_load_guard PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_midi_control SOURCES tst_midi_control.cpp LIBS gigchain::engine)
+gigchain_add_test(tst_midi_monitor SOURCES tst_midi_monitor.cpp LIBS gigchain::engine)
+target_include_directories(tst_midi_monitor PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_metronome SOURCES tst_metronome.cpp LIBS gigchain::engine)
 target_include_directories(tst_metronome PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_audio_file SOURCES tst_audio_file.cpp LIBS gigchain::engine)

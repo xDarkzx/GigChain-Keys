@@ -6,6 +6,7 @@
 #include "Metronome.h"
 #include "MidiClockOut.h"
 #include "MidiInput.h"
+#include "MidiMonitor.h"
 #include "MidiQueue.h"
 #include "PluginLoadGuard.h"
 #include "SafetyLimiter.h"
@@ -54,6 +55,7 @@ public:
     [[nodiscard]] LevelReading masterLevel() override;
     [[nodiscard]] float cpuLoad() const override { return m_cpuLoad.load(std::memory_order_relaxed); }
     [[nodiscard]] bool midiActivity() const override { return m_midiSeen.load(std::memory_order_relaxed); }
+    [[nodiscard]] MidiActivity keyboardActivity() const override { return m_keyboard.read(); }
     void setChannelVolume(const core::ChannelId& id, double volumeDb) override;
     void setChannelPan(const core::ChannelId& id, double pan) override;
     void setChannelMute(const core::ChannelId& id, bool mute) override;
@@ -213,6 +215,7 @@ private:
     double m_ppq = 0.0;           // audio thread
     Metronome m_click;
     MidiClockOut m_clockOut;
+    MidiMonitor m_keyboard; // what is being played, for the on-screen keyboard
 
     // The backing track: read on a worker thread, handed to the audio thread
     // through the exchange. Play state and position are atomics.

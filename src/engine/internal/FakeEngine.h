@@ -32,6 +32,7 @@ public:
     [[nodiscard]] LevelReading masterLevel() override;
     [[nodiscard]] float cpuLoad() const override;
     [[nodiscard]] bool midiActivity() const override;
+    [[nodiscard]] MidiActivity keyboardActivity() const override { return m_keyboard; }
     void setChannelVolume(const core::ChannelId& id, double volumeDb) override;
     void setChannelPan(const core::ChannelId& id, double pan) override;
     void setChannelMute(const core::ChannelId& id, bool mute) override;
@@ -103,6 +104,7 @@ public:
 private:
     double m_tempo = 120.0;
     bool m_click = false;
+    MidiActivity m_keyboard; // notes played on screen (the demo has no MIDI input)
     BackingTrackState m_track;
     struct ChannelState
     {

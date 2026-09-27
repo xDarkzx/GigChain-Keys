@@ -21,6 +21,7 @@ ApplicationWindow {
     property bool performMode: false
     property bool sidePanelOpen: true
     property bool mixerOpen: true
+    property bool keyboardOpen: true
     property string pendingAction: ""
     property string pendingPath: "" // a recent setlist waiting to be opened
     property bool closeConfirmed: false
@@ -197,6 +198,8 @@ ApplicationWindow {
         performMode: root.performMode
         sidePanelOpen: root.sidePanelOpen
         mixerOpen: root.mixerOpen
+        keyboardOpen: root.keyboardOpen
+        onToggleKeyboard: root.keyboardOpen = !root.keyboardOpen
         onToggleMode: root.performMode = !root.performMode
         onToggleSidePanel: root.sidePanelOpen = !root.sidePanelOpen
         onToggleMixer: root.mixerOpen = !root.mixerOpen
@@ -273,6 +276,14 @@ ApplicationWindow {
                 effectWindows: root.effectWindows
                 masterBus: root.masterBus
             }
+        }
+
+        // The keys being played, lit up (and playable with the mouse).
+        KeyboardView {
+            objectName: "keyboardView"
+            Layout.fillWidth: true
+            visible: root.keyboardOpen
+            engineStatus: root.engineStatus
         }
 
         // Status line: the audio setup the engine is using.

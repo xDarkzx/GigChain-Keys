@@ -71,6 +71,10 @@ public:
     [[nodiscard]] virtual LevelReading masterLevel() = 0;
     [[nodiscard]] virtual float cpuLoad() const = 0;
     [[nodiscard]] virtual bool midiActivity() const = 0;
+    // The keys down (and how hard), wheels and sustain pedal right now, as
+    // the instruments hear them (controls learned for switching are left
+    // out). For the on-screen keyboard.
+    [[nodiscard]] virtual MidiActivity keyboardActivity() const = 0;
 
     // Fast paths for mixer moves. Unknown ids and non-finite values are ignored;
     // volumes are clamped to core::limits.
