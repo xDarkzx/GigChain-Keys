@@ -674,6 +674,40 @@ private slots:
         settle();
     }
 
+    // The on-screen keyboard keeps real key proportions at any window width:
+    // on a very wide screen it grows a little taller, then sits in the
+    // middle instead of stretching the keys.
+    void theKeyboardKeepsItsKeysInShape()
+    {
+        QQuickWindow* w = window();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        auto* keys = w->findChild<QQuickItem*>(u"keyboardKeys"_s);
+        auto* board = w->findChild<QQuickItem*>(u"keyboardView"_s);
+        QVERIFY(keys != nullptr && board != nullptr);
+        const auto whiteKey = [keys] { // middle C
+            const QList<QQuickItem*> all = keys->childItems();
+            const auto it = std::ranges::find_if(all, [](const QQuickItem* key) { return key->objectName() == u"key60"_s; });
+            return it != all.end() ? *it : nullptr;
+        };
+        for (const int width : {1440, 3440}) {
+            w->resize(width, 900);
+            QTRY_COMPARE(w->width(), width);
+            settle();
+            QQuickItem* c = whiteKey();
+            QVERIFY(c != nullptr);
+            const double ratio = c->height() / (c->width() + 1); // (+1: the gap between keys)
+            QVERIFY2(ratio > 3.9 && ratio < 4.5, qPrintable(u"%1 wide: key %2 x %3"_s.arg(width).arg(c->width()).arg(c->height())));
+            QVERIFY(board->height() >= 96 && board->height() <= 160);
+            // Centred in the room it has.
+            const double keysCentre = keys->mapToScene(QPointF(keys->width() / 2, 0)).x();
+            const double roomCentre = keys->parentItem()->mapToScene(QPointF(keys->parentItem()->width() / 2, 0)).x();
+            QVERIFY2(qAbs(keysCentre - roomCentre) <= 1.0, qPrintable(QString::number(keysCentre - roomCentre)));
+        }
+        shoot(u"keyboard-wide"_s);
+        w->resize(1440, 880);
+        settle();
+    }
+
     // The on-screen keyboard: a key clicked plays and lights, and lets go.
     void theKeyboardLightsTheKeysPlayed()
     {
