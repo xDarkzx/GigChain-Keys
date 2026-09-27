@@ -721,6 +721,93 @@ private slots:
         QVERIFY(!engine.songPosition().playing);
     }
 
+    // A loop records its channel and plays on alone, through a patch change.
+    void aLoopPlaysOnAfterAPatchChangeAndClears()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-90.0); // inaudible, measurable
+        engine.setTempo(240.0);        // a bar a second
+        const core::SongId song = core::SongId::generate();
+        const core::Patch patch = pianoPatch();
+        const core::ChannelId piano = patch.channels.front().id;
+        engine.applyPatch(song, patch);
+        QVERIFY(engine.poll().empty());
+        const auto stateOf = [&engine, &piano] {
+            const std::vector<ChannelLoop> loops = engine.loops();
+            const auto it = std::ranges::find_if(loops, [&piano](const ChannelLoop& loop) { return loop.channel == piano; });
+            return it != loops.end() ? it->state : LoopState::Empty;
+        };
+        const auto waitFor = [&engine, &stateOf](LoopState state) {
+            for (int i = 0; i < 300 && stateOf() != state; ++i) pump(engine, 10);
+            return stateOf() == state;
+        };
+
+        engine.loopCommand(piano, LoopCommand::Record); // from the next bar
+        QVERIFY(waitFor(LoopState::Recording));
+        engine.injectNote(1, 60, 110);
+        pump(engine, 500);
+        engine.injectNote(1, 60, 0);
+        engine.loopCommand(piano, LoopCommand::Record); // closes on the next bar: a one-bar loop
+        QVERIFY(waitFor(LoopState::Playing));
+        const auto loops = engine.loops();
+        QCOMPARE(loops.size(), std::size_t{1});
+        QCOMPARE(loops.front().bars, 1);
+
+        // Another patch, without the piano: the loop plays on.
+        engine.applyPatch(song, core::makePatch(u"Chorus"_s));
+        pump(engine, 4000); // the live piano has long died away
+        (void)engine.masterLevel();
+        pump(engine, 1200);
+        QVERIFY2(engine.masterLevel().peak > 0.0F, "the loop stopped at the patch change");
+        QCOMPARE(stateOf(), LoopState::Playing);
+
+        engine.clearAllLoops();
+        pump(engine, 200);
+        (void)engine.masterLevel();
+        pump(engine, 1200);
+        QCOMPARE(engine.masterLevel().peak, 0.0F);
+        QVERIFY(engine.loops().empty()); // and its room given back
+    }
+
+    // The looper's buttons (here two pads): pressed, and both held = clear;
+    // the instruments never hear them.
+    void looperButtonsArePressedAndHeldTogetherClear()
+    {
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.applyPatch(core::makePatch(u"Empty"_s));
+        LoopTriggers buttons{};
+        buttons.at(static_cast<std::size_t>(LoopAction::Record)) = MidiTrigger{.kind = MidiTrigger::Note, .channel = 0, .number = 36};
+        buttons.at(static_cast<std::size_t>(LoopAction::PlayStop)) = MidiTrigger{.kind = MidiTrigger::Note, .channel = 0, .number = 37};
+        engine.setLoopControls(buttons, SelectorKnob{});
+        const auto actions = [&engine] {
+            pump(engine, 60);
+            return engine.takeLoopActions();
+        };
+
+        engine.injectNote(1, 36, 100);
+        QCOMPARE(actions(), std::vector<LoopAction>{LoopAction::Record});
+        QCOMPARE(int(engine.keyboardActivity().velocity.at(36)), 0); // a control, not a note
+        engine.injectNote(1, 36, 0);
+        QVERIFY(actions().empty()); // letting go does nothing
+
+        engine.injectNote(1, 37, 100); // PlayStop held...
+        QCOMPARE(actions(), std::vector<LoopAction>{LoopAction::PlayStop});
+        engine.injectNote(1, 36, 100); // ... and Record with it: clear
+        QCOMPARE(actions(), std::vector<LoopAction>{LoopAction::Clear});
+        engine.injectNote(1, 36, 0);
+        engine.injectNote(1, 37, 0);
+        QVERIFY(actions().empty());
+        engine.injectNote(1, 36, 100); // alone again: Record
+        QCOMPARE(actions(), std::vector<LoopAction>{LoopAction::Record});
+    }
+
     void aPluginsParametersAreListedForKnobs()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");

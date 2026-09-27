@@ -14,6 +14,8 @@
 
 namespace gigchain::engine {
 
+class LoopStation;
+
 // A keyboard knob, fader or pedal (a MIDI controller) moving one parameter
 // of one plugin on a strip, within a range (MainStage's screen controls).
 struct ParameterMapping
@@ -82,6 +84,10 @@ public:
     // pedals and knobs carry on, so it rings out.
     void setSections(uint64_t mask) { m_sections.store(mask, std::memory_order_relaxed); }
     [[nodiscard]] uint64_t sections() const { return m_sections.load(std::memory_order_relaxed); }
+    // The loop-station slot this channel records into (-1: none). What it
+    // records is its sound at its fader and pan: what is heard of it.
+    void setLoopSlot(int slot) { m_loopSlot.store(slot, std::memory_order_relaxed); }
+    [[nodiscard]] int loopSlot() const { return m_loopSlot.load(std::memory_order_relaxed); }
     // Peak since the last call (then reset), and the most recent block's RMS.
     LevelReading takeLevel();
 
@@ -95,17 +101,19 @@ public:
 
     // Audio thread.
     void render(std::span<const MidiEvent> events, const AudioBlock& mix, bool anySolo, const TimeInfo& time,
-                const AudioInputs& inputs, const SectionGate& gate = {}) noexcept;
+                const AudioInputs& inputs, const SectionGate& gate = {}, LoopStation* loops = nullptr) noexcept;
     // Audio thread: as a tail of a newer patch. Only note-offs and the
     // sustain pedal reach it; it stops (tailDone) after a second of silence
     // with nothing held.
-    void renderTail(std::span<const MidiEvent> events, const AudioBlock& mix, const TimeInfo& time) noexcept;
+    void renderTail(std::span<const MidiEvent> events, const AudioBlock& mix, const TimeInfo& time,
+                    LoopStation* loops = nullptr) noexcept;
 
 private:
     // The strip's sound for this block into m_left/m_right, before its fader.
     void produce(std::span<const MidiEvent> routed, int frames, const TimeInfo& time, const AudioInputs& inputs) noexcept;
-    // Adds the strip's sound to `mix` at `gain` with the pan law; returns the peak.
-    float mixInto(const AudioBlock& mix, float gain) noexcept;
+    // Puts the strip's fader and pan (at `gain`) on its sound, adds it to
+    // `mix` and to its loop (if recording); returns the peak.
+    float mixInto(const AudioBlock& mix, float gain, LoopStation* loops) noexcept;
 
     core::ChannelId m_id;
     RouteSettings m_route;
@@ -122,6 +130,7 @@ private:
     std::atomic<bool> m_mute{false};
     std::atomic<bool> m_solo{false};
     std::atomic<uint64_t> m_sections{~uint64_t{0}};
+    std::atomic<int> m_loopSlot{-1};
     std::atomic<float> m_peak{0.0F};
     std::atomic<float> m_rms{0.0F};
     // Tail state (audio thread): how long it has been silent, and how long
@@ -145,8 +154,10 @@ public:
                 std::vector<std::shared_ptr<ChannelStrip>> tails = {});
 
     // Audio thread. Overwrites `out`. `gate`: the song section in force.
+    // `loops`: the loop station (its block begun): strips record into it,
+    // and its loops play into the mix before the master effects.
     void render(std::span<const MidiEvent> events, AudioBlock out, float masterGain, const TimeInfo& time = {},
-                const AudioInputs& inputs = {}, const SectionGate& gate = {}) noexcept;
+                const AudioInputs& inputs = {}, const SectionGate& gate = {}, LoopStation* loops = nullptr) noexcept;
 
     // Main thread lookups for live mixer changes and meters. Non-owning.
     [[nodiscard]] ChannelStrip* strip(std::size_t index);

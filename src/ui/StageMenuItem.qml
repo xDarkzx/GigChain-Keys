@@ -9,7 +9,7 @@ MenuItem {
     implicitWidth: 220
 
     contentItem: Text {
-        leftPadding: 8
+        leftPadding: item.checkable ? 26 : 8
         rightPadding: 18
         text: item.text
         color: item.enabled ? (item.highlighted ? "white" : Theme.text) : Theme.textDim
@@ -27,7 +27,16 @@ MenuItem {
         font.pixelSize: 16
     }
 
-    indicator: Item {}
+    // A tick for an option that is on.
+    indicator: Text {
+        x: 9
+        anchors.verticalCenter: parent.verticalCenter
+        visible: item.checkable && item.checked
+        text: "✓"
+        color: item.highlighted ? "white" : Theme.accent
+        font.pixelSize: Theme.fontSize
+        font.bold: true
+    }
 
     background: Rectangle {
         anchors.fill: parent

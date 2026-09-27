@@ -48,6 +48,20 @@ QList<QQuickItem*> findAll(QQuickItem* item, const QString& name)
     return found;
 }
 
+// Scrolls whatever flickable holds `item` so that the item is in view (as
+// a player would scroll to it).
+void scrollIntoView(QQuickItem* item)
+{
+    for (QQuickItem* parent = item->parentItem(); parent != nullptr; parent = parent->parentItem()) {
+        if (!parent->inherits("QQuickFlickable")) continue;
+        auto* content = parent->property("contentItem").value<QQuickItem*>();
+        const QPointF at = item->mapToItem(content, QPointF(0, 0));
+        const qreal most = std::max(0.0, parent->property("contentHeight").toReal() - parent->height());
+        parent->setProperty("contentY", std::clamp(at.y() - (parent->height() / 3), 0.0, most));
+        return;
+    }
+}
+
 class TestQmlSmoke : public QObject
 {
     Q_OBJECT
@@ -513,6 +527,8 @@ private slots:
         // [+] on the chorus: the menu offers Strings; picking it adds it.
         QQuickItem* add = findItem(headers.value(1), u"sectionAdd"_s);
         QVERIFY(add != nullptr && add->isEnabled());
+        scrollIntoView(add);
+        settle();
         QTest::mouseClick(w, Qt::LeftButton, {}, add->mapToScene(QPointF(add->width() / 2, add->height() / 2)).toPoint());
         auto* menu = add->findChild<QObject*>(u"sectionAddMenu"_s);
         QVERIFY(menu != nullptr);
@@ -530,12 +546,16 @@ private slots:
         // ✕ takes one out.
         QQuickItem* remove = findAll(header(1), u"sectionChipRemove"_s).value(0);
         QVERIFY(remove != nullptr);
+        scrollIntoView(remove);
+        settle();
         QTest::mouseClick(w, Qt::LeftButton, {}, remove->mapToScene(QPointF(remove->width() / 2, remove->height() / 2)).toPoint());
         QTRY_COMPARE(chipNames(header(1)), QStringList{u"Strings"_s});
 
         // The length: click, type, Enter.
         QQuickItem* bars = findItem(header(0), u"sectionBars"_s);
         QVERIFY(bars != nullptr);
+        scrollIntoView(bars);
+        settle();
         QTest::mouseClick(w, Qt::LeftButton, {}, bars->mapToScene(QPointF(bars->width() / 2, bars->height() / 2)).toPoint());
         QTest::keyClick(w, Qt::Key_8);
         QTest::keyClick(w, Qt::Key_Return);
@@ -555,6 +575,79 @@ private slots:
         shoot(u"sections-playing"_s);
         click(u"songPlayButton"_s); // stops
         QTRY_VERIFY(!m_engine->songPosition().playing);
+        settle();
+    }
+
+    // The loop pedal over the mixer: a record and a loop button above each
+    // strip; the pill when the strip is out of sight; the Loops menu.
+    void theLooperStripRecordsAndLoops()
+    {
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
+        QVERIFY(doc.addChannel(u"demo.pad"_s, u"Pad"_s));
+        settle();
+
+        auto* cells = w->findChild<QQuickItem*>(u"looperCells"_s);
+        auto* strips = w->findChild<QQuickItem*>(u"mixerStrips"_s);
+        QVERIFY(cells != nullptr && strips != nullptr);
+        QTRY_COMPARE(findAll(cells, u"loopRecord"_s).size(), 2);
+        // Each cell sits over its strip.
+        QQuickItem* strip = nullptr;
+        QVERIFY(QMetaObject::invokeMethod(strips, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, strip), Q_ARG(int, 1)));
+        QQuickItem* cell = nullptr;
+        QVERIFY(QMetaObject::invokeMethod(cells, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, cell), Q_ARG(int, 1)));
+        QVERIFY(strip != nullptr && cell != nullptr);
+        QCOMPARE(cell->mapToScene(QPointF(0, 0)).x(), strip->mapToScene(QPointF(0, 0)).x());
+        QCOMPARE(cell->width(), strip->width());
+        QVERIFY(cell->mapToScene(QPointF(0, cell->height())).y() <= strip->mapToScene(QPointF(0, 0)).y()); // above it
+
+        const auto press = [w](QQuickItem* item) {
+            QTest::mouseClick(w, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
+        };
+        const auto status = [cell] { return findItem(cell, u"loopStatus"_s)->property("text").toString(); };
+        press(findItem(cell, u"loopRecord"_s)); // the pad: record...
+        QTRY_COMPARE(status(), u"REC"_s);
+        press(findItem(cell, u"loopRecord"_s)); // ... and close: it plays
+        QTRY_COMPARE(status(), u"1/4"_s);
+        QVERIFY(findItem(cell, u"loopRing"_s)->isVisible());
+        shoot(u"looper"_s);
+
+        // The pill shows only while the strip is out of sight.
+        auto* pill = w->findChild<QQuickItem*>(u"loopsPill"_s);
+        QVERIFY(pill != nullptr);
+        QVERIFY(!pill->isVisible());
+        auto* loops = m_qml->rootObjects().value(0)->property("loops").value<QObject*>();
+        QVERIFY(loops != nullptr);
+        const qreal withLooper = strip->height();
+        QVERIFY(loops->setProperty("stripVisible", false));
+        QTRY_VERIFY(pill->isVisible());
+        QTRY_COMPARE(strip->height(), withLooper); // the looper strip adds room, it does not squeeze the strips
+        QCOMPARE(findItem(pill, u"loopsPillCount"_s)->property("text").toString(), u"1"_s);
+        shoot(u"loops-pill"_s);
+        QVERIFY(loops->setProperty("stripVisible", true));
+        QTRY_VERIFY(!pill->isVisible());
+        settle(); // laid out again
+
+        // Loop: stops it.
+        press(findItem(cell, u"loopPlay"_s));
+        QTRY_COMPARE(status(), u"stopped"_s);
+
+        // The Loops menu and the keyboard controls.
+        click(u"loopsMenuButton"_s);
+        auto* menu = w->findChild<QObject*>(u"loopsMenu"_s);
+        QVERIFY(menu != nullptr);
+        QTRY_VERIFY(menu->property("visible").toBool());
+        QTest::keyClick(w, Qt::Key_Escape);
+        auto* dialog = w->findChild<QObject*>(u"loopControlsDialog"_s);
+        QVERIFY(dialog != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "open"));
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_COMPARE(findAll(qobject_cast<QQuickItem*>(dialog->property("contentItem").value<QObject*>()), u"loopControlLearn"_s).size(), 6);
+        shoot(u"loop-controls"_s);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
         settle();
     }
 

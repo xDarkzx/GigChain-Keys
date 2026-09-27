@@ -69,6 +69,8 @@ class DocumentController : public QObject
     Q_PROPERTY(int songTimeNumerator READ songTimeNumerator NOTIFY songChanged)
     Q_PROPERTY(int songTimeDenominator READ songTimeDenominator NOTIFY songChanged)
     Q_PROPERTY(bool songSwitchEarly READ songSwitchEarly NOTIFY songChanged)
+    // The current song's loops start and stop on the bars (or press to press).
+    Q_PROPERTY(bool songLoopSync READ songLoopSync NOTIFY songChanged)
     // The current song's sections (from its chart) with what each plays in
     // the current patch: [{index, name, label, bars, guessed, assigned,
     // channels: [{channel, name}], choices: [{channel, name}] (the patch's
@@ -189,6 +191,11 @@ public:
     [[nodiscard]] bool songSwitchEarly() const;
     Q_INVOKABLE bool setSongTimeSignature(int song, int numerator, int denominator);
     Q_INVOKABLE bool setSongSwitchEarly(int song, bool early);
+    [[nodiscard]] bool songLoopSync() const;
+    Q_INVOKABLE bool setSongLoopSync(int song, bool sync);
+    // The looper's keyboard controls, kept with the setlist (an undoable edit).
+    [[nodiscard]] const core::LoopControls& loopControls() const { return m_setlist.loopControls; }
+    bool setLoopControls(const core::LoopControls& controls);
 
     // Song sections: what each section of the current song's chart plays in
     // the current patch, and how long it is.
@@ -253,6 +260,7 @@ signals:
     void undoChanged();
     void songChanged(); // the current song, or its tempo, time, backing track
     void sectionsChanged(); // the current song's sections or what they play
+    void loopControlsChanged();
     void channelEditRequested(int channel, const QString& page);
 
 private:
@@ -282,6 +290,8 @@ private:
     // The channels a section of the current song plays in the current
     // patch; nothing when there is no such section.
     [[nodiscard]] std::optional<std::vector<core::ChannelId>> sectionLive(int section) const;
+    // The setlist's looper controls, to the engine.
+    void applyLoopControlsToEngine();
     // Stores one section's setup (an undoable edit) and plays it.
     bool storeSection(int section, const std::function<void(core::SectionSetup&)>& edit);
     core::SongId m_sectionsSong; // the song whose sections the engine has

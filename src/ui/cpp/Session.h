@@ -7,6 +7,7 @@
 #include "EffectWindows.h"
 #include "MasterBus.h"
 #include "EngineStatus.h"
+#include "LoopController.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
@@ -49,6 +50,7 @@ private:
     SelectedChannel m_selectedChannel;
     PluginListModel m_pluginModel;
     EngineStatus m_engineStatus;
+    LoopController m_loops;
     EditorService m_editorService;
     EffectWindows m_effectWindows;
     MasterBus m_masterBus; // after the windows it opens

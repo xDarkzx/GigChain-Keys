@@ -140,6 +140,45 @@ struct SongPosition
     bool operator==(const SongPosition&) const = default;
 };
 
+// ---- The loop station (one audio loop per channel)
+
+// What a looper button asks for.
+enum class LoopCommand : uint8_t
+{
+    Record = 1, // start recording, close the loop, record a layer on top, end the layer
+    PlayStop,   // start or stop the loop (ends a recording or layer too)
+    Undo,       // takes off the last layer (or the one being recorded)
+    Stop,       // stops at once (a recording in progress is dropped)
+    Clear,      // empties it
+};
+
+enum class LoopState : uint8_t
+{
+    Empty,
+    Armed,        // recording starts on the next bar
+    Recording,
+    Closing,      // the loop closes on the next bar
+    Playing,
+    OverdubArmed, // a layer starts on the next bar
+    Overdubbing,
+    Stopped,      // has a loop, not playing
+    StartArmed,   // starts on the next bar
+    StopArmed,    // stops on the next bar
+};
+
+// One channel's loop as the screen shows it.
+struct ChannelLoop
+{
+    core::ChannelId channel;
+    LoopState state = LoopState::Empty;
+    double progress = 0.0; // where the loop is, 0-1 (while recording: 0)
+    int bar = 0;           // 1-based bar of the loop playing (0 when not playing)
+    int bars = 0;          // its length in bars (0 until known)
+    int layers = 0;        // layers recorded on top
+
+    bool operator==(const ChannelLoop&) const = default;
+};
+
 // A MIDI input as Settings shows it.
 struct MidiPort
 {

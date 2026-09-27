@@ -13,8 +13,10 @@ ToolBar {
     required property bool sidePanelOpen
     required property bool mixerOpen
     required property bool keyboardOpen
+    required property LoopController loops
 
     signal toggleKeyboard()
+    signal loopControlsRequested()
     signal toggleMode()
     signal toggleSidePanel()
     signal toggleMixer()
@@ -82,6 +84,70 @@ ToolBar {
                 StageMenuItem { text: qsTr("Save"); onTriggered: bar.saveRequested() }
                 StageMenuItem { text: qsTr("Save As…"); onTriggered: bar.saveAsRequested() }
             }
+        }
+
+        // The loop pedal's menu: everything beyond the buttons over the mixer.
+        StageButton {
+            objectName: "loopsMenuButton"
+            text: qsTr("Loops")
+            iconSource: "icons/loop.svg"
+            onClicked: loopsMenu.popup(0, height)
+            StageMenu {
+                id: loopsMenu
+                objectName: "loopsMenu"
+                StageMenuItem {
+                    objectName: "loopsShowStrip"
+                    text: qsTr("Show the looper strip")
+                    checkable: true
+                    checked: bar.loops.stripVisible
+                    onTriggered: bar.loops.stripVisible = !bar.loops.stripVisible
+                }
+                StageMenuItem {
+                    objectName: "loopsSync"
+                    text: qsTr("Loops follow the tempo (bars)")
+                    checkable: true
+                    checked: bar.doc.songLoopSync
+                    enabled: bar.doc.hasPatch
+                    onTriggered: bar.doc.setSongLoopSync(bar.doc.songIndex, !bar.doc.songLoopSync)
+                }
+                StageMenuItem {
+                    text: qsTr("Free loops: the first sets the tempo")
+                    checkable: true
+                    checked: bar.loops.tempoFromFirstLoop
+                    enabled: !bar.doc.songLoopSync
+                    onTriggered: bar.loops.tempoFromFirstLoop = !bar.loops.tempoFromFirstLoop
+                }
+                MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+                StageMenuItem {
+                    objectName: "loopsStopAll"
+                    text: qsTr("Stop all loops")
+                    enabled: bar.loops.loopCount > 0
+                    onTriggered: bar.loops.stopAll()
+                }
+                StageMenuItem {
+                    objectName: "loopsClearAll"
+                    text: qsTr("Clear all loops")
+                    enabled: bar.loops.loopCount > 0
+                    onTriggered: bar.loops.clearAll()
+                }
+                StageMenuItem {
+                    text: qsTr("Undo last layer (selected channel)")
+                    enabled: bar.doc.selectedChannel >= 0
+                    onTriggered: bar.loops.undo(bar.doc.selectedChannel)
+                }
+                MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+                StageMenuItem {
+                    objectName: "loopsLearn"
+                    text: qsTr("Keyboard controls…")
+                    onTriggered: bar.loopControlsRequested()
+                }
+            }
+        }
+        // What the loops are doing, while the looper strip is out of sight.
+        LoopsPill {
+            objectName: "loopsPill"
+            loops: bar.loops
+            visible: bar.loops.loopCount > 0 && (!bar.mixerOpen || !bar.loops.stripVisible)
         }
 
         StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8 }

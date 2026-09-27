@@ -82,6 +82,19 @@ private slots:
         QCOMPARE((MidiTrigger{MidiTrigger::ProgramChange, 0, 4}).describe(), u"Program 5 (channel 1)"_s);
         QCOMPARE(MidiTrigger{}.describe(), u"Not set"_s);
     }
+
+    // Endless encoders: how many steps each value means.
+    void encodersCountSteps()
+    {
+        QCOMPARE(encoderSteps(SelectorKnob::Relative, 1), 1);
+        QCOMPARE(encoderSteps(SelectorKnob::Relative, 3), 3);
+        QCOMPARE(encoderSteps(SelectorKnob::Relative, 127), -1);
+        QCOMPARE(encoderSteps(SelectorKnob::Relative, 125), -3);
+        QCOMPARE(encoderSteps(SelectorKnob::Relative, 0), 0);
+        QCOMPARE(encoderSteps(SelectorKnob::RelativeOffset, 65), 1);
+        QCOMPARE(encoderSteps(SelectorKnob::RelativeOffset, 62), -2);
+        QCOMPARE(encoderSteps(SelectorKnob::Absolute, 100), 0); // not steps: a place
+    }
 };
 
 QTEST_GUILESS_MAIN(TestMidiControl)

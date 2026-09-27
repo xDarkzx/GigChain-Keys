@@ -1,5 +1,7 @@
 #include "RenderGraph.h"
 
+#include "LoopStation.h"
+
 #include "gigchain/core/Limits.h"
 
 #include <algorithm>
@@ -114,7 +116,7 @@ void ChannelStrip::produce(std::span<const MidiEvent> routed, int frames, const 
     }
 }
 
-float ChannelStrip::mixInto(const AudioBlock& mix, float gain) noexcept
+float ChannelStrip::mixInto(const AudioBlock& mix, float gain, LoopStation* loops) noexcept
 {
     const auto frames = static_cast<std::size_t>(mix.frames);
     // Constant-power pan, normalised so the centre is unity on both sides.
@@ -124,9 +126,11 @@ float ChannelStrip::mixInto(const AudioBlock& mix, float gain) noexcept
 
     float peak = 0.0F;
     double sumSquares = 0.0;
-    // The strip's own buffers and the mix, each `frames` long (checked by the graph).
-    const std::span<const float> fromLeft(m_left.data(), frames);
-    const std::span<const float> fromRight(m_right.data(), frames);
+    // The strip's own buffers (the fader and pan go on them: what is heard
+    // of the strip, for its loop too) and the mix, each `frames` long
+    // (checked by the graph).
+    const std::span<float> fromLeft(m_left.data(), frames);
+    const std::span<float> fromRight(m_right.data(), frames);
     const std::span<float> toLeft(mix.left, frames);
     const std::span<float> toRight(mix.right, frames);
     auto inRight = fromRight.begin();
@@ -135,6 +139,8 @@ float ChannelStrip::mixInto(const AudioBlock& mix, float gain) noexcept
     for (auto inLeft = fromLeft.begin(); inLeft != fromLeft.end(); ++inLeft, ++inRight, ++outLeft, ++outRight) {
         const float left = *inLeft * leftGain;
         const float right = *inRight * rightGain;
+        *inLeft = left;
+        *inRight = right;
         *outLeft += left;
         *outRight += right;
         peak = std::max({peak, std::abs(left), std::abs(right)});
@@ -142,11 +148,14 @@ float ChannelStrip::mixInto(const AudioBlock& mix, float gain) noexcept
     }
     m_rms.store(frames > 0 ? static_cast<float>(std::sqrt(sumSquares / static_cast<double>(frames))) : 0.0F,
                 std::memory_order_relaxed);
+    if (const int slot = m_loopSlot.load(std::memory_order_relaxed); loops != nullptr && slot >= 0) {
+        loops->record(slot, m_left.data(), m_right.data(), mix.frames);
+    }
     return peak;
 }
 
 void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& mix, bool anySolo, const TimeInfo& time,
-                          const AudioInputs& inputs, const SectionGate& gate) noexcept
+                          const AudioInputs& inputs, const SectionGate& gate, LoopStation* loops) noexcept
 {
     const uint64_t mask = m_sections.load(std::memory_order_relaxed);
     // Whether a new note at `offset` is for this strip: its section is in force.
@@ -182,10 +191,11 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
 
     // Silenced strips still process so instruments and effect tails keep state.
     const bool audible = !m_mute.load(std::memory_order_relaxed) && (!anySolo || m_solo.load(std::memory_order_relaxed));
-    atomicMax(m_peak, mixInto(mix, audible ? m_gain.load(std::memory_order_relaxed) : 0.0F));
+    atomicMax(m_peak, mixInto(mix, audible ? m_gain.load(std::memory_order_relaxed) : 0.0F, loops));
 }
 
-void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBlock& mix, const TimeInfo& time) noexcept
+void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBlock& mix, const TimeInfo& time,
+                              LoopStation* loops) noexcept
 {
     if (m_tailDone.load(std::memory_order_relaxed)) return;
     std::size_t routedCount = 0;
@@ -196,7 +206,7 @@ void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBloc
     }
     produce(std::span<const MidiEvent>(m_routed.data(), routedCount), mix.frames, time, {});
     const float gain = m_mute.load(std::memory_order_relaxed) ? 0.0F : m_gain.load(std::memory_order_relaxed);
-    const float peak = mixInto(mix, gain);
+    const float peak = mixInto(mix, gain, loops);
 
     // Done after a second of silence with nothing held, or when it has
     // droned on long after every key was let go.
@@ -223,7 +233,7 @@ RenderGraph::RenderGraph(std::vector<StripSpec> specs, double sampleRate, int ma
 }
 
 void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, float masterGain, const TimeInfo& time,
-                         const AudioInputs& inputs, const SectionGate& gate) noexcept
+                         const AudioInputs& inputs, const SectionGate& gate, LoopStation* loops) noexcept
 {
     const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
     std::fill_n(out.left, frames, 0.0F);
@@ -236,11 +246,13 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
 
     const bool anySolo = std::ranges::any_of(m_strips, [](const auto& s) { return s->solo(); });
     for (const auto& channel : m_strips) {
-        channel->render(events, out, anySolo, time, inputs, gate);
+        channel->render(events, out, anySolo, time, inputs, gate, loops);
     }
     for (const auto& tail : m_tails) {
-        if (out.frames <= tail->maxBlock()) tail->renderTail(events, out, time);
+        if (out.frames <= tail->maxBlock()) tail->renderTail(events, out, time, loops);
     }
+    // The loops, whatever patch is playing, through the master effects.
+    if (loops != nullptr) loops->play(out.left, out.right, out.frames);
     for (const auto& effect : m_masterEffects) {
         effect->process({}, out, time);
     }

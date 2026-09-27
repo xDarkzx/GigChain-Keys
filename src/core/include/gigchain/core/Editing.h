@@ -23,6 +23,10 @@ Result<void> setSongKeyAndTempo(Setlist& setlist, int songIndex, const QString& 
 Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator, int denominator);
 // Sections switch a beat early (true) or just before their first beat.
 Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early);
+// Loops start and stop on the bars (true) or press to press.
+Result<void> setSongLoopSync(Setlist& setlist, int songIndex, bool sync);
+// The looper's keyboard controls (validated).
+Result<void> setLoopControls(Setlist& setlist, const LoopControls& controls);
 // Stores what one section plays and how long it is, replacing the setup of
 // the same section (same name ignoring case, same occurrence).
 Result<void> setSectionSetup(Setlist& setlist, int songIndex, const SectionSetup& setup);

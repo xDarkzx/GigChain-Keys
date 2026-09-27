@@ -145,6 +145,20 @@ Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early)
     return {};
 }
 
+Result<void> setSongLoopSync(Setlist& setlist, int songIndex, bool sync)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    setlist.songs.at(toIndex(songIndex)).loopSync = sync;
+    return {};
+}
+
+Result<void> setLoopControls(Setlist& setlist, const LoopControls& controls)
+{
+    if (auto r = validateLoopControls(controls); !r) return r;
+    setlist.loopControls = controls;
+    return {};
+}
+
 Result<void> setSectionSetup(Setlist& setlist, int songIndex, const SectionSetup& setup)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));

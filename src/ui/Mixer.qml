@@ -15,6 +15,7 @@ Rectangle {
     required property EngineStatus engineStatus
     property EffectWindows effectWindows: null
     property MasterBus masterBus: null
+    property LoopController loops: null
 
     // The console's floor: darker at the bottom, strips standing on it.
     gradient: Gradient {
@@ -35,6 +36,48 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: Theme.spacing
         spacing: Theme.spacing
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 4
+
+        // The looper strip: a loop's buttons above each channel, scrolling
+        // with the strips.
+        Rectangle {
+            id: looperBand
+            objectName: "looperBand"
+            Layout.fillWidth: true
+            Layout.preferredHeight: Theme.looperHeight - 4 // (the gap under it: the column's spacing)
+            visible: mixer.loops !== null && mixer.loops.stripVisible
+            radius: Theme.radiusCard
+            color: Theme.panelBottom
+            border.color: Theme.outline
+            ListView {
+                id: looperCells
+                objectName: "looperCells"
+                anchors.fill: parent
+                anchors.topMargin: 4
+                anchors.bottomMargin: 4
+                orientation: ListView.Horizontal
+                spacing: strips.spacing
+                interactive: false
+                clip: true
+                contentX: strips.contentX
+                // One per channel, as the strips (a loop's state changing
+                // many times a second must not rebuild the cells).
+                model: mixer.channelModel
+                delegate: LooperCell {
+                    required property int index
+                    loop: mixer.loops !== null && index < mixer.loops.channelLoops.length ? mixer.loops.channelLoops[index] : undefined
+                    selected: mixer.doc.selectedChannel === index
+                    onRecordPressed: mixer.loops.record(index)
+                    onPlayStopPressed: mixer.loops.playStop(index)
+                    onUndoRequested: mixer.loops.undo(index)
+                    onClearRequested: mixer.loops.clear(index)
+                }
+            }
+        }
 
         ListView {
             id: strips
@@ -123,12 +166,15 @@ Rectangle {
             }
         }
 
+        }
+
         // Master strip: the rig's own effects on everything (not saved in the
         // setlist), the master fader, mute, and the safety limiter's light.
         Rectangle {
             id: masterStrip
             property int menuEffect: -1
             Layout.alignment: Qt.AlignTop
+            Layout.topMargin: looperBand.visible ? looperBand.height + 4 : 0 // level with the strips
             Layout.preferredHeight: Math.min(strips.height, Theme.stripHeight)
             Layout.preferredWidth: Theme.stripWidth
             radius: Theme.radiusCard

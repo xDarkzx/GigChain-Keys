@@ -5,6 +5,8 @@
 #include <QByteArray>
 #include <QString>
 
+#include <array>
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -128,15 +130,43 @@ struct Song
     int timeDenominator = 4;
     // Sections switch a beat before their first beat instead of just before it.
     bool switchEarly = false;
+    // Loops start and stop on the bars (true) or press to press (free).
+    bool loopSync = true;
     // What the chart's sections play; a section not listed plays the default.
     std::vector<SectionSetup> sections;
 
     friend bool operator==(const Song&, const Song&) = default;
 };
 
+// A keyboard button, pad, pedal or knob learned for a control: the kind of
+// MIDI message (0 = none, 0xB0 controller, 0x90 note, 0xC0 program), its
+// channel (1-16) and number (0-127).
+struct LearnedControl
+{
+    int kind = 0;
+    int channel = 0;
+    int number = 0;
+
+    [[nodiscard]] bool isSet() const { return kind != 0; }
+    friend bool operator==(const LearnedControl&, const LearnedControl&) = default;
+};
+
+// The looper's keyboard controls, kept with the setlist (each project its own).
+struct LoopControls
+{
+    enum Button : std::uint8_t { Record, PlayStop, Undo, StopAll, NextChannel, PreviousChannel, ButtonCount };
+    enum KnobMode : std::uint8_t { Absolute, Relative, RelativeOffset }; // 0-127 / 1-63 up, 65-127 down / 64 +- n
+    std::array<LearnedControl, ButtonCount> buttons{};
+    LearnedControl selector; // a knob choosing the instrument (a controller)
+    int selectorMode = Absolute;
+
+    friend bool operator==(const LoopControls&, const LoopControls&) = default;
+};
+
 struct Setlist
 {
     std::vector<Song> songs;
+    LoopControls loopControls;
 
     friend bool operator==(const Setlist&, const Setlist&) = default;
 };

@@ -831,6 +831,48 @@ bool DocumentController::setSongSwitchEarly(int song, bool early)
     return true;
 }
 
+bool DocumentController::songLoopSync() const
+{
+    const core::Song* song = currentSong();
+    return song == nullptr || song->loopSync;
+}
+
+bool DocumentController::setSongLoopSync(int song, bool sync)
+{
+    if (auto r = core::setSongLoopSync(m_setlist, song, sync); !r) return report(r.error());
+    setDirty(true);
+    if (song == m_cursor.song) m_engine.setLoopSync(sync);
+    emit songChanged();
+    return true;
+}
+
+bool DocumentController::setLoopControls(const core::LoopControls& controls)
+{
+    if (!m_hasSetlist) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("Start or open a setlist first")});
+    }
+    if (auto r = core::setLoopControls(m_setlist, controls); !r) return report(r.error());
+    setDirty(true);
+    applyLoopControlsToEngine();
+    emit loopControlsChanged();
+    return true;
+}
+
+void DocumentController::applyLoopControlsToEngine()
+{
+    const auto trigger = [](const core::LearnedControl& c) {
+        if (!c.isSet()) return engine::MidiTrigger{};
+        return engine::MidiTrigger{.kind = static_cast<engine::MidiTrigger::Kind>(c.kind),
+                                   .channel = static_cast<uint8_t>(c.channel - 1),
+                                   .number = static_cast<uint8_t>(c.number)};
+    };
+    const core::LoopControls& controls = m_setlist.loopControls;
+    engine::LoopTriggers buttons{};
+    std::ranges::transform(controls.buttons, buttons.begin(), trigger);
+    m_engine.setLoopControls(buttons, engine::SelectorKnob{.knob = trigger(controls.selector),
+                                                           .mode = static_cast<engine::SelectorKnob::Mode>(controls.selectorMode)});
+}
+
 QVariantList DocumentController::currentSections() const
 {
     const core::Song* song = currentSong();
@@ -957,6 +999,7 @@ void DocumentController::playSong()
 void DocumentController::stopSong()
 {
     m_engine.stopSong();
+    m_engine.stopAllLoops(); // they are kept: Play on a loop starts it again
 }
 
 void DocumentController::selectSection(int section)
@@ -994,7 +1037,10 @@ void DocumentController::applySectionsToEngine()
     }
     const core::SongId songId = song != nullptr ? song->id : core::SongId{};
     const bool newSong = songId != m_sectionsSong;
-    if (newSong) m_engine.stopSong();
+    if (newSong) {
+        m_engine.stopSong();
+        m_engine.clearAllLoops(); // loops belong to the song they were played in
+    }
     m_engine.setSongSections(sections);
     m_sectionCount = static_cast<int>(sections.sections.size());
     if (newSong && m_sectionCount > 0) m_engine.jumpToSection(0); // a new song starts at its beginning
@@ -1070,6 +1116,8 @@ void DocumentController::applyCurrentSongToEngine()
     const core::Song* song = currentSong();
     if (song != nullptr && song->tempo > 0.0) m_engine.setTempo(song->tempo); // a song without one keeps the tempo playing
     if (song != nullptr) m_engine.setTimeSignature(song->timeNumerator, song->timeDenominator);
+    m_engine.setLoopSync(song == nullptr || song->loopSync);
+    applyLoopControlsToEngine(); // the setlist's (a newly opened one too)
     const QString track = song != nullptr && !song->backingTrack.isEmpty() && !m_filePath.isEmpty()
                               ? QFileInfo(m_filePath).absoluteDir().filePath(song->backingTrack)
                               : QString();

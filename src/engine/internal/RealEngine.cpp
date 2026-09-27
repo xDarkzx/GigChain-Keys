@@ -532,6 +532,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     auto next = std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(), std::move(master),
                                               std::move(tails));
     applySectionMasks(*next); // before it plays: no moment with the wrong channels taking notes
+    applyLoopSlots(*next);
     m_exchange.publish(std::move(next));
     publishTimeline(); // the sections count only for the patch they were worked out for
     qCInfo(lcEngine).noquote() << "Patch applied:" << patch.name << "(" << patch.channels.size() << "channels,"
@@ -616,6 +617,7 @@ std::vector<Notice> RealEngine::poll()
     syncPluginsToDevice();
     watchMidiPorts(notices);
     collectBackingTrack(notices);
+    serviceLoops(notices);
     m_clockOut.setTempo(tempo());
     if (m_clockOut.takeFailed()) {
         notices.push_back(Notice::warning(u"The MIDI clock to %1 stopped: the output stopped working"_s.arg(m_clockOut.portName())));
@@ -776,6 +778,11 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
     std::ranges::transform(m_triggers, triggers.begin(),
                            [](const auto& packed) { return MidiTrigger::unpack(packed.load(std::memory_order_relaxed)); });
     const bool any = std::ranges::any_of(triggers, [](const MidiTrigger& t) { return t.isSet(); });
+    std::array<MidiTrigger, kLoopButtonCount> loopButtons;
+    std::ranges::transform(m_loopTriggers, loopButtons.begin(),
+                           [](const auto& packed) { return MidiTrigger::unpack(packed.load(std::memory_order_relaxed)); });
+    const MidiTrigger selector = MidiTrigger::unpack(m_selectorKnob.load(std::memory_order_relaxed));
+    const auto selectorMode = static_cast<SelectorKnob::Mode>(m_selectorMode.load(std::memory_order_relaxed));
 
     // The block's events, filtered in place: what is not a control stays.
     const std::span<MidiEvent> events(m_events.data(), count);
@@ -785,9 +792,32 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
             m_learned.store(press.pack(), std::memory_order_relaxed);
         }
         if ((event.status & 0xF0) == 0xB0) {
-            m_movedController.store(((event.status & 0x0F) * 128) + event.data1, std::memory_order_relaxed);
+            m_movedController.store(((((event.status & 0x0F) * 128) + event.data1) * 128) + event.data2,
+                                    std::memory_order_relaxed);
         }
         bool consumed = false;
+        // The instrument knob.
+        if (selector.isSet() && (event.status & 0xF0) == 0xB0 && (event.status & 0x0F) == selector.channel &&
+            event.data1 == selector.number) {
+            consumed = true;
+            if (selectorMode == SelectorKnob::Absolute) m_selectorValue.store(event.data2, std::memory_order_relaxed);
+            else m_selectorSteps.fetch_add(encoderSteps(selectorMode, event.data2), std::memory_order_relaxed);
+        }
+        // The looper's buttons; Record and PlayStop held together clear.
+        for (std::size_t b = 0; b < loopButtons.size(); ++b) {
+            const TriggerMatch match = matchTrigger(loopButtons.at(b), event.status, event.data1, event.data2);
+            if (!match.belongs) continue;
+            consumed = true;
+            const uint32_t bit = 1U << b;
+            if (!match.pressed) {
+                m_loopHeld &= ~bit;
+                continue;
+            }
+            m_loopHeld |= bit;
+            const uint32_t pair = (1U << static_cast<int>(LoopAction::Record)) | (1U << static_cast<int>(LoopAction::PlayStop));
+            const bool both = (bit & pair) != 0 && (m_loopHeld & pair) == pair;
+            m_loopPressed.fetch_or(both ? (1U << static_cast<int>(LoopAction::Clear)) : bit, std::memory_order_relaxed);
+        }
         if (any) {
             uint32_t action = 1U;
             for (const MidiTrigger& trigger : triggers) {
@@ -837,7 +867,41 @@ std::optional<std::pair<int, int>> RealEngine::takeMovedController()
     GC_ONLY_MAIN_THREAD();
     const int moved = m_movedController.exchange(-1, std::memory_order_relaxed);
     if (moved < 0) return std::nullopt;
-    return std::pair{(moved / 128) + 1, moved % 128};
+    return std::pair{(moved / (128 * 128)) + 1, (moved / 128) % 128};
+}
+
+std::optional<std::array<int, 3>> RealEngine::takeControllerMove()
+{
+    GC_ONLY_MAIN_THREAD();
+    const int moved = m_movedController.exchange(-1, std::memory_order_relaxed);
+    if (moved < 0) return std::nullopt;
+    return std::array{(moved / (128 * 128)) + 1, (moved / 128) % 128, moved % 128};
+}
+
+void RealEngine::setLoopControls(const LoopTriggers& buttons, const SelectorKnob& selector)
+{
+    GC_ONLY_MAIN_THREAD();
+    for (std::size_t i = 0; i < buttons.size(); ++i) m_loopTriggers.at(i).store(buttons.at(i).pack(), std::memory_order_relaxed);
+    m_selectorMode.store(selector.mode, std::memory_order_relaxed);
+    m_selectorKnob.store(selector.knob.kind == MidiTrigger::ControlChange ? selector.knob.pack() : 0U, std::memory_order_relaxed);
+}
+
+std::vector<LoopAction> RealEngine::takeLoopActions()
+{
+    GC_ONLY_MAIN_THREAD();
+    const uint32_t pressed = m_loopPressed.exchange(0, std::memory_order_relaxed);
+    std::vector<LoopAction> actions;
+    for (int i = 0; i <= static_cast<int>(LoopAction::Clear); ++i) {
+        if ((pressed & (1U << i)) != 0) actions.push_back(static_cast<LoopAction>(i));
+    }
+    return actions;
+}
+
+SelectorMove RealEngine::takeSelectorMove()
+{
+    GC_ONLY_MAIN_THREAD();
+    return SelectorMove{.value = m_selectorValue.exchange(-1, std::memory_order_relaxed),
+                        .steps = m_selectorSteps.exchange(0, std::memory_order_relaxed)};
 }
 
 MidiTrigger RealEngine::takeLearnedTrigger()
@@ -1040,6 +1104,184 @@ void RealEngine::jumpToSection(int section)
     m_transport.jump(section);
 }
 
+// ---------------------------------------------------------------- loops
+
+namespace {
+constexpr double kLongestLoopSeconds = 120.0;
+constexpr double kLongestLoopBars = 64.0;
+// Room for a loop's layers; a long loop gets fewer than LoopStation::kMaxLayers.
+constexpr int64_t kLayerBudgetBytes = 256LL * 1024 * 1024;
+} // namespace
+
+int RealEngine::loopSlot(const core::ChannelId& channel) const
+{
+    const auto it = std::ranges::find(m_loopOwners, channel);
+    return channel.isNull() || it == m_loopOwners.end() ? -1 : static_cast<int>(it - m_loopOwners.begin());
+}
+
+double RealEngine::barFrames() const
+{
+    const double bpm = tempo();
+    const double quartersPerBar = m_timeNumerator.load(std::memory_order_relaxed) * 4.0 /
+                                  m_timeDenominator.load(std::memory_order_relaxed);
+    return bpm > 0.0 ? quartersPerBar * 60.0 / bpm * m_audio.sampleRate() : 0.0;
+}
+
+void RealEngine::applyLoopSlots(RenderGraph& graph) const
+{
+    GC_ONLY_MAIN_THREAD();
+    for (std::size_t i = 0; i < graph.stripCount(); ++i) graph.strip(i)->setLoopSlot(loopSlot(graph.strip(i)->id()));
+}
+
+void RealEngine::loopCommand(const core::ChannelId& channel, LoopCommand command)
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto report = [this](const QString& text) {
+        m_pendingNotices.push_back(Notice::warning(text));
+        qCWarning(lcEngine).noquote() << text;
+    };
+    int slot = loopSlot(channel);
+    if (slot < 0) {
+        if (command != LoopCommand::Record || channel.isNull()) return; // no loop to act on
+        const auto free = std::ranges::find_if(m_loopOwners, [](const core::ChannelId& id) { return id.isNull(); });
+        if (free == m_loopOwners.end()) {
+            report(u"No room for another loop: %1 loops at most (clear one first)"_s.arg(LoopStation::kSlots));
+            return;
+        }
+        slot = static_cast<int>(free - m_loopOwners.begin());
+        *free = channel;
+        if (RenderGraph* graph = m_exchange.current()) applyLoopSlots(*graph);
+    }
+    const auto index = static_cast<std::size_t>(slot);
+    if (command == LoopCommand::Record && m_loops.read(slot).state == LoopState::Empty && !m_loops.pending(slot)) {
+        // Room for the longest loop: 2 minutes, or 64 bars when that is shorter.
+        const double rate = m_audio.sampleRate();
+        const double bars = barFrames() * kLongestLoopBars;
+        const auto frames = static_cast<int64_t>(bars > 0.0 ? std::min(kLongestLoopSeconds * rate, bars) : kLongestLoopSeconds * rate);
+        std::shared_ptr<LoopData> data;
+        try {
+            data = std::make_shared<LoopData>();
+            data->base = std::make_shared<LoopTake>(frames);
+        } catch (const std::bad_alloc&) {
+            report(u"Not enough memory to record a loop (%1 MB needed)"_s.arg(frames * int64_t{8} / (int64_t{1024} * 1024)));
+            m_loopOwners.at(index) = {};
+            return;
+        }
+        m_loops.setData(slot, std::move(data));
+    }
+    if (!m_loops.post(slot, command)) report(u"Too many loop presses at once: one was dropped"_s);
+}
+
+void RealEngine::stopAllLoops()
+{
+    GC_ONLY_MAIN_THREAD();
+    for (int slot = 0; slot < LoopStation::kSlots; ++slot) {
+        if (!m_loopOwners.at(static_cast<std::size_t>(slot)).isNull()) (void)m_loops.post(slot, LoopCommand::Stop);
+    }
+}
+
+void RealEngine::clearAllLoops()
+{
+    GC_ONLY_MAIN_THREAD();
+    for (int slot = 0; slot < LoopStation::kSlots; ++slot) {
+        if (!m_loopOwners.at(static_cast<std::size_t>(slot)).isNull()) (void)m_loops.post(slot, LoopCommand::Clear);
+    }
+}
+
+void RealEngine::serviceLoops(std::vector<Notice>& notices)
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto tell = [&notices](Notice notice) {
+        qCInfo(lcEngine).noquote() << notice.text;
+        notices.push_back(std::move(notice));
+    };
+    bool anyLoop = false;
+    bool freed = false;
+    for (int slot = 0; slot < LoopStation::kSlots; ++slot) {
+        const auto index = static_cast<std::size_t>(slot);
+        if (m_loopOwners.at(index).isNull()) continue;
+        const LoopReading loop = m_loops.read(slot);
+        if (m_loops.takeFull(slot)) {
+            tell(Notice::warning(u"A loop reached its longest (2 minutes or 64 bars) and closed there"_s));
+        }
+        if (m_loops.takeNoLayerLeft(slot)) {
+            tell(Notice::warning(u"That loop has all the layers it can take: undo one to record another"_s));
+        }
+        if (m_loops.takeNeedsLayers(slot) && loop.length > 0) {
+            // The base cut to the loop, and room for layers.
+            const LoopData* now = m_loops.data(slot);
+            const auto length = static_cast<std::size_t>(loop.length);
+            try {
+                auto data = std::make_shared<LoopData>();
+                data->base = std::make_shared<LoopTake>(loop.length);
+                if (now != nullptr && now->base && now->base->left.size() >= length) {
+                    std::copy_n(now->base->left.begin(), length, data->base->left.begin());
+                    std::copy_n(now->base->right.begin(), length, data->base->right.begin());
+                }
+                const int64_t layerBytes = loop.length * 2 * static_cast<int64_t>(sizeof(float));
+                const auto layers = std::clamp<int64_t>(kLayerBudgetBytes / std::max<int64_t>(layerBytes, 1), 1, LoopStation::kMaxLayers);
+                for (int64_t i = 0; i < layers; ++i) data->layers.push_back(std::make_shared<LoopTake>(loop.length));
+                m_loops.setData(slot, std::move(data));
+            } catch (const std::bad_alloc&) {
+                tell(Notice::warning(u"Not enough memory for layers on that loop: it plays, without layers"_s));
+            }
+            // Free: the first loop sets the tempo, bar 1 on it.
+            if (m_tempoFromLoop && !m_loops.sync() && !m_freeTempoTaken) {
+                const double quartersPerBar = m_timeNumerator.load(std::memory_order_relaxed) * 4.0 /
+                                              m_timeDenominator.load(std::memory_order_relaxed);
+                double best = 0.0;
+                for (const double loopBars : {1.0, 2.0, 4.0}) {
+                    const double bpm = quartersPerBar * loopBars * 60.0 * m_audio.sampleRate() / static_cast<double>(loop.length);
+                    if (bpm >= 60.0 && bpm <= 180.0 && (best == 0.0 || std::abs(bpm - 110.0) < std::abs(best - 110.0))) best = bpm;
+                }
+                m_freeTempoTaken = true;
+                if (best > 0.0) {
+                    setTempo(best);
+                    m_barOriginAt.store(m_loops.freeGrid().origin, std::memory_order_release);
+                    tell(Notice::info(u"Tempo %1 BPM taken from the first loop"_s.arg(best, 0, 'f', 1)));
+                } else {
+                    tell(Notice::warning(u"No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM"_s));
+                }
+            }
+        }
+        // Cleared (and no press on its way): its room is given back.
+        if (loop.state == LoopState::Empty && !m_loops.pending(slot)) {
+            m_loops.setData(slot, nullptr);
+            m_loopOwners.at(index) = {};
+            freed = true;
+            continue;
+        }
+        anyLoop = true;
+    }
+    if (!anyLoop) m_freeTempoTaken = false;
+    if (freed) {
+        if (RenderGraph* graph = m_exchange.current()) applyLoopSlots(*graph);
+    }
+    m_loops.collectGarbage();
+}
+
+std::vector<ChannelLoop> RealEngine::loops() const
+{
+    GC_ONLY_MAIN_THREAD();
+    std::vector<ChannelLoop> list;
+    const double bar = m_loops.sync() ? barFrames() : 0.0;
+    for (int slot = 0; slot < LoopStation::kSlots; ++slot) {
+        const core::ChannelId& channel = m_loopOwners.at(static_cast<std::size_t>(slot));
+        if (channel.isNull()) continue;
+        const LoopReading loop = m_loops.read(slot);
+        ChannelLoop item{.channel = channel, .state = loop.state, .progress = 0.0, .bar = 0, .bars = 0, .layers = loop.layers};
+        if (loop.length > 0) {
+            item.progress = static_cast<double>(loop.position) / static_cast<double>(loop.length);
+            if (bar > 0.0) {
+                item.bars = std::max(1, static_cast<int>(std::lround(static_cast<double>(loop.length) / bar)));
+                item.bar = std::min(item.bars, static_cast<int>(static_cast<double>(loop.position) / bar) + 1);
+            }
+        }
+        list.push_back(item);
+    }
+    return list;
+}
+
 double RealEngine::tempo() const
 {
     if (m_followClock.load(std::memory_order_relaxed)) {
@@ -1232,6 +1474,10 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     const SongTransport::Block song = m_transport.advance(m_timeline.acquire(), m_ppq, out.frames, quartersPerSample);
     m_timeline.release();
     m_ppq = song.ppq;
+    // A free first loop set the tempo: bar 1 starts where it started.
+    if (const int64_t origin = m_barOriginAt.exchange(-1, std::memory_order_acq_rel); origin >= 0) {
+        m_ppq = static_cast<double>(m_samplePosition - origin) * quartersPerSample;
+    }
 
     TimeInfo time{.tempo = bpm,
                   .sampleRate = rate,
@@ -1242,15 +1488,25 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
                   .timeSigDenominator = m_timeDenominator.load(std::memory_order_relaxed)};
     time.barStartPpq = std::floor(m_ppq / time.quartersPerBar()) * time.quartersPerBar();
 
+    // The loops' bar lines: where the current bar started, a bar apart.
+    LoopGrid bars;
+    if (quartersPerSample > 0.0) {
+        const double samplesPerQuarter = 1.0 / quartersPerSample;
+        bars.unit = time.quartersPerBar() * samplesPerQuarter;
+        bars.origin = m_samplePosition - std::llround((m_ppq - time.barStartPpq) * samplesPerQuarter);
+    }
+    m_loops.beginBlock(m_samplePosition, out.frames, bars);
+
     const float masterGain = m_masterGain.load(std::memory_order_relaxed);
     RenderGraph* graph = m_exchange.acquire();
     if (graph != nullptr) {
-        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs, song.gate);
+        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs, song.gate, &m_loops);
     } else {
         std::fill_n(out.left, out.frames, 0.0F);
         std::fill_n(out.right, out.frames, 0.0F);
     }
     m_exchange.release();
+    m_loops.endBlock();
 
     // The backing track, through the master fader.
     const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));

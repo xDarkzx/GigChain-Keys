@@ -12,6 +12,7 @@ ApplicationWindow {
     required property SelectedChannel selectedChannel
     required property PluginListModel pluginModel
     required property EngineStatus engineStatus
+    required property LoopController loops
     required property EditorService editorService
     required property EffectWindows effectWindows
     required property MasterBus masterBus
@@ -164,6 +165,11 @@ ApplicationWindow {
         doc: root.doc
         channel: root.selectedChannel
     }
+    LoopControlsDialog {
+        id: loopControlsDialog
+        objectName: "loopControlsDialog"
+        loops: root.loops
+    }
     KnobDialog {
         id: knobDialog
         objectName: "knobDialog"
@@ -201,7 +207,9 @@ ApplicationWindow {
         sidePanelOpen: root.sidePanelOpen
         mixerOpen: root.mixerOpen
         keyboardOpen: root.keyboardOpen
+        loops: root.loops
         onToggleKeyboard: root.keyboardOpen = !root.keyboardOpen
+        onLoopControlsRequested: loopControlsDialog.open()
         onToggleMode: root.performMode = !root.performMode
         onToggleSidePanel: root.sidePanelOpen = !root.sidePanelOpen
         onToggleMixer: root.mixerOpen = !root.mixerOpen
@@ -253,10 +261,11 @@ ApplicationWindow {
                         onOpenRecentRequested: (path) => root.openRecent(path)
                         // Plugin windows sit above Qt content: hide them while a dialog is up.
                         suspended: settingsDialog.visible || unsavedDialog.visible || zoneDialog.visible || knobDialog.visible
+                                   || loopControlsDialog.visible
                     }
                     Mixer {
                         visible: root.mixerOpen
-                        SplitView.preferredHeight: Theme.mixerHeight
+                        SplitView.preferredHeight: Theme.mixerHeight + (root.loops.stripVisible ? Theme.looperHeight : 0)
                         SplitView.minimumHeight: 240
                         doc: root.doc
                         channelModel: root.channelModel
@@ -264,6 +273,7 @@ ApplicationWindow {
                         engineStatus: root.engineStatus
                         effectWindows: root.effectWindows
                         masterBus: root.masterBus
+                        loops: root.loops
                     }
                 }
             }
@@ -278,6 +288,7 @@ ApplicationWindow {
                 sidePanelOpen: root.sidePanelOpen
                 effectWindows: root.effectWindows
                 masterBus: root.masterBus
+                loops: root.loops
             }
         }
 

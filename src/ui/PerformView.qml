@@ -17,6 +17,7 @@ Rectangle {
     required property bool mixerOpen
     property EffectWindows effectWindows: null
     property MasterBus masterBus: null
+    property LoopController loops: null
 
     color: Theme.performBackground
 
@@ -190,13 +191,14 @@ Rectangle {
         Mixer {
             visible: perform.mixerOpen
             Layout.fillWidth: true
-            Layout.preferredHeight: Theme.mixerHeight
+            Layout.preferredHeight: Theme.mixerHeight + (perform.loops !== null && perform.loops.stripVisible ? Theme.looperHeight : 0)
             doc: perform.doc
             channelModel: perform.channelModel
             pluginModel: perform.pluginModel
             engineStatus: perform.engineStatus
             effectWindows: perform.effectWindows
             masterBus: perform.masterBus
+            loops: perform.loops
         }
     }
 }

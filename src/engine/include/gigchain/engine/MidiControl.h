@@ -52,6 +52,55 @@ struct MidiTrigger
 
 using ControlTriggers = std::array<MidiTrigger, kControlActionCount>;
 
+// The looper's keyboard buttons (learned per setlist). Clear is not a
+// button of its own: Record and PlayStop held together.
+enum class LoopAction : int
+{
+    Record = 0,
+    PlayStop,
+    Undo,
+    StopAll,
+    NextChannel,
+    PreviousChannel,
+    Clear, // Record and PlayStop held together
+};
+inline constexpr int kLoopButtonCount = 6; // the learnable ones (not Clear)
+using LoopTriggers = std::array<MidiTrigger, kLoopButtonCount>;
+
+// A knob choosing the instrument: its controller, and how it counts.
+struct SelectorKnob
+{
+    enum Mode : uint8_t
+    {
+        Absolute,       // 0-127, split among the channels
+        Relative,       // an endless encoder: 1-63 up, 65-127 down (127 = -1)
+        RelativeOffset, // an endless encoder: 64 + n up, 64 - n down
+    };
+    MidiTrigger knob; // a ControlChange (or unset)
+    Mode mode = Absolute;
+
+    bool operator==(const SelectorKnob&) const = default;
+};
+
+// What the selector knob did since last asked: where it is (Absolute), or
+// how many steps it turned (a relative encoder).
+struct SelectorMove
+{
+    int value = -1; // 0-127, -1 = not moved (Absolute)
+    int steps = 0;  // + up, - down (relative)
+};
+
+// Real-time safe: the steps a relative encoder's value means.
+[[nodiscard]] constexpr int encoderSteps(SelectorKnob::Mode mode, uint8_t value) noexcept
+{
+    switch (mode) {
+    case SelectorKnob::Relative: return value == 0 ? 0 : (value < 64 ? value : value - 128);
+    case SelectorKnob::RelativeOffset: return static_cast<int>(value) - 64;
+    case SelectorKnob::Absolute: break;
+    }
+    return 0;
+}
+
 // Real-time safe. Whether a MIDI message belongs to `trigger` (every value of
 // its CC, the note's on and off), and whether it is a press: CC value 64 or
 // more, a note-on with velocity, any program change.

@@ -10,7 +10,8 @@ namespace gigchain::core {
 // 2: songs gained chart, key, tempo, notes, links and attachments.
 // 3: channels gained velocity ranges, control mappings and audio inputs;
 //    songs gained a backing track.
-// 4: songs gained a time signature, "switch early" and section setups.
+// 4: songs gained a time signature, "switch early", section setups and loop
+//    sync; the setlist gained the looper's keyboard controls.
 // Older files still open (the new fields at their defaults).
 inline constexpr int kSetlistFormatVersion = 4;
 
