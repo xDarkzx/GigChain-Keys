@@ -83,6 +83,13 @@ the iPad remote.
 - **Toolbar**: a Live/Monitor switch that is impossible to miss when on
   Monitor (the house is silent).
 - Perform view: the looper strip shows above its mixer too.
+- **With the mixer hidden** (only the setlist and chart showing), a small
+  **loops pill** in the toolbar tells what is going on without getting in
+  the way. It shows only while a loop exists: "⟳ 2" green = two loops
+  playing, a small red dot = something is recording, dim = loops recorded
+  but stopped. It changes colour, never blinks or pops up. Clicking it
+  opens a small list of the loops (channel name, progress ring,
+  play/stop) with Stop all.
 
 ## 4. Controls and remote
 
