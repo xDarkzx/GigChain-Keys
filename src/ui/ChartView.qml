@@ -34,7 +34,7 @@ Column {
                             required property var modelData
                             Text {
                                 text: modelData.chord !== "" ? modelData.chord : " "
-                                color: Theme.accent
+                                color: Theme.chord
                                 font.pixelSize: (Theme.fontSize + 5) * chart.size
                                 font.bold: true
                                 // Chords with no words under them (an intro, a

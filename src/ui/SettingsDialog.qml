@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -5,7 +7,7 @@ import QtQuick.Layouts
 // Settings, laid out like Audacity 4's Preferences: pages on the left, the
 // page on the right, Reset / Cancel / OK at the bottom. Nothing changes until
 // OK; a problem stays on screen with its cause.
-Popup {
+StageDialog {
     id: dialog
 
     required property SettingsController settings
@@ -13,13 +15,9 @@ Popup {
 
     property int page: 0
 
-    modal: true
-    focus: true
-    anchors.centerIn: Overlay.overlay
+    title: qsTr("Settings")
     width: Math.min(880, (parent ? parent.width : 880) - 32)
-    height: Math.min(600, (parent ? parent.height : 600) - 32)
-    padding: 0
-    closePolicy: Popup.CloseOnEscape
+    height: Math.min(640, (parent ? parent.height : 640) - 32)
 
     onAboutToShow: settings.load()
 
@@ -30,30 +28,9 @@ Popup {
         onTriggered: dialog.settings.refreshMidi()
     }
 
-    background: Rectangle {
-        color: Theme.panel
-        border.color: Theme.border
-        radius: 8
-    }
-
-    Overlay.modal: Rectangle { color: "#99000000" }
-
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
-
-        // title
-        Label {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 44
-            leftPadding: 16
-            verticalAlignment: Text.AlignVCenter
-            text: qsTr("Settings")
-            font.pixelSize: 16
-            font.bold: true
-            color: Theme.text
-        }
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.border }
 
         RowLayout {
             Layout.fillWidth: true
@@ -83,16 +60,21 @@ Popup {
                         verticalAlignment: Text.AlignVCenter
                     }
                     background: Rectangle {
+                        id: pageBack
+                        readonly property bool chosen: dialog.page === pageRow.index
                         anchors.fill: parent
                         anchors.leftMargin: 8
                         anchors.rightMargin: 8
-                        radius: 4
-                        color: dialog.page === pageRow.index ? Theme.accentBlue
-                                                             : (pageRow.hovered ? Theme.slotHover : "transparent")
+                        radius: Theme.radiusSmall
+                        border.color: chosen || pageRow.hovered ? Theme.outline : "transparent"
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: pageBack.chosen ? Theme.accentTop : (pageRow.hovered ? Theme.buttonHoverTop : "transparent") }
+                            GradientStop { position: 1.0; color: pageBack.chosen ? Theme.accentBottom : (pageRow.hovered ? Theme.buttonHoverBottom : "transparent") }
+                        }
                     }
                 }
             }
-            Rectangle { Layout.fillHeight: true; Layout.preferredWidth: 1; color: Theme.border }
+            StageDivider { vertical: true; Layout.fillHeight: true }
 
             StackLayout {
                 Layout.fillWidth: true
@@ -362,17 +344,15 @@ Popup {
                                          : (controlRow.modelData.trigger !== "" ? Theme.text : Theme.textDim)
                                     font.bold: controlRow.learning
                                 }
-                                Button {
+                                StageButton {
                                     objectName: "learnControl"
                                     text: controlRow.learning ? qsTr("Waiting…") : qsTr("Learn")
                                     highlighted: controlRow.learning
-                                    focusPolicy: Qt.NoFocus
                                     onClicked: dialog.settings.learnControl(controlRow.modelData.action)
                                 }
-                                Button {
+                                StageButton {
                                     text: qsTr("Clear")
                                     enabled: controlRow.modelData.trigger !== ""
-                                    focusPolicy: Qt.NoFocus
                                     onClicked: dialog.settings.clearControl(controlRow.modelData.action)
                                 }
                             }
@@ -427,10 +407,9 @@ Popup {
                                     ToolTip.text: blockedRow.modelData.path
                                     HoverHandler { id: blockedHover }
                                 }
-                                Button {
+                                StageButton {
                                     objectName: "unblockPlugin"
                                     text: qsTr("Try again")
-                                    focusPolicy: Qt.NoFocus
                                     onClicked: dialog.settings.unblockPlugin(blockedRow.modelData.path)
                                 }
                             }
@@ -439,9 +418,8 @@ Popup {
                         RowLayout {
                             Layout.leftMargin: 20
                             spacing: 12
-                            Button {
+                            StageButton {
                                 text: qsTr("Show hidden instruments")
-                                focusPolicy: Qt.NoFocus
                                 onClicked: dialog.pluginModel.showAll()
                             }
                             Label {
@@ -467,27 +445,25 @@ Popup {
             background: Rectangle { color: Theme.danger }
         }
 
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.border }
+        StageDivider { Layout.fillWidth: true }
         RowLayout {
             Layout.fillWidth: true
             Layout.margins: 12
             spacing: 8
-            Button {
+            StageButton {
                 text: qsTr("Reset to defaults")
-                focusPolicy: Qt.NoFocus
                 onClicked: dialog.settings.resetToDefaults()
             }
             Item { Layout.fillWidth: true }
-            Button {
+            StageButton {
                 text: qsTr("Cancel")
-                focusPolicy: Qt.NoFocus
                 onClicked: dialog.close()
             }
-            Button {
+            StageButton {
                 objectName: "settingsOk"
                 text: qsTr("OK")
-                highlighted: true
-                focusPolicy: Qt.NoFocus
+                tone: "accent"
+                implicitWidth: 90
                 onClicked: if (dialog.settings.apply()) dialog.close()
             }
         }

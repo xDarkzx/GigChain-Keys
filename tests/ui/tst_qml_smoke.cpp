@@ -53,6 +53,15 @@ class TestQmlSmoke : public QObject
         QVERIFY2(m_warnings.isEmpty(), qPrintable(m_warnings.join(u'\n')));
     }
 
+    // For looking at the screens: with GIGCHAIN_SCREENSHOTS set to a folder,
+    // the window as it is now is saved there as <name>.png. Off otherwise.
+    void shoot(const QString& name) const
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS");
+        if (folder.isEmpty()) return;
+        QVERIFY(window()->grabWindow().save(folder + u'/' + name + u".png"_s));
+    }
+
     // An item inside the first channel strip (delegates are not QObject
     // children of the window).
     QQuickItem* stripChild(const QString& name) const
@@ -144,6 +153,7 @@ private slots:
         auto* chart = root->findChild<QQuickItem*>(u"performChart"_s);
         QVERIFY(chart != nullptr);
         QVERIFY(chart->property("contentHeight").toDouble() > 40); // the lines are there
+        shoot(u"perform"_s);
         auto* panic = root->findChild<QObject*>(u"performPanic"_s);
         QVERIFY(panic != nullptr);
         QVERIFY(QMetaObject::invokeMethod(panic, "clicked"));
@@ -324,6 +334,7 @@ private slots:
         QTest::keyClick(window(), Qt::Key_Down); // one step down: a velocity layer of 1-126
         settle();
         QCOMPARE(doc.currentPatch()->channels.at(0).velocityHigh, 126);
+        shoot(u"zone-dialog"_s);
         QVERIFY(QMetaObject::invokeMethod(zone, "close"));
         settle();
         QTRY_VERIFY(stripChild(u"zoneText"_s)->isVisible());
@@ -337,6 +348,18 @@ private slots:
         auto* parameters = window()->findChild<QObject*>(u"parameterList"_s);
         QVERIFY(parameters != nullptr);
         QTRY_COMPARE(parameters->property("count").toInt(), 2); // the demo plugin's Cutoff and Resonance
+        {
+            // Each setting's name is on screen: its row's text has room (the
+            // row's own padding once left it no height at all).
+            QQuickItem* row = nullptr;
+            QVERIFY(QMetaObject::invokeMethod(parameters, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, row), Q_ARG(int, 0)));
+            QVERIFY(row != nullptr);
+            auto* name = row->property("contentItem").value<QQuickItem*>();
+            QVERIFY(name != nullptr);
+            QCOMPARE(name->property("text").toString(), u"Cutoff"_s);
+            QVERIFY2(name->height() >= 14, qPrintable(QString::number(name->height())));
+        }
+        shoot(u"knob-dialog"_s);
         QVERIFY(QMetaObject::invokeMethod(knobs, "close"));
         settle();
     }
@@ -386,6 +409,7 @@ private slots:
         for (int page = 0; page < 4; ++page) {
             QVERIFY(dialog->setProperty("page", page));
             settle(); // no warnings from any page
+            shoot(u"settings-%1"_s.arg(page));
         }
         auto* device = dialog->findChild<QObject*>(u"deviceBox"_s);
         QVERIFY(device != nullptr);
@@ -473,7 +497,8 @@ private slots:
         settle();
         auto* star = findItem(scene, u"favoriteButton"_s); // the list is re-sorted
         QVERIFY(star != nullptr);
-        QCOMPARE(star->property("glyph").toString(), u"★"_s); // a favourite is listed first
+        QVERIFY(star->property("active").toBool()); // a favourite is listed first, its star lit
+        QVERIFY(star->property("activeIconSource").toString().endsWith(u"star-filled.svg"_s));
     }
 
     void chartTabShowsThePastedChart()

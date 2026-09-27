@@ -8,10 +8,22 @@ ComboBox {
     implicitHeight: 30
     implicitWidth: 260
 
+    // Raised like a button, with the drop arrow in its own section.
     background: Rectangle {
-        radius: Theme.radius
-        color: box.hovered ? Theme.slotHover : Theme.panelRaised
-        border.color: box.activeFocus ? Theme.accentBlue : Theme.border
+        radius: Theme.radiusSmall
+        border.color: box.activeFocus || box.popup.visible ? Theme.accent : Theme.outline
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: box.hovered ? Theme.buttonHoverTop : Theme.buttonTop }
+            GradientStop { position: 1.0; color: box.hovered ? Theme.buttonHoverBottom : Theme.buttonBottom }
+        }
+        Rectangle { x: 1; y: 1; width: parent.width - 2; height: 1; color: Theme.bevelLight }
+        // The groove before the arrow.
+        StageDivider {
+            vertical: true
+            x: parent.width - 26
+            y: 5
+            height: parent.height - 10
+        }
     }
 
     contentItem: Text {
@@ -24,12 +36,12 @@ ComboBox {
         verticalAlignment: Text.AlignVCenter
     }
 
-    indicator: Text {
-        x: box.width - width - 10
+    indicator: Image {
+        x: box.width - 13 - width / 2
         anchors.verticalCenter: parent.verticalCenter
-        text: "▾"
-        color: Theme.textDim
-        font.pixelSize: 12
+        source: "icons/chevron-down.svg"
+        sourceSize: Qt.size(14, 14)
+        opacity: 0.8
     }
 
     delegate: ItemDelegate {
@@ -38,6 +50,10 @@ ComboBox {
         required property var modelData
         width: ListView.view.width
         implicitHeight: 26
+        topPadding: 0
+        bottomPadding: 0
+        leftPadding: 6
+        rightPadding: 6
         highlighted: box.highlightedIndex === index
         contentItem: Text {
             leftPadding: 4
@@ -51,8 +67,12 @@ ComboBox {
         background: Rectangle {
             anchors.fill: parent
             anchors.margins: 1
-            radius: 4
-            color: row.highlighted ? Theme.accentBlue : "transparent"
+            radius: Theme.radiusSmall
+            border.color: row.highlighted ? Theme.outline : "transparent"
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: row.highlighted ? Theme.accentTop : "transparent" }
+                GradientStop { position: 1.0; color: row.highlighted ? Theme.accentBottom : "transparent" }
+            }
         }
     }
 
@@ -71,9 +91,12 @@ ComboBox {
             ScrollBar.vertical: ScrollBar {}
         }
         background: Rectangle {
-            color: Theme.menuBackground
-            border.color: Theme.stripBorder
-            radius: 6
+            border.color: Theme.outline
+            radius: Theme.radiusCard
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.lighter(Theme.menuBackground, 1.08) }
+                GradientStop { position: 1.0; color: Theme.menuBackground }
+            }
         }
     }
 }

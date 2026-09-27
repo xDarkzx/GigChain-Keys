@@ -5,7 +5,7 @@ import QtQuick.Layouts
 // Where a channel sits on the keyboard: its keys (a split), how hard a key
 // must be played for it to sound (a velocity layer), transposition and the
 // MIDI channel it listens to. Changes apply at once (and can be undone).
-Popup {
+StageDialog {
     id: dialog
 
     required property DocumentController doc
@@ -14,40 +14,18 @@ Popup {
     readonly property var noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     function noteName(n) { return noteNames[n % 12] + (Math.floor(n / 12) - 1) }
 
-    modal: true
-    focus: true
-    anchors.centerIn: Overlay.overlay
+    title: qsTr("Keyboard zone: %1").arg(dialog.channel.name)
     width: 460
-    padding: 0
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-    background: Rectangle {
-        color: Theme.panel
-        border.color: Theme.border
-        radius: 8
-    }
-    Overlay.modal: Rectangle { color: "#99000000" }
 
     ColumnLayout {
         width: parent.width
         spacing: 12
 
-        Label {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 44
-            leftPadding: 16
-            verticalAlignment: Text.AlignVCenter
-            text: qsTr("Keyboard zone: %1").arg(dialog.channel.name)
-            font.pixelSize: 16
-            font.bold: true
-            elide: Text.ElideRight
-        }
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.border }
-
         SettingsSection { title: qsTr("Keys it plays") }
         SettingsRow {
             label: qsTr("Lowest key")
-            SpinBox {
+            StageSpinBox {
                 objectName: "keyLowBox"
                 from: 0; to: 127
                 value: dialog.channel.keyLow
@@ -58,7 +36,7 @@ Popup {
         }
         SettingsRow {
             label: qsTr("Highest key")
-            SpinBox {
+            StageSpinBox {
                 objectName: "keyHighBox"
                 from: 0; to: 127
                 value: dialog.channel.keyHigh
@@ -69,7 +47,7 @@ Popup {
         }
         SettingsRow {
             label: qsTr("Transpose")
-            SpinBox {
+            StageSpinBox {
                 objectName: "transposeBox"
                 from: -48; to: 48
                 value: dialog.channel.transpose
@@ -78,10 +56,11 @@ Popup {
             }
         }
 
+        StageDivider { Layout.fillWidth: true; Layout.leftMargin: 20; Layout.rightMargin: 20 }
         SettingsSection { title: qsTr("How hard (velocity layer)") }
         SettingsRow {
             label: qsTr("From")
-            SpinBox {
+            StageSpinBox {
                 objectName: "velocityLowBox"
                 from: 1; to: 127
                 value: dialog.channel.velocityLow
@@ -90,7 +69,7 @@ Popup {
         }
         SettingsRow {
             label: qsTr("To")
-            SpinBox {
+            StageSpinBox {
                 objectName: "velocityHighBox"
                 from: 1; to: 127
                 value: dialog.channel.velocityHigh
@@ -107,6 +86,7 @@ Popup {
             wrapMode: Text.Wrap
         }
 
+        StageDivider { Layout.fillWidth: true; Layout.leftMargin: 20; Layout.rightMargin: 20 }
         SettingsSection { title: qsTr("MIDI") }
         SettingsRow {
             label: qsTr("Listens to")
@@ -118,12 +98,13 @@ Popup {
             }
         }
 
+        StageDivider { Layout.fillWidth: true; Layout.topMargin: 4 }
         RowLayout {
             Layout.fillWidth: true
             Layout.margins: 12
-            Button {
+            Layout.topMargin: 0
+            StageButton {
                 text: qsTr("Whole keyboard")
-                focusPolicy: Qt.NoFocus
                 onClicked: {
                     dialog.doc.setChannelKeyRange(dialog.channel.index, 0, 127)
                     dialog.doc.setChannelVelocityRange(dialog.channel.index, 1, 127)
@@ -131,10 +112,9 @@ Popup {
                 }
             }
             Item { Layout.fillWidth: true }
-            Button {
+            StageButton {
                 text: qsTr("Done")
-                highlighted: true
-                focusPolicy: Qt.NoFocus
+                tone: "accent"
                 onClicked: dialog.close()
             }
         }

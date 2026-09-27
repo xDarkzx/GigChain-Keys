@@ -55,10 +55,16 @@ Rectangle {
     property int menuEffect: -1 // effect the effect menu acts on
 
     width: Theme.stripWidth
-    radius: Theme.radius
-    color: selected ? Theme.stripSelected : Theme.stripBackground
+    radius: Theme.radiusCard
     border.color: selected ? Theme.accent : Theme.stripBorder
     border.width: selected ? 2 : 1
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: strip.selected ? Qt.lighter(Theme.stripSelected, 1.15) : Theme.stripTop }
+        GradientStop { position: 1.0; color: strip.selected ? Theme.stripSelected : Theme.stripBottom }
+    }
+
+    // The lit top edge of the strip.
+    Rectangle { x: 3; y: strip.border.width; width: parent.width - 6; height: 1; color: Theme.bevelLight }
 
     HoverHandler { id: stripHover }
 
@@ -355,7 +361,7 @@ Rectangle {
             visible: strip.zoneText !== ""
             text: strip.zoneText
             color: Theme.textDim
-            font.pixelSize: 9
+            font.pixelSize: Theme.tinyFontSize
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
             MouseArea {
@@ -364,12 +370,17 @@ Rectangle {
             }
         }
 
-        // name tag
+        // name tag: a coloured plate, lit from above
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 22
-            radius: 3
-            color: strip.color
+            radius: Theme.radiusSmall
+            border.color: Theme.outline
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.lighter(strip.color, 1.2) }
+                GradientStop { position: 1.0; color: Qt.darker(strip.color, 1.3) }
+            }
+            Rectangle { x: 1; y: 1; width: parent.width - 2; height: 1; color: "#40ffffff" }
             Text {
                 anchors.fill: parent
                 anchors.margins: 3

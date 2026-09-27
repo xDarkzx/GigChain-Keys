@@ -109,34 +109,35 @@ Rectangle {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Theme.spacing * 2
-                    Button {
+                    StageButton {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 72
-                        text: qsTr("◀  Previous song")
+                        text: qsTr("Previous song")
+                        iconSource: "icons/chevron-left.svg"
+                        iconSize: 28
                         font.pixelSize: Theme.performSubtitleSize - 6
-                        focusPolicy: Qt.NoFocus
                         onClicked: perform.doc.previousSong()
                     }
-                    Button {
+                    StageButton {
                         objectName: "performPanic"
-                        Layout.preferredWidth: 160
+                        Layout.preferredWidth: 180
                         Layout.preferredHeight: 72
                         text: qsTr("Panic")
+                        iconSource: "icons/alert-octagon.svg"
+                        iconSize: 28
+                        tone: "danger"
                         font.pixelSize: Theme.performSubtitleSize - 6
-                        focusPolicy: Qt.NoFocus
-                        palette.button: Theme.danger
-                        palette.buttonText: "white"
                         onClicked: perform.engineStatus.panic()
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Stop every sound now (stuck notes, runaway effects)")
+                        tip: qsTr("Stop every sound now (stuck notes, runaway effects)")
                     }
-                    Button {
+                    StageButton {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 72
-                        text: qsTr("Next song  ▶")
+                        text: qsTr("Next song")
+                        iconSource: "icons/chevron-right.svg"
+                        iconSize: 28
+                        tone: "accent"
                         font.pixelSize: Theme.performSubtitleSize - 6
-                        highlighted: true
-                        focusPolicy: Qt.NoFocus
                         onClicked: perform.doc.nextSong()
                     }
                 }

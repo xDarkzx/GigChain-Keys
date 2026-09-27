@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+// The top bar: file and mode on the left, undo, where we are in the middle,
+// the song's backing track, tempo and click, then the rig's state.
 ToolBar {
     id: bar
 
@@ -21,7 +23,8 @@ ToolBar {
     signal saveAsRequested()
     signal settingsRequested()
 
-    background: Rectangle { color: Theme.panelRaised }
+    implicitHeight: 48
+    background: StagePanel { bar: true }
 
     RowLayout {
         anchors.fill: parent
@@ -29,17 +32,14 @@ ToolBar {
         anchors.rightMargin: Theme.spacing
         spacing: Theme.spacing
 
-        ToolButton {
-            text: bar.sidePanelOpen ? "◀" : "▶"
-            focusPolicy: Qt.NoFocus
+        StageButton {
+            iconSource: bar.sidePanelOpen ? "icons/chevron-left.svg" : "icons/chevron-right.svg"
+            tip: bar.sidePanelOpen ? qsTr("Hide the side panel") : qsTr("Show the side panel")
             onClicked: bar.toggleSidePanel()
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("Show or hide the side panel")
         }
-        ToolButton {
+        StageButton {
             text: qsTr("File")
             visible: !bar.performMode
-            focusPolicy: Qt.NoFocus
             onClicked: fileMenu.popup(0, height)
             StageMenu {
                 id: fileMenu
@@ -67,115 +67,133 @@ ToolBar {
             }
         }
 
-        Rectangle { width: 1; Layout.fillHeight: true; Layout.margins: 6; color: Theme.border }
+        StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8 }
 
-        Button {
-            text: qsTr("Edit")
-            highlighted: !bar.performMode
-            focusPolicy: Qt.NoFocus
-            onClicked: if (bar.performMode) bar.toggleMode()
-        }
-        Button {
-            objectName: "performButton"
-            text: qsTr("Perform")
-            highlighted: bar.performMode
-            focusPolicy: Qt.NoFocus
-            onClicked: if (!bar.performMode) bar.toggleMode()
+        // Edit / Perform: one segmented switch.
+        Row {
+            spacing: -1
+            StageButton {
+                text: qsTr("Edit")
+                checked: !bar.performMode
+                onClicked: if (bar.performMode) bar.toggleMode()
+            }
+            StageButton {
+                objectName: "performButton"
+                text: qsTr("Perform")
+                checked: bar.performMode
+                onClicked: if (!bar.performMode) bar.toggleMode()
+            }
         }
 
-        Button {
+        StageButton {
             objectName: "panicButton"
             text: qsTr("Panic")
-            focusPolicy: Qt.NoFocus
-            palette.button: Theme.danger
-            palette.buttonText: "white"
+            iconSource: "icons/alert-octagon.svg"
+            tone: "danger"
+            tip: qsTr("Stop every sound now (stuck notes, runaway effects)")
             onClicked: bar.engineStatus.panic()
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("Stop every sound now (stuck notes, runaway effects)")
         }
 
-        ToolButton {
+        StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8; visible: !bar.performMode }
+
+        StageButton {
             objectName: "undoButton"
-            text: "↶"
+            iconSource: "icons/undo.svg"
             visible: !bar.performMode
             enabled: bar.doc.canUndo
-            focusPolicy: Qt.NoFocus
+            tip: qsTr("Undo (Ctrl+Z)")
             onClicked: bar.doc.undo()
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("Undo (Ctrl+Z)")
         }
-        ToolButton {
+        StageButton {
             objectName: "redoButton"
-            text: "↷"
+            iconSource: "icons/redo.svg"
             visible: !bar.performMode
             enabled: bar.doc.canRedo
-            focusPolicy: Qt.NoFocus
+            tip: qsTr("Redo (Ctrl+Shift+Z)")
             onClicked: bar.doc.redo()
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("Redo (Ctrl+Shift+Z)")
         }
 
         Label {
             text: bar.doc.hasPatch ? bar.doc.currentSongName + "  ·  " + bar.doc.currentPatchName : ""
-            color: Theme.textDim
+            color: Theme.text
+            font.bold: true
             elide: Text.ElideRight
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
         }
 
         // Backing track of the song: rewind, play/pause, where it is.
-        RowLayout {
+        Row {
+            id: transport
             visible: bar.doc.songBackingTrack !== ""
-            spacing: 2
+            spacing: -1
             function clock(seconds) {
                 const s = Math.max(0, Math.floor(seconds))
                 return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0")
             }
-            ToolButton {
-                text: "⏮"
-                focusPolicy: Qt.NoFocus
+            StageButton {
+                iconSource: "icons/player-skip-back.svg"
                 enabled: bar.engineStatus.trackLoaded
+                tip: qsTr("Back to the start of the backing track")
                 onClicked: bar.engineStatus.rewindTrack()
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Back to the start of the backing track")
             }
-            ToolButton {
+            StageButton {
                 objectName: "trackPlayButton"
-                text: bar.engineStatus.trackPlaying ? "❚❚" : "▶"
-                focusPolicy: Qt.NoFocus
+                iconSource: bar.engineStatus.trackPlaying ? "icons/player-pause.svg" : "icons/player-play.svg"
+                checked: bar.engineStatus.trackPlaying
                 enabled: bar.engineStatus.trackLoaded
+                tip: qsTr("Play or pause the backing track (%1)").arg(bar.doc.songBackingTrack)
                 onClicked: bar.engineStatus.playPauseTrack()
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Play or pause the backing track (%1)").arg(bar.doc.songBackingTrack)
             }
-            Label {
-                text: bar.engineStatus.trackLoading ? qsTr("Reading…")
-                                                    : parent.clock(bar.engineStatus.trackPosition) + " / " + parent.clock(bar.engineStatus.trackLength)
-                color: Theme.textDim
-                font.pixelSize: Theme.smallFontSize
+            // Where it is: a recessed display.
+            Rectangle {
+                width: 96
+                height: Theme.controlHeight
+                radius: Theme.radiusSmall
+                color: Theme.readoutBackground
+                border.color: Theme.outline
+                Text {
+                    anchors.centerIn: parent
+                    text: bar.engineStatus.trackLoading ? qsTr("Reading…")
+                                                        : transport.clock(bar.engineStatus.trackPosition) + " / "
+                                                          + transport.clock(bar.engineStatus.trackLength)
+                    color: Theme.readoutText
+                    font.pixelSize: Theme.smallFontSize
+                    font.family: "Consolas"
+                }
             }
         }
 
-        // Tempo: the number (type a new one), TAP it in, and the click.
-        RowLayout {
-            spacing: 2
-            // Shows the tempo; click it, type a new one, Enter (Esc keeps it).
+        // Tempo: the number (click to type one), TAP it in, and the click.
+        Row {
+            spacing: -1
+            // A recessed display; click it, type a new tempo, Enter (Esc keeps it).
             Rectangle {
                 id: tempoField
                 objectName: "tempoField"
-                implicitWidth: 52
-                implicitHeight: 26
-                radius: Theme.radius
+                width: 74
+                height: Theme.controlHeight
+                radius: Theme.radiusSmall
                 color: Theme.readoutBackground
-                border.color: tempoInput.visible ? Theme.accentBlue : (tempoHover.hovered ? Theme.border : "transparent")
+                border.color: tempoInput.visible ? Theme.accent : Theme.outline
                 readonly property string shown: bar.engineStatus.tempo.toFixed(bar.engineStatus.tempo % 1 === 0 ? 0 : 1)
-                Text {
+                Row {
                     anchors.centerIn: parent
+                    spacing: 4
                     visible: !tempoInput.visible
-                    text: tempoField.shown
-                    color: Theme.text
-                    font.pixelSize: Theme.fontSize
-                    font.bold: true
+                    Text {
+                        text: tempoField.shown
+                        color: Theme.readoutText
+                        font.pixelSize: Theme.fontSize
+                        font.bold: true
+                        font.family: "Consolas"
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTr("BPM")
+                        color: Theme.textDim
+                        font.pixelSize: Theme.tinyFontSize
+                    }
                 }
                 TextInput {
                     id: tempoInput
@@ -184,10 +202,11 @@ ToolBar {
                     visible: false
                     horizontalAlignment: TextInput.AlignHCenter
                     verticalAlignment: TextInput.AlignVCenter
-                    color: Theme.text
-                    selectionColor: Theme.accentBlue
+                    color: Theme.readoutText
+                    selectionColor: Theme.accent
                     selectedTextColor: "white"
                     font.pixelSize: Theme.fontSize
+                    font.family: "Consolas"
                     selectByMouse: true
                     validator: DoubleValidator { bottom: 20; top: 400; decimals: 1 }
                     onAccepted: {
@@ -210,26 +229,23 @@ ToolBar {
                 ToolTip.visible: tempoHover.hovered && !tempoInput.visible
                 ToolTip.text: qsTr("Tempo for arpeggiators, delays and the click: click to type one. Songs can have their own (right-click a song).")
             }
-            Label { text: qsTr("BPM"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
-            ToolButton {
+            StageButton {
                 objectName: "tapButton"
-                text: qsTr("TAP")
-                focusPolicy: Qt.NoFocus
+                text: qsTr("Tap")
+                tip: qsTr("Tap along: the tempo follows your taps")
                 onPressed: bar.engineStatus.tapTempo()
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Tap along: the tempo follows your taps")
             }
-            ToolButton {
+            StageButton {
                 objectName: "clickButton"
-                text: qsTr("Click")
+                iconSource: "icons/metronome.svg"
                 checkable: true
                 checked: bar.engineStatus.clickOn
-                focusPolicy: Qt.NoFocus
+                tip: qsTr("A click on every beat")
                 onClicked: bar.engineStatus.clickOn = checked
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("A click on every beat")
             }
         }
+
+        StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8 }
 
         StatBox {
             objectName: "cpuBox"
@@ -246,24 +262,33 @@ ToolBar {
                                                      : bar.engineStatus.memoryMb + " MB"
             widest: "1023 MB"
         }
-        Rectangle {
-            width: 10
-            height: 10
-            radius: 5
-            color: bar.engineStatus.midiActivity ? Theme.meterLow : Theme.border
+        // MIDI light: a lit LED set into the panel.
+        Row {
+            spacing: 6
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 10
+                height: 10
+                radius: 5
+                border.color: Theme.outline
+                color: bar.engineStatus.midiActivity ? Theme.meterLow : "#2a2e35"
+            }
+            Label { text: qsTr("MIDI"); color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
         }
-        Label { text: qsTr("MIDI"); color: Theme.textDim }
-        ToolButton {
+
+        StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+
+        StageButton {
             text: qsTr("Mixer")
+            iconSource: "icons/adjustments-horizontal.svg"
             visible: !bar.performMode
             checkable: true
             checked: bar.mixerOpen
-            focusPolicy: Qt.NoFocus
             onClicked: bar.toggleMixer()
         }
-        ToolButton {
+        StageButton {
             text: qsTr("Settings")
-            focusPolicy: Qt.NoFocus
+            tip: qsTr("Audio, MIDI, pedals and plugins (Ctrl+,)")
             onClicked: bar.settingsRequested()
         }
     }

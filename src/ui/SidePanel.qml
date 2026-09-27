@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Collapsible left panel: Setlist and Plugins tabs (setlist only in Perform).
-Rectangle {
+// Collapsible left panel: Setlist and Instruments tabs (setlist only in Perform).
+StagePanel {
     id: panel
 
     required property DocumentController doc
@@ -11,7 +11,7 @@ Rectangle {
     required property PluginListModel pluginModel
     property bool editable: true
 
-    color: Theme.panel
+    outlined: false
 
     ColumnLayout {
         anchors.fill: parent
@@ -22,9 +22,12 @@ Rectangle {
             objectName: "sidePanelTabs"
             Layout.fillWidth: true
             visible: panel.editable
-            TabButton { text: qsTr("Setlist"); focusPolicy: Qt.NoFocus }
-            TabButton { text: qsTr("Instruments"); focusPolicy: Qt.NoFocus }
+            spacing: 0
+            background: Rectangle { color: Theme.barBottom }
+            StageTabButton { text: qsTr("Setlist") }
+            StageTabButton { text: qsTr("Instruments") }
         }
+        StageDivider { Layout.fillWidth: true; visible: panel.editable }
 
         StackLayout {
             Layout.fillWidth: true
@@ -41,5 +44,13 @@ Rectangle {
                 pluginModel: panel.pluginModel
             }
         }
+    }
+
+    // The engraved edge against the main area.
+    StageDivider {
+        vertical: true
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
     }
 }

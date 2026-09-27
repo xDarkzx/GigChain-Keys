@@ -47,22 +47,23 @@ Rectangle {
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
             spacing: 10
-            Button {
+            StageButton {
                 objectName: "newSetlistButton"
                 text: qsTr("New setlist")
-                highlighted: true
-                focusPolicy: Qt.NoFocus
+                iconSource: "icons/plus.svg"
+                tone: "accent"
+                implicitHeight: 36
                 onClicked: start.newRequested()
             }
-            Button {
+            StageButton {
                 text: qsTr("Open setlist…")
-                focusPolicy: Qt.NoFocus
+                implicitHeight: 36
                 onClicked: start.openRequested()
             }
         }
 
+        StageDivider { Layout.fillWidth: true; Layout.topMargin: 10; visible: start.doc.recentFiles.length > 0 }
         Label {
-            Layout.topMargin: 10
             visible: start.doc.recentFiles.length > 0
             text: qsTr("Recent setlists")
             color: Theme.textDim
@@ -105,8 +106,13 @@ Rectangle {
                     }
                 }
                 background: Rectangle {
-                    radius: Theme.radius
-                    color: recent.hovered ? Theme.slotHover : Theme.panelRaised
+                    radius: Theme.radiusCard
+                    border.color: Theme.outline
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: recent.hovered ? Theme.buttonHoverTop : Theme.buttonTop }
+                        GradientStop { position: 1.0; color: recent.hovered ? Theme.buttonHoverBottom : Theme.buttonBottom }
+                    }
+                    Rectangle { x: 3; y: 1; width: parent.width - 6; height: 1; color: Theme.bevelLight }
                 }
             }
         }

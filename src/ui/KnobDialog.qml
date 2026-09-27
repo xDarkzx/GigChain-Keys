@@ -7,7 +7,7 @@ import QtQuick.Layouts
 // Keyboard knobs, faders and pedals that move a plugin's settings on this
 // channel (MainStage's screen controls). Learn: choose the setting (from the
 // list, or by moving it in an effect's own window), then move the knob.
-Popup {
+StageDialog {
     id: dialog
 
     required property DocumentController doc
@@ -24,13 +24,9 @@ Popup {
         parameterList = engineStatus.parameters(channel.index, target)
     }
 
-    modal: true
-    focus: true
-    anchors.centerIn: Overlay.overlay
+    title: qsTr("Knobs: %1").arg(dialog.channel.name)
     width: 620
-    height: Math.min(560, (parent ? parent.height : 560) - 32)
-    padding: 0
-    closePolicy: Popup.CloseOnEscape
+    height: Math.min(600, (parent ? parent.height : 600) - 32)
 
     onAboutToShow: {
         target = channel.instrumentName !== "" ? -1 : 0
@@ -44,28 +40,9 @@ Popup {
         function onChannelUpdated() { if (dialog.visible) dialog.mappingList = dialog.doc.mappings(dialog.channel.index) }
     }
 
-    background: Rectangle {
-        color: Theme.panel
-        border.color: Theme.border
-        radius: 8
-    }
-    Overlay.modal: Rectangle { color: "#99000000" }
-
     ColumnLayout {
         anchors.fill: parent
         spacing: 10
-
-        Label {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 44
-            leftPadding: 16
-            verticalAlignment: Text.AlignVCenter
-            text: qsTr("Knobs: %1").arg(dialog.channel.name)
-            font.pixelSize: 16
-            font.bold: true
-            elide: Text.ElideRight
-        }
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.border }
 
         // ------------------------------------------------ the mappings
         SettingsSection { title: qsTr("Mapped knobs") }
@@ -110,17 +87,17 @@ Popup {
                     first.onMoved: dialog.doc.setMappingRange(dialog.channel.index, mappingRow.index, first.value, second.value)
                     second.onMoved: dialog.doc.setMappingRange(dialog.channel.index, mappingRow.index, first.value, second.value)
                 }
-                ToolButton {
-                    text: "✕"
-                    focusPolicy: Qt.NoFocus
+                StageButton {
+                    iconSource: "icons/x.svg"
+                    iconSize: 12
+                    tip: qsTr("Remove this knob")
                     onClicked: dialog.doc.removeMapping(dialog.channel.index, mappingRow.index)
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Remove this knob")
                 }
             }
         }
 
         // ------------------------------------------------ learning
+        StageDivider { Layout.fillWidth: true; Layout.leftMargin: 20; Layout.rightMargin: 20 }
         SettingsSection { title: qsTr("Learn a knob") }
         SettingsRow {
             label: qsTr("Plugin")
@@ -140,8 +117,9 @@ Popup {
         }
         SettingsRow {
             label: qsTr("Setting")
-            TextField {
+            StageTextField {
                 id: filterField
+                iconSource: "icons/search.svg"
                 Layout.fillWidth: true
                 placeholderText: qsTr("Search the plugin's settings")
                 onTextChanged: dialog.filter = text.toLowerCase()
@@ -162,7 +140,11 @@ Popup {
                 id: parameterRow
                 required property var modelData
                 width: ListView.view.width
-                implicitHeight: 24
+                implicitHeight: 26
+                topPadding: 0
+                bottomPadding: 0
+                leftPadding: 8
+                rightPadding: 8
                 highlighted: dialog.engineStatus.learnedParameter === modelData.name
                 contentItem: Text {
                     text: parameterRow.modelData.name
@@ -185,14 +167,16 @@ Popup {
             }
         }
 
+        StageDivider { Layout.fillWidth: true }
         RowLayout {
             Layout.fillWidth: true
             Layout.margins: 12
+            Layout.topMargin: 0
             spacing: 10
-            Button {
+            StageButton {
                 objectName: "learnButton"
                 text: dialog.engineStatus.learningMapping ? qsTr("Stop learning") : qsTr("Learn")
-                focusPolicy: Qt.NoFocus
+                checked: dialog.engineStatus.learningMapping
                 onClicked: dialog.engineStatus.learningMapping ? dialog.engineStatus.cancelMappingLearn()
                                                                : dialog.engineStatus.startMappingLearn(dialog.channel.index, dialog.target)
             }
@@ -206,10 +190,9 @@ Popup {
                                                                    : qsTr("%1: now move a knob on your keyboard…").arg(dialog.engineStatus.learnedParameter))
                         + (dialog.engineStatus.learnedKnob !== "" ? "  " + dialog.engineStatus.learnedKnob : "")
             }
-            Button {
+            StageButton {
                 text: qsTr("Done")
-                highlighted: true
-                focusPolicy: Qt.NoFocus
+                tone: "accent"
                 onClicked: dialog.close()
             }
         }

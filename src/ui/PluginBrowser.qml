@@ -37,8 +37,9 @@ Item {
         anchors.margins: Theme.spacing
         spacing: Theme.spacing
 
-        TextField {
+        StageTextField {
             objectName: "pluginSearch"
+            iconSource: "icons/search.svg"
             Layout.fillWidth: true
             placeholderText: qsTr("Search instruments")
             onTextChanged: browser.pluginModel.filterText = text
@@ -49,10 +50,9 @@ Item {
             }
         }
 
-        Button {
+        StageButton {
             text: qsTr("Show hidden instruments")
-            flat: true
-            focusPolicy: Qt.NoFocus
+            font.pixelSize: Theme.smallFontSize
             Layout.alignment: Qt.AlignRight
             onClicked: browser.pluginModel.showAll()
         }
@@ -93,10 +93,15 @@ Item {
 
                 width: ListView.view.width - 10
                 height: body.implicitHeight + 10
-                radius: 4
-                color: hover.hovered ? Theme.slotHover : Theme.panelRaised
-                border.color: card.favorite ? Theme.accent : Theme.stripBorder
+                radius: Theme.radiusCard
+                border.color: card.favorite ? Theme.star : Theme.outline
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: hover.hovered ? Theme.buttonHoverTop : Theme.buttonTop }
+                    GradientStop { position: 1.0; color: hover.hovered ? Theme.buttonHoverBottom : Theme.stripBottom }
+                }
                 HoverHandler { id: hover }
+                // The lit top edge.
+                Rectangle { x: 3; y: 1; width: parent.width - 6; height: 1; color: Theme.bevelLight }
 
                 // Drag onto the mixer, double-click to add, right-click for more.
                 // Underneath the buttons, so they still get their clicks.
@@ -150,14 +155,15 @@ Item {
                         }
                         CardButton {
                             objectName: "favoriteButton"
-                            glyph: card.favorite ? "★" : "☆"
+                            iconSource: "icons/star.svg"
+                            activeIconSource: "icons/star-filled.svg"
                             active: card.favorite
                             tip: card.favorite ? qsTr("Remove from favourites") : qsTr("Favourite: keep at the top")
                             onClicked: browser.pluginModel.setFavorite(card.pluginId, !card.favorite)
                         }
                         CardButton {
                             objectName: "infoButton"
-                            glyph: "ⓘ"
+                            iconSource: "icons/info-circle.svg"
                             active: card.expanded
                             tip: card.expanded ? qsTr("Hide details") : qsTr("Details")
                             onClicked: card.expanded = !card.expanded
@@ -168,7 +174,8 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 56
-                        radius: 2
+                        radius: Theme.radiusSmall
+                        border.color: Theme.outline
                         clip: true
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
@@ -230,7 +237,7 @@ Item {
                                 required property int index
                                 objectName: "ratingStar" + index
                                 text: index < card.rating ? "★" : "☆"
-                                color: index < card.rating ? Theme.accent : Theme.textDim
+                                color: index < card.rating ? Theme.star : Theme.textDim
                                 font.pixelSize: 13
                                 MouseArea {
                                     anchors.fill: parent
@@ -286,18 +293,16 @@ Item {
                             Layout.fillWidth: true
                             Layout.topMargin: 2
                             spacing: 6
-                            Button {
+                            StageButton {
                                 text: qsTr("Visit website")
                                 visible: card.website !== ""
-                                focusPolicy: Qt.NoFocus
                                 font.pixelSize: Theme.smallFontSize
                                 onClicked: if (!Qt.openUrlExternally(card.website))
                                                browser.doc.reportMessage(qsTr("Could not open %1").arg(card.website),
                                                                          Notifications.Warning)
                             }
-                            Button {
+                            StageButton {
                                 text: qsTr("Show in folder")
-                                focusPolicy: Qt.NoFocus
                                 font.pixelSize: Theme.smallFontSize
                                 onClicked: {
                                     const problem = browser.pluginModel.showInFolder(card.pluginId)

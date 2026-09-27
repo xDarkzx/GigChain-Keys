@@ -17,11 +17,26 @@ Rectangle {
     signal menuRequested()  // arrow click or right-click
     signal powerToggled()
 
+    // The instrument slot is green, effects blue; each lit from above.
+    readonly property color baseColor: bypassed ? Theme.slotBypassed : (hover.hovered ? Qt.lighter(loadedColor, 1.12) : loadedColor)
+
     implicitHeight: 20
-    radius: 3
-    border.color: loaded ? Qt.darker(color, 1.4) : Theme.slotEmptyBorder
-    color: !loaded ? (hover.hovered ? Theme.slotHover : Theme.slotEmpty)
-                   : (bypassed ? Theme.slotBypassed : (hover.hovered ? Qt.lighter(loadedColor, 1.15) : loadedColor))
+    radius: Theme.radiusSmall
+    border.color: loaded ? Theme.outline : Theme.slotEmptyBorder
+    readonly property color emptyColor: hover.hovered ? Theme.slotHover : Theme.slotEmpty
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: slot.loaded ? Qt.lighter(slot.baseColor, 1.25) : slot.emptyColor }
+        GradientStop { position: 1.0; color: slot.loaded ? Qt.darker(slot.baseColor, 1.15) : slot.emptyColor }
+    }
+    // A loaded slot is raised (lit top edge); an empty one is recessed
+    // (shaded top edge).
+    Rectangle {
+        x: 1
+        y: 1
+        width: parent.width - 2
+        height: 1
+        color: slot.loaded ? "#30ffffff" : Theme.bevelDark
+    }
 
     HoverHandler { id: hover }
 

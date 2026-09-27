@@ -48,9 +48,13 @@ Window {
 
             width: ListView.view.width
             height: Math.max(44, message.implicitHeight + 20)
-            radius: Theme.radius
-            color: Theme.panelRaised
+            radius: Theme.radiusCard
             border.color: levelColour
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.barTop }
+                GradientStop { position: 1.0; color: Theme.barBottom }
+            }
+            Rectangle { x: 6; y: 1; width: parent.width - 8; height: 1; color: Theme.bevelLight }
 
             // The level's colour down the left edge.
             Rectangle {
@@ -74,9 +78,10 @@ Window {
                     maximumLineCount: 3
                     elide: Text.ElideRight
                 }
-                ToolButton {
-                    text: "✕"
-                    focusPolicy: Qt.NoFocus
+                StageButton {
+                    iconSource: "icons/x.svg"
+                    iconSize: 12
+                    tip: qsTr("Dismiss")
                     onClicked: toasts.notifications.dismiss(toast.notificationId)
                 }
             }

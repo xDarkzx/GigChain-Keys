@@ -122,8 +122,17 @@ class TestPluginView : public QObject
         QVERIFY2(m.window.width() <= area.width() + 1 && m.window.height() <= area.height() + 1,
                  qPrintable(u"bigger than the area %1x%2: "_s.arg(area.width()).arg(area.height()) + report(m)));
         QVERIFY2(m.plugin == m.window, qPrintable(u"the plugin is not exactly its window (cut off or not filling): "_s + report(m)));
-        QVERIFY2(m.window.width() >= area.width() - 2 || m.window.height() >= area.height() - 2,
-                 qPrintable(u"does not fill the area %1x%2: "_s.arg(area.width()).arg(area.height()) + report(m)));
+        // As big as the area allows, but never past its own size (the plugin
+        // is shrunk to fit, never enlarged): a plugin smaller than the area
+        // shows at exactly its own size.
+        const bool fitsAsItIs = m_ownSize.width() <= area.width() && m_ownSize.height() <= area.height();
+        const bool fills = m.window.width() >= area.width() - 2 || m.window.height() >= area.height() - 2;
+        QVERIFY2(fitsAsItIs ? m.window == m_ownSize : fills,
+                 qPrintable(u"does not fill the area %1x%2 (its own size %3x%4): "_s.arg(area.width())
+                                .arg(area.height())
+                                .arg(m_ownSize.width())
+                                .arg(m_ownSize.height())
+                            + report(m)));
         // The plugin's own shape: shrunk, not squashed or cropped.
         const double own = static_cast<double>(m_ownSize.width()) / m_ownSize.height();
         const double shape = static_cast<double>(m.plugin.width()) / m.plugin.height();
