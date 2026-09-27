@@ -31,6 +31,8 @@ ApplicationWindow {
     width: 1440
     height: 880
     visible: true
+    // No Windows frame: the toolbar is the title bar, with its own lights.
+    flags: Qt.Window | Qt.FramelessWindowHint
     title: (doc.dirty ? "● " : "") + doc.displayName + " — " + Branding.name
     color: Theme.background
     font.family: Theme.fontFamily
@@ -286,17 +288,64 @@ ApplicationWindow {
             engineStatus: root.engineStatus
         }
 
-        // Status line: the audio setup the engine is using.
+        // Status line: what's next on the left, the audio setup in the
+        // middle, the limiter and audio inputs on the right.
         StagePanel {
+            id: statusBar
             Layout.fillWidth: true
             Layout.preferredHeight: 24
             bar: true
+
             Label {
+                objectName: "statusNext"
                 anchors.verticalCenter: parent.verticalCenter
-                x: Theme.spacing
+                anchors.left: parent.left
+                anchors.leftMargin: Theme.spacing
+                width: Math.max(0, statusCenter.x - x - Theme.spacing)
+                elide: Text.ElideRight
+                visible: root.doc.nextPatchLabel !== ""
+                text: qsTr("Next: %1").arg(root.doc.nextPatchLabel)
+                color: Theme.textDim
+                font.pixelSize: Theme.smallFontSize
+            }
+            Label {
+                id: statusCenter
+                objectName: "statusAudio"
+                anchors.centerIn: parent
+                width: Math.min(implicitWidth, parent.width - 2 * statusRight.width - 4 * Theme.spacing)
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignHCenter
                 text: root.engineStatus.statusText
                 color: Theme.textDim
                 font.pixelSize: Theme.smallFontSize
+            }
+            Row {
+                id: statusRight
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.right: parent.right
+                anchors.rightMargin: Theme.spacing
+                spacing: 6
+                Label {
+                    visible: root.engineStatus.audioInputChannels > 0
+                    text: qsTr("Inputs: %1").arg(root.engineStatus.audioInputChannels)
+                    color: Theme.textDim
+                    font.pixelSize: Theme.smallFontSize
+                }
+                // Lit while the master limiter is pulling the level down.
+                Rectangle {
+                    objectName: "statusLimiter"
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 8
+                    height: 8
+                    radius: 4
+                    border.color: Theme.outline
+                    color: root.engineStatus.limiting ? Theme.meterHigh : "#2a2e35"
+                }
+                Label {
+                    text: qsTr("Limiter")
+                    color: Theme.textDim
+                    font.pixelSize: Theme.smallFontSize
+                }
             }
         }
     }
@@ -305,5 +354,11 @@ ApplicationWindow {
     NotificationWindow {
         notifications: root.doc.notifications
         owner: root
+    }
+
+    // Without the Windows frame the edges still resize the window.
+    WindowResizeEdges {
+        objectName: "resizeEdges"
+        window: root
     }
 }

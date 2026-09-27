@@ -364,6 +364,91 @@ private slots:
         settle();
     }
 
+    // No Windows frame: the toolbar is the title bar, with mac-style lights
+    // that zoom (within the screen's work area, not over the taskbar),
+    // minimise and close.
+    void theWindowHasItsOwnTitleBar()
+    {
+        QQuickWindow* w = window();
+        QVERIFY(w->flags().testFlag(Qt::FramelessWindowHint));
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+
+        auto* title = w->findChild<QQuickItem*>(u"windowTitle"_s);
+        QVERIFY(title != nullptr);
+        const QString shown = title->property("text").toString();
+        QVERIFY2(shown.contains(m_session->document().displayName()), qPrintable(shown));
+        QVERIFY2(shown.contains(u"Song 1"_s) && shown.contains(u"Patch 1"_s), qPrintable(shown));
+        QVERIFY(m_session->document().renameSong(0, u"<b>A & B</b>"_s));
+        QTRY_VERIFY2(title->property("text").toString().contains(u"&lt;b&gt;A &amp; B&lt;/b&gt;"_s),
+                     qPrintable(title->property("text").toString())); // shown as typed, not as markup
+
+        // Status line: the audio setup sits in the middle.
+        auto* audio = w->findChild<QQuickItem*>(u"statusAudio"_s);
+        QVERIFY(audio != nullptr);
+        const double middle = audio->mapToScene(QPointF(audio->width() / 2, 0)).x();
+        QVERIFY2(qAbs(middle - w->width() / 2.0) <= 1, qPrintable(QString::number(middle)));
+        QVERIFY(!audio->property("text").toString().isEmpty());
+
+        // The lights sit at the right end, close last, as on Windows.
+        auto* minimise = item(u"windowMinimise"_s);
+        auto* zoom = item(u"windowZoom"_s);
+        auto* close = item(u"windowClose"_s);
+        QVERIFY(minimise != nullptr && zoom != nullptr && close != nullptr);
+        const auto left = [](const QQuickItem* i) { return i->mapToScene(QPointF(0, 0)).x(); };
+        QVERIFY(left(minimise) < left(zoom) && left(zoom) < left(close));
+        QVERIFY2(left(close) + close->width() > w->width() - 40, qPrintable(QString::number(left(close))));
+        auto* settingsButton = w->findChild<QQuickItem*>(u"settingsButton"_s);
+        QVERIFY(settingsButton != nullptr);
+        QVERIFY(left(minimise) > left(settingsButton)); // after the last toolbar button
+
+        // The edges resize while windowed, and step aside when maximised.
+        auto* edges = w->findChild<QQuickItem*>(u"resizeEdges"_s);
+        QVERIFY(edges != nullptr);
+        QVERIFY(edges->isVisible());
+
+        // Green: maximised inside the work area, then back.
+        const QRect normal = w->geometry();
+        click(u"windowZoom"_s);
+        QTRY_COMPARE(w->visibility(), QWindow::Maximized);
+        const QRect work = w->screen()->availableGeometry();
+        QTRY_VERIFY2(work.contains(w->geometry()), qPrintable(u"%1,%2 %3x%4 in %5,%6 %7x%8"_s
+            .arg(w->x()).arg(w->y()).arg(w->width()).arg(w->height())
+            .arg(work.x()).arg(work.y()).arg(work.width()).arg(work.height())));
+        QVERIFY(!edges->isVisible());
+        shoot(u"maximised"_s);
+        click(u"windowZoom"_s);
+        QTRY_COMPARE(w->visibility(), QWindow::Windowed);
+        QVERIFY(edges->isVisible());
+        QTRY_COMPARE(w->geometry().size(), normal.size());
+
+        // Yellow: minimised.
+        click(u"windowMinimise"_s);
+        QTRY_COMPARE(w->visibility(), QWindow::Minimized);
+        w->showNormal();
+        QTRY_COMPARE(w->visibility(), QWindow::Windowed);
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+
+        // Red: asks the window to close (caught here so the test app stays up;
+        // the unsaved-changes guard in onClosing is what runs for real).
+        struct CloseCatcher : QObject {
+            int closes = 0;
+            bool eventFilter(QObject*, QEvent* event) override
+            {
+                if (event->type() != QEvent::Close) return false;
+                ++closes;
+                event->ignore();
+                return true;
+            }
+        } catcher;
+        w->installEventFilter(&catcher);
+        click(u"windowClose"_s);
+        w->removeEventFilter(&catcher);
+        QCOMPARE(catcher.closes, 1);
+        QVERIFY(w->isVisible());
+        settle();
+    }
+
     // The on-screen keyboard: a key clicked plays and lights, and lets go.
     void theKeyboardLightsTheKeysPlayed()
     {

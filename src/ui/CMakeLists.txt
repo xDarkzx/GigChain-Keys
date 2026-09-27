@@ -73,6 +73,8 @@ qt_add_qml_module(gigchain_ui
         StageSpinBox.qml
         StageSplitHandle.qml
         KeyboardView.qml
+        WindowControls.qml
+        WindowResizeEdges.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/alert-octagon.svg
