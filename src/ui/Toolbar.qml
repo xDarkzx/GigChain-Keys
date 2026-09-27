@@ -26,12 +26,27 @@ ToolBar {
     signal settingsRequested()
 
     implicitHeight: 48
-    background: StagePanel { bar: true }
+    // This bar is the window's title bar: drag it to move the window,
+    // double-click it to maximise or restore (there is no Windows frame).
+    background: StagePanel {
+        bar: true
+        DragHandler {
+            target: null
+            onActiveChanged: if (active) bar.Window.window.startSystemMove()
+        }
+        TapHandler {
+            onDoubleTapped: {
+                const w = bar.Window.window
+                if (w.visibility === Window.Maximized) w.showNormal()
+                else if (w.visibility !== Window.FullScreen) w.showMaximized()
+            }
+        }
+    }
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: Theme.spacing
-        anchors.rightMargin: Theme.spacing
+        anchors.leftMargin: Theme.spacingLarge
+        anchors.rightMargin: Theme.spacingLarge
         spacing: Theme.spacing
 
         StageButton {
@@ -115,13 +130,22 @@ ToolBar {
             onClicked: bar.doc.redo()
         }
 
-        Label {
-            text: bar.doc.hasPatch ? bar.doc.currentSongName + "  ·  " + bar.doc.currentPatchName : ""
-            color: Theme.text
-            font.bold: true
-            elide: Text.ElideRight
+        // The window's title: the setlist (a dot while unsaved), then where we are.
+        Text {
+            objectName: "windowTitle"
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
+            elide: Text.ElideRight
+            textFormat: Text.StyledText
+            color: Theme.text
+            font.pixelSize: Theme.fontSize
+            function escaped(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") }
+            text: {
+                const file = "<font color='" + Theme.textDim + "'>" + (bar.doc.dirty ? "● " : "") + escaped(bar.doc.displayName) + "</font>"
+                const where = bar.doc.hasPatch ? "&nbsp;&nbsp;—&nbsp;&nbsp;<b>" + escaped(bar.doc.currentSongName) + "  ·  "
+                                                 + escaped(bar.doc.currentPatchName) + "</b>" : ""
+                return bar.doc.hasSetlist ? file + where : ""
+            }
         }
 
         // Backing track of the song: rewind, play/pause, where it is.
@@ -298,9 +322,16 @@ ToolBar {
             onClicked: bar.toggleMixer()
         }
         StageButton {
+            objectName: "settingsButton"
             text: qsTr("Settings")
             tip: qsTr("Audio, MIDI, pedals and plugins (Ctrl+,)")
             onClicked: bar.settingsRequested()
+        }
+
+        // Minimise, maximise, close: at the right end, as on Windows.
+        WindowControls {
+            visible: bar.Window.window !== null && bar.Window.window.visibility !== Window.FullScreen
+            Layout.leftMargin: Theme.spacing
         }
     }
 }
