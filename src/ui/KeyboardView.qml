@@ -40,8 +40,16 @@ StagePanel {
         return Qt.tint(base, Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, strength))
     }
 
+    // A white key is about 4.2 times as tall as it is wide (as on screen
+    // keyboards in instruments). The keyboard grows taller with the window,
+    // up to a point; beyond that the keys keep their shape and the keyboard
+    // sits in the middle instead of stretching.
+    readonly property real keyRatio: 4.2
+    readonly property int shortest: 96
+    readonly property int tallest: 160
+
     bar: true
-    implicitHeight: 96
+    implicitHeight: Math.max(shortest, Math.min(tallest, ((width - 90) / whiteNotes.length) * keyRatio + 12))
 
     RowLayout {
         anchors.fill: parent
@@ -149,12 +157,19 @@ StagePanel {
 
         // ---------------------------------------------- the keys
         Item {
-            id: keys
-            objectName: "keyboardKeys"
+            id: keyArea
             Layout.fillWidth: true
             Layout.fillHeight: true
-            readonly property real whiteWidth: width / board.whiteNotes.length
+
+        Item {
+            id: keys
+            objectName: "keyboardKeys"
+            // As wide as the room allows without the keys losing their shape.
+            readonly property real whiteWidth: Math.min(keyArea.width / board.whiteNotes.length, keyArea.height / board.keyRatio)
             readonly property real blackWidth: whiteWidth * 0.62
+            width: whiteWidth * board.whiteNotes.length
+            height: keyArea.height
+            anchors.horizontalCenter: parent.horizontalCenter
 
             Repeater {
                 model: board.whiteNotes
@@ -177,12 +192,12 @@ StagePanel {
                     // Octave names on the C keys (middle C is C4).
                     Text {
                         visible: white.modelData % 12 === 0 && keys.whiteWidth >= 9
+                        font.pixelSize: Math.max(8, Math.min(12, keys.whiteWidth * 0.4))
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: 3
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "C" + (Math.floor(white.modelData / 12) - 1)
                         color: white.velocity > 0 ? "white" : "#5b6068"
-                        font.pixelSize: 8
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -218,6 +233,7 @@ StagePanel {
                     }
                 }
             }
+        }
         }
     }
 }
