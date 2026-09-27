@@ -62,6 +62,7 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_preparedRate = engine->m_audio.sampleRate();
     engine->m_preparedBlock = engine->m_audio.maxBlock();
     engine->m_midiSetup = options.midi;
+    engine->m_midiInputs = options.midiInputs;
     std::ranges::transform(engine->openMidi(), std::back_inserter(engine->m_pendingNotices), &Notice::warning);
     std::ranges::transform(engine->applyClockSetup(), std::back_inserter(engine->m_pendingNotices), &Notice::warning);
     engine->m_progress = options.progress;
@@ -371,7 +372,8 @@ std::vector<QString> RealEngine::openMidi()
 {
     m_midiPorts = MidiInput::listPorts();
     m_lastMidiCheck = std::chrono::steady_clock::now();
-    const auto ports = resolveMidiInputs(m_midiPorts, m_midiSetup);
+    // (None at all when the engine was made without MIDI inputs.)
+    const auto ports = m_midiInputs ? resolveMidiInputs(m_midiPorts, m_midiSetup) : std::vector<MidiPort>{};
     // The audio thread drains the ports: pause it while they change.
     const bool running = m_audio.isOpen();
     if (running) {
@@ -1244,6 +1246,23 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
                 }
             }
         }
+        // Undone layers: fresh, silent buffers before they are recorded on again.
+        const uint32_t dirty = m_loops.dirtyLayers(slot);
+        if (dirty == 0) m_loopFreshSent.at(index) = 0;
+        if (const LoopData* now = m_loops.data(slot);
+            dirty != 0 && dirty != m_loopFreshSent.at(index) && now != nullptr && !now->layers.empty()) {
+            try {
+                auto fresh = std::make_shared<LoopData>(*now);
+                for (std::size_t i = 0; i < fresh->layers.size(); ++i) {
+                    if ((dirty & (1U << i)) != 0) fresh->layers.at(i) = std::make_shared<LoopTake>(now->layers.at(i)->frames());
+                }
+                fresh->freshMask = dirty;
+                m_loops.setData(slot, std::move(fresh));
+                m_loopFreshSent.at(index) = dirty;
+            } catch (const std::bad_alloc&) {
+                tell(Notice::warning(u"Not enough memory to record another layer on that loop"_s));
+            }
+        }
         // Cleared (and no press on its way): its room is given back.
         if (loop.state == LoopState::Empty && !m_loops.pending(slot)) {
             m_loops.setData(slot, nullptr);
@@ -1270,7 +1289,16 @@ std::vector<ChannelLoop> RealEngine::loops() const
         if (channel.isNull()) continue;
         const LoopReading loop = m_loops.read(slot);
         ChannelLoop item{.channel = channel, .state = loop.state, .progress = 0.0, .bar = 0, .bars = 0, .layers = loop.layers};
-        if (loop.length > 0) {
+        if (bar > 0.0) {
+            const double beat = bar / m_timeNumerator.load(std::memory_order_relaxed);
+            item.beatsToGo = loop.wait > 0 ? static_cast<int>(std::ceil(static_cast<double>(loop.wait) / beat)) : 0;
+        }
+        if ((loop.state == LoopState::Recording || loop.state == LoopState::Closing) && bar > 0.0) {
+            // Recording: which bar, and how far into it (so its end can be seen coming).
+            const double bars = static_cast<double>(loop.position) / bar;
+            item.bar = static_cast<int>(bars) + 1;
+            item.progress = bars - std::floor(bars);
+        } else if (loop.length > 0) {
             item.progress = static_cast<double>(loop.position) / static_cast<double>(loop.length);
             if (bar > 0.0) {
                 item.bars = std::max(1, static_cast<int>(std::lround(static_cast<double>(loop.length) / bar)));

@@ -35,7 +35,8 @@ class LoopController : public QObject
     QML_ELEMENT
     QML_UNCREATABLE("Created by the application")
 
-    // One per channel of the current patch: {state, progress, bar, bars, layers}.
+    // One per channel of the current patch: {state, progress, bar, bars, layers,
+    // beatsToGo}. Recording: bar = the bar being recorded, progress = how far into it.
     // state: "empty", "armed", "recording", "closing", "playing",
     // "overdubArmed", "overdubbing", "stopped", "startArmed", "stopArmed".
     Q_PROPERTY(QVariantList channelLoops READ channelLoops NOTIFY loopsChanged)

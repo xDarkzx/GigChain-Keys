@@ -31,6 +31,15 @@ int64_t LoopGrid::next(int64_t sample) const
     return line;
 }
 
+int64_t LoopGrid::previous(int64_t sample) const
+{
+    if (!valid()) return sample;
+    auto k = static_cast<int64_t>(std::floor((static_cast<double>(sample - origin) / unit) + 1e-9));
+    int64_t line = origin + std::llround(static_cast<double>(k) * unit);
+    while (line > sample) line = origin + std::llround(static_cast<double>(--k) * unit);
+    return line;
+}
+
 // ---------------------------------------------------------------- main thread
 
 void LoopStation::setData(int slot, std::shared_ptr<LoopData> buffers)
@@ -66,7 +75,13 @@ LoopReading LoopStation::read(int slot) const
     return LoopReading{.state = s.outState.load(std::memory_order_acquire),
                        .length = s.outLength.load(std::memory_order_relaxed),
                        .position = s.outPosition.load(std::memory_order_relaxed),
-                       .layers = s.outLayers.load(std::memory_order_relaxed)};
+                       .layers = s.outLayers.load(std::memory_order_relaxed),
+                       .wait = s.outWait.load(std::memory_order_relaxed)};
+}
+
+uint32_t LoopStation::dirtyLayers(int slot) const
+{
+    return m_slots.at(static_cast<std::size_t>(slot)).outDirty.load(std::memory_order_acquire);
 }
 
 bool LoopStation::takeNeedsLayers(int slot)
@@ -109,6 +124,12 @@ bool LoopStation::layersReady(const Slot& slot) noexcept
            });
 }
 
+bool LoopStation::canLayer(const Slot& slot) noexcept
+{
+    return layersReady(slot) && std::cmp_less(slot.layers, slot.current->layers.size()) &&
+           (slot.dirty & (1U << static_cast<unsigned>(slot.layers))) == 0;
+}
+
 int64_t LoopStation::capacity(const Slot& slot) noexcept
 {
     return slot.current != nullptr && slot.current->base ? slot.current->base->frames() : 0;
@@ -123,11 +144,30 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
         slot.target = then;
         slot.switchAt = at;
     };
+    using S = LoopState;
+    // A layer being recorded is dropped: its buffer holds some of it now.
     const auto dropLayer = [&slot] {
+        if (slot.state == S::Overdubbing) slot.dirty |= 1U << static_cast<unsigned>(slot.layers);
         slot.overdubDone = 0;
         slot.commitOnSwitch = false;
     };
-    using S = LoopState;
+    // Ends a recording on the nearest bar: a little late, on the bar just
+    // gone (what was played after it is left out, and the loop goes on in
+    // time from there); a little early, on the coming one.
+    const auto close = [&slot, &lines, &schedule, blockStart, line] {
+        if (lines.valid()) {
+            const int64_t gone = lines.previous(blockStart);
+            if (gone > slot.recordStart && blockStart - gone < line - blockStart) {
+                slot.length = gone - slot.recordStart;
+                slot.written = slot.length;
+                slot.position = (blockStart - gone) % slot.length;
+                slot.closed = true;
+                schedule(S::Playing, S::Playing, -1);
+                return;
+            }
+        }
+        schedule(S::Closing, S::Playing, line);
+    };
     switch (command) {
     case LoopCommand::Record:
         switch (slot.state) {
@@ -138,14 +178,15 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
             schedule(S::Armed, S::Recording, line);
             return;
         case S::Armed: schedule(S::Empty, S::Empty, -1); return; // changed my mind
-        case S::Recording: schedule(S::Closing, S::Playing, line); return;
+        case S::Recording: close(); return;
         case S::Playing:
             // Every layer used (8, or fewer for a long loop: they take memory).
             if (slot.layers >= kMaxLayers || (layersReady(slot) && std::cmp_greater_equal(slot.layers, slot.current->layers.size()))) {
                 slot.noLayerLeft.store(true, std::memory_order_release);
                 return;
             }
-            schedule(S::OverdubArmed, S::Overdubbing, layersReady(slot) ? line : -1);
+            // (Waits for its buffer when it is not there or not silent yet.)
+            schedule(S::OverdubArmed, S::Overdubbing, canLayer(slot) ? line : -1);
             return;
         case S::OverdubArmed: schedule(S::Playing, S::Playing, -1); return;
         case S::Overdubbing:
@@ -163,16 +204,25 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
         case S::Empty:
         case S::Closing: return;
         case S::Armed: schedule(S::Empty, S::Empty, -1); return;
-        case S::Recording: schedule(S::Closing, S::Playing, line); return;
+        case S::Recording: close(); return;
+        // Stopping is at once; starting waits for the bar (to stay in time).
         case S::Playing:
-        case S::OverdubArmed: schedule(S::StopArmed, S::Stopped, line); return;
+        case S::StopArmed:
+        case S::OverdubArmed:
+            dropLayer();
+            slot.position = 0;
+            schedule(S::Stopped, S::Stopped, -1);
+            return;
         case S::Overdubbing:
-            schedule(S::Overdubbing, S::Stopped, line);
-            slot.commitOnSwitch = true;
+            // The layer so far is kept (the rest of its pass stays silent).
+            ++slot.layers;
+            slot.overdubDone = 0;
+            slot.commitOnSwitch = false;
+            slot.position = 0;
+            schedule(S::Stopped, S::Stopped, -1);
             return;
         case S::Stopped: schedule(S::StartArmed, S::Playing, line); return;
         case S::StartArmed: schedule(S::Stopped, S::Stopped, -1); return;
-        case S::StopArmed: schedule(S::Playing, S::Playing, -1); return;
         }
         return;
     case LoopCommand::Undo:
@@ -181,6 +231,7 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
             schedule(S::Playing, S::Playing, -1);
         } else if (slot.layers > 0 && slot.state != S::Empty && slot.state != S::Armed && !recordsBase(slot.state)) {
             --slot.layers;
+            slot.dirty |= 1U << static_cast<unsigned>(slot.layers); // its sound is still in the buffer
         }
         return;
     case LoopCommand::Stop:
@@ -199,6 +250,7 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
         slot.length = 0;
         slot.position = 0;
         slot.layers = 0;
+        slot.dirty = 0; // (new buffers come with the next recording)
         schedule(S::Empty, S::Empty, -1);
         return;
     }
@@ -208,7 +260,7 @@ void LoopStation::plan(Slot& slot, int64_t blockStart, int frames, const LoopGri
 {
     using S = LoopState;
     // A layer asked for before its buffers were there: on the next line now.
-    if (slot.state == S::OverdubArmed && slot.switchAt < 0 && layersReady(slot)) {
+    if (slot.state == S::OverdubArmed && slot.switchAt < 0 && canLayer(slot)) {
         slot.switchAt = lines.valid() ? lines.next(blockStart) : blockStart;
     }
 
@@ -303,6 +355,10 @@ void LoopStation::beginBlock(int64_t blockStart, int frames, const LoopGrid& bar
     for (Slot& slot : m_slots) {
         slot.current = slot.data.acquire();
         slot.recordedThisBlock = false;
+        if (slot.current != slot.seen) { // new buffers: the layers made fresh are clean again
+            if (slot.current != nullptr) slot.dirty &= ~slot.current->freshMask;
+            slot.seen = slot.current;
+        }
         Commands& queue = slot.commands;
         uint32_t tail = queue.tail.load(std::memory_order_relaxed);
         while (tail != queue.head.load(std::memory_order_acquire)) {
@@ -436,6 +492,9 @@ void LoopStation::endBlock() noexcept
         s.outLength.store(s.length, std::memory_order_relaxed);
         s.outPosition.store(recordsBase(s.state) ? s.written : s.position, std::memory_order_relaxed);
         s.outLayers.store(s.layers, std::memory_order_relaxed);
+        s.outWait.store(s.switchAt >= 0 ? std::max<int64_t>(s.switchAt - (m_blockStart + m_frames), 0) : 0,
+                        std::memory_order_relaxed);
+        s.outDirty.store(s.dirty, std::memory_order_release);
         if (s.closed) s.needsLayers.store(true, std::memory_order_release); // (the length above goes with it)
         s.closed = false;
         if (s.current != nullptr) s.data.release();

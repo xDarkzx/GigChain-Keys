@@ -108,7 +108,8 @@ QVariantList LoopController::channelLoops() const
                             {u"progress"_s, loop.progress},
                             {u"bar"_s, loop.bar},
                             {u"bars"_s, loop.bars},
-                            {u"layers"_s, loop.layers}};
+                            {u"layers"_s, loop.layers},
+                            {u"beatsToGo"_s, loop.beatsToGo}};
     }
     return list;
 }

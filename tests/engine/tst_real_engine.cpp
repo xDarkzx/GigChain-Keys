@@ -37,6 +37,16 @@ core::Patch pianoPatch()
     return patch;
 }
 
+// The real engine without MIDI inputs: tests measuring sound and silence
+// must not hear a keyboard someone happens to be playing (notes come in
+// through injectNote).
+core::Result<std::unique_ptr<IEngine>> createQuietEngine()
+{
+    RealEngineOptions options;
+    options.midiInputs = false;
+    return createRealEngine(options);
+}
+
 // A mono 48 kHz WAV of a 0.5 sine, `frames` long.
 bool writeSineWav(const QString& path, quint32 frames)
 {
@@ -93,7 +103,7 @@ private slots:
     void playsAnInstrumentFromAnInjectedNote()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY2(created.has_value(), created ? "" : qPrintable(created.error().message));
         IEngine& engine = **created;
@@ -127,7 +137,7 @@ private slots:
     void changingTheSampleRateKeepsPlaying()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -170,7 +180,7 @@ private slots:
 
     void unusableAudioSetupKeepsTheCurrentOne()
     {
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -186,7 +196,7 @@ private slots:
 
     void midiInputsCanBeSwitchedOff()
     {
-        auto created = createRealEngine();
+        auto created = createRealEngine(); // (with the MIDI inputs: they are what is tested)
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -207,7 +217,7 @@ private slots:
         // A small plugin keeps this quick; any plugin behaves the same.
         const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
         if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -255,7 +265,7 @@ private slots:
     {
         const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
         if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -300,7 +310,7 @@ private slots:
     {
         const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
         if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -328,7 +338,7 @@ private slots:
     {
         const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
         if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -404,7 +414,7 @@ private slots:
     void aLearnedPadSwitchesSongsAndIsNotPlayed()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -446,7 +456,7 @@ private slots:
     void panicStopsTheSoundAndPlaysOnAfter()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -473,7 +483,7 @@ private slots:
 
     void unknownPluginIsReportedNotIgnored()
     {
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -492,7 +502,7 @@ private slots:
 
     void theTempoIsSetAndOutOfRangeIsRefused()
     {
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -506,7 +516,7 @@ private slots:
 
     void theClickSoundsOnTheBeat()
     {
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -527,7 +537,7 @@ private slots:
 
     void aBackingTrackPlaysThroughTheMasterFader()
     {
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -586,7 +596,7 @@ private slots:
     void aHeldChordRingsOnAcrossAPatchChange()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -619,7 +629,7 @@ private slots:
     void songSectionsSendNotesToTheirChannels()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -689,7 +699,7 @@ private slots:
 
     void aCountInKeepsTheBackingTrackWaiting()
     {
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -725,7 +735,7 @@ private slots:
     void aLoopPlaysOnAfterAPatchChangeAndClears()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -765,6 +775,18 @@ private slots:
         QVERIFY2(engine.masterLevel().peak > 0.0F, "the loop stopped at the patch change");
         QCOMPARE(stateOf(), LoopState::Playing);
 
+        // Loop stops it at once (not on the next bar, a second away).
+        engine.loopCommand(piano, LoopCommand::PlayStop);
+        pump(engine, 60);
+        QCOMPARE(stateOf(), LoopState::Stopped);
+        (void)engine.masterLevel();
+        pump(engine, 300);
+        QCOMPARE(engine.masterLevel().peak, 0.0F);
+        engine.loopCommand(piano, LoopCommand::PlayStop); // starts again on the next bar
+        pump(engine, 60);
+        QCOMPARE(stateOf(), LoopState::StartArmed);
+        QVERIFY(waitFor(LoopState::Playing));
+
         engine.clearAllLoops();
         pump(engine, 200);
         (void)engine.masterLevel();
@@ -777,7 +799,7 @@ private slots:
     // the instruments never hear them.
     void looperButtonsArePressedAndHeldTogetherClear()
     {
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
@@ -811,7 +833,7 @@ private slots:
     void aPluginsParametersAreListedForKnobs()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto created = createRealEngine();
+        auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;

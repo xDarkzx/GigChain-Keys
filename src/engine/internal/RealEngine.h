@@ -201,6 +201,7 @@ private:
     double m_preparedRate = 0.0; // what the plugins are prepared for
     int m_preparedBlock = 0;
     MidiSetup m_midiSetup;
+    bool m_midiInputs = true; // false: none opened (RealEngineOptions::midiInputs)
     LoadProgress m_progress;
     QStringList m_midiPorts; // what was plugged in at the last check
     std::chrono::steady_clock::time_point m_lastMidiCheck{};
@@ -268,6 +269,7 @@ private:
     // first free loop setting the tempo.
     LoopStation m_loops;
     std::array<core::ChannelId, LoopStation::kSlots> m_loopOwners{};
+    std::array<uint32_t, LoopStation::kSlots> m_loopFreshSent{}; // undone layers given fresh buffers
     bool m_tempoFromLoop = false;
     bool m_freeTempoTaken = false;
     // Audio thread: bar 1 is moved to this sample (-1: nothing to do).

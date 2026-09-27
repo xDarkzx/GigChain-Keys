@@ -18,6 +18,10 @@ struct RealEngineOptions
     // device cannot open, system audio is used and the user is told why.
     AudioSetup audio;
     MidiSetup midi;            // the inputs chosen in Settings
+    // false: no MIDI input is opened at all (tests measuring silence must
+    // not hear a keyboard someone is playing); notes still come in through
+    // IEngine::injectNote.
+    bool midiInputs = true;
     QString pluginFolder;      // empty: the standard VST3 folder
     // Plugins that come with the app (open-source instruments an installer
     // puts next to it), scanned after pluginFolder when the folder exists. A
