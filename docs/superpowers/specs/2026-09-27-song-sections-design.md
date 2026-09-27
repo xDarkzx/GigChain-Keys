@@ -38,8 +38,14 @@ words and chords only. Assigning is clicking, in both Edit and Perform.
 On every section title, in the chart view (Edit and Perform):
 
 ```
- CHORUS    [ Piano ✕ ] [ Strings ✕ ] [ + ]        8 bars
+                          CHORUS
+          [ Piano ✕ ] [ Strings ✕ ] [ + ]   · 8 bars
 ```
+
+- **Section titles are centred and larger** than the lyrics (about 1.5x the
+  chart's text size, bold, spaced out), so they can be read at a glance
+  from the keyboard; the assign row sits centred just under the title.
+  The lyrics and chords stay left-aligned as now.
 
 - **Default:** every section plays the patch's first instrument channel.
 - **[ + ]** opens a menu of the patch's other channels (as the effect slot's
