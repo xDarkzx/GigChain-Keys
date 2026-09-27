@@ -611,6 +611,21 @@ private slots:
         QCOMPARE(cell->mapToScene(QPointF(0, 0)).x(), strip->mapToScene(QPointF(0, 0)).x());
         QCOMPARE(cell->width(), strip->width());
         QVERIFY(cell->mapToScene(QPointF(0, cell->height())).y() <= strip->mapToScene(QPointF(0, 0)).y()); // above it
+        // The loop station runs right across the mixer (over the master
+        // strip too), its name in the middle.
+        auto* band = w->findChild<QQuickItem*>(u"looperBand"_s);
+        auto* mixer = strips->parentItem()->parentItem(); // (strips in their row, in the mixer's column)
+        QVERIFY(band != nullptr && mixer != nullptr);
+        QCOMPARE(band->width(), mixer->width());
+        auto* master = w->findChild<QQuickItem*>(u"masterEffectList"_s);
+        QVERIFY(master != nullptr);
+        QVERIFY(band->mapToScene(QPointF(band->width(), 0)).x() >= master->mapToScene(QPointF(master->width(), 0)).x());
+        auto* title = w->findChild<QQuickItem*>(u"looperTitle"_s);
+        QVERIFY(title != nullptr);
+        QCOMPARE(title->property("text").toString(), u"LOOP STATION"_s);
+        const double titleCentre = title->mapToScene(QPointF(title->width() / 2, 0)).x();
+        const double bandCentre = band->mapToScene(QPointF(band->width() / 2, 0)).x();
+        QVERIFY2(qAbs(titleCentre - bandCentre) <= 1.0, qPrintable(u"%1 vs %2"_s.arg(titleCentre).arg(bandCentre)));
 
         const auto press = [w](QQuickItem* item) {
             QTest::mouseClick(w, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
