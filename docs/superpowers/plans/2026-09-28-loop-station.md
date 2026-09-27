@@ -88,6 +88,11 @@ virtual void clearAllLoops() = 0;
 
 **Files:** create `src/ui/cpp/LoopController.h/.cpp` (QML: `record(channel)`, `playStop(channel)`, `undo(channel)`, `clear(channel)`, `stopAll()`, `clearAll()`, `sync`, `tempoFromFirstLoop`, `loopStates` (per current channel), `loopList`, `playingCount`, `recording`, `storedCount`); `DocumentController` (song Stop stops loops; another song clears them; `Song.loopSync` stored); `MidiControl.h` (LoopRecord, LoopPlay, LoopUndo, LoopStopAll; held tracking for clear); `SettingsController` labels; `Session` wiring; tests `tst_document_controller.cpp`, `tst_settings.cpp`, `tst_midi_control.cpp`.
 
+### Task 4b: Keyboard controls saved with the setlist
+
+**Files:** `Model.h` (`Setlist.loopControls`: record, playStop, undo, stopAll, next/previous instrument triggers and the instrument selector knob {channel, cc, kind absolute|relative}), `SetlistJson.cpp` (format 4 optional `loopControls`), `Validation.cpp`; engine: the learned loop triggers and selector reach the audio thread like ControlTriggers (a second trigger set) and come back as actions / a selector value; `LoopController` learn API (`learn(action)`, `learnSelector()`), relative/absolute detection from the learned messages (values 1-3 / 125-127 or 63-65 steps = relative); `DocumentController` stores them in the setlist (undoable, dirty) and applies them on open.
+- [ ] Tests: JSON round trip and v3/v4-without defaults; learning each; an absolute knob at 0/64/127 selects first/middle/last channel; a relative encoder steps +1/-1 and stops at the ends; next/previous buttons; held Record + Loop clears.
+
 ### Task 5: Screens wired + Loops menu + pill
 
 **Files:** `LooperCell.qml`, `LoopsPill.qml`, `Toolbar.qml`, `Mixer.qml`, `PerformView.qml`, `Main.qml`; smoke test drives Record/Loop via clicks against the fake engine's states; pill appears only with loops; menu items act.

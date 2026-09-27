@@ -96,9 +96,20 @@ the iPad remote.
 
 ## 4. Controls and remote
 
-- Learnable actions (Settings > MIDI): Record, Loop play/stop and Cue for
-  the selected channel; Stop all; Undo layer; Live/Monitor. Holding the
-  Record and Loop controls together clears.
+- Learnable actions: Record, Loop play/stop and Cue for the selected
+  channel; Stop all; Undo layer; Live/Monitor. Holding the Record and Loop
+  controls together clears.
+- **Choosing the instrument from the keyboard**: a knob or wheel learned
+  as the instrument selector scrolls through the patch's channels, the
+  current one lit in the mixer and on the looper strip; Record and Loop
+  act on it. A knob with a range (0-127) splits it among the channels; an
+  endless encoder (it sends small steps) moves one channel per step; learned
+  "next / previous instrument" buttons do the same. So a loop can be
+  recorded, started, and the next instrument chosen without the laptop.
+- **Saved with the setlist**: the looper and instrument-selector controls
+  are learned (Loops menu > Learn keyboard controls) and stored in the
+  setlist file, so each project keeps its own. (The song/patch/panic pedals
+  stay in the app's settings: they belong to the rig.)
 - All looper actions go through one command interface (in the document
   layer), which the screen, pedals and the future iPad remote use alike.
 
