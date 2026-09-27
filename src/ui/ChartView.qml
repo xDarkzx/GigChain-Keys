@@ -51,26 +51,32 @@ Column {
             }
             Component {
                 id: lyricLine
-                // Each segment: its chord above its words.
-                Flow {
+                // The line centred as a whole: each segment its chord above
+                // its words. A line wider than the chart wraps, centred too.
+                Item {
+                    objectName: "chartLyricLine"
                     width: lineLoader.width
-                    Repeater {
-                        model: lineLoader.modelData.segments
-                        delegate: Column {
-                            required property var modelData
-                            Text {
-                                text: modelData.chord !== "" ? modelData.chord : " "
-                                color: Theme.chord
-                                font.pixelSize: (Theme.fontSize + 5) * chart.size
-                                font.bold: true
-                                // Chords with no words under them (an intro, a
-                                // turnaround) keep a gap between them.
-                                rightPadding: modelData.text.trim() === "" ? 18 * chart.size : 0
+                    height: flow.height
+                    // The line's own width, laid out in one row (not shown).
+                    Row {
+                        id: natural
+                        visible: false
+                        Repeater {
+                            model: lineLoader.modelData.segments
+                            delegate: ChartSegment {
+                                size: chart.size
                             }
-                            Text {
-                                text: modelData.text !== "" ? modelData.text : " "
-                                color: Theme.text
-                                font.pixelSize: (Theme.fontSize + 7) * chart.size
+                        }
+                    }
+                    Flow {
+                        id: flow
+                        objectName: "chartLyricFlow"
+                        width: Math.min(parent.width, natural.implicitWidth)
+                        x: (parent.width - width) / 2
+                        Repeater {
+                            model: lineLoader.modelData.segments
+                            delegate: ChartSegment {
+                                size: chart.size
                             }
                         }
                     }
@@ -79,6 +85,9 @@ Column {
             Component {
                 id: sectionLine
                 Text {
+                    width: lineLoader.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
                     topPadding: 10 * chart.size
                     text: lineLoader.modelData.label
                     color: Theme.accentBlue
@@ -88,12 +97,16 @@ Column {
             }
             Component {
                 id: commentLine
+                // A note to the player ("Capo 2", "play softly"), centred.
                 Text {
+                    width: lineLoader.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
                     topPadding: 8 * chart.size
                     text: lineLoader.modelData.label
-                    color: Theme.accentBlue
+                    color: Theme.textDim
                     font.pixelSize: (Theme.fontSize + 3) * chart.size
-                    font.bold: true
+                    font.italic: true
                 }
             }
             Component {
