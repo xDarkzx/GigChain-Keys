@@ -2,6 +2,7 @@
 
 #include <QString>
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <vector>
@@ -84,6 +85,18 @@ struct PluginParameter
     QString name;
 
     bool operator==(const PluginParameter&) const = default;
+};
+
+// What the keyboard is doing right now, as the instruments hear it: for the
+// on-screen keyboard that lights up with the keys played.
+struct MidiActivity
+{
+    std::array<uint8_t, 128> velocity{}; // per note: 0 = up, else how hard it was played
+    int pitchBend = 8192;                // 0..16383, 8192 = centre
+    int modWheel = 0;                    // 0..127
+    bool sustain = false;                // the sustain pedal is down
+
+    bool operator==(const MidiActivity&) const = default;
 };
 
 // The song's backing track as it plays now.

@@ -144,9 +144,11 @@ double FakeEngine::masterVolume() const
     return m_masterDb;
 }
 
-void FakeEngine::injectNote(int, int, int)
+void FakeEngine::injectNote(int, int note, int velocity)
 {
-    // The fake engine makes no sound; notes are accepted and dropped by design.
+    // The fake engine makes no sound; the note only shows on the keyboard.
+    if (note < 0 || note > 127 || velocity < 0 || velocity > 127) return;
+    m_keyboard.velocity.at(static_cast<std::size_t>(note)) = static_cast<uint8_t>(velocity);
 }
 
 std::vector<Notice> FakeEngine::poll()

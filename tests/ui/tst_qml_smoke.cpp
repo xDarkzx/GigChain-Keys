@@ -364,6 +364,38 @@ private slots:
         settle();
     }
 
+    // The on-screen keyboard: a key clicked plays and lights, and lets go.
+    void theKeyboardLightsTheKeysPlayed()
+    {
+        window()->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        auto* keyboard = window()->findChild<QQuickItem*>(u"keyboardView"_s);
+        QVERIFY(keyboard != nullptr);
+        QVERIFY(keyboard->isVisible());
+        // The keys are the key area's child items (made by a Repeater).
+        auto* keys = window()->findChild<QQuickItem*>(u"keyboardKeys"_s);
+        QVERIFY(keys != nullptr);
+        QQuickItem* middleC = nullptr;
+        for (QQuickItem* key : keys->childItems()) {
+            if (key->objectName() == u"key60"_s) middleC = key;
+        }
+        QVERIFY(middleC != nullptr);
+        QCOMPARE(middleC->property("velocity").toInt(), 0);
+        const QPoint at = middleC->mapToScene(QPointF(middleC->width() / 2, middleC->height() * 0.8)).toPoint();
+        QTest::mousePress(window(), Qt::LeftButton, {}, at);
+        QCOMPARE(int(m_engine->keyboardActivity().velocity.at(60)), 100); // played
+        QTRY_COMPARE(middleC->property("velocity").toInt(), 100);         // and lit
+        shoot(u"keyboard"_s);
+        QTest::mouseRelease(window(), Qt::LeftButton, {}, at);
+        QTRY_COMPARE(middleC->property("velocity").toInt(), 0);
+        // Hidden and shown from the toolbar.
+        click(u"keyboardButton"_s);
+        QVERIFY(!keyboard->isVisible());
+        click(u"keyboardButton"_s);
+        QVERIFY(keyboard->isVisible());
+        settle();
+    }
+
     // Tempo typed and the click switched on in the toolbar; an edit undone.
     void toolbarTempoClickAndUndo()
     {

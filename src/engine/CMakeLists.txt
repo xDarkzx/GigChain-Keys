@@ -15,6 +15,7 @@ add_library(gigchain_engine STATIC
     internal/RenderGraph.cpp
     internal/GraphExchange.h
     internal/Metronome.h
+    internal/MidiMonitor.h
     internal/AudioFile.h
     internal/AudioFile.cpp
     internal/MidiClockOut.h

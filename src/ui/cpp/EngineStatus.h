@@ -57,6 +57,12 @@ class EngineStatus : public QObject
     Q_PROPERTY(QString learnedParameter READ learnedParameter NOTIFY mappingLearnChanged)
     // Audio input channels open now (0: no input device chosen in Settings).
     Q_PROPERTY(int audioInputChannels READ audioInputChannels NOTIFY statusChanged)
+    // The on-screen keyboard: how hard each key (0-127) is held (0 = up),
+    // the pitch bend (-1..1, 0 = centre), mod wheel (0..1) and sustain pedal.
+    Q_PROPERTY(QVariantList keyVelocities READ keyVelocities NOTIFY keyboardChanged)
+    Q_PROPERTY(double pitchBend READ pitchBend NOTIFY keyboardChanged)
+    Q_PROPERTY(double modWheel READ modWheel NOTIFY keyboardChanged)
+    Q_PROPERTY(bool sustain READ sustain NOTIFY keyboardChanged)
 
 public:
     static constexpr int kPollIntervalMs = 33;
@@ -109,6 +115,10 @@ public:
     // the plugin's window.
     Q_INVOKABLE void setLearnParameter(quint32 id, const QString& name);
     [[nodiscard]] int audioInputChannels() const { return m_audioInputs; }
+    [[nodiscard]] QVariantList keyVelocities() const;
+    [[nodiscard]] double pitchBend() const { return (m_keyboard.pitchBend - 8192) / 8192.0; }
+    [[nodiscard]] double modWheel() const { return m_keyboard.modWheel / 127.0; }
+    [[nodiscard]] bool sustain() const { return m_keyboard.sustain; }
     [[nodiscard]] bool learningMapping() const { return m_learnChannel >= 0; }
     [[nodiscard]] QString learnedKnob() const;
     [[nodiscard]] QString learnedParameter() const { return m_learnedParameter ? m_learnedParameter->name : QString(); }
@@ -128,6 +138,7 @@ signals:
     void transportChanged();
     void mappingLearnChanged();
     void mappingLearned(int channel); // a knob was mapped
+    void keyboardChanged();
     void polled();
 
 private:
@@ -148,6 +159,7 @@ private:
     QString m_statusText;
 
     int m_audioInputs = 0;
+    engine::MidiActivity m_keyboard;
     double m_tempo = 120.0;
     bool m_clickOn = false;
     double m_clickVolumeDb = -6.0;

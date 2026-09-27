@@ -94,8 +94,10 @@ private slots:
         pump(engine, 400);
         const float peak = engine.channelLevel(patch.channels[0].id).peak;
         const LevelReading master = engine.masterLevel();
+        QCOMPARE(int(engine.keyboardActivity().velocity.at(60)), 110); // lit on the screen's keyboard
         engine.injectNote(1, 60, 0);
         pump(engine, 50);
+        QCOMPARE(int(engine.keyboardActivity().velocity.at(60)), 0);
         QVERIFY2(peak > 0.001F, "piano channel stayed silent");
         // The master meter shows what leaves the app: after the master fader.
         QVERIFY2(master.peak > 0.0F, "master meter stayed empty");
