@@ -15,8 +15,11 @@ the iPad remote.
 ## 1. Loops
 
 - **One loop per channel**, recording that channel's own sound (its
-  instrument and effects, before its fader), taken inside the app: no
-  round trip through the audio interface, so no latency to correct.
+  instrument and effects, at its fader and pan: what the audience heard
+  from it), taken inside the app: no round trip through the audio
+  interface, so no latency to correct. The loop then plays on its own,
+  through the master effects, at the level it was recorded, whatever
+  happens to the channel afterwards (a section muting it, another patch).
   Audio-input channels (a mic, a guitar) loop too.
 - **Length**
   - **Sync on** (default, saved per song): recording starts on the next bar
