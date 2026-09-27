@@ -75,6 +75,7 @@ qt_add_qml_module(gigchain_ui
         KeyboardView.qml
         WindowControls.qml
         WindowResizeEdges.qml
+        SectionHeader.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/alert-octagon.svg
@@ -88,6 +89,7 @@ qt_add_qml_module(gigchain_ui
         icons/metronome.svg
         icons/player-pause.svg
         icons/player-play.svg
+        icons/player-stop.svg
         icons/player-skip-back.svg
         icons/redo.svg
         icons/star.svg

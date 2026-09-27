@@ -2,6 +2,7 @@
 
 #include "EngineLog.h"
 #include "PluginCatalog.h"
+#include "gigchain/core/Chart.h"
 #include "gigchain/core/Checks.h"
 
 #include "gigchain/core/Limits.h"
@@ -528,8 +529,11 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     for (const QString& key : masterKeys()) {
         if (const auto it = m_masterNodes.find(key); it != m_masterNodes.end()) master.push_back(it->second);
     }
-    m_exchange.publish(std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(),
-                                                     std::move(master), std::move(tails)));
+    auto next = std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(), std::move(master),
+                                              std::move(tails));
+    applySectionMasks(*next); // before it plays: no moment with the wrong channels taking notes
+    m_exchange.publish(std::move(next));
+    publishTimeline(); // the sections count only for the patch they were worked out for
     qCInfo(lcEngine).noquote() << "Patch applied:" << patch.name << "(" << patch.channels.size() << "channels,"
                                << m_exchange.current()->tails().size() << "ringing out ) in" << timer.elapsed() << "ms";
 }
@@ -951,6 +955,91 @@ void RealEngine::setTempo(double bpm)
     m_tempo.store(bpm, std::memory_order_relaxed);
 }
 
+void RealEngine::setTimeSignature(int numerator, int denominator)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (!core::isTimeSignature(numerator, denominator)) {
+        qCWarning(lcEngine) << "Time signature" << numerator << "/" << denominator
+                            << "ignored: it must be 1-32 beats of a 1, 2, 4, 8, 16 or 32 note";
+        return;
+    }
+    if (numerator == m_timeNumerator.load(std::memory_order_relaxed) &&
+        denominator == m_timeDenominator.load(std::memory_order_relaxed)) {
+        return;
+    }
+    m_timeNumerator.store(numerator, std::memory_order_relaxed);
+    m_timeDenominator.store(denominator, std::memory_order_relaxed);
+    publishTimeline(); // bars are longer or shorter now
+}
+
+void RealEngine::setSongSections(const SongSections& sections)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (sections.sections.size() > static_cast<std::size_t>(core::limits::kMaxSectionsPerSong)) {
+        qCWarning(lcEngine) << "Song sections ignored:" << sections.sections.size() << "sections, at most"
+                            << core::limits::kMaxSectionsPerSong;
+        return;
+    }
+    m_sections = sections;
+    if (RenderGraph* graph = m_exchange.current()) applySectionMasks(*graph);
+    publishTimeline();
+}
+
+void RealEngine::publishTimeline()
+{
+    GC_ONLY_MAIN_THREAD();
+    if (m_sections.sections.empty() || m_sections.patch != m_patch.id) {
+        m_timeline.publish(nullptr); // no sections (or not this patch's): everything plays
+        return;
+    }
+    const int numerator = m_timeNumerator.load(std::memory_order_relaxed);
+    const int denominator = m_timeDenominator.load(std::memory_order_relaxed);
+    const double beat = 4.0 / denominator; // in quarter notes
+    std::vector<int> bars;
+    bars.reserve(m_sections.sections.size());
+    std::ranges::transform(m_sections.sections, std::back_inserter(bars), [](const auto& s) { return s.bars; });
+    // Just before the section (a sixteenth), or a whole beat early.
+    const double lead = m_sections.switchEarly ? beat : 0.25;
+    m_timeline.publish(std::make_shared<SongTimeline>(SongTimeline::fromBars(bars, numerator * beat, lead)));
+}
+
+void RealEngine::applySectionMasks(RenderGraph& graph) const
+{
+    GC_ONLY_MAIN_THREAD();
+    const bool ours = !m_sections.sections.empty() && m_sections.patch == m_patch.id;
+    for (std::size_t i = 0; i < graph.stripCount(); ++i) {
+        ChannelStrip* strip = graph.strip(i);
+        uint64_t mask = ours ? 0 : ~uint64_t{0};
+        for (std::size_t s = 0; ours && s < m_sections.sections.size(); ++s) {
+            const auto& live = m_sections.sections.at(s).live;
+            if (std::ranges::find(live, strip->id()) != live.end()) mask |= uint64_t{1} << s;
+        }
+        strip->setSections(mask);
+    }
+}
+
+void RealEngine::playSong(int fromSection, bool countIn)
+{
+    GC_ONLY_MAIN_THREAD();
+    const int count = static_cast<int>(m_sections.sections.size());
+    if (count == 0 || fromSection < 0 || fromSection >= count) {
+        qCWarning(lcEngine) << "Play from section" << fromSection + 1 << "ignored: the song has" << count << "sections";
+        return;
+    }
+    m_transport.play(fromSection, countIn);
+}
+
+void RealEngine::jumpToSection(int section)
+{
+    GC_ONLY_MAIN_THREAD();
+    const int count = static_cast<int>(m_sections.sections.size());
+    if (section < 0 || section >= count) {
+        qCWarning(lcEngine) << "Jump to section" << section + 1 << "ignored: the song has" << count << "sections";
+        return;
+    }
+    m_transport.jump(section);
+}
+
 double RealEngine::tempo() const
 {
     if (m_followClock.load(std::memory_order_relaxed)) {
@@ -1136,19 +1225,27 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
         if (const double clock = m_midi.clockTempo(); clock > 0.0) bpm = clock;
     }
     const double rate = m_audio.sampleRate();
+
+    // The song's sections: which one is in force (and where it changes in
+    // this block); Play and jumps move the clock.
+    const double quartersPerSample = rate > 0.0 ? bpm / 60.0 / rate : 0.0;
+    const SongTransport::Block song = m_transport.advance(m_timeline.acquire(), m_ppq, out.frames, quartersPerSample);
+    m_timeline.release();
+    m_ppq = song.ppq;
+
     TimeInfo time{.tempo = bpm,
                   .sampleRate = rate,
                   .samplePosition = m_samplePosition,
                   .ppqPosition = m_ppq,
                   .barStartPpq = 0.0,
-                  .timeSigNumerator = 4,
-                  .timeSigDenominator = 4};
+                  .timeSigNumerator = m_timeNumerator.load(std::memory_order_relaxed),
+                  .timeSigDenominator = m_timeDenominator.load(std::memory_order_relaxed)};
     time.barStartPpq = std::floor(m_ppq / time.quartersPerBar()) * time.quartersPerBar();
 
     const float masterGain = m_masterGain.load(std::memory_order_relaxed);
     RenderGraph* graph = m_exchange.acquire();
     if (graph != nullptr) {
-        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs);
+        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs, song.gate);
     } else {
         std::fill_n(out.left, out.frames, 0.0F);
         std::fill_n(out.right, out.frames, 0.0F);
@@ -1159,14 +1256,26 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
     if (const AudioClip* clip = m_track.acquire(); clip != nullptr) {
         if (m_trackRewind.exchange(false, std::memory_order_relaxed)) m_trackPosition.store(0, std::memory_order_relaxed);
+        // Played with the song: from the section's place in the track, on its first beat.
+        if (song.seekTrack && bpm > 0.0) {
+            const auto at = static_cast<int64_t>(std::llround(song.trackQuarter * 60.0 / bpm * clip->sampleRate));
+            m_trackPosition.store(std::clamp<int64_t>(at, 0, clip->frames()), std::memory_order_relaxed);
+        }
+        if (song.stopTrack) m_trackPlaying.store(false, std::memory_order_relaxed);
+        std::size_t offset = 0; // where in this block the track plays from
+        if (song.startTrackAt >= 0) {
+            m_trackPlaying.store(true, std::memory_order_relaxed);
+            offset = static_cast<std::size_t>(song.startTrackAt);
+        }
         const int64_t position = std::clamp<int64_t>(m_trackPosition.load(std::memory_order_relaxed), 0, clip->frames());
-        if (m_trackPlaying.load(std::memory_order_relaxed)) {
-            const auto n = static_cast<std::size_t>(std::min<int64_t>(static_cast<int64_t>(frames), clip->frames() - position));
+        if (m_trackPlaying.load(std::memory_order_relaxed) && offset < frames) {
+            const auto n = static_cast<std::size_t>(
+                std::min<int64_t>(static_cast<int64_t>(frames - offset), clip->frames() - position));
             const float gain = m_trackGain.load(std::memory_order_relaxed) * masterGain;
             const auto from = static_cast<std::size_t>(position);
             const auto add = [gain](float mix, float sample) { return mix + (sample * gain); };
-            const std::span<float> left(out.left, n);
-            const std::span<float> right(out.right, n);
+            const std::span<float> left = std::span<float>(out.left, frames).subspan(offset, n);
+            const std::span<float> right = std::span<float>(out.right, frames).subspan(offset, n);
             std::ranges::transform(left, std::span<const float>(clip->left).subspan(from, n), left.begin(), add);
             std::ranges::transform(right, std::span<const float>(clip->right).subspan(from, n), right.begin(), add);
             m_trackPosition.store(position + static_cast<int64_t>(n), std::memory_order_relaxed);

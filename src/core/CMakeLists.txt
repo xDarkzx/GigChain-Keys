@@ -19,6 +19,8 @@ add_library(gigchain_core STATIC
     internal/Editing.cpp
     include/gigchain/core/Chart.h
     internal/Chart.cpp
+    include/gigchain/core/Sections.h
+    internal/Sections.cpp
     internal/FileLog.cpp
     internal/Checks.cpp
 )

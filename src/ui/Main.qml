@@ -247,6 +247,7 @@ ApplicationWindow {
                         SplitView.minimumHeight: 200
                         doc: root.doc
                         editorService: root.editorService
+                        engineStatus: root.engineStatus
                         onNewRequested: root.guarded("new")
                         onOpenRequested: root.guarded("open")
                         onOpenRecentRequested: (path) => root.openRecent(path)

@@ -101,7 +101,36 @@ public:
     [[nodiscard]] int audioInputChannels() const override { return m_setup.inputDevice.isEmpty() ? 0 : 2; }
     [[nodiscard]] QStringList midiOutputs() const override { return {}; }
 
+    // The demo does not count bars: Play shows the first bar of the section.
+    void setTimeSignature(int, int) override {}
+    void setSongSections(const SongSections& sections) override
+    {
+        m_sections = sections;
+        m_position = SongPosition{.section = sections.sections.empty() ? -1 : 0};
+    }
+    void playSong(int fromSection, bool) override
+    {
+        if (fromSection < 0 || std::cmp_greater_equal(fromSection, m_sections.sections.size())) return;
+        m_position = SongPosition{.playing = true, .countingIn = false, .section = fromSection, .bar = 1,
+                                  .bars = m_sections.sections.at(static_cast<std::size_t>(fromSection)).bars};
+    }
+    void stopSong() override
+    {
+        m_position.playing = false;
+        m_position.bar = 0;
+    }
+    void jumpToSection(int section) override
+    {
+        if (section < 0 || std::cmp_greater_equal(section, m_sections.sections.size())) return;
+        m_position.section = section;
+        m_position.bars = m_sections.sections.at(static_cast<std::size_t>(section)).bars;
+        m_position.bar = m_position.playing ? 1 : 0;
+    }
+    [[nodiscard]] SongPosition songPosition() const override { return m_position; }
+
 private:
+    SongSections m_sections;
+    SongPosition m_position;
     double m_tempo = 120.0;
     bool m_click = false;
     MidiActivity m_keyboard; // notes played on screen (the demo has no MIDI input)

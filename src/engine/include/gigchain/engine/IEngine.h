@@ -178,6 +178,27 @@ public:
     virtual void setClick(bool on, double volumeDb) = 0;
     [[nodiscard]] virtual bool clickOn() const = 0;
 
+    // Beats per bar and the beat's note value (6/8: 6, 8), for plugins, the
+    // click and counting a song's bars. Anything that is not a time
+    // signature is ignored (logged).
+    virtual void setTimeSignature(int numerator, int denominator) = 0;
+
+    // ---- Song sections (the chart's Intro, Verse, Chorus...)
+    // The current song's sections, in order. Each channel of the patch takes
+    // new notes only in the sections it plays in (it rings on in the others);
+    // empty = the song has none: every channel plays. Sections worked out for
+    // another patch than the one playing count as none.
+    virtual void setSongSections(const SongSections& sections) = 0;
+    // Counts the song's bars at the tempo from `fromSection` (a bar of click
+    // first when `countIn`), switching sections on the way; the backing track
+    // (if any) plays along from that section's first beat.
+    virtual void playSong(int fromSection, bool countIn) = 0;
+    // Stops counting (and the backing track); the section playing stays.
+    virtual void stopSong() = 0;
+    // Playing: on to that section now. Stopped: that section is in force.
+    virtual void jumpToSection(int section) = 0;
+    [[nodiscard]] virtual SongPosition songPosition() const = 0;
+
     // ---- Backing track (one at a time: the current song's)
     // Reads the file in the background (problems come through poll()) and
     // makes it the track; empty = none. Asking for the same file again keeps

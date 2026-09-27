@@ -17,9 +17,10 @@ enum class ControlAction : int
     PreviousPatch,
     Panic,
     TapTempo,    // each press is a beat; a few presses set the tempo
-    PlayBacking, // starts or stops the song's backing track
+    PlayBacking, // starts or stops the song (its sections' count and backing track)
+    NextSection, // on to the song's next section now
 };
-inline constexpr int kControlActionCount = 7;
+inline constexpr int kControlActionCount = 8;
 
 // One MIDI control: a CC (a pedal or button), a note (a pad or key) or a
 // program change, on one channel.

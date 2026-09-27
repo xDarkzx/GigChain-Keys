@@ -146,10 +146,18 @@ float ChannelStrip::mixInto(const AudioBlock& mix, float gain) noexcept
 }
 
 void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& mix, bool anySolo, const TimeInfo& time,
-                          const AudioInputs& inputs) noexcept
+                          const AudioInputs& inputs, const SectionGate& gate) noexcept
 {
+    const uint64_t mask = m_sections.load(std::memory_order_relaxed);
+    // Whether a new note at `offset` is for this strip: its section is in force.
+    const auto plays = [&gate, mask](int offset) {
+        const int section = offset < gate.switchAt ? gate.before : gate.after;
+        return section < 0 || section >= 64 || ((mask >> section) & 1U) != 0;
+    };
     std::size_t routedCount = 0;
     for (const MidiEvent& event : events) {
+        const bool newNote = (event.status & 0xF0) == 0x90 && event.data2 > 0;
+        if (newNote && !plays(event.sampleOffset)) continue;
         // A controller mapped to a parameter moves it, and nothing else hears it.
         bool mapped = false;
         if ((event.status & 0xF0) == 0xB0) {
@@ -215,7 +223,7 @@ RenderGraph::RenderGraph(std::vector<StripSpec> specs, double sampleRate, int ma
 }
 
 void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, float masterGain, const TimeInfo& time,
-                         const AudioInputs& inputs) noexcept
+                         const AudioInputs& inputs, const SectionGate& gate) noexcept
 {
     const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
     std::fill_n(out.left, frames, 0.0F);
@@ -228,7 +236,7 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
 
     const bool anySolo = std::ranges::any_of(m_strips, [](const auto& s) { return s->solo(); });
     for (const auto& channel : m_strips) {
-        channel->render(events, out, anySolo, time, inputs);
+        channel->render(events, out, anySolo, time, inputs, gate);
     }
     for (const auto& tail : m_tails) {
         if (out.frames <= tail->maxBlock()) tail->renderTail(events, out, time);

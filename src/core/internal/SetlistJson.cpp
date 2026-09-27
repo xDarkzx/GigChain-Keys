@@ -1,6 +1,7 @@
 #include "gigchain/core/SetlistJson.h"
 
 #include "gigchain/core/Branding.h"
+#include "gigchain/core/Chart.h"
 
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/Validation.h"
@@ -26,6 +27,8 @@ class JsonReader
 {
 public:
     [[nodiscard]] bool failed() const { return m_error.has_value(); }
+    // For values checked outside the reader (the first error is kept).
+    void invalid(QString message) { setError(ErrorCode::InvalidData, std::move(message)); }
     [[nodiscard]] const Error& error() const { return *m_error; }
 
     QString string(const QJsonObject& obj, QLatin1StringView key, const QString& path, qsizetype maxLength)
@@ -298,6 +301,42 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
         song.attachments.push_back(attachments.at(i).toString());
     }
     song.backingTrack = r.optionalString(obj, "backingTrack"_L1, path, limits::kMaxFileNameLength); // format 3
+
+    // Format 4.
+    if (const QString time = r.optionalString(obj, "timeSignature"_L1, path, 8); !time.isEmpty()) {
+        const QStringList parts = time.split(u'/');
+        bool numberOk = false;
+        bool noteOk = false;
+        const int numerator = parts.size() == 2 ? parts.at(0).toInt(&numberOk) : 0;
+        const int denominator = parts.size() == 2 ? parts.at(1).toInt(&noteOk) : 0;
+        if (!numberOk || !noteOk || !isTimeSignature(numerator, denominator)) {
+            r.invalid(u"%1.timeSignature \"%2\" is not a time signature like 4/4 or 6/8"_s.arg(path, time));
+            return song;
+        }
+        song.timeNumerator = numerator;
+        song.timeDenominator = denominator;
+    }
+    song.switchEarly = obj.contains("switchEarly"_L1) && r.boolean(obj, "switchEarly"_L1, path);
+    const QJsonArray sections = r.optionalArray(obj, "sections"_L1, path, limits::kMaxSectionsPerSong);
+    for (qsizetype i = 0; i < sections.size() && !r.failed(); ++i) {
+        const QString where = u"%1.sections[%2]"_s.arg(path).arg(i);
+        const QJsonObject item = r.object(sections.at(i), where);
+        SectionSetup section;
+        section.name = r.string(item, "name"_L1, where, limits::kMaxNameLength);
+        section.occurrence = r.integer(item, "occurrence"_L1, where, 1, limits::kMaxSectionOccurrence);
+        section.bars = r.integer(item, "bars"_L1, where, 0, limits::kMaxSectionBars);
+        section.assigned = r.boolean(item, "assigned"_L1, where);
+        const QJsonArray channels = r.array(item, "channels"_L1, where, limits::kMaxChannelsPerPatch);
+        for (qsizetype c = 0; c < channels.size() && !r.failed(); ++c) {
+            const QString channelPath = u"%1.channels[%2]"_s.arg(where).arg(c);
+            if (!channels.at(c).isString()) {
+                r.invalid(u"%1 must be text"_s.arg(channelPath));
+                break;
+            }
+            section.channels.emplace_back(channels.at(c).toString().left(limits::kMaxIdLength + 1));
+        }
+        song.sections.push_back(section);
+    }
     return song;
 }
 
@@ -368,6 +407,16 @@ QJsonObject writeSong(const Song& song)
     for (const SongLink& link : song.links) links.append(QJsonObject{{u"title"_s, link.title}, {u"url"_s, link.url}});
     QJsonArray attachments;
     for (const QString& name : song.attachments) attachments.append(name);
+    QJsonArray sections;
+    for (const SectionSetup& section : song.sections) {
+        QJsonArray channels;
+        for (const ChannelId& id : section.channels) channels.append(id.value());
+        sections.append(QJsonObject{{u"name"_s, section.name},
+                                    {u"occurrence"_s, section.occurrence},
+                                    {u"bars"_s, section.bars},
+                                    {u"assigned"_s, section.assigned},
+                                    {u"channels"_s, channels}});
+    }
     return QJsonObject{{u"id"_s, song.id.value()},
                        {u"name"_s, song.name},
                        {u"patches"_s, patches},
@@ -377,7 +426,10 @@ QJsonObject writeSong(const Song& song)
                        {u"notes"_s, song.notes},
                        {u"links"_s, links},
                        {u"attachments"_s, attachments},
-                       {u"backingTrack"_s, song.backingTrack}};
+                       {u"backingTrack"_s, song.backingTrack},
+                       {u"timeSignature"_s, u"%1/%2"_s.arg(song.timeNumerator).arg(song.timeDenominator)},
+                       {u"switchEarly"_s, song.switchEarly},
+                       {u"sections"_s, sections}};
 }
 
 } // namespace

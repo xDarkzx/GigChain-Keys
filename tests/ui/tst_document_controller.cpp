@@ -32,6 +32,27 @@ class TestDocumentController : public QObject
 
     QString path(const QString& name) const { return m_dir->filePath(name); }
 
+    // Piano and Strings in the patch; a chart with a Verse (2 chords) and a
+    // Chorus (1 chord).
+    void addSectionsSong()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));
+        QVERIFY(m_doc->addChannel(u"spy/Strings.vst3"_s, u"Strings"_s));
+        QVERIFY(m_doc->setSongChart(0, u"{comment: Verse}\n[C]words [G]more\n{comment: Chorus}\n[F]la\n"_s));
+    }
+    // The names of the channels a section plays.
+    [[nodiscard]] QStringList sectionChannels(int section) const
+    {
+        QStringList names;
+        const QVariantMap map = m_doc->currentSections().at(section).toMap();
+        for (const QVariant& c : map.value(u"channels"_s).toList()) names << c.toMap().value(u"name"_s).toString();
+        return names;
+    }
+    [[nodiscard]] core::ChannelId channelId(int channel) const
+    {
+        return m_doc->currentPatch()->channels.at(static_cast<std::size_t>(channel)).id;
+    }
+
 private slots:
     void init()
     {
@@ -714,6 +735,157 @@ private slots:
         }
         QVERIFY(!m_engine->tempoRequests.empty());
         QVERIFY2(std::abs(m_engine->tempoRequests.back() - 200.0) < 15.0, qPrintable(QString::number(m_engine->tempoRequests.back())));
+    }
+
+    // ---- Song sections
+
+    void theChartsSectionsPlayTheFirstInstrument()
+    {
+        addSectionsSong();
+        const QVariantList sections = m_doc->currentSections();
+        QCOMPARE(sections.size(), 2);
+        QCOMPARE(sections.at(0).toMap().value(u"name"_s).toString(), u"Verse"_s);
+        QCOMPARE(sections.at(0).toMap().value(u"bars"_s).toInt(), 2);
+        QVERIFY(sections.at(0).toMap().value(u"guessed"_s).toBool());
+        QCOMPARE(sectionChannels(0), QStringList{u"Piano"_s});
+        QCOMPARE(sectionChannels(1), QStringList{u"Piano"_s});
+        // To the engine, for this patch.
+        QVERIFY(m_engine->sections.patch == m_doc->currentPatch()->id);
+        QCOMPARE(m_engine->sections.sections.size(), std::size_t{2});
+        QCOMPARE(m_engine->sections.sections.at(0).live, std::vector<core::ChannelId>{channelId(0)});
+        QCOMPARE(m_engine->sections.sections.at(1).bars, 1);
+        // The chart's title lines know their section.
+        const QVariantList lines = m_doc->chartLines(m_doc->currentChart());
+        QCOMPARE(lines.at(0).toMap().value(u"sectionIndex"_s).toInt(), 0);
+        QCOMPARE(lines.at(1).toMap().value(u"sectionIndex"_s).toInt(), -1);
+        QCOMPARE(lines.at(2).toMap().value(u"sectionIndex"_s).toInt(), 1);
+    }
+
+    void aSectionIsGivenItsInstrumentsAndUndoTakesThemBack()
+    {
+        addSectionsSong();
+        QSignalSpy changed(m_doc.get(), &DocumentController::sectionsChanged);
+        QCOMPARE(m_doc->sectionChoices(1).size(), 1); // Strings (Piano plays there already)
+        QVERIFY(m_doc->addSectionChannel(1, 1));
+        QCOMPARE(sectionChannels(1), (QStringList{u"Piano"_s, u"Strings"_s}));
+        QVERIFY(m_doc->sectionChoices(1).isEmpty());
+        QCOMPARE(m_engine->sections.sections.at(1).live, (std::vector<core::ChannelId>{channelId(0), channelId(1)}));
+        QVERIFY(!changed.isEmpty());
+        QVERIFY(m_doc->isDirty());
+
+        QVERIFY(m_doc->removeSectionChannel(1, 0));
+        QCOMPARE(sectionChannels(1), QStringList{u"Strings"_s});
+        QVERIFY(m_doc->removeSectionChannel(1, 1));
+        QVERIFY(sectionChannels(1).isEmpty()); // a silent chorus
+        QVERIFY(m_engine->sections.sections.at(1).live.empty());
+        QCOMPARE(sectionChannels(0), QStringList{u"Piano"_s}); // the verse untouched
+
+        QVERIFY(m_doc->undo());
+        QCOMPARE(sectionChannels(1), QStringList{u"Strings"_s});
+        QCOMPARE(m_engine->sections.sections.at(1).live, std::vector<core::ChannelId>{channelId(1)});
+
+        QVERIFY(m_doc->setSectionBars(0, 8));
+        QCOMPARE(m_doc->currentSections().at(0).toMap().value(u"bars"_s).toInt(), 8);
+        QVERIFY(!m_doc->currentSections().at(0).toMap().value(u"guessed"_s).toBool());
+        QCOMPARE(m_engine->sections.sections.at(0).bars, 8);
+
+        QVERIFY(!m_doc->setSectionBars(0, 0));
+        QVERIFY(!m_doc->setSectionBars(0, 1000));
+        QVERIFY(!m_doc->addSectionChannel(5, 0));
+        QVERIFY2(m_doc->lastError().contains(u"Section 6"_s), qPrintable(m_doc->lastError()));
+        QVERIFY(!m_doc->addSectionChannel(0, 9));
+    }
+
+    void sectionsReachTheEngineBeforeThePatch()
+    {
+        addSectionsSong();
+        QVERIFY(m_doc->addSong()); // the new song is chosen
+        QVERIFY(m_doc->setSongChart(1, u"{comment: Intro}\n[C]\n"_s));
+        m_engine->calls.clear();
+        m_engine->jumps.clear();
+        const int stops = m_engine->stops;
+        m_doc->previousSong();
+        const auto patchAt = std::ranges::find(m_engine->calls, u"patch"_s);
+        QVERIFY(patchAt != m_engine->calls.end());
+        QVERIFY(patchAt != m_engine->calls.begin());
+        QCOMPARE(*(patchAt - 1), u"sections"_s); // just before it
+        QCOMPARE(m_engine->stops, stops + 1);         // another song: the count stops...
+        QCOMPARE(m_engine->jumps, std::vector<int>{0}); // ... and starts over at its first section
+        // An edit in the same song does not stop it.
+        QVERIFY(m_doc->addSectionChannel(0, 1));
+        QCOMPARE(m_engine->stops, stops + 1);
+    }
+
+    void aSongWithoutSectionsPlaysEverything()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));
+        QVERIFY(m_doc->setSongChart(0, u"[C]just words\n"_s));
+        QVERIFY(m_doc->currentSections().isEmpty());
+        QVERIFY(m_engine->sections.sections.empty());
+        QVERIFY(!m_doc->hasSections());
+        m_doc->playSong();
+        QVERIFY(!m_engine->played);
+        QVERIFY(m_doc->notifications()->text(m_doc->notifications()->count() - 1).contains(u"no sections"_s));
+    }
+
+    void theSongPlaysStopsAndMovesOn()
+    {
+        addSectionsSong();
+        EngineStatus status(*m_engine, *m_doc);
+        m_doc->playSong();
+        const auto notPlayed = std::pair{-1, true};
+        QCOMPARE(m_engine->played.value_or(notPlayed), (std::pair{0, false})); // the first section; no click: no count-in
+        status.poll();
+        QVERIFY(status.songPlaying());
+        QCOMPARE(status.songSection(), 0);
+        QCOMPARE(status.songBar(), 1);
+        m_doc->nextSection();
+        QCOMPARE(m_engine->jumps.back(), 1);
+        m_doc->nextSection(); // already the last: nowhere to go
+        QCOMPARE(m_engine->jumps.back(), 1);
+        m_engine->pendingActions = {engine::ControlAction::PlayBacking}; // the play/stop pedal stops the song
+        status.poll();
+        QVERIFY(!status.songPlaying());
+        m_engine->click = true;
+        m_engine->pendingActions = {engine::ControlAction::PlayBacking};
+        status.poll();
+        // From the section it was at; with the click on, a bar of it first.
+        QCOMPARE(m_engine->played.value_or(notPlayed), (std::pair{1, true}));
+        m_engine->pendingActions = {engine::ControlAction::NextSection};
+        m_engine->jumps.clear();
+        m_engine->position.section = 0;
+        status.poll();
+        QCOMPARE(m_engine->jumps, std::vector<int>{1});
+        m_doc->selectSection(0);
+        QCOMPARE(m_engine->jumps.back(), 0);
+        m_doc->selectSection(4);
+        QVERIFY(m_doc->lastError().contains(u"Section 5"_s));
+    }
+
+    void pastingTakesTheTempoAndTimeAndSaysSo()
+    {
+        const int before = m_doc->notifications()->count();
+        QVERIFY(m_doc->pasteChart(0, u"Some Song Chords by Someone\nTempo: 96\nTime: 6/8\n[Verse]\nC G\nla la\n"_s));
+        QCOMPARE(m_doc->songTempo(), 96.0);
+        QCOMPARE(m_doc->songTimeNumerator(), 6);
+        QCOMPARE(m_doc->songTimeDenominator(), 8);
+        QCOMPARE(m_engine->timeSignature, (std::pair{6, 8}));
+        QCOMPARE(m_engine->tempoNow, 96.0);
+        QStringList said;
+        for (int i = before; i < m_doc->notifications()->count(); ++i) said << m_doc->notifications()->text(i);
+        QVERIFY2(said.join(u'|').contains(u"Tempo 96 BPM taken from the chart"_s), qPrintable(said.join(u'|')));
+        QVERIFY2(said.join(u'|').contains(u"Time signature 6/8 taken from the chart"_s), qPrintable(said.join(u'|')));
+        // A tempo the song already has stays.
+        QVERIFY(m_doc->pasteChart(0, u"Tempo: 140\n[Verse]\nC G\n"_s));
+        QCOMPARE(m_doc->songTempo(), 96.0);
+        // Undoing the paste puts the time back.
+        QVERIFY(m_doc->undoPaste());
+        QCOMPARE(m_doc->songTimeNumerator(), 6); // the first paste's
+        QVERIFY(m_doc->setSongTimeSignature(0, 3, 4));
+        QCOMPARE(m_engine->timeSignature, (std::pair{3, 4}));
+        QVERIFY(!m_doc->setSongTimeSignature(0, 3, 5));
+        QVERIFY(m_doc->setSongSwitchEarly(0, true));
+        QVERIFY(m_doc->songSwitchEarly());
     }
 
     void pedalsTapTheTempoAndStartTheBackingTrack()

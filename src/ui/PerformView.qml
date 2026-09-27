@@ -96,6 +96,10 @@ Rectangle {
                         width: performChart.width - 16
                         size: 1.7
                         lines: perform.doc.chartLines(perform.doc.currentChart)
+                        doc: perform.doc
+                        currentSection: perform.engineStatus.songSection
+                        playing: perform.engineStatus.songPlaying
+                        bar: perform.engineStatus.songBar
                     }
                     Label {
                         visible: perform.doc.currentChart.trim() === ""

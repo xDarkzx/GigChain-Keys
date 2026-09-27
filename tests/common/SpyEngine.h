@@ -61,6 +61,7 @@ public:
     void applyPatch(const core::SongId&, const core::Patch& patch) override
     {
         ++applyCount;
+        calls.push_back(QStringLiteral("patch"));
         lastPatch = patch;
     }
     [[nodiscard]] QString pluginFolder() const override { return {}; } // its plugins are not on disk
@@ -234,6 +235,40 @@ public:
     }
     [[nodiscard]] int audioInputChannels() const override { return setup.inputDevice.isEmpty() ? 0 : 2; }
     [[nodiscard]] QStringList midiOutputs() const override { return {QStringLiteral("Spy Drum Machine")}; }
+
+    // Song sections and the song's transport.
+    std::vector<QString> calls; // "patch", "sections", in the order asked
+    engine::SongSections sections;
+    int sectionsCount = 0;
+    std::pair<int, int> timeSignature{4, 4};
+    void setTimeSignature(int numerator, int denominator) override { timeSignature = {numerator, denominator}; }
+    void setSongSections(const engine::SongSections& chosen) override
+    {
+        ++sectionsCount;
+        calls.push_back(QStringLiteral("sections"));
+        sections = chosen;
+    }
+    std::optional<std::pair<int, bool>> played; // {from section, count-in}
+    void playSong(int fromSection, bool countIn) override
+    {
+        played = {fromSection, countIn};
+        position = {.playing = true, .countingIn = countIn, .section = fromSection, .bar = countIn ? 0 : 1,
+                    .bars = sections.sections.at(static_cast<std::size_t>(fromSection)).bars};
+    }
+    int stops = 0;
+    void stopSong() override
+    {
+        ++stops;
+        position.playing = false;
+    }
+    std::vector<int> jumps;
+    void jumpToSection(int section) override
+    {
+        jumps.push_back(section);
+        position.section = section;
+    }
+    engine::SongPosition position;
+    [[nodiscard]] engine::SongPosition songPosition() const override { return position; }
 };
 
 } // namespace gigchain::test

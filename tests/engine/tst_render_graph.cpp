@@ -393,6 +393,74 @@ private slots:
         QVERIFY(after.tails().front()->tailDone());
     }
 
+    // Sections: a strip takes new notes only in its sections, exactly from
+    // the switch point; everything else still reaches it.
+    void aSectionGateSendsNewNotesToItsStrips()
+    {
+        auto verse = std::make_shared<HeldNoteNode>(0.25F);
+        auto chorus = std::make_shared<HeldNoteNode>(0.5F);
+        verse->received.reserve(16);
+        chorus->received.reserve(16);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(verse));
+        specs.push_back(strip(chorus));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        graph.strip(0)->setSections(0b01); // section 0
+        graph.strip(1)->setSections(0b10); // section 1
+        QCOMPARE(graph.strip(0)->sections(), uint64_t{0b01});
+
+        MidiEvent before = noteOn(60);
+        before.sampleOffset = 31;
+        MidiEvent after = noteOn(64);
+        after.sampleOffset = 32;
+        MidiEvent release = cc(0x80, 60, 0); // the verse's key let go after the switch
+        release.sampleOffset = 40;
+        const std::array events{before, after, release};
+        Output out;
+        graph.render(events, out.block(), 1.0F, {}, {}, SectionGate{.before = 0, .after = 1, .switchAt = 32});
+
+        QCOMPARE(verse->received.size(), std::size_t{2}); // its note, and its note-off
+        QCOMPARE(verse->received.at(0).data1, uint8_t{60});
+        QCOMPARE(verse->received.at(1).status, uint8_t{0x80});
+        QCOMPARE(chorus->received.size(), std::size_t{2}); // its note (note-offs reach every strip: harmless)
+        QCOMPARE(chorus->received.at(0).data1, uint8_t{64});
+        QCOMPARE(chorus->received.at(1).status, uint8_t{0x80});
+        QCOMPARE(out.left.at(kFrames - 1), 0.5F); // the verse's key was let go; the chorus sounds
+    }
+
+    void withoutSectionsEveryStripPlays()
+    {
+        auto a = std::make_shared<HeldNoteNode>(0.25F);
+        auto b = std::make_shared<HeldNoteNode>(0.5F);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(a));
+        specs.push_back(strip(b));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        graph.strip(0)->setSections(0);
+        graph.strip(1)->setSections(0);
+        const std::array events{noteOn(60)};
+        Output out;
+        graph.render(events, out.block(), 1.0F); // no gate: no sections
+        QCOMPARE(a->received.size(), std::size_t{1});
+        QCOMPARE(b->received.size(), std::size_t{1});
+        QCOMPARE(out.left.at(0), 0.75F);
+    }
+
+    void aGatedStripStillHearsPedalsAndKnobs()
+    {
+        auto node = std::make_shared<HeldNoteNode>(0.25F);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(node));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        graph.strip(0)->setSections(0b10); // not in section 0
+        const std::array events{noteOn(60), cc(0xB0, 64, 127), cc(0xE0, 0, 80), cc(0x90, 60, 0)};
+        Output out;
+        graph.render(events, out.block(), 1.0F, {}, {}, SectionGate{.before = 0, .after = 0, .switchAt = 0});
+        QCOMPARE(node->received.size(), std::size_t{3}); // sustain, bend, the note-on with velocity 0 (a note-off)
+        QCOMPARE(node->received.at(0).status, uint8_t{0xB0});
+        QCOMPARE(out.left.at(0), 0.0F); // no note sounded
+    }
+
     void renderDoesNotAllocate()
     {
         auto first = std::make_shared<HeldNoteNode>(0.3F);

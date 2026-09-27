@@ -10,6 +10,7 @@ Rectangle {
     id: panel
 
     required property DocumentController doc
+    required property EngineStatus engineStatus
     property bool editing: false
 
     color: Theme.background
@@ -141,8 +142,13 @@ Rectangle {
                 }
 
                 ChartView {
+                    objectName: "chartView"
                     width: parent.width
                     lines: panel.doc.chartLines(panel.doc.currentChart)
+                    doc: panel.doc
+                    currentSection: panel.engineStatus.songSection
+                    playing: panel.engineStatus.songPlaying
+                    bar: panel.engineStatus.songBar
                 }
             }
         }

@@ -2,6 +2,7 @@
 
 #include <QUrl>
 
+#include "gigchain/core/Chart.h"
 #include "gigchain/core/Limits.h"
 
 #include <cmath>
@@ -182,6 +183,40 @@ Result<void> validateChart(const Song& song, const QString& path)
     }
     if (!song.backingTrack.isEmpty()) {
         if (auto r = validateFileName(song.backingTrack, path + ".backingTrack"_L1); !r) return r;
+    }
+    return validateSections(song, path);
+}
+
+Result<void> validateSections(const Song& song, const QString& path)
+{
+    if (!isTimeSignature(song.timeNumerator, song.timeDenominator)) {
+        return fail(ErrorCode::OutOfRange, u"%1.timeSignature %2/%3 is not a time signature (1-32 beats of 1, 2, 4, 8, 16 or 32)"_s
+                                               .arg(path)
+                                               .arg(song.timeNumerator)
+                                               .arg(song.timeDenominator));
+    }
+    if (song.sections.size() > static_cast<std::size_t>(limits::kMaxSectionsPerSong)) {
+        return fail(ErrorCode::LimitExceeded,
+                    u"%1 has more than %2 sections"_s.arg(path).arg(limits::kMaxSectionsPerSong));
+    }
+    for (std::size_t i = 0; i < song.sections.size(); ++i) {
+        const SectionSetup& section = song.sections.at(i);
+        const QString where = u"%1.sections[%2]"_s.arg(path).arg(i);
+        if (auto r = validateName(section.name, where + ".name"_L1); !r) return r;
+        if (section.occurrence < 1 || section.occurrence > limits::kMaxSectionOccurrence) {
+            return fail(ErrorCode::OutOfRange,
+                        u"%1.occurrence must be between 1 and %2"_s.arg(where).arg(limits::kMaxSectionOccurrence));
+        }
+        if (section.bars < 0 || section.bars > limits::kMaxSectionBars) {
+            return fail(ErrorCode::OutOfRange, u"%1.bars must be between 0 and %2"_s.arg(where).arg(limits::kMaxSectionBars));
+        }
+        if (section.channels.size() > static_cast<std::size_t>(limits::kMaxChannelsPerPatch)) {
+            return fail(ErrorCode::LimitExceeded,
+                        u"%1 lists more than %2 channels"_s.arg(where).arg(limits::kMaxChannelsPerPatch));
+        }
+        for (std::size_t c = 0; c < section.channels.size(); ++c) {
+            if (auto r = validateId(section.channels.at(c).value(), u"%1.channels[%2]"_s.arg(where).arg(c)); !r) return r;
+        }
     }
     return {};
 }

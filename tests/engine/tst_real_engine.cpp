@@ -37,6 +37,25 @@ core::Patch pianoPatch()
     return patch;
 }
 
+// A mono 48 kHz WAV of a 0.5 sine, `frames` long.
+bool writeSineWav(const QString& path, quint32 frames)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) return false;
+    QDataStream out(&file);
+    out.setByteOrder(QDataStream::LittleEndian);
+    out.writeRawData("RIFF", 4);
+    out << quint32{36 + (frames * 2)};
+    out.writeRawData("WAVEfmt ", 8);
+    out << quint32{16} << quint16{1} << quint16{1} << quint32{48000} << quint32{96000} << quint16{2} << quint16{16};
+    out.writeRawData("data", 4);
+    out << frames * 2;
+    for (quint32 i = 0; i < frames; ++i) {
+        out << static_cast<qint16>(std::lround(0.5 * 32767.0 * std::sin(2.0 * std::numbers::pi * 440.0 * i / 48000.0)));
+    }
+    return out.status() == QDataStream::Ok;
+}
+
 void pump(IEngine& engine, int milliseconds)
 {
     const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
@@ -593,6 +612,113 @@ private slots:
         (void)engine.masterLevel();
         pump(engine, 300);
         QCOMPARE(engine.masterLevel().peak, 0.0F);
+    }
+
+    // Song sections: each channel takes notes only in its sections; the
+    // count moves through them at the tempo.
+    void songSectionsSendNotesToTheirChannels()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-90.0); // inaudible, measurable
+        const core::SongId song = core::SongId::generate();
+        core::Patch patch = pianoPatch();
+        patch.channels.push_back(pianoPatch().channels.front()); // a second piano, its own instance
+        const core::ChannelId verse = patch.channels.at(0).id;
+        const core::ChannelId chorus = patch.channels.at(1).id;
+        engine.applyPatch(song, patch);
+        QVERIFY(engine.poll().empty());
+        engine.setTempo(240.0); // a 4/4 bar a second
+        engine.setSongSections(SongSections{.patch = patch.id,
+                                            .sections = {{.bars = 1, .live = {verse}}, {.bars = 1, .live = {chorus}}},
+                                            .switchEarly = false});
+        const auto playNote = [&engine] {
+            pump(engine, 100);
+            engine.injectNote(1, 60, 110);
+            pump(engine, 300);
+            engine.injectNote(1, 60, 0);
+        };
+        const auto levelsAfter = [&engine, &verse, &chorus](const auto& play) {
+            (void)engine.channelLevel(verse);
+            (void)engine.channelLevel(chorus);
+            play();
+            return std::pair{engine.channelLevel(verse).peak, engine.channelLevel(chorus).peak};
+        };
+
+        // Stopped: the first section is in force.
+        const auto [verseFirst, chorusFirst] = levelsAfter(playNote);
+        QVERIFY2(verseFirst > 0.0F, "the verse's piano stayed silent in the verse");
+        QCOMPARE(chorusFirst, 0.0F);
+        QCOMPARE(engine.songPosition().section, 0);
+        pump(engine, 3000); // the note fades away
+
+        // Selecting the chorus sends the notes there.
+        engine.jumpToSection(1);
+        const auto [verseSecond, chorusSecond] = levelsAfter(playNote);
+        QCOMPARE(verseSecond, 0.0F);
+        QVERIFY2(chorusSecond > 0.0F, "the chorus's piano stayed silent in the chorus");
+        QCOMPARE(engine.songPosition().section, 1);
+
+        // Played: the verse, then a second later the chorus, then the end.
+        engine.playSong(0, false);
+        pump(engine, 200);
+        SongPosition at = engine.songPosition();
+        QVERIFY(at.playing);
+        QCOMPARE(at.section, 0);
+        QCOMPARE(at.bar, 1);
+        QCOMPARE(at.bars, 1);
+        for (int i = 0; i < 150 && engine.songPosition().section != 1; ++i) pump(engine, 10);
+        QCOMPARE(engine.songPosition().section, 1);
+        for (int i = 0; i < 150 && engine.songPosition().playing; ++i) pump(engine, 10);
+        at = engine.songPosition();
+        QVERIFY(!at.playing);
+        QCOMPARE(at.section, 1); // the last one stays
+
+        // Sections worked out for another patch count as none: both play.
+        pump(engine, 3000);
+        engine.setSongSections(SongSections{.patch = core::PatchId::generate(),
+                                            .sections = {{.bars = 1, .live = {verse}}, {.bars = 1, .live = {chorus}}},
+                                            .switchEarly = false});
+        const auto [verseAll, chorusAll] = levelsAfter(playNote);
+        QVERIFY(verseAll > 0.0F && chorusAll > 0.0F);
+        QCOMPARE(engine.songPosition().section, -1);
+    }
+
+    void aCountInKeepsTheBackingTrackWaiting()
+    {
+        auto created = createRealEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-60.0);
+        core::Patch patch = core::makePatch(u"Empty"_s);
+        engine.applyPatch(patch);
+        const QTemporaryDir dir;
+        const QString path = dir.filePath(u"backing.wav"_s);
+        QVERIFY(writeSineWav(path, 96000)); // two seconds
+        engine.setBackingTrack(path);
+        for (int i = 0; i < 300 && !engine.backingTrack().loaded; ++i) pump(engine, 10);
+        QVERIFY2(engine.backingTrack().loaded, "the backing track was not read");
+        engine.setTempo(240.0); // the count-in bar is a second
+        engine.setSongSections(SongSections{.patch = patch.id, .sections = {{.bars = 4, .live = {}}}, .switchEarly = false});
+
+        engine.playSong(0, true);
+        pump(engine, 500);
+        QVERIFY(engine.songPosition().countingIn);
+        QVERIFY(!engine.backingTrack().playing); // waiting for bar 1
+        QCOMPARE(engine.backingTrack().position, 0.0);
+        pump(engine, 800);
+        QVERIFY(!engine.songPosition().countingIn);
+        QVERIFY(engine.backingTrack().playing);
+        const double position = engine.backingTrack().position;
+        QVERIFY2(position > 0.1 && position < 0.5, qPrintable(QString::number(position))); // started about 0.3 s ago
+        engine.stopSong();
+        pump(engine, 100);
+        QVERIFY(!engine.backingTrack().playing);
+        QVERIFY(!engine.songPosition().playing);
     }
 
     void aPluginsParametersAreListedForKnobs()

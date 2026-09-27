@@ -45,6 +45,13 @@ Setlist richSetlist()
     song.links.push_back(SongLink{QStringLiteral("Chords"), QStringLiteral("https://tabs.example/cafe")});
     song.attachments.push_back(QStringLiteral("cafe-chords.pdf"));
     song.backingTrack = QStringLiteral("cafe backing.mp3");
+    song.timeNumerator = 6;
+    song.timeDenominator = 8;
+    song.switchEarly = true;
+    song.sections.push_back(SectionSetup{.name = QStringLiteral("Verse 1"), .occurrence = 1, .bars = 8, .assigned = true,
+                                         .channels = {piano.id, mic.id}});
+    song.sections.push_back(SectionSetup{.name = QStringLiteral("Chorus"), .occurrence = 2, .bars = 0, .assigned = true,
+                                         .channels = {}}); // a silent break
     setlist.songs.push_back(song);
     setlist.songs.push_back(makeSong(QStringLiteral("Second")));
     return setlist;
@@ -52,6 +59,18 @@ Setlist richSetlist()
 
 // The JSON for richSetlist(), as an object tests can tamper with.
 QJsonObject richJson() { return QJsonDocument::fromJson(toJson(richSetlist())).object(); }
+
+// richSetlist() JSON with songs[0][key] replaced.
+QByteArray withFirstSongField(const QString& key, const QJsonValue& value)
+{
+    QJsonObject root = richJson();
+    QJsonArray songs = root.value(u"songs").toArray();
+    QJsonObject song = songs.at(0).toObject();
+    song.insert(key, value);
+    songs.replace(0, song);
+    root.insert(u"songs", songs);
+    return QJsonDocument(root).toJson();
+}
 
 // richSetlist() JSON with songs[0].patches[0].channels[0][key] replaced.
 QByteArray withFirstChannelField(const QString& key, const QJsonValue& value)
@@ -189,6 +208,44 @@ private slots:
         songs.replace(0, song);
         root.insert(u"songs", songs);
         QVERIFY(!fromJson(QJsonDocument(root).toJson()));
+    }
+
+    void versionThreeFilesOpenWithoutSections()
+    {
+        QJsonObject root = richJson();
+        root.insert(u"formatVersion", 3);
+        QJsonArray songs = root.value(u"songs").toArray();
+        QJsonObject song = songs.at(0).toObject();
+        for (const auto& key : {u"timeSignature", u"switchEarly", u"sections"}) song.remove(key);
+        songs.replace(0, song);
+        root.insert(u"songs", songs);
+        const auto parsed = fromJson(QJsonDocument(root).toJson());
+        QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
+        const Song& s = parsed->songs.at(0);
+        QCOMPARE(s.timeNumerator, 4);
+        QCOMPARE(s.timeDenominator, 4);
+        QVERIFY(!s.switchEarly);
+        QVERIFY(s.sections.empty());
+    }
+
+    void rejectsBadSections()
+    {
+        QVERIFY(!fromJson(withFirstSongField(u"timeSignature"_s, u"5/5"_s)));
+        QVERIFY(!fromJson(withFirstSongField(u"timeSignature"_s, u"four"_s)));
+        QVERIFY(!fromJson(withFirstSongField(u"switchEarly"_s, u"yes"_s)));
+        const auto section = [](const QJsonValue& bars, const QJsonValue& channel) {
+            return QJsonArray{QJsonObject{{u"name"_s, u"Verse"_s}, {u"occurrence"_s, 1}, {u"bars"_s, bars},
+                                          {u"assigned"_s, true}, {u"channels"_s, QJsonArray{channel}}}};
+        };
+        const auto tooLong = fromJson(withFirstSongField(u"sections"_s, section(1000, u"x"_s)));
+        QVERIFY(!tooLong);
+        QVERIFY2(tooLong.error().message.contains(u"bars"_s), qPrintable(tooLong.error().message));
+        QVERIFY(!fromJson(withFirstSongField(u"sections"_s, section(4, u""_s))));  // an empty channel id
+        QVERIFY(!fromJson(withFirstSongField(u"sections"_s, section(4, 12))));      // not text
+        QJsonArray many;
+        for (int i = 0; i <= limits::kMaxSectionsPerSong; ++i) many.append(section(4, u"x"_s).at(0));
+        QVERIFY(!fromJson(withFirstSongField(u"sections"_s, many)));
+        QVERIFY(fromJson(withFirstSongField(u"sections"_s, section(0, u"x"_s)))); // 0 = guessed
     }
 
     void rejectsNonJson()

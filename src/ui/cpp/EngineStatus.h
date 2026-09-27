@@ -51,6 +51,13 @@ class EngineStatus : public QObject
     Q_PROPERTY(bool trackPlaying READ trackPlaying NOTIFY transportChanged)
     Q_PROPERTY(double trackPosition READ trackPosition NOTIFY transportChanged) // seconds
     Q_PROPERTY(double trackLength READ trackLength NOTIFY transportChanged)     // seconds
+    // Where the song is: counting its sections, the one in force (-1: it has
+    // none) and the bar in it (0 while stopped or counting in).
+    Q_PROPERTY(bool songPlaying READ songPlaying NOTIFY songPositionChanged)
+    Q_PROPERTY(bool songCountingIn READ songCountingIn NOTIFY songPositionChanged)
+    Q_PROPERTY(int songSection READ songSection NOTIFY songPositionChanged)
+    Q_PROPERTY(int songBar READ songBar NOTIFY songPositionChanged)
+    Q_PROPERTY(int songBars READ songBars NOTIFY songPositionChanged)
     // Learning a knob for a plugin parameter: what has been caught so far.
     Q_PROPERTY(bool learningMapping READ learningMapping NOTIFY mappingLearnChanged)
     Q_PROPERTY(QString learnedKnob READ learnedKnob NOTIFY mappingLearnChanged)
@@ -103,6 +110,11 @@ public:
     [[nodiscard]] bool trackPlaying() const { return m_track.playing; }
     [[nodiscard]] double trackPosition() const { return m_track.position; }
     [[nodiscard]] double trackLength() const { return m_track.length; }
+    [[nodiscard]] bool songPlaying() const { return m_song.playing; }
+    [[nodiscard]] bool songCountingIn() const { return m_song.countingIn; }
+    [[nodiscard]] int songSection() const { return m_song.section; }
+    [[nodiscard]] int songBar() const { return m_song.bar; }
+    [[nodiscard]] int songBars() const { return m_song.bars; }
     Q_INVOKABLE void playPauseTrack();
     Q_INVOKABLE void rewindTrack();
 
@@ -136,6 +148,7 @@ signals:
     void masterMutedChanged();
     void limitingChanged();
     void transportChanged();
+    void songPositionChanged();
     void mappingLearnChanged();
     void mappingLearned(int channel); // a knob was mapped
     void keyboardChanged();
@@ -164,6 +177,7 @@ private:
     bool m_clickOn = false;
     double m_clickVolumeDb = -6.0;
     engine::BackingTrackState m_track;
+    engine::SongPosition m_song;
     QElapsedTimer m_tapClock;
     std::vector<qint64> m_taps; // ms, the last few taps
     int m_learnChannel = -1;

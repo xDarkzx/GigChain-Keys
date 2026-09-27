@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gigchain/core/Ids.h"
+
 #include <QString>
 
 #include <array>
@@ -108,6 +110,34 @@ struct BackingTrackState
     bool playing = false;
     double position = 0.0; // seconds
     double length = 0.0;   // seconds
+};
+
+// A song's sections for the engine: how long each is and which channels of
+// `patch` play in it (see IEngine::setSongSections).
+struct SongSections
+{
+    struct Section
+    {
+        int bars = 4;
+        std::vector<core::ChannelId> live;
+    };
+    core::PatchId patch; // the patch `live` was worked out for
+    std::vector<Section> sections;
+    bool switchEarly = false; // a beat before each section instead of a sixteenth
+
+    bool operator==(const SongSections&) const = default;
+};
+
+// Where the song is (IEngine::songPosition).
+struct SongPosition
+{
+    bool playing = false;
+    bool countingIn = false;
+    int section = -1; // in force; -1 = the song has no sections
+    int bar = 0;      // 1-based within the section; 0 while stopped or counting in
+    int bars = 0;     // the section's length
+
+    bool operator==(const SongPosition&) const = default;
 };
 
 // A MIDI input as Settings shows it.
