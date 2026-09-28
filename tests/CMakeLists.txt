@@ -32,3 +32,4 @@ add_test(NAME no_hardcoded_product_name
 add_subdirectory(core)
 add_subdirectory(engine)
 add_subdirectory(ui)
+add_subdirectory(soak)

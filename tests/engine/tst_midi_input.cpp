@@ -1,3 +1,4 @@
+#include "MidiClockOut.h"
 #include "MidiInput.h"
 
 #include <QtTest>
@@ -177,6 +178,24 @@ private slots:
         QCOMPARE(input.takeDropped(), uint64_t{0});
         input.close();
         QVERIFY(input.openPortNames().isEmpty());
+    }
+
+    // The engine lists the ports every 2 s for as long as it runs (to notice
+    // a keyboard plugged in): listing must not leak (the soak saw handles
+    // creep up).
+    void listingPortsLeaksNoHandles()
+    {
+        (void)MidiInput::listPorts(); // first use: the MIDI system loads
+        (void)MidiClockOut::listPorts();
+        DWORD before = 0;
+        QVERIFY(GetProcessHandleCount(GetCurrentProcess(), &before));
+        for (int i = 0; i < 200; ++i) {
+            (void)MidiInput::listPorts();
+            (void)MidiClockOut::listPorts();
+        }
+        DWORD after = 0;
+        QVERIFY(GetProcessHandleCount(GetCurrentProcess(), &after));
+        QVERIFY2(after <= before + 5, qPrintable(u"handles went from %1 to %2"_s.arg(before).arg(after)));
     }
 
     void switchedOffPortsStayClosed()
