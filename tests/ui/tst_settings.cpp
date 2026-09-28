@@ -174,6 +174,25 @@ private slots:
         QCOMPARE(options.midi.channels.at(u"MIDIIN2 (Spy Keys) 1"_s), 2);
     }
 
+    // Saved before port names left out their place in Windows' list
+    // ("Impact GXP61 0"): the keyboard chosen then still plays.
+    void midiChoicesSavedByAnEarlierVersionStillApply()
+    {
+        m_settings->setValue(u"midi/configured"_s, true);
+        m_settings->setValue(u"midi/enabled"_s, QStringList{u"Impact GXP61 0"_s});
+        m_settings->setValue(u"midi/channels"_s, QVariantMap{{u"Impact GXP61 0"_s, 3}});
+        m_settings->setValue(u"midi/clockOutput"_s, u"MIDIOUT2 (Impact GXP61) 1"_s);
+        auto options = SettingsController::engineOptions(*m_settings);
+        QCOMPARE(options.midi.enabled, QStringList{u"Impact GXP61"_s});
+        QCOMPARE(options.midi.channels, (std::map<QString, int>{{u"Impact GXP61"_s, 3}}));
+        QCOMPARE(options.midi.clockOutput, u"MIDIOUT2 (Impact GXP61)"_s);
+
+        // Only once: a name of today that ends in a number keeps it.
+        m_settings->setValue(u"midi/enabled"_s, QStringList{u"Keystation 49"_s});
+        options = SettingsController::engineOptions(*m_settings);
+        QCOMPARE(options.midi.enabled, QStringList{u"Keystation 49"_s});
+    }
+
     void reopeningTheLastSetlistIsOffUntilChosen()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);

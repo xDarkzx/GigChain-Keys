@@ -30,6 +30,8 @@
 #include <set>
 #include <vector>
 
+class TestRealEngine;
+
 namespace gigchain::engine {
 
 // The engine that makes sound. Main thread: applyPatch builds a RenderGraph
@@ -39,6 +41,8 @@ namespace gigchain::engine {
 // docs/superpowers/specs/2026-09-24-real-engine-design.md.
 class RealEngine final : public IEngine
 {
+    friend class ::TestRealEngine; // unplugs the MIDI clock's output
+
 public:
     static core::Result<std::unique_ptr<RealEngine>> create(const RealEngineOptions& options);
     ~RealEngine() override;
@@ -208,7 +212,8 @@ private:
     MidiSetup m_midiSetup;
     bool m_midiInputs = true; // false: none opened (RealEngineOptions::midiInputs)
     LoadProgress m_progress;
-    QStringList m_midiPorts; // what was plugged in at the last check
+    QStringList m_midiPorts;   // what was plugged in at the last check
+    QStringList m_midiOutputs; // the outputs plugged in at the last check
     std::chrono::steady_clock::time_point m_lastMidiCheck{};
     // Main thread: the instrument each channel of the current patch plays.
     std::map<QString, std::shared_ptr<Vst3Node>> m_currentInstruments;

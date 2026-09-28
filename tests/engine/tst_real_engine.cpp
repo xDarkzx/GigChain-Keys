@@ -3,6 +3,7 @@
 // heard; the channel meters are measured before the master fader.
 #include "PluginCatalog.h"
 #include "PluginLoadGuard.h"
+#include "RealEngine.h"
 #include "gigchain/core/Limits.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
@@ -93,6 +94,33 @@ private slots:
         QVERIFY(!piano->vendor.isEmpty());
         QVERIFY(piano->website.contains(u"arturia"_s, Qt::CaseInsensitive)); // for the info panel
         QVERIFY(piano->sdkVersion.startsWith(u"VST"_s));
+    }
+
+    // The output the MIDI clock goes to, pulled out and plugged in again: the
+    // clock starts again by itself.
+    void theMidiClockComesBackWhenItsOutputIsPluggedIn()
+    {
+        const QStringList outputs = MidiClockOut::listPorts();
+        if (outputs.isEmpty()) QSKIP("No MIDI outputs on this machine");
+        RealEngineOptions options;
+        options.midiInputs = false;
+        options.midi.clockOutput = outputs.first();
+        auto created = RealEngine::create(options);
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY2(created.has_value(), created ? "" : qPrintable(created.error().message));
+        RealEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb); // silent test
+        QCOMPARE(engine.m_clockOut.portName(), outputs.first());
+
+        // Pulled out: sending failed and the clock stopped (as poll() does then),
+        // and the last look found the output gone.
+        engine.m_clockOut.close();
+        engine.m_midiOutputs.clear();
+        engine.m_lastMidiCheck = {}; // due for another look
+        const std::vector<Notice> notices = engine.poll();
+        QCOMPARE(engine.m_clockOut.portName(), outputs.first());
+        QVERIFY(std::ranges::any_of(notices, [](const Notice& n) { return n.text.contains(u"MIDI clock"_s); }));
+        engine.m_clockOut.close();
     }
 
     void catalogOfMissingFolderIsEmpty()

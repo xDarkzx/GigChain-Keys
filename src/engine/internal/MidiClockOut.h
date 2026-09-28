@@ -9,7 +9,9 @@
 #include <memory>
 #include <thread>
 
+namespace rt::midi {
 class RtMidiOut;
+} // namespace rt::midi
 
 namespace gigchain::engine {
 
@@ -47,7 +49,7 @@ public:
 private:
     void run();
 
-    std::unique_ptr<RtMidiOut> m_out;
+    std::unique_ptr<rt::midi::RtMidiOut> m_out;
     QString m_port;
     std::thread m_thread;
     std::atomic<bool> m_stop{false};

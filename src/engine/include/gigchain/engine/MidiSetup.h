@@ -25,6 +25,16 @@ struct MidiSetup
     bool operator==(const MidiSetup&) const = default;
 };
 
+// Port names as shown and saved, from RtMidi's (in Windows' order). RtMidi
+// numbers every port by its place in the list ("Impact GXP61 0"), which
+// changes when devices are plugged in in another order, so the number is
+// left out; ports with the same name are told apart as "Name", "Name (2)"...
+[[nodiscard]] QStringList portNames(const QStringList& numbered);
+// A setup saved by a version before portNames(), its names with RtMidi's
+// place number ("Impact GXP61 0"): the same setup with the numbers removed.
+// Run once on such settings; a newer name may end in a number of its own.
+[[nodiscard]] MidiSetup withoutPortPlaces(MidiSetup saved);
+
 // Which inputs play, given what is plugged in (in Windows' order):
 // - never chosen: only the first port. A keyboard often lists more than one
 //   port (the Impact GXP61: keys on the first, DAW control on the second),

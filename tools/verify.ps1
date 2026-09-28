@@ -25,7 +25,7 @@ $head = (git rev-parse HEAD | Out-String).Trim()
 $untracked = @(git ls-files --others --exclude-standard | Where-Object { $_ })
 $changed = @(@(git diff --name-only HEAD) + $untracked | Where-Object { $_ -and (Test-Path $_ -PathType Leaf) } |
     Sort-Object -Unique)
-$sources = @($changed | Where-Object { $_ -match '^(src|tests|cmake|tools)/|CMakeLists\.txt$|CMakePresets\.json$|vcpkg\.json$' })
+$sources = @($changed | Where-Object { $_ -match '^(src|tests|cmake|tools|ports)/|CMakeLists\.txt$|CMakePresets\.json$|vcpkg\.json$' })
 
 $sha = [System.Security.Cryptography.SHA256]::Create()
 $material = New-Object System.Text.StringBuilder
