@@ -18,6 +18,8 @@
 #include <chrono>
 #include <cmath>
 #include <numbers>
+#include <optional>
+#include <stdexcept>
 #include <thread>
 
 using namespace gigchain;
@@ -29,11 +31,25 @@ namespace {
 const QString kVst3Folder = u"C:/Program Files/Common Files/VST3"_s;
 const QString kPiano = u"C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3"_s;
 
+core::PluginSlot slot(const QString& pluginId, const QString& name, bool bypass = false)
+{
+    return core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = bypass, .state = {}};
+}
+
+// The instrument of the first song's patch `patch`, first channel (the tests
+// put one there).
+core::PluginSlot& instrumentOf(core::Setlist& setlist, std::size_t patch)
+{
+    core::Channel& channel = setlist.songs.at(0).patches.at(patch).channels.at(0);
+    if (!channel.instrument) throw std::logic_error("the test's channel has no instrument");
+    return *channel.instrument; // written through by callers
+}
+
 core::Patch pianoPatch()
 {
     core::Patch patch = core::makePatch(u"Verse"_s);
     core::Channel channel = core::makeChannel(u"Piano"_s);
-    channel.instrument = core::PluginSlot{kPiano, u"Piano V2"_s, false};
+    channel.instrument = slot(kPiano, u"Piano V2"_s);
     patch.channels.push_back(channel);
     return patch;
 }
@@ -253,7 +269,7 @@ private slots:
 
         const auto channelWith = [&](const QString& name) {
             core::Channel channel = core::makeChannel(name);
-            channel.instrument = core::PluginSlot{kSmall, u"Kotelnikov"_s, false};
+            channel.instrument = slot(kSmall, u"Kotelnikov"_s);
             return channel;
         };
         core::Setlist setlist;
@@ -300,7 +316,7 @@ private slots:
         engine.setMasterVolume(core::limits::kMinVolumeDb);
 
         core::Channel channel = core::makeChannel(u"Keys"_s);
-        channel.instrument = core::PluginSlot{kSmall, u"Kotelnikov"_s, false};
+        channel.instrument = slot(kSmall, u"Kotelnikov"_s);
         core::Song song = core::makeSong(u"Ballad"_s);
         song.patches[0].channels = {channel};
         song.patches.push_back(core::makePatch(u"Chorus"_s));
@@ -312,15 +328,15 @@ private slots:
         QVERIFY(!engine.takePluginEdits()); // loading is not an edit
 
         QVERIFY(engine.storePluginStates(setlist).empty());
-        const QByteArray stored = setlist.songs[0].patches[0].channels[0].instrument->state;
+        const QByteArray stored = instrumentOf(setlist, 0).state;
         QVERIFY(!stored.isEmpty());
-        QCOMPARE(setlist.songs[0].patches[1].channels[0].instrument->state, stored); // one instance, one state
+        QCOMPARE(instrumentOf(setlist, 1).state, stored); // one instance, one state
 
         // Opening a setlist whose settings differ reloads the plugin with them;
         // settings it cannot take are reported, not ignored.
         core::Setlist broken = setlist;
-        broken.songs[0].patches[0].channels[0].instrument->state = "GCS1 garbage";
-        broken.songs[0].patches[1].channels[0].instrument->state = "GCS1 garbage";
+        instrumentOf(broken, 0).state = "GCS1 garbage";
+        instrumentOf(broken, 1).state = "GCS1 garbage";
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov.*saved settings"_s));
         engine.preload(broken);
         const auto notices = engine.poll();
@@ -346,7 +362,7 @@ private slots:
 
         core::Patch patch = core::makePatch(u"Verse"_s);
         core::Channel channel = core::makeChannel(u"Keys"_s);
-        channel.effects = {core::PluginSlot{kSmall, u"Kotelnikov"_s, false}, core::PluginSlot{kSmall, u"Kotelnikov"_s, true}};
+        channel.effects = {slot(kSmall, u"Kotelnikov"_s), slot(kSmall, u"Kotelnikov"_s, true)};
         patch.channels.push_back(channel);
         engine.applyPatch(patch);
 
@@ -372,8 +388,7 @@ private slots:
         IEngine& engine = **created;
         engine.setMasterVolume(core::limits::kMinVolumeDb);
 
-        std::vector<core::PluginSlot> master{core::PluginSlot{kSmall, u"Kotelnikov"_s, false},
-                                             core::PluginSlot{kSmall, u"Kotelnikov"_s, true}};
+        std::vector<core::PluginSlot> master{slot(kSmall, u"Kotelnikov"_s), slot(kSmall, u"Kotelnikov"_s, true)};
         engine.setMasterEffects(master);
         QVERIFY(engine.poll().empty());
         QVERIFY(!engine.takeMasterEdits()); // loading is not an edit
@@ -422,7 +437,7 @@ private slots:
 
         core::Patch patch = core::makePatch(u"Verse"_s);
         core::Channel channel = core::makeChannel(u"Keys"_s);
-        channel.instrument = core::PluginSlot{kSmall, u"Kotelnikov"_s, false};
+        channel.instrument = slot(kSmall, u"Kotelnikov"_s);
         patch.channels.push_back(channel);
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov is switched off"_s));
         engine.applyPatch(patch);
@@ -517,7 +532,7 @@ private slots:
         IEngine& engine = **created;
         core::Patch patch = core::makePatch(u"Broken"_s);
         core::Channel channel = core::makeChannel(u"Ghost"_s);
-        channel.instrument = core::PluginSlot{u"C:/no/such/Ghost.vst3"_s, u"Ghost"_s, false};
+        channel.instrument = slot(u"C:/no/such/Ghost.vst3"_s, u"Ghost"_s);
         patch.channels.push_back(channel);
 
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Plugin not found: C:/no/such/Ghost\\.vst3"_s));

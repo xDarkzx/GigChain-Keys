@@ -9,10 +9,13 @@
 #include <utility>
 #include <cstdlib>
 #include <new>
+#include <span>
 #include <vector>
 
 // Counts heap allocations made while `t_countAllocations` is set on this thread,
-// so tests can prove render() never allocates.
+// so tests can prove render() never allocates. Replacing the global operator
+// new takes mutable globals and malloc/free: that is what it is.
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables, cppcoreguidelines-no-malloc)
 namespace {
 thread_local bool t_countAllocations = false;
 std::atomic<int> g_allocations{0};
@@ -26,6 +29,7 @@ void* operator new(std::size_t size)
 }
 void operator delete(void* p) noexcept { std::free(p); }
 void operator delete(void* p, std::size_t) noexcept { std::free(p); }
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables, cppcoreguidelines-no-malloc)
 
 using namespace gigchain;
 using namespace gigchain::engine;
@@ -80,10 +84,10 @@ public:
     core::Result<void> prepare(double, int) override { return {}; }
     void process(std::span<const MidiEvent>, AudioBlock io, const TimeInfo&) override
     {
-        for (int i = 0; i < io.frames; ++i) {
-            io.left[i] = (io.left[i] + m_add) * m_mul;
-            io.right[i] = (io.right[i] + m_add) * m_mul;
-        }
+        const auto frames = static_cast<std::size_t>(io.frames);
+        const auto shape = [this](float sample) { return (sample + m_add) * m_mul; };
+        std::ranges::transform(std::span(io.left, frames), io.left, shape);
+        std::ranges::transform(std::span(io.right, frames), io.right, shape);
     }
 private:
     float m_add;
@@ -105,7 +109,7 @@ struct Output
     AudioBlock block() { return AudioBlock{left.data(), right.data(), kFrames}; }
 };
 
-StripSpec strip(std::shared_ptr<INode> instrument, RouteSettings route = {}, double volumeDb = 0.0)
+StripSpec strip(std::shared_ptr<INode> instrument, const RouteSettings& route = {}, double volumeDb = 0.0)
 {
     StripSpec spec;
     spec.id = core::ChannelId::generate();
@@ -128,7 +132,7 @@ private slots:
         QVERIFY(!routeEvent(noteOn(47), split).has_value());
         QVERIFY(!routeEvent(noteOn(60), split).has_value());
         const auto routed = routeEvent(noteOn(48), split);
-        QVERIFY(routed.has_value());
+        if (!routed) QFAIL("a note inside the split was not routed");
         QCOMPARE(int(routed->data1), 60);
 
         const RouteSettings channel2{0, 127, 0, 2};
@@ -140,7 +144,7 @@ private slots:
 
         const MidiEvent sustain{0xB0, 64, 127, 0};
         const auto cc = routeEvent(sustain, split);
-        QVERIFY(cc.has_value()); // controllers reach every layer
+        if (!cc) QFAIL("a controller did not reach the layer"); // controllers reach every layer
         QCOMPARE(int(cc->data1), 64);
 
         const MidiEvent clock{0xF8, 0, 0, 0};
@@ -267,8 +271,8 @@ private slots:
         std::vector<StripSpec> specs;
         specs.push_back(strip(std::make_shared<HeldNoteNode>(0.5F)));
         RenderGraph graph(std::move(specs), 48000.0, kFrames);
-        std::vector<float> left(kFrames * 2, 1.0F);
-        std::vector<float> right(kFrames * 2, 1.0F);
+        std::vector<float> left(static_cast<std::size_t>(kFrames) * 2, 1.0F);
+        std::vector<float> right(static_cast<std::size_t>(kFrames) * 2, 1.0F);
         const MidiEvent events[] = {noteOn(60)};
         graph.render(events, AudioBlock{left.data(), right.data(), kFrames * 2}, 1.0F);
         QVERIFY(std::all_of(left.begin(), left.end(), [](float v) { return v == 0.0F; }));

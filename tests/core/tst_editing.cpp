@@ -26,8 +26,8 @@ QStringList songNames(const Setlist& setlist)
     return names;
 }
 
-const PluginSlot kPiano{u"fake.grand-piano"_s, u"Grand Piano"_s, false};
-const PluginSlot kReverb{u"fake.reverb"_s, u"Reverb"_s, false};
+const PluginSlot kPiano{.pluginId = u"fake.grand-piano"_s, .displayName = u"Grand Piano"_s, .bypass = false, .state = {}};
+const PluginSlot kReverb{.pluginId = u"fake.reverb"_s, .displayName = u"Reverb"_s, .bypass = false, .state = {}};
 
 } // namespace
 
@@ -62,7 +62,7 @@ private slots:
         QCOMPARE(*addPatch(s, 1, u"Chorus"_s), 1);
         QCOMPARE(s.songs[1].patches[1].name, u"Chorus"_s);
         QVERIFY(addPatch(s, 7, u"X"_s).error().code == ErrorCode::OutOfRange);
-        while (s.songs[0].patches.size() < std::size_t(limits::kMaxPatchesPerSong)) {
+        while (s.songs.at(0).patches.size() < static_cast<std::size_t>(limits::kMaxPatchesPerSong)) {
             QVERIFY(addPatch(s, 0, u"P"_s).has_value());
         }
         QVERIFY(addPatch(s, 0, u"P"_s).error().code == ErrorCode::LimitExceeded);

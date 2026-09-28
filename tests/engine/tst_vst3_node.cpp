@@ -120,8 +120,8 @@ private slots:
         QVERIFY(!(*node)->takeProblems().any());
 
         // A block bigger than prepared is refused (silence) and counted, not ignored.
-        std::vector<float> bigLeft(kBlock * 2);
-        std::vector<float> bigRight(kBlock * 2);
+        std::vector<float> bigLeft(static_cast<std::size_t>(kBlock) * 2);
+        std::vector<float> bigRight(static_cast<std::size_t>(kBlock) * 2);
         (*node)->process({}, AudioBlock{.left = bigLeft.data(), .right = bigRight.data(), .frames = kBlock * 2}, kTime);
         const auto problems = (*node)->takeProblems();
         QCOMPARE(problems.oversizedBlocks, uint64_t{1});
@@ -244,6 +244,7 @@ private slots:
         QVERIFY(handler.takeEdited());
 
         void* second = nullptr;
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay): a VST3 interface id is a raw TUID array by design
         QCOMPARE(handler.queryInterface(Steinberg::Vst::IComponentHandler2::iid, &second), Steinberg::kResultOk);
         static_cast<Steinberg::Vst::IComponentHandler2*>(second)->setDirty(true);
         QVERIFY(handler.takeEdited());

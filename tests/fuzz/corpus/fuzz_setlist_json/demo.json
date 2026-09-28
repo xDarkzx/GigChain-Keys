@@ -1,0 +1,259 @@
+{
+    "formatVersion": 1,
+    "songs": [
+        {
+            "id": "aca5c27d-42b1-4946-ac73-357db581efcf",
+            "name": "Demo Ballad",
+            "patches": [
+                {
+                    "id": "2e21e602-f487-478d-8694-5675fd2589a2",
+                    "name": "Intro",
+                    "channels": [
+                        {
+                            "id": "40b6fb5a-57d6-43d8-a48e-7adf285cebec",
+                            "name": "Piano",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3",
+                                "displayName": "Piano V2",
+                                "bypass": false
+                            },
+                            "effects": [
+                                {
+                                    "pluginId": "C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-R.vst3",
+                                    "displayName": "Pro-R",
+                                    "bypass": false
+                                }
+                            ],
+                            "volumeDb": 0.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 0,
+                            "keyHigh": 127,
+                            "transpose": 0,
+                            "midiChannel": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "c35985a3-341c-41ad-80e5-6a2414ad6556",
+                    "name": "Verse",
+                    "channels": [
+                        {
+                            "id": "a1620980-7df2-4959-82a1-7025d8dc3267",
+                            "name": "Piano",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3",
+                                "displayName": "Piano V2",
+                                "bypass": false
+                            },
+                            "effects": [
+                                {
+                                    "pluginId": "C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-R.vst3",
+                                    "displayName": "Pro-R",
+                                    "bypass": false
+                                }
+                            ],
+                            "volumeDb": 0.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 0,
+                            "keyHigh": 127,
+                            "transpose": 0,
+                            "midiChannel": 0
+                        },
+                        {
+                            "id": "a34f8b53-f50d-4799-a881-0e4ba7608fac",
+                            "name": "Strings",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/Solina V2.vst3",
+                                "displayName": "Solina V2",
+                                "bypass": false
+                            },
+                            "effects": [],
+                            "volumeDb": -8.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 0,
+                            "keyHigh": 127,
+                            "transpose": 0,
+                            "midiChannel": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "88039d62-be19-4fda-9428-1bbb50314e35",
+                    "name": "Chorus",
+                    "channels": [
+                        {
+                            "id": "023a4d1a-7007-4bcb-9f9b-21cc7a6848d7",
+                            "name": "Piano",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3",
+                                "displayName": "Piano V2",
+                                "bypass": false
+                            },
+                            "effects": [
+                                {
+                                    "pluginId": "C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-R.vst3",
+                                    "displayName": "Pro-R",
+                                    "bypass": false
+                                }
+                            ],
+                            "volumeDb": 0.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 0,
+                            "keyHigh": 127,
+                            "transpose": 0,
+                            "midiChannel": 0
+                        },
+                        {
+                            "id": "0f20cc4e-51f0-4396-97cd-51be6e1244f7",
+                            "name": "Strings",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/Solina V2.vst3",
+                                "displayName": "Solina V2",
+                                "bypass": false
+                            },
+                            "effects": [],
+                            "volumeDb": -6.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 0,
+                            "keyHigh": 127,
+                            "transpose": 0,
+                            "midiChannel": 0
+                        },
+                        {
+                            "id": "3e15fdd9-9528-4fe7-895e-a42d3c44a79b",
+                            "name": "Pad",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/Jup-8 V4.vst3",
+                                "displayName": "Jup-8 V4",
+                                "bypass": false
+                            },
+                            "effects": [],
+                            "volumeDb": -10.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 0,
+                            "keyHigh": 127,
+                            "transpose": 0,
+                            "midiChannel": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "94768c35-b612-4080-8a99-374accd92a89",
+            "name": "Funk Tune",
+            "patches": [
+                {
+                    "id": "c2041d6a-01cd-447f-bfd4-f951d8533a01",
+                    "name": "Verse",
+                    "channels": [
+                        {
+                            "id": "95e3d86f-c079-4aa7-a71f-975c44c7706e",
+                            "name": "Rhodes",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/Stage-73 V2.vst3",
+                                "displayName": "Stage-73 V2",
+                                "bypass": false
+                            },
+                            "effects": [
+                                {
+                                    "pluginId": "C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-Q 3.vst3",
+                                    "displayName": "Pro-Q 3",
+                                    "bypass": false
+                                }
+                            ],
+                            "volumeDb": 0.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 0,
+                            "keyHigh": 127,
+                            "transpose": 0,
+                            "midiChannel": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "5fefcd45-46fb-4b2c-9f9e-adbc15e601c9",
+                    "name": "Chorus",
+                    "channels": [
+                        {
+                            "id": "dd71e655-a83e-4038-b355-94bcd3cfcd3b",
+                            "name": "Organ (left hand)",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/B-3 V2.vst3",
+                                "displayName": "B-3 V2",
+                                "bypass": false
+                            },
+                            "effects": [],
+                            "volumeDb": 0.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 0,
+                            "keyHigh": 59,
+                            "transpose": 0,
+                            "midiChannel": 0
+                        },
+                        {
+                            "id": "19589975-b4ad-4d8e-ba17-4e637d383f6f",
+                            "name": "Rhodes (right hand)",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/Stage-73 V2.vst3",
+                                "displayName": "Stage-73 V2",
+                                "bypass": false
+                            },
+                            "effects": [
+                                {
+                                    "pluginId": "C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-Q 3.vst3",
+                                    "displayName": "Pro-Q 3",
+                                    "bypass": false
+                                }
+                            ],
+                            "volumeDb": 0.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 60,
+                            "keyHigh": 127,
+                            "transpose": 0,
+                            "midiChannel": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "8badcf39-d794-4678-962d-1500369ac1ce",
+                    "name": "Solo",
+                    "channels": [
+                        {
+                            "id": "7ff2652b-a468-4773-9de3-39216a662bb2",
+                            "name": "Lead",
+                            "instrument": {
+                                "pluginId": "C:/Program Files/Common Files/VST3/Arturia/Mini V3.vst3",
+                                "displayName": "Mini V3",
+                                "bypass": false
+                            },
+                            "effects": [
+                                {
+                                    "pluginId": "C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-R.vst3",
+                                    "displayName": "Pro-R",
+                                    "bypass": false
+                                }
+                            ],
+                            "volumeDb": -4.0,
+                            "mute": false,
+                            "solo": false,
+                            "keyLow": 0,
+                            "keyHigh": 127,
+                            "transpose": 12,
+                            "midiChannel": 0
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -33,7 +33,7 @@ public:
     HiddenParent(HiddenParent&&) = delete;
     HiddenParent& operator=(HiddenParent&&) = delete;
 
-    [[nodiscard]] quintptr handle() const { return reinterpret_cast<quintptr>(m_hwnd); }
+    [[nodiscard]] quintptr handle() const { return reinterpret_cast<quintptr>(m_hwnd); } // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): an HWND as a window id
 
 private:
     HWND m_hwnd;

@@ -1,5 +1,6 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
 
 // Instruments grouped by maker (Arturia, Spitfire Audio, Xfer Records...).
 StageMenu {

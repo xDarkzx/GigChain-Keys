@@ -27,7 +27,7 @@ Popup {
         }
         Rectangle {
             Layout.fillWidth: true
-            height: 4
+            Layout.preferredHeight: 4
             radius: 2
             color: Theme.border
             Rectangle {

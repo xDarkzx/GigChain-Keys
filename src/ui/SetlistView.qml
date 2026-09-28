@@ -112,10 +112,10 @@ Item {
                     onRightClicked: if (view.editable) contextMenu.popup()
                 }
 
-                DropArea {
+                PayloadDropArea {
                     anchors.fill: parent
                     keys: ["song", "patch"]
-                    function acceptDrop(payload) {
+                    onPayloadDropped: (payload) => {
                         if (payload.kind === "song")
                             view.doc.moveSong(payload.songIndex, row.songIndex)
                         else if (!row.isSong && payload.songIndex === row.songIndex)

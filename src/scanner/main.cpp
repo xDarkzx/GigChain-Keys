@@ -36,10 +36,12 @@ int main(int argc, char** argv)
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
     SetUnhandledExceptionFilter(&endQuietly);
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
-    for (const int type : {_CRT_WARN, _CRT_ERROR, _CRT_ASSERT}) { // debug builds: printed, not a dialog
+#ifdef _DEBUG // the debug C runtime's reports: printed, not a dialog (release builds have none)
+    for (const int type : {_CRT_WARN, _CRT_ERROR, _CRT_ASSERT}) {
         _CrtSetReportMode(type, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
         _CrtSetReportFile(type, _CRTDBG_FILE_STDERR);
     }
+#endif
 
     const QCoreApplication app(argc, argv);
     const QStringList arguments = QCoreApplication::arguments();

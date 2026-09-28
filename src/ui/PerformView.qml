@@ -178,8 +178,8 @@ Rectangle {
                     valueColor: perform.engineStatus.cpuLoad > 0.8 ? Theme.danger : Theme.text
                 }
                     Rectangle {
-                        width: 12
-                        height: 12
+                        Layout.preferredWidth: 12
+                        Layout.preferredHeight: 12
                         radius: 6
                         color: perform.engineStatus.midiActivity ? Theme.meterLow : Theme.border
                     }

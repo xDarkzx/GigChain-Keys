@@ -94,14 +94,14 @@ std::vector<AudioDeviceInfo> AudioDevice::listInputs()
 }
 
 core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigned int bufferFrames, RenderCallback render,
-                                     unsigned int wantedRate, std::optional<DeviceChoice> input)
+                                     unsigned int askedRate, std::optional<DeviceChoice> input)
 {
     m_render = std::move(render);
     m_wanted = choice;
-    m_wantedRate = wantedRate;
+    m_wantedRate = askedRate;
     m_wantedInput = input;
     m_standingIn = false;
-    auto opened = openUnlogged(std::move(choice), bufferFrames, wantedRate, std::move(input));
+    auto opened = openUnlogged(std::move(choice), bufferFrames, askedRate, std::move(input));
     if (opened) {
         qCInfo(lcEngine).noquote() << "Audio output:" << m_choice.name << "(" << apiName(m_choice.api) << ")"
                                    << m_sampleRate << "Hz," << m_maxBlock << "frames, latency" << m_latencyMs << "ms";
@@ -115,11 +115,11 @@ core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigne
 }
 
 core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames,
-                                             unsigned int wantedRate, std::optional<DeviceChoice> input)
+                                             unsigned int askedRate, std::optional<DeviceChoice> input)
 {
     close();
     m_requestedFrames = bufferFrames;
-    m_requestedRate = wantedRate;
+    m_requestedRate = askedRate;
     m_requestedInput = input;
     m_inputChannels = 0;
     const AudioApi driver = choice ? choice->api : AudioApi::Wasapi;
@@ -154,11 +154,11 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
     options.streamName = branding::name().toStdString(); // what Windows shows for our audio
     const unsigned int ownRate = info.preferredSampleRate != 0 ? info.preferredSampleRate : 48000;
-    const unsigned int rate = wantedRate != 0 ? wantedRate : ownRate;
-    if (wantedRate != 0 && wantedRate != info.preferredSampleRate &&
-        std::ranges::find(info.sampleRates, wantedRate) == info.sampleRates.end()) {
+    const unsigned int rate = askedRate != 0 ? askedRate : ownRate;
+    if (askedRate != 0 && askedRate != info.preferredSampleRate &&
+        std::ranges::find(info.sampleRates, askedRate) == info.sampleRates.end()) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 (%2) cannot run at %3 Hz"_s.arg(
-                                                            QString::fromStdString(info.name), apiName(driver)).arg(wantedRate));
+                                                            QString::fromStdString(info.name), apiName(driver)).arg(askedRate));
     }
     unsigned int frames = bufferFrames;
 

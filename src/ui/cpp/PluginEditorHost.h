@@ -27,7 +27,8 @@ class PluginEditorHost : public QQuickItem
     Q_OBJECT
     QML_ELEMENT
 
-    Q_PROPERTY(EditorService* service READ service WRITE setService NOTIFY serviceChanged)
+    // Fully qualified: QML's type registration resolves the name as written.
+    Q_PROPERTY(gigchain::ui::EditorService* service READ service WRITE setService NOTIFY serviceChanged)
     Q_PROPERTY(bool suspended READ isSuspended WRITE setSuspended NOTIFY suspendedChanged)
     Q_PROPERTY(bool hasEditor READ hasEditor NOTIFY editorChanged)
     Q_PROPERTY(QString title READ title NOTIFY editorChanged)

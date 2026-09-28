@@ -31,6 +31,9 @@ add_subdirectory(src/scanner)
 add_subdirectory(src/ui)
 add_subdirectory(src/app)
 add_subdirectory(tests)
+if(GIGCHAIN_FUZZ)
+    add_subdirectory(tests/fuzz)
+endif()
 
 # Throwaway experiments (engine spike). Off by default; use the "spike" preset.
 option(GIGCHAIN_BUILD_SPIKES "Build throwaway spike programs" OFF)

@@ -10,12 +10,16 @@ namespace {
 
 engine::PluginInfo instrument(const QString& name, const QString& sub)
 {
-    return engine::PluginInfo{u"x"_s, name, u"Vendor"_s, engine::PluginKind::Instrument, sub, u"1.0"_s};
+    return engine::PluginInfo{.id = u"x"_s, .name = name, .vendor = u"Vendor"_s, .kind = engine::PluginKind::Instrument,
+                              .subCategories = sub, .version = u"1.0"_s, .classId = {}, .website = {}, .email = {},
+                              .sdkVersion = {}};
 }
 
 engine::PluginInfo effect(const QString& name, const QString& sub)
 {
-    return engine::PluginInfo{u"x"_s, name, u"Vendor"_s, engine::PluginKind::Effect, sub, u"1.0"_s};
+    return engine::PluginInfo{.id = u"x"_s, .name = name, .vendor = u"Vendor"_s, .kind = engine::PluginKind::Effect,
+                              .subCategories = sub, .version = u"1.0"_s, .classId = {}, .website = {}, .email = {},
+                              .sdkVersion = {}};
 }
 
 } // namespace

@@ -23,11 +23,11 @@ Rectangle {
         GradientStop { position: 1.0; color: Theme.mixerBackground }
     }
 
-    DropArea {
+    PayloadDropArea {
         objectName: "mixerDrop"
         anchors.fill: parent
         keys: ["instrument"]
-        function acceptDrop(payload) { mixer.doc.addChannel(payload.pluginId, payload.name) }
+        onPayloadDropped: (payload) => mixer.doc.addChannel(payload.pluginId, payload.name)
     }
 
     StageDivider { anchors.top: parent.top; width: parent.width }

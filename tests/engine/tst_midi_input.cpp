@@ -136,14 +136,14 @@ private slots:
     {
         const std::vector<unsigned char> noteOn{0x91, 60, 100};
         const auto on = parseMidi(noteOn);
-        QVERIFY(on.has_value());
+        if (!on) QFAIL("a note-on was not parsed");
         QCOMPARE(int(on->status), 0x91);
         QCOMPARE(int(on->data1), 60);
         QCOMPARE(int(on->data2), 100);
 
         const std::vector<unsigned char> program{0xC0, 5}; // two-byte message
         const auto pc = parseMidi(program);
-        QVERIFY(pc.has_value());
+        if (!pc) QFAIL("a program change was not parsed");
         QCOMPARE(int(pc->data1), 5);
         QCOMPARE(int(pc->data2), 0);
 

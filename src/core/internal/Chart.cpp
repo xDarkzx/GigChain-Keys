@@ -60,6 +60,15 @@ const QRegularExpression& kSectionName()
     return pattern;
 }
 
+// Text with every kind of line end (\r\n Windows, \n, \r old Mac or a stray
+// one from a web page) as \n: a chart must read the same whichever it has.
+QString withNewlines(QString text)
+{
+    text.replace(u"\r\n"_s, u"\n"_s);
+    text.replace(u'\r', u'\n');
+    return text;
+}
+
 // How many times a repeat mark says to play something; 1 without one.
 int repeatCount(const QRegularExpressionMatch& match)
 {
@@ -228,7 +237,7 @@ std::vector<ChartSection> chartSections(const Chart& chart)
 Chart parseChordPro(const QString& text)
 {
     Chart chart;
-    const QStringList rawLines = QString(text).replace(u"\r\n"_s, u"\n"_s).split(u'\n');
+    const QStringList rawLines = withNewlines(text).split(u'\n');
     for (const QString& raw : rawLines) chart.lines.push_back(parseLine(raw, chart));
     return chart;
 }
@@ -264,8 +273,7 @@ bool isChordLine(const QString& line)
 
 QString chordSheetToChordPro(const QString& sheet)
 {
-    QString text = sheet;
-    text.replace(u"\r\n"_s, u"\n"_s);
+    QString text = withNewlines(sheet);
     // Ultimate Guitar markup: [ch]Am[/ch] marks a chord, [tab]...[/tab] a block.
     for (const QString& tag : {u"[ch]"_s, u"[/ch]"_s, u"[tab]"_s, u"[/tab]"_s}) text.remove(tag);
     QStringList lines = text.split(u'\n');
@@ -442,8 +450,7 @@ QString tidyChordPro(const QString& chordPro)
 
 QString tidyChordSheet(const QString& text)
 {
-    QString cleaned = text;
-    cleaned.replace(u"\r\n"_s, u"\n"_s);
+    QString cleaned = withNewlines(text);
     for (const QString& tag : {u"[ch]"_s, u"[/ch]"_s, u"[tab]"_s, u"[/tab]"_s}) cleaned.remove(tag);
 
     // Decided on what was pasted, before Capo/Key lines become {directives}.
@@ -521,8 +528,7 @@ bool isSectionLabel(const QString& line)
 ImportedSheet importChordSheet(const QString& text)
 {
     ImportedSheet sheet;
-    QString cleaned = text;
-    cleaned.replace(u"\r\n"_s, u"\n"_s);
+    QString cleaned = withNewlines(text);
     for (const QString& tag : {u"[ch]"_s, u"[/ch]"_s, u"[tab]"_s, u"[/tab]"_s}) cleaned.remove(tag);
     const QStringList lines = cleaned.split(u'\n');
 

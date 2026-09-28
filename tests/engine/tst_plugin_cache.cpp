@@ -93,6 +93,20 @@ private slots:
         QCOMPARE(third.opened, 1);
     }
 
+    // A cache grown past any real one (a runaway write, disk damage) is not
+    // read into memory: it counts as no cache, and says so.
+    void anOversizedCacheIsNotRead()
+    {
+        QFile file(m_cache);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QVERIFY(file.resize(PluginCatalog::kMaxCacheBytes + 1));
+        file.close();
+        ScanStats stats;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Plugin cache .* too large"_s));
+        QVERIFY(PluginCatalog::scan(m_folder, m_cache, &stats).empty());
+        QCOMPARE(stats.fromCache, 0);
+    }
+
     void anUnreadableCacheMeansAFullScan()
     {
         writeFile(m_cache, "{ this is not json");
