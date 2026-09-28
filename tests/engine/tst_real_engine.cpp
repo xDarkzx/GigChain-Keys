@@ -535,12 +535,63 @@ private slots:
         channel.instrument = slot(u"C:/no/such/Ghost.vst3"_s, u"Ghost"_s);
         patch.channels.push_back(channel);
 
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Plugin not found: C:/no/such/Ghost\\.vst3"_s));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Ghost is not one of the installed plugins"_s));
         engine.applyPatch(patch);
         const auto notices = engine.poll();
         QCOMPARE(notices.size(), std::size_t{1});
         QVERIFY(notices.front().text.contains(u"Ghost"_s));
         QVERIFY(notices.front().level == Notice::Level::Error); // it does not play
+    }
+
+    // A setlist names its plugins by file: one from anywhere else (a shared
+    // setlist naming a DLL in Downloads) is not loaded, so opening a setlist
+    // can never run a program that was not installed as a plugin.
+    void onlyInstalledPluginsLoad()
+    {
+        const QString installed = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+        if (!QFileInfo::exists(installed)) QSKIP("TDR Kotelnikov not installed");
+        QTemporaryDir elsewhere;
+        const QString copy = elsewhere.filePath(u"Kotelnikov.vst3"_s);
+        QVERIFY(QFile::copy(installed, copy));
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        const std::size_t before = engine.loadedPluginCount();
+
+        core::Patch patch = core::makePatch(u"Shared"_s);
+        core::Channel channel = core::makeChannel(u"Copy"_s);
+        channel.instrument = slot(copy, u"Kotelnikov copy"_s);
+        patch.channels.push_back(channel);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov copy is not one of the installed plugins"_s));
+        engine.applyPatch(patch);
+        QCOMPARE(engine.loadedPluginCount(), before); // never loaded
+        const auto notices = engine.poll();
+        QVERIFY(std::ranges::any_of(notices, [](const Notice& n) {
+            return n.level == Notice::Level::Error && n.text.contains(u"not one of the installed plugins"_s);
+        }));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov is not one of the installed plugins"_s));
+        QVERIFY(!engine.createEditorForPlugin(copy).has_value()); // nor as an editor
+
+        // Named as if in the plugin folder, climbing out of it: still refused.
+        const QString climbing = u"C:/Program Files/Common Files/VST3/../../../"_s + QFileInfo(copy).canonicalFilePath().mid(3);
+        QVERIFY2(QFileInfo::exists(climbing), qPrintable(climbing));
+        core::Patch sneaky = core::makePatch(u"Sneaky"_s);
+        core::Channel up = core::makeChannel(u"Up"_s);
+        up.instrument = slot(climbing, u"Climbing copy"_s);
+        sneaky.channels.push_back(up);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Climbing copy is not one of the installed plugins"_s));
+        engine.applyPatch(sneaky);
+        QCOMPARE(engine.loadedPluginCount(), before);
+        (void)engine.poll();
+
+        // The installed one, named the way Windows may write it, loads.
+        core::Patch real = core::makePatch(u"Installed"_s);
+        core::Channel same = core::makeChannel(u"Kotelnikov"_s);
+        same.instrument = slot(QString(installed).replace(u'/', u'\\').toUpper(), u"Kotelnikov"_s);
+        real.channels.push_back(same);
+        engine.applyPatch(real);
+        QCOMPARE(engine.loadedPluginCount(), before + 1);
     }
 
     void theTempoIsSetAndOutOfRangeIsRefused()

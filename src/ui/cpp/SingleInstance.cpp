@@ -86,6 +86,9 @@ bool SingleInstance::handOver(const QString& path) const
 
 core::Result<void> SingleInstance::listen()
 {
+    // Only this Windows user may reach it (Windows' default lets everyone
+    // and anonymous read a pipe).
+    m_server.setSocketOptions(QLocalServer::UserAccessOption);
     if (m_server.listen(m_pipe)) return {};
     return core::fail(core::ErrorCode::SystemRefused,
                       u"Could not listen for later starts (%1): %2"_s.arg(m_pipe, m_server.errorString()));

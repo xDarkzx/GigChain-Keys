@@ -12,6 +12,7 @@
 #include <QProcess>
 #include <QSettings>
 #include <QUrl>
+#include <QUrl>
 #include <QVariantMap>
 
 #include <algorithm>
@@ -71,7 +72,13 @@ QVariant PluginListModel::data(const QModelIndex& index, int role) const
     case ImageUrlRole: return m_images.at(at);
     case FavoriteRole: return m_favorites.contains(plugin.id);
     case RatingRole: return m_ratings.value(plugin.id, 0).toInt();
-    case WebsiteRole: return plugin.website;
+    case WebsiteRole: {
+        // Offered as a link (opened by Windows): only a web address, never a
+        // file or a program a plugin names as its "website".
+        const QUrl url(plugin.website, QUrl::StrictMode);
+        const bool web = url.isValid() && (url.scheme() == u"https"_s || url.scheme() == u"http"_s) && !url.host().isEmpty();
+        return web ? plugin.website : QString();
+    }
     case EmailRole: return plugin.email;
     case SdkVersionRole: return plugin.sdkVersion;
     case TagsRole: return plugin.subCategories.split(u'|', Qt::SkipEmptyParts);

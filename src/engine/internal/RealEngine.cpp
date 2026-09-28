@@ -8,6 +8,7 @@
 #include "gigchain/core/Limits.h"
 
 #include <QElapsedTimer>
+#include <QDir>
 #include <QFileInfo>
 
 #include <algorithm>
@@ -98,6 +99,7 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
                                             &engine->m_guard, options.pluginScanner);
     // The app's own plugins, unless the same one is installed already.
     if (!options.bundledPluginFolder.isEmpty() && QFileInfo(options.bundledPluginFolder).isDir()) {
+        engine->m_bundledPluginFolder = options.bundledPluginFolder;
         const QString bundledCache = options.pluginCacheFile.isEmpty() ? QString() : options.pluginCacheFile + u".bundled"_s;
         int added = 0;
         for (PluginInfo& plugin : PluginCatalog::scan(options.bundledPluginFolder, bundledCache, nullptr, scanProgress,
@@ -253,6 +255,27 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
     return node;
 }
 
+bool RealEngine::isInstalledPlugin(const QString& pluginId) const
+{
+    // Where the file really is (empty: it is not there).
+    const QString file = QFileInfo(pluginId).canonicalFilePath();
+    if (file.isEmpty()) return false;
+    return std::ranges::any_of(std::array{m_pluginFolder, m_bundledPluginFolder}, [&file](const QString& folder) {
+        const QString inside = folder.isEmpty() ? QString() : QFileInfo(folder).canonicalFilePath();
+        // Windows paths: the same whatever the case.
+        return !inside.isEmpty() && file.startsWith(inside + u'/', Qt::CaseInsensitive);
+    });
+}
+
+core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QString& name) const
+{
+    if (isInstalledPlugin(pluginId)) return {};
+    const QString problem = u"%1 is not one of the installed plugins (%2): not loaded. Install it in %3, "
+                            u"or choose another plugin"_s.arg(name, pluginId, QDir::toNativeSeparators(m_pluginFolder));
+    qCWarning(lcEngine).noquote() << problem;
+    return core::fail(core::ErrorCode::InvalidData, problem);
+}
+
 std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& slot)
 {
     GC_ONLY_MAIN_THREAD();
@@ -262,6 +285,12 @@ std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& s
                 slot.displayName);
         qCWarning(lcEngine).noquote() << problem;
         m_pendingNotices.push_back(Notice::warning(problem));
+        return nullptr;
+    }
+    // A setlist names its plugins by file: only installed ones load, so
+    // opening a setlist (maybe someone else's) cannot run any other program.
+    if (auto installed = checkInstalled(slot.pluginId, slot.displayName); !installed) {
+        m_pendingNotices.push_back(Notice::error(installed.error().message));
         return nullptr;
     }
     QElapsedTimer timer;
@@ -1513,6 +1542,9 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(c
     // A separate instance, not in the audio graph; the editor keeps it alive.
     if (m_guard.isBlocked(pluginId)) {
         return core::fail(core::ErrorCode::InvalidData, u"This plugin crashed the app while loading before, so it is switched off"_s);
+    }
+    if (auto installed = checkInstalled(pluginId, QFileInfo(pluginId).completeBaseName()); !installed) {
+        return tl::unexpected(installed.error());
     }
     const auto loading = m_guard.loading(pluginId);
     auto node = Vst3Node::load(pluginId, m_audio.sampleRate(), m_audio.maxBlock());

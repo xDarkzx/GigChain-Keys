@@ -145,6 +145,12 @@ private:
     // reported, and it plays at its defaults). nullptr when it cannot load
     // (reported). Loading is not an edit.
     std::shared_ptr<Vst3Node> loadWithSettings(const core::PluginSlot& slot);
+    // Whether `pluginId` (a .vst3 file) is an installed plugin: a file inside
+    // the plugin folder or the app's own (followed through "..", links and
+    // junctions), read or not (one switched off after a crash still is).
+    // checkInstalled also says why not (logged).
+    [[nodiscard]] bool isInstalledPlugin(const QString& pluginId) const;
+    [[nodiscard]] core::Result<void> checkInstalled(const QString& pluginId, const QString& name) const;
     // The instance key of each master effect, by position (empty: switched off).
     [[nodiscard]] std::vector<QString> masterKeys() const;
     // Every plugin slot of a patch with the key of the instance it plays:
@@ -192,7 +198,8 @@ private:
     MidiQueue m_injected; // main thread -> audio thread
     GraphExchange m_exchange;
     std::vector<PluginInfo> m_plugins;
-    QString m_pluginFolder; // where m_plugins were found
+    QString m_pluginFolder;        // where m_plugins were found
+    QString m_bundledPluginFolder; // the app's own plugins (empty: none)
     PluginLoadGuard m_guard; // plugins that crashed the app while loading
 
     // Main thread: every plugin instance created so far, by channel slot.
