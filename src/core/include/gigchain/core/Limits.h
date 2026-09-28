@@ -18,6 +18,9 @@ inline constexpr int kMaxNameLength = 200;
 inline constexpr int kMaxIdLength = 64;
 inline constexpr int kMaxPluginIdLength = 512;
 inline constexpr int kMaxChartLength = 100'000; // a very long song is ~10k
+// What is read to make a chart (pasted, or a chart file) before tidying:
+// web pages bring a lot of clutter, but more than this is not a song.
+inline constexpr int kMaxChartSourceLength = 1'000'000;
 inline constexpr int kMaxNotesLength = 10'000;
 inline constexpr int kMaxKeyLength = 16;
 inline constexpr int kMaxLinksPerSong = 32;

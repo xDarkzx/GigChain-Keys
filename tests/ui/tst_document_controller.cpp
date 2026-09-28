@@ -6,6 +6,7 @@
 #include "LeakCheck.h"
 #include "SpyEngine.h"
 
+#include "gigchain/core/Limits.h"
 #include "gigchain/core/SetlistFile.h"
 
 #include <QDir>
@@ -280,7 +281,9 @@ private slots:
         QCOMPARE(m_engine->lastPatch.channels[0].effects[0].pluginId, u"spy/Delay.vst3"_s);
         QVERIFY(!m_doc->replaceEffect(0, 9, u"spy/Delay.vst3"_s, u"Spy Delay"_s));
         QVERIFY(m_doc->setChannelInstrument(0, u"spy/Pad.vst3"_s, u"Spy Pad"_s));
-        QCOMPARE(m_engine->lastPatch.channels[0].instrument->pluginId, u"spy/Pad.vst3"_s);
+        const auto& instrument = m_engine->lastPatch.channels.at(0).instrument;
+        if (!instrument) QFAIL("the channel lost its instrument");
+        QCOMPARE(instrument->pluginId, u"spy/Pad.vst3"_s);
         QVERIFY(m_doc->removeEffect(0, 0));
         QVERIFY(m_doc->removeChannel(0));
         QCOMPARE(m_doc->selectedChannel(), -1);
@@ -400,8 +403,10 @@ private slots:
         QVERIFY(m_doc->saveAs(path(u"gig.gigchain.json"_s)));
         QCOMPARE(m_engine->storeCount, 1); // asked for the plugins' settings when saving
         const auto saved = core::loadSetlistFile(path(u"gig.gigchain.json"_s));
-        QVERIFY(saved.has_value());
-        QCOMPARE(saved->songs[0].patches[0].channels[0].instrument->state, QByteArray("spy settings: spy/Piano.vst3"));
+        if (!saved) QFAIL("the saved setlist did not load");
+        const auto& instrument = saved->songs.at(0).patches.at(0).channels.at(0).instrument;
+        if (!instrument) QFAIL("the saved channel has no instrument");
+        QCOMPARE(instrument->state, QByteArray("spy settings: spy/Piano.vst3"));
     }
 
     void aDuplicatedSongSoundsLikeTheOriginalDoesNow()
@@ -409,7 +414,9 @@ private slots:
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
         QVERIFY(m_doc->duplicateSong(0));
         const auto& copy = m_doc->setlist().songs.at(1);
-        QCOMPARE(copy.patches[0].channels[0].instrument->state, QByteArray("spy settings: spy/Piano.vst3"));
+        const auto& instrument = copy.patches.at(0).channels.at(0).instrument;
+        if (!instrument) QFAIL("the copy has no instrument");
+        QCOMPARE(instrument->state, QByteArray("spy settings: spy/Piano.vst3"));
     }
 
     void clickingAnEffectAsksForItsWindow()
@@ -512,6 +519,14 @@ private slots:
 
         QVERIFY(!m_doc->pasteChart(0, u"   \n"_s)); // nothing to paste
         QVERIFY(m_doc->lastError().contains(u"no text"_s));
+        QCOMPARE(m_doc->currentChart(), u"[C]Hello my [G]friend\n"_s); // unchanged
+
+        // A whole book pasted by mistake is refused before it is read
+        // (reading it would freeze the app), with the reason.
+        const QString huge = u"C        G\nHello my friend\n"_s.repeated(core::limits::kMaxChartSourceLength / 26 + 1);
+        QVERIFY(huge.size() > core::limits::kMaxChartSourceLength);
+        QVERIFY(!m_doc->pasteChart(0, huge));
+        QVERIFY(m_doc->lastError().contains(u"too long"_s));
         QCOMPARE(m_doc->currentChart(), u"[C]Hello my [G]friend\n"_s); // unchanged
 
         QVERIFY(m_doc->setSongChart(0, u"[Am]Edited"_s)); // typed in the editor

@@ -35,6 +35,7 @@ qt_add_qml_module(gigchain_ui
         SidePanel.qml
         SetlistView.qml
         DragSource.qml
+        PayloadDropArea.qml
         PluginBrowser.qml
         PluginArea.qml
         ChannelStrip.qml

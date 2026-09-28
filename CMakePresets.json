@@ -44,6 +44,13 @@
       }
     },
     {
+      "name": "fuzz",
+      "inherits": "asan",
+      "cacheVariables": {
+        "GIGCHAIN_FUZZ": "ON"
+      }
+    },
+    {
       "name": "spike",
       "inherits": "base",
       "cacheVariables": {
@@ -64,6 +71,10 @@
     {
       "name": "asan",
       "configurePreset": "asan"
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz"
     },
     {
       "name": "spike",
@@ -92,6 +103,16 @@
       "name": "asan",
       "inherits": "base",
       "configurePreset": "asan"
+    },
+    {
+      "name": "fuzz",
+      "inherits": "base",
+      "configurePreset": "fuzz",
+      "filter": {
+        "include": {
+          "name": "^fuzz_"
+        }
+      }
     }
   ]
 }

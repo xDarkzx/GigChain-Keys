@@ -116,19 +116,36 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
 
 RealEngine::~RealEngine()
 {
+    // Nothing may leave a destructor, and every step must still run when
+    // one before it failed (the audio thread must stop before the graph goes).
+    const auto step = [](const char* what, const auto& run) noexcept {
+        try {
+            run();
+        } catch (const std::exception& e) {
+            qCCritical(lcEngine).noquote() << "Shutting down:" << what << "failed:" << e.what();
+        } catch (...) {
+            qCCritical(lcEngine).noquote() << "Shutting down:" << what << "failed with an error of an unknown kind";
+        }
+    };
     // Stop audio before any graph or plugin is destroyed.
-    m_clockOut.close();
-    m_midi.close();
-    m_audio.close();
-    m_exchange.publish(nullptr);
-    m_exchange.collectGarbage();
-    m_track.publish(nullptr);
-    m_track.collectGarbage();
+    step("closing the MIDI clock", [this] { m_clockOut.close(); });
+    step("closing the MIDI inputs", [this] { m_midi.close(); });
+    step("closing the audio device", [this] { m_audio.close(); });
+    step("releasing the graph", [this] {
+        m_exchange.publish(nullptr);
+        m_exchange.collectGarbage();
+    });
+    step("releasing the backing track", [this] {
+        m_track.publish(nullptr);
+        m_track.collectGarbage();
+    });
     // A backing track still being read writes into this engine: let it stop.
-    if (m_trackReader) {
-        m_cancelTrackRead.store(true, std::memory_order_relaxed);
-        m_trackReader->wait();
-    }
+    step("stopping the backing track reader", [this] {
+        if (m_trackReader) {
+            m_cancelTrackRead.store(true, std::memory_order_relaxed);
+            m_trackReader->wait();
+        }
+    });
 }
 
 std::vector<RealEngine::PlannedSlot> RealEngine::planPatch(const core::SongId& song, const core::Patch& patch)

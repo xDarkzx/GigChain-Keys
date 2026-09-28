@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -76,10 +78,10 @@ Rectangle {
                 required property var modelData
                 Layout.fillWidth: true
                 implicitHeight: 48
-                onClicked: start.openRecentRequested(modelData.path)
+                onClicked: start.openRecentRequested(recent.modelData.path)
                 ToolTip.visible: hovered
                 ToolTip.delay: 600
-                ToolTip.text: modelData.path
+                ToolTip.text: recent.modelData.path
                 contentItem: ColumnLayout {
                     spacing: 2
                     RowLayout {

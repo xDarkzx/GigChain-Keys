@@ -1,0 +1,15 @@
+{title: Hallelujah}
+{artist: Leonard Cohen}
+{key: C}
+{tempo: 96}
+{time: 6/8}
+{comment: Capo 3}
+
+{start_of_verse: Verse 1}
+[C]Now I've [Am]heard there was a [C]secret chord
+[F]That David [G]played and it [C]pleased the [G]Lord
+{end_of_verse}
+
+{start_of_chorus}
+Halle[F]lujah, Halle[Am]lujah x2
+{end_of_chorus}

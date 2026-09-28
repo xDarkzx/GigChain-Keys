@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Controls
 
 // Makes its parent draggable. While dragging, a label follows the pointer on
-// the window overlay; on release it calls acceptDrop(payload) on the DropArea
-// underneath, if that DropArea defines one. Plain clicks pass through as the
+// the window overlay; on release the PayloadDropArea underneath (if any)
+// gets the payload. Plain clicks pass through as the
 // clicked / doubleClicked / rightClicked signals.
 MouseArea {
     id: source
@@ -32,8 +32,8 @@ MouseArea {
             source.rightClicked()
             return
         }
-        const target = ghost.Drag.target
-        if (target !== null && typeof target.acceptDrop === "function")
+        const target = ghost.Drag.target as PayloadDropArea
+        if (target !== null)
             target.acceptDrop(source.payload)
     }
 

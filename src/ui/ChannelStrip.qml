@@ -78,10 +78,10 @@ Rectangle {
         }
     }
 
-    DropArea {
+    PayloadDropArea {
         anchors.fill: parent
         keys: ["effect"]
-        function acceptDrop(payload) { strip.doc.addEffect(strip.index, payload.pluginId, payload.name) }
+        onPayloadDropped: (payload) => strip.doc.addEffect(strip.index, payload.pluginId, payload.name)
     }
 
     // ---------------------------------------------------------------- menus

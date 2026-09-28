@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 
@@ -13,9 +15,10 @@ StageMenu {
     Instantiator {
         model: group.modelData.plugins
         delegate: StageMenuItem {
+            id: entry
             required property var modelData
-            text: modelData.name
-            onTriggered: group.picked(modelData.pluginId, modelData.name)
+            text: entry.modelData.name
+            onTriggered: group.picked(entry.modelData.pluginId, entry.modelData.name)
         }
         onObjectAdded: (index, object) => group.insertItem(index, object)
         onObjectRemoved: (index, object) => group.removeItem(object)

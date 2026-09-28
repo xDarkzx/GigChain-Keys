@@ -10,7 +10,10 @@ namespace {
 
 // What Windows lists when an Impact GXP61 is plugged in: the keys on the
 // first port, DAW control on the second.
-const QStringList kGxp61{u"Impact GXP61 0"_s, u"MIDIIN2 (Impact GXP61) 1"_s};
+QStringList gxp61()
+{
+    return {u"Impact GXP61 0"_s, u"MIDIIN2 (Impact GXP61) 1"_s};
+}
 
 } // namespace
 
@@ -21,7 +24,7 @@ class TestMidiSetup : public QObject
 private slots:
     void firstTimeOnlyTheFirstPortPlays()
     {
-        const auto ports = resolveMidiInputs(kGxp61, MidiSetup{});
+        const auto ports = resolveMidiInputs(gxp61(), MidiSetup{});
         QCOMPARE(ports.size(), std::size_t{2});
         QVERIFY(ports[0].enabled);
         QVERIFY(!ports[1].enabled); // two enabled ports would double every note
@@ -34,7 +37,7 @@ private slots:
         setup.configured = true;
         setup.enabled = {u"MIDIIN2 (Impact GXP61) 1"_s};
         setup.channels[u"MIDIIN2 (Impact GXP61) 1"_s] = 10;
-        const auto ports = resolveMidiInputs(kGxp61, setup);
+        const auto ports = resolveMidiInputs(gxp61(), setup);
         QVERIFY(!ports[0].enabled);
         QVERIFY(ports[1].enabled);
         QCOMPARE(ports[1].channel, 10);
@@ -45,7 +48,7 @@ private slots:
         MidiSetup setup;
         setup.configured = true;
         setup.enabled = {u"Impact GXP61 0"_s};
-        const auto ports = resolveMidiInputs(QStringList{kGxp61} << u"Some Pad Controller 2"_s, setup);
+        const auto ports = resolveMidiInputs(gxp61() << u"Some Pad Controller 2"_s, setup);
         QVERIFY(ports[0].enabled);
         QVERIFY(!ports[2].enabled);
     }
@@ -56,7 +59,7 @@ private slots:
         MidiSetup setup;
         setup.configured = true;
         setup.enabled = {u"Studio Keyboard 0"_s};
-        const auto ports = resolveMidiInputs(kGxp61, setup);
+        const auto ports = resolveMidiInputs(gxp61(), setup);
         QVERIFY(ports[0].enabled);
         QVERIFY(!ports[1].enabled);
     }

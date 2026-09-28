@@ -45,7 +45,7 @@ private slots:
         GC_ONLY_MAIN_THREAD(); // the test runs on the main thread
         bool ranElsewhere = false;
         std::unique_ptr<QThread> worker(QThread::create([&ranElsewhere] {
-            GC_ONLY_AUDIO_THREAD(); // any thread but the main one
+            GC_ONLY_AUDIO_THREAD(); // NOLINT(bugprone-lambda-function-name): any thread but the main one; the name is only for the assert
             ranElsewhere = true;
         }));
         worker->start();

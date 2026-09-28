@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 
@@ -10,7 +12,7 @@ StageMenu {
     required property PluginListModel pluginModel
     signal picked(string pluginId, string name)
 
-    readonly property var groups: pluginModel.effectMenu
+    readonly property var groups: picker.pluginModel.effectMenu
 
     Instantiator {
         model: picker.groups.categories

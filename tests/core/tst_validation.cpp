@@ -19,8 +19,10 @@ Setlist sampleSetlist()
     Setlist setlist;
     Song song = makeSong(QStringLiteral("Wonderwall"));
     Channel piano = makeChannel(QStringLiteral("Piano"));
-    piano.instrument = PluginSlot{QStringLiteral("fake.grand-piano"), QStringLiteral("Grand Piano"), false};
-    piano.effects.push_back(PluginSlot{QStringLiteral("fake.reverb"), QStringLiteral("Reverb"), false});
+    piano.instrument =
+        PluginSlot{.pluginId = QStringLiteral("fake.grand-piano"), .displayName = QStringLiteral("Grand Piano"), .bypass = false, .state = {}};
+    piano.effects.push_back(
+        PluginSlot{.pluginId = QStringLiteral("fake.reverb"), .displayName = QStringLiteral("Reverb"), .bypass = false, .state = {}});
     song.patches.front().channels.push_back(piano);
     setlist.songs.push_back(song);
     return setlist;

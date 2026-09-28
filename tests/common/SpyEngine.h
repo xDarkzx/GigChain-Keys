@@ -68,13 +68,16 @@ public:
     [[nodiscard]] std::vector<engine::PluginInfo> availablePlugins() const override
     {
         return {
-            {QStringLiteral("spy/Piano.vst3"), QStringLiteral("Spy Piano"), QStringLiteral("Spy"), engine::PluginKind::Instrument,
-             QStringLiteral("Instrument|Piano"), QStringLiteral("1.0"), {}, QStringLiteral("https://spy.example"),
-             QStringLiteral("help@spy.example"), QStringLiteral("VST 3.8.0")},
-            {QStringLiteral("spy/Pad.vst3"), QStringLiteral("Spy Pad"), QStringLiteral("Spy"), engine::PluginKind::Instrument,
-             QStringLiteral("Instrument|Synth"), QStringLiteral("1.0")},
-            {QStringLiteral("spy/Reverb.vst3"), QStringLiteral("Spy Reverb"), QStringLiteral("Other"), engine::PluginKind::Effect,
-             QStringLiteral("Fx|Reverb"), QStringLiteral("1.0")},
+            {.id = QStringLiteral("spy/Piano.vst3"), .name = QStringLiteral("Spy Piano"), .vendor = QStringLiteral("Spy"),
+             .kind = engine::PluginKind::Instrument, .subCategories = QStringLiteral("Instrument|Piano"),
+             .version = QStringLiteral("1.0"), .classId = {}, .website = QStringLiteral("https://spy.example"),
+             .email = QStringLiteral("help@spy.example"), .sdkVersion = QStringLiteral("VST 3.8.0")},
+            {.id = QStringLiteral("spy/Pad.vst3"), .name = QStringLiteral("Spy Pad"), .vendor = QStringLiteral("Spy"),
+             .kind = engine::PluginKind::Instrument, .subCategories = QStringLiteral("Instrument|Synth"),
+             .version = QStringLiteral("1.0"), .classId = {}, .website = {}, .email = {}, .sdkVersion = {}},
+            {.id = QStringLiteral("spy/Reverb.vst3"), .name = QStringLiteral("Spy Reverb"), .vendor = QStringLiteral("Other"),
+             .kind = engine::PluginKind::Effect, .subCategories = QStringLiteral("Fx|Reverb"),
+             .version = QStringLiteral("1.0"), .classId = {}, .website = {}, .email = {}, .sdkVersion = {}},
         };
     }
     [[nodiscard]] engine::LevelReading channelLevel(const core::ChannelId&) override { return {0.5F, 0.25F}; }
@@ -148,7 +151,8 @@ public:
     }
     std::vector<QString> pluginEditorRequests;
 
-    engine::AudioSetup setup{engine::AudioDriver::System, QStringLiteral("Spy Speakers"), 48000, 256};
+    engine::AudioSetup setup{.driver = engine::AudioDriver::System, .device = QStringLiteral("Spy Speakers"),
+                             .sampleRate = 48000, .bufferFrames = 256, .inputDevice = {}};
     QStringList midiPresent{QStringLiteral("Spy Keys 0"), QStringLiteral("MIDIIN2 (Spy Keys) 1")};
     engine::MidiSetup midi;
     int midiChanges = 0;

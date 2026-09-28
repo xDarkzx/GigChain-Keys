@@ -17,9 +17,11 @@ Setlist richSetlist()
     Setlist setlist;
     Song song = makeSong(QStringLiteral("Café ☕ 🎹"));
     Channel piano = makeChannel(QStringLiteral("Piano"));
-    piano.instrument = PluginSlot{QStringLiteral("fake.grand-piano"), QStringLiteral("Grand Piano"), false};
-    piano.instrument->state = QByteArray("GCS1\x00\x01\xff binary sound settings", 30); // opaque to core
-    piano.effects.push_back(PluginSlot{QStringLiteral("fake.eq"), QStringLiteral("Channel EQ"), true});
+    piano.instrument = PluginSlot{.pluginId = QStringLiteral("fake.grand-piano"), .displayName = QStringLiteral("Grand Piano"),
+                                  .bypass = false,
+                                  .state = QByteArray("GCS1\x00\x01\xff binary sound settings", 30)}; // opaque to core
+    piano.effects.push_back(
+        PluginSlot{.pluginId = QStringLiteral("fake.eq"), .displayName = QStringLiteral("Channel EQ"), .bypass = true, .state = {}});
     piano.volumeDb = -6.5;
     piano.keyLow = 21;
     piano.keyHigh = 59;
@@ -118,7 +120,9 @@ private slots:
         QJsonObject slot{{u"pluginId"_s, u"fake.piano"_s}, {u"displayName"_s, u"Piano"_s}, {u"bypass"_s, false}};
         const auto parsed = fromJson(withFirstChannelField(u"instrument"_s, slot));
         QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
-        QVERIFY(parsed->songs[0].patches[0].channels[0].instrument->state.isEmpty()); // the plugin's defaults
+        const auto& instrument = parsed->songs.at(0).patches.at(0).channels.at(0).instrument;
+        if (!instrument) QFAIL("the instrument was lost");
+        QVERIFY(instrument->state.isEmpty()); // the plugin's defaults
     }
 
     void rejectsBrokenPluginSettings()

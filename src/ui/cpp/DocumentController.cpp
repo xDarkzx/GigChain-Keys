@@ -203,6 +203,13 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
     if (pasted.trimmed().isEmpty()) {
         return report(core::Error{core::ErrorCode::InvalidData, tr("There is no text to paste")});
     }
+    // Before reading it: a whole book would freeze the app for seconds.
+    if (pasted.size() > core::limits::kMaxChartSourceLength) {
+        return report(core::Error{core::ErrorCode::LimitExceeded,
+                                  tr("That text is too long for a chart (%1 characters; a song is at most %2)")
+                                      .arg(pasted.size())
+                                      .arg(core::limits::kMaxChartSourceLength)});
+    }
     const core::ImportedSheet sheet = core::importChordSheet(pasted);
     if (song < 0 || static_cast<std::size_t>(song) >= m_setlist.songs.size()) {
         // No song to paste into (an empty setlist): the paste makes one.
@@ -269,20 +276,20 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
 bool DocumentController::undoPaste()
 {
     if (!m_pasteUndo) return false;
-    const PasteUndo undo = *m_pasteUndo;
+    const PasteUndo before = *m_pasteUndo;
     clearPasteUndo();
-    const auto it = std::ranges::find_if(m_setlist.songs, [&](const core::Song& s) { return s.id == undo.song; });
+    const auto it = std::ranges::find_if(m_setlist.songs, [&](const core::Song& s) { return s.id == before.song; });
     if (it == m_setlist.songs.end()) {
         return report(core::Error{core::ErrorCode::OutOfRange, tr("The pasted song no longer exists")});
     }
     const int song = static_cast<int>(it - m_setlist.songs.begin());
-    if (auto r = core::renameSong(m_setlist, song, undo.name); !r) return report(r.error());
-    if (auto r = core::setSongKeyAndTempo(m_setlist, song, undo.key, undo.tempo); !r) return report(r.error());
-    if (auto r = core::setSongTimeSignature(m_setlist, song, undo.timeNumerator, undo.timeDenominator); !r) {
+    if (auto r = core::renameSong(m_setlist, song, before.name); !r) return report(r.error());
+    if (auto r = core::setSongKeyAndTempo(m_setlist, song, before.key, before.tempo); !r) return report(r.error());
+    if (auto r = core::setSongTimeSignature(m_setlist, song, before.timeNumerator, before.timeDenominator); !r) {
         return report(r.error());
     }
     commitRename();
-    if (!setSongChart(song, undo.pasted)) return false; // reported
+    if (!setSongChart(song, before.pasted)) return false; // reported
     if (song == m_cursor.song) applyCurrentSongToEngine();
     emit songChanged();
     return true;

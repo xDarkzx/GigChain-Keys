@@ -11,10 +11,12 @@ namespace {
 
 void noErrorDialogs() noexcept
 {
+#ifdef _DEBUG // the debug C runtime's reports; release builds have none
     for (const int type : {_CRT_WARN, _CRT_ERROR, _CRT_ASSERT}) {
         _CrtSetReportMode(type, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
         _CrtSetReportFile(type, _CRTDBG_FILE_STDERR);
     }
+#endif
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
 }

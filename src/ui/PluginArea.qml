@@ -14,10 +14,10 @@ Rectangle {
 
     color: Theme.background
 
-    DropArea {
+    PayloadDropArea {
         anchors.fill: parent
         keys: ["instrument"]
-        function acceptDrop(payload) { area.doc.addChannel(payload.pluginId, payload.name) }
+        onPayloadDropped: (payload) => area.doc.addChannel(payload.pluginId, payload.name)
     }
 
     ColumnLayout {

@@ -204,7 +204,8 @@ private:
     double m_masterDb = 0.0;
     bool m_masterMuted = false;
     std::vector<core::PluginSlot> m_masterEffects;
-    AudioSetup m_setup{AudioDriver::System, QStringLiteral("Demo output"), 48000, 256};
+    AudioSetup m_setup{.driver = AudioDriver::System, .device = QStringLiteral("Demo output"), .sampleRate = 48000,
+                       .bufferFrames = 256, .inputDevice = {}};
     MidiSetup m_midiSetup;
 };
 

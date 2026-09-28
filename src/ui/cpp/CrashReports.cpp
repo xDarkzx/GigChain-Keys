@@ -112,7 +112,9 @@ QStringList readSeen(const QDir& folder)
         qCWarning(lcUi).noquote() << "Could not read" << file.fileName() << ":" << file.errorString();
         return {};
     }
-    return QString::fromUtf8(file.readAll()).split(u'\n', Qt::SkipEmptyParts);
+    // A list of report names: far below this unless damaged (then the tail is ignored).
+    constexpr qint64 kMaxSeenBytes = 1024LL * 1024;
+    return QString::fromUtf8(file.read(kMaxSeenBytes)).split(u'\n', Qt::SkipEmptyParts);
 }
 
 } // namespace

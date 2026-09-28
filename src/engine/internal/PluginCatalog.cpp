@@ -145,8 +145,13 @@ std::map<QString, CacheEntry> readCache(const QString& cacheFile)
                                       << "); scanning every plugin";
         return cache;
     }
+    if (file.size() > PluginCatalog::kMaxCacheBytes) {
+        qCWarning(lcEngine).noquote() << "Plugin cache" << cacheFile << "is too large (" << file.size()
+                                      << "bytes; damaged?); scanning every plugin";
+        return cache;
+    }
     QJsonParseError error{};
-    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
+    const QJsonDocument doc = QJsonDocument::fromJson(file.read(PluginCatalog::kMaxCacheBytes), &error);
     if (error.error != QJsonParseError::NoError || !doc.isObject()) {
         qCWarning(lcEngine).noquote() << "Plugin cache" << cacheFile << "is unreadable (" << error.errorString()
                                       << "); scanning every plugin";
@@ -254,9 +259,16 @@ CacheEntry readInScanner(const QString& scanner, const QString& bundle, const QS
     const auto code = static_cast<uint32_t>(process.exitCode());
     if (process.exitStatus() == QProcess::NormalExit && code == kScannerRead) {
         QFile file(resultFile);
-        const QJsonDocument doc = file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()) : QJsonDocument();
-        if (doc.isObject()) return fromJson(doc.object());
-        entry.error = u"the plugin scanner's result was unreadable"_s;
+        if (!file.open(QIODevice::ReadOnly)) {
+            entry.error = u"the plugin scanner's result could not be read (%1)"_s.arg(file.errorString());
+        } else if (file.size() > PluginCatalog::kMaxResultBytes) {
+            entry.error = u"the plugin scanner's result was too large (%1 bytes)"_s.arg(file.size());
+        } else {
+            QJsonParseError error{};
+            const QJsonDocument doc = QJsonDocument::fromJson(file.read(PluginCatalog::kMaxResultBytes), &error);
+            if (doc.isObject()) return fromJson(doc.object());
+            entry.error = u"the plugin scanner's result was unreadable (%1)"_s.arg(error.errorString());
+        }
         entry.retry = true;
         return entry;
     }

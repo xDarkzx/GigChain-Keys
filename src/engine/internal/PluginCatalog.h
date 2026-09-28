@@ -55,6 +55,10 @@ public:
     static bool readToFile(const QString& bundle, const QString& resultFile);
 
     static constexpr int kScanTimeoutMs = 15000; // Audacity 4's AUDIO_PLUGIN_REGISTRATION_TIMEOUT_MS
+    // A cache larger than this is not read (a real one is ~1 KB a plugin).
+    static constexpr qint64 kMaxCacheBytes = 16LL * 1024 * 1024;
+    // A scanner's result larger than this is not read (a real one is ~1 KB).
+    static constexpr qint64 kMaxResultBytes = 1024LL * 1024;
 };
 
 } // namespace gigchain::engine

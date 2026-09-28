@@ -79,6 +79,23 @@ private slots:
                                                "[Am] [F] [C] [G]\n"_s);
     }
 
+    // Old Mac line ends (\r) and stray ones from web pages are line breaks
+    // like \n and \r\n, and a chart with them saves the same every time
+    // (the fuzzer found "\r\r\n" changing on each save).
+    void everyKindOfLineEndIsALineBreak()
+    {
+        QCOMPARE(parseChordPro(u"A\rB\r\r\nC\n"_s).lines.size(), std::size_t{5}); // A, B, empty, C, empty
+        const QString once = toChordPro(parseChordPro(u"\r\r\n"_s));
+        QCOMPARE(toChordPro(parseChordPro(once)), once);
+        QCOMPARE(once, u"\n\n"_s);
+
+        const QString unix = u"C           G\nHello there\n"_s;
+        QCOMPARE(chordSheetToChordPro(u"C           G\rHello there\r"_s), chordSheetToChordPro(unix));
+        QCOMPARE(chordSheetToChordPro(u"C           G\r\nHello there\r\n"_s), chordSheetToChordPro(unix));
+        QCOMPARE(tidyChordSheet(u"C           G\rHello there\r"_s), tidyChordSheet(unix));
+        QCOMPARE(importChordSheet(u"C           G\rHello there\r"_s).chart, importChordSheet(unix).chart);
+    }
+
     void chordsPastTheEndOfTheLyricLine()
     {
         QCOMPARE(chordSheetToChordPro(u"C           G\nHello\n"_s), u"[C]Hello [G]\n"_s);

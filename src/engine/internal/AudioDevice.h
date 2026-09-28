@@ -81,12 +81,12 @@ public:
     // Every WASAPI and ASIO device with inputs (microphones, instrument inputs).
     static std::vector<AudioDeviceInfo> listInputs();
 
-    // std::nullopt = the default system (WASAPI) output. wantedRate 0 = the
+    // std::nullopt = the default system (WASAPI) output. askedRate 0 = the
     // device's own rate; any other rate the device does not list is an error.
     // `input`: a device whose inputs open with the output (same driver; for
     // ASIO the same device); none by default.
     core::Result<void> open(std::optional<DeviceChoice> choice, unsigned int bufferFrames, RenderCallback render,
-                            unsigned int wantedRate = 0, std::optional<DeviceChoice> input = std::nullopt);
+                            unsigned int askedRate = 0, std::optional<DeviceChoice> input = std::nullopt);
     void close();
 
     // Stop / restart the running stream without closing it. When pause()
@@ -129,7 +129,7 @@ private:
     static int callback(void* output, void* input, unsigned int frames, double streamTime, unsigned int status,
                         void* user);
     void onError(int type, const std::string& text);
-    core::Result<void> openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames, unsigned int wantedRate,
+    core::Result<void> openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames, unsigned int askedRate,
                                     std::optional<DeviceChoice> input);
     // After the stream stopped working: the wanted device again, else the
     // system default, else nothing (tried again later).
