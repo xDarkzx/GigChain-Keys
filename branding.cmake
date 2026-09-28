@@ -26,7 +26,7 @@ set(PRODUCT_WEBSITE "https://github.com/xDarkzx/GigChain-Keys")
 set(PRODUCT_SPLASH_IMAGE "${CMAKE_CURRENT_LIST_DIR}/branding/splash.png")
 
 # The app's icon (the .exe in Explorer, the taskbar, its windows), made from
-# branding/gigchain-logo.png by tools/make-icon.ps1.
+# branding/gigchain-icon.png by tools/make-icon.ps1.
 set(PRODUCT_ICON "${CMAKE_CURRENT_LIST_DIR}/branding/app.ico")
 
 # Earlier names. Settings saved under them are carried over on first start,
