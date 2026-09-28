@@ -21,6 +21,8 @@ gigchain_add_test(tst_midi_input SOURCES tst_midi_input.cpp LIBS gigchain::engin
 target_include_directories(tst_midi_input PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_real_engine SOURCES tst_real_engine.cpp LIBS gigchain::engine)
 target_include_directories(tst_real_engine PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+# (It unplugs the MIDI clock's output: RealEngine.h and what it includes.)
+target_link_libraries(tst_real_engine PRIVATE Qt6::Multimedia vst3_host_support)
 gigchain_add_test(tst_vst3_editor SOURCES tst_vst3_editor.cpp LIBS gigchain::engine)
 target_include_directories(tst_vst3_editor PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 target_compile_definitions(tst_vst3_editor PRIVATE NOMINMAX)

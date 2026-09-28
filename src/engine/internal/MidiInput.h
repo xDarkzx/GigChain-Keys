@@ -15,7 +15,9 @@
 #include <span>
 #include <vector>
 
+namespace rt::midi {
 class RtMidiIn;
+} // namespace rt::midi
 
 namespace gigchain::engine {
 
@@ -64,7 +66,7 @@ public:
 private:
     struct Port
     {
-        std::unique_ptr<RtMidiIn> in;
+        std::unique_ptr<rt::midi::RtMidiIn> in;
         MidiQueue queue;
         MidiInput* owner = nullptr;
         QString name;

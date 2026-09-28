@@ -137,6 +137,7 @@ private:
     [[nodiscard]] const engine::AudioOutput* chosenOutput() const;
     void keepRateValid();
     [[nodiscard]] engine::MidiSetup pendingMidi() const;
+    static void saveMidi(QSettings& settings, const engine::MidiSetup& midi);
 
     engine::IEngine& m_engine;
     DocumentController& m_document;

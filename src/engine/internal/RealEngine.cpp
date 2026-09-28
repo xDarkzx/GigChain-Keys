@@ -447,6 +447,20 @@ void RealEngine::watchMidiPorts(std::vector<Notice>& notices)
     const auto now = std::chrono::steady_clock::now();
     if (now - m_lastMidiCheck < kInterval) return;
     m_lastMidiCheck = now;
+
+    // The clock's output plugged in again (the clock stopped when it was
+    // pulled out): it starts again.
+    const QStringList outputs = MidiClockOut::listPorts();
+    if (outputs != std::exchange(m_midiOutputs, outputs) && !m_midiSetup.clockOutput.isEmpty() &&
+        m_clockOut.portName().isEmpty() && outputs.contains(m_midiSetup.clockOutput)) {
+        const std::vector<QString> problems = applyClockSetup(); // each logged
+        if (problems.empty()) {
+            notices.push_back(Notice::info(u"MIDI clock to %1 started again"_s.arg(m_midiSetup.clockOutput)));
+            qCInfo(lcEngine).noquote() << notices.back().text;
+        }
+        std::ranges::transform(problems, std::back_inserter(notices), &Notice::warning);
+    }
+
     const QStringList present = MidiInput::listPorts();
     if (present == m_midiPorts) return;
 

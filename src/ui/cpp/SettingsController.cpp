@@ -33,6 +33,9 @@ const QString kControlsKey = u"midi/controls"_s; // one packed trigger per actio
 const QString kInputDeviceKey = u"audio/inputDevice"_s;
 const QString kClockOutputKey = u"midi/clockOutput"_s;
 const QString kFollowClockKey = u"midi/followClock"_s;
+// 2: MIDI port names without RtMidi's place number (see engine::portNames).
+const QString kMidiNamesKey = u"midi/names"_s;
+constexpr int kMidiNames = 2;
 const QString kLimiterKey = u"master/limiter"_s;
 const QString kLimiterCeilingKey = u"master/limiterCeilingDb"_s;
 constexpr double kDefaultCeilingDb = -1.0;
@@ -89,7 +92,24 @@ engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
     options.midi.enabled = settings.value(kMidiEnabledKey).toStringList();
     const QVariantMap channels = settings.value(kMidiChannelsKey).toMap();
     for (auto it = channels.begin(); it != channels.end(); ++it) options.midi.channels[it.key()] = it.value().toInt();
+    if (settings.value(kMidiNamesKey, 1).toInt() < kMidiNames) {
+        // Saved with the place numbers: converted once, and saved converted.
+        options.midi = engine::withoutPortPlaces(std::move(options.midi));
+        saveMidi(settings, options.midi);
+    }
     return options;
+}
+
+void SettingsController::saveMidi(QSettings& settings, const engine::MidiSetup& midi)
+{
+    settings.setValue(kMidiConfiguredKey, midi.configured);
+    QVariantMap channels;
+    for (const auto& [name, channel] : midi.channels) channels.insert(name, channel);
+    settings.setValue(kMidiEnabledKey, midi.enabled);
+    settings.setValue(kMidiChannelsKey, channels);
+    settings.setValue(kClockOutputKey, midi.clockOutput);
+    settings.setValue(kFollowClockKey, midi.followClock);
+    settings.setValue(kMidiNamesKey, kMidiNames);
 }
 
 void SettingsController::load()
@@ -457,13 +477,7 @@ bool SettingsController::apply()
             problems << changedMidi.error().message; // logged by the engine
         }
         // The choice itself stands even if an input failed to open (it is named above).
-        QVariantMap channels;
-        for (const auto& [name, channel] : midi.channels) channels.insert(name, channel);
-        m_settings.setValue(kMidiConfiguredKey, true);
-        m_settings.setValue(kMidiEnabledKey, midi.enabled);
-        m_settings.setValue(kMidiChannelsKey, channels);
-        m_settings.setValue(kClockOutputKey, midi.clockOutput);
-        m_settings.setValue(kFollowClockKey, midi.followClock);
+        saveMidi(m_settings, midi);
         m_midiTouched = false;
     }
 

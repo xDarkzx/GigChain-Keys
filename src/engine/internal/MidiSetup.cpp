@@ -3,10 +3,52 @@
 
 #include <QCoreApplication>
 
+#include <QStringView>
+
 #include <algorithm>
 #include <array>
 
+using namespace Qt::StringLiterals;
+
 namespace gigchain::engine {
+
+QStringList portNames(const QStringList& numbered)
+{
+    QStringList plain; // without the place number, before telling the same ones apart
+    QStringList names;
+    for (qsizetype i = 0; i < numbered.size(); ++i) {
+        QString name = numbered.at(i);
+        const QString place = u' ' + QString::number(i);
+        if (name.endsWith(place)) name.chop(place.size());
+        const auto before = std::ranges::count(plain, name);
+        plain << name;
+        names << (before == 0 ? name : u"%1 (%2)"_s.arg(name).arg(before + 1));
+    }
+    return names;
+}
+
+namespace {
+
+QString withoutPlace(const QString& name)
+{
+    const qsizetype space = name.lastIndexOf(u' ');
+    if (space <= 0 || space == name.size() - 1) return name;
+    const QStringView place = QStringView(name).sliced(space + 1);
+    return std::ranges::all_of(place, [](QChar c) { return c.isDigit(); }) ? name.left(space) : name;
+}
+
+} // namespace
+
+MidiSetup withoutPortPlaces(MidiSetup saved)
+{
+    for (QString& name : saved.enabled) name = withoutPlace(name);
+    saved.enabled.removeDuplicates();
+    std::map<QString, int> channels;
+    for (const auto& [name, channel] : saved.channels) channels.try_emplace(withoutPlace(name), channel);
+    saved.channels = std::move(channels);
+    saved.clockOutput = withoutPlace(saved.clockOutput);
+    return saved;
+}
 
 std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSetup& setup)
 {

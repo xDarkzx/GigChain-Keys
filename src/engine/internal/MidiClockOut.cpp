@@ -4,6 +4,7 @@
 #include "MidiInput.h"
 
 #include "gigchain/core/Branding.h"
+#include "gigchain/engine/MidiSetup.h"
 
 #include <rtmidi/RtMidi.h>
 
@@ -37,7 +38,7 @@ QStringList MidiClockOut::listPorts()
     } catch (const std::exception& e) {
         qCWarning(lcEngine).noquote() << "Listing MIDI outputs failed:" << QString::fromUtf8(e.what());
     }
-    return names;
+    return portNames(names);
 }
 
 core::Result<void> MidiClockOut::open(const QString& port)

@@ -60,7 +60,7 @@ QStringList MidiInput::listPorts()
     } catch (const std::exception& e) {
         qCWarning(lcEngine).noquote() << "Listing MIDI inputs failed:" << QString::fromUtf8(e.what());
     }
-    return ports;
+    return portNames(ports);
 }
 
 std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)

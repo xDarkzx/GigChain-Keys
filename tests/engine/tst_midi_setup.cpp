@@ -66,6 +66,66 @@ private slots:
         QVERIFY(resolveMidiInputs({}, MidiSetup{}).empty());
     }
 
+    // RtMidi numbers each port by its place in Windows' list; plugged in in
+    // another order, the same keyboard gets another number. Names leave it out.
+    void portNamesLeaveOutThePlaceInTheList()
+    {
+        QCOMPARE(portNames({u"Impact GXP61 0"_s, u"MIDIIN2 (Impact GXP61) 1"_s}),
+                 (QStringList{u"Impact GXP61"_s, u"MIDIIN2 (Impact GXP61)"_s}));
+        // Plugged in after another device: the same names.
+        QCOMPARE(portNames({u"Pad Controller 0"_s, u"Impact GXP61 1"_s, u"MIDIIN2 (Impact GXP61) 2"_s}),
+                 (QStringList{u"Pad Controller"_s, u"Impact GXP61"_s, u"MIDIIN2 (Impact GXP61)"_s}));
+        // A name that ends in a number keeps it; only the place goes.
+        QCOMPARE(portNames({u"Keystation 49 0"_s}), QStringList{u"Keystation 49"_s});
+        // Not numbered by place: kept as it is.
+        QCOMPARE(portNames({u"Keystation 49"_s}), QStringList{u"Keystation 49"_s});
+        QCOMPARE(portNames({}), QStringList{});
+    }
+
+    void twoOfTheSameKeyboardAreToldApart()
+    {
+        QCOMPARE(portNames({u"Keystation 49 0"_s, u"Keystation 49 1"_s, u"Keystation 49 2"_s}),
+                 (QStringList{u"Keystation 49"_s, u"Keystation 49 (2)"_s, u"Keystation 49 (3)"_s}));
+    }
+
+    // Settings saved by an earlier version name the ports with their place.
+    void earlierSavedNamesLoseTheirPlace()
+    {
+        MidiSetup saved;
+        saved.configured = true;
+        saved.enabled = {u"Impact GXP61 0"_s, u"Keystation 49 1"_s, u"Odd Name x"_s};
+        saved.channels = {{u"Impact GXP61 0"_s, 2}, {u"MIDIIN2 (Impact GXP61) 1"_s, 10}};
+        saved.clockOutput = u"MIDIOUT2 (Impact GXP61) 1"_s;
+        saved.followClock = true;
+        const MidiSetup now = withoutPortPlaces(saved);
+        QCOMPARE(now.enabled, (QStringList{u"Impact GXP61"_s, u"Keystation 49"_s, u"Odd Name x"_s}));
+        QCOMPARE(now.channels, (std::map<QString, int>{{u"Impact GXP61"_s, 2}, {u"MIDIIN2 (Impact GXP61)"_s, 10}}));
+        QCOMPARE(now.clockOutput, u"MIDIOUT2 (Impact GXP61)"_s);
+        QVERIFY(now.configured);
+        QVERIFY(now.followClock);
+        QCOMPARE(withoutPortPlaces(MidiSetup{}), MidiSetup{});
+    }
+
+    // The keyboard chosen before, plugged in after another device this time:
+    // it still plays, with its channel, and the other device stays off.
+    void theChosenKeyboardPlaysWhateverOrderItIsPluggedIn()
+    {
+        MidiSetup setup;
+        setup.configured = true;
+        setup.enabled = {u"Impact GXP61"_s};
+        setup.channels = {{u"Impact GXP61"_s, 2}};
+        const QStringList first = portNames({u"Impact GXP61 0"_s, u"MIDIIN2 (Impact GXP61) 1"_s});
+        const QStringList after = portNames({u"Pad Controller 0"_s, u"Impact GXP61 1"_s, u"MIDIIN2 (Impact GXP61) 2"_s});
+        const auto alone = resolveMidiInputs(first, setup);
+        QVERIFY(alone.at(0).enabled);
+        QCOMPARE(alone.at(0).channel, 2);
+        const auto ports = resolveMidiInputs(after, setup);
+        QVERIFY(!ports.at(0).enabled);
+        QVERIFY(ports.at(1).enabled);
+        QCOMPARE(ports.at(1).channel, 2);
+        QVERIFY(!ports.at(2).enabled);
+    }
+
     void channelFilter()
     {
         const uint8_t noteOnChannel3 = 0x92;
