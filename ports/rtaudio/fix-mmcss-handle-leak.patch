@@ -1,0 +1,42 @@
+diff --git a/RtAudio.cpp b/RtAudio.cpp
+index b13f04e..7bb0aa8 100644
+--- a/RtAudio.cpp
++++ b/RtAudio.cpp
+@@ -5667,14 +5667,21 @@ void RtApiWasapi::wasapiThread()
+   std::string errorText;
+   RtAudioErrorType errorType = RTAUDIO_DRIVER_ERROR;
+ 
+-  // Attempt to assign "Pro Audio" characteristic to thread
++  // Attempt to assign "Pro Audio" characteristic to thread. The handle it
++  // returns (to \Device\MMCSS) is given back when the thread ends: kept, and
++  // AVRT.dll with it, or every stream start leaks one.
+   HMODULE AvrtDll = LoadLibraryW( L"AVRT.dll" );
++  HANDLE mmcssHandle = NULL;
++  typedef BOOL ( __stdcall *TAvRevertMmThreadCharacteristicsPtr )( HANDLE AvrtHandle );
++  TAvRevertMmThreadCharacteristicsPtr AvRevertMmThreadCharacteristicsPtr = NULL;
+   if ( AvrtDll ) {
+     DWORD taskIndex = 0;
+     TAvSetMmThreadCharacteristicsPtr AvSetMmThreadCharacteristicsPtr =
+       ( TAvSetMmThreadCharacteristicsPtr ) (void(*)()) GetProcAddress( AvrtDll, "AvSetMmThreadCharacteristicsW" );
+-    AvSetMmThreadCharacteristicsPtr( L"Pro Audio", &taskIndex );
+-    FreeLibrary( AvrtDll );
++    AvRevertMmThreadCharacteristicsPtr =
++      ( TAvRevertMmThreadCharacteristicsPtr ) (void(*)()) GetProcAddress( AvrtDll, "AvRevertMmThreadCharacteristics" );
++    if ( AvSetMmThreadCharacteristicsPtr )
++      mmcssHandle = AvSetMmThreadCharacteristicsPtr( L"Pro Audio", &taskIndex );
+   }
+ 
+   // start capture stream if applicable
+@@ -6227,6 +6234,12 @@ Exit:
+ 
+   CoUninitialize();
+ 
++  // Give back the "Pro Audio" registration (closes its handle).
++  if ( mmcssHandle && AvRevertMmThreadCharacteristicsPtr )
++    AvRevertMmThreadCharacteristicsPtr( mmcssHandle );
++  if ( AvrtDll )
++    FreeLibrary( AvrtDll );
++
+   if ( !errorText.empty() )
+   {
+     errorText_ = errorText;

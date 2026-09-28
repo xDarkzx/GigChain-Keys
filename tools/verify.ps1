@@ -128,8 +128,10 @@ function Invoke-Logged([string]$name, [string]$exe, [string[]]$arguments) {
 function Get-Tail([string]$file, [int]$count) { (Get-Content $file -Tail $count) -join "`n" }
 
 # ------------------------------------------------------------ 1. build
-# The app's exe is locked while it runs.
-Get-Process | Where-Object { $_.Path -and $_.Path.StartsWith((Join-Path $root 'build'), [StringComparison]::OrdinalIgnoreCase) } |
+# What runs from build\debug (the app, a test) locks files this build writes.
+# Only that folder: a soak, sanitizer or Release run elsewhere in build\
+# is left alone (stopping it looked like a crash: exit -1, no report).
+Get-Process | Where-Object { $_.Path -and $_.Path.StartsWith((Join-Path $root 'build\debug\'), [StringComparison]::OrdinalIgnoreCase) } |
     Stop-Process -Force
 
 $configure = Invoke-Logged 'configure' 'cmake' @('--preset', 'debug')

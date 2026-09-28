@@ -1,6 +1,7 @@
 // Integration tests against real installed plugins. Each test skips when its
 // plugin is not installed, so the suite still passes on other machines.
 #include "ComponentHandler.h"
+#include "Handles.h"
 #include "PluginModules.h"
 #include "Vst3Node.h"
 
@@ -97,6 +98,30 @@ private slots:
         QVERIFY(node.error().code == core::ErrorCode::InvalidData);
         QVERIFY2(node.error().message.contains(u"LoadLibraryW failed"_s), qPrintable(node.error().message));
         QCOMPARE(GetThreadErrorMode(), before);
+    }
+
+    // Panic prepares every plugin again (deactivate, activate); a gig presses
+    // it many times. The soak saw File handles grow by about 2 a panic.
+    void preparingAgainLeaksNoHandles_data()
+    {
+        QTest::addColumn<QString>("plugin");
+        QTest::newRow("Piano V2") << kInstrument;
+        QTest::newRow("Kotelnikov") << u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+    }
+    void preparingAgainLeaksNoHandles()
+    {
+        QFETCH(QString, plugin);
+        if (!QFileInfo::exists(plugin)) QSKIP("plugin not installed");
+        auto node = Vst3Node::load(plugin, kRate, kBlock);
+        QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
+        QVERIFY((*node)->prepare(kRate, kBlock).has_value()); // the first round opens what it keeps
+        const auto before = test::handlesByType();
+        for (int i = 0; i < 30; ++i) QVERIFY((*node)->prepare(kRate, kBlock).has_value());
+        const auto after = test::handlesByType();
+        for (const auto& [type, count] : after) {
+            const int was = before.contains(type) ? before.at(type) : 0;
+            QVERIFY2(count <= was + 2, qPrintable(u"%1 handles went from %2 to %3"_s.arg(type).arg(was).arg(count)));
+        }
     }
 
     void instrumentPlaysANote()

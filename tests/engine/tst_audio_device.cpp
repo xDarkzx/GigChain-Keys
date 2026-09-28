@@ -1,6 +1,7 @@
 // Integration tests against the machine's real audio outputs. Tests that need
 // a device skip when none exists. Output is silence: nothing audible plays.
 #include "AudioDevice.h"
+#include "Handles.h"
 
 #include <RtAudio.h>
 
@@ -191,6 +192,30 @@ private slots:
         for (int i = 0; i < 50 && blocks.load() < paused + 5; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(20));
         QVERIFY(blocks.load() >= paused + 5);
         QVERIFY(device.poll().empty());
+    }
+
+    // Panic pauses and resumes the stream; a gig presses it many times. The
+    // soak saw File handles grow by about 2 a panic: not from here.
+    void pausingAndResumingLeaksNoHandles()
+    {
+        if (AudioDevice::listOutputs().empty()) QSKIP("No audio outputs on this machine");
+        AudioDevice device;
+        QVERIFY(device.open(std::nullopt, 256, [](AudioBlock out, const AudioInputs&) {
+            std::fill_n(out.left, out.frames, 0.0F);
+            std::fill_n(out.right, out.frames, 0.0F);
+        }).has_value());
+        QVERIFY(device.pause().has_value()); // the first round opens what it keeps
+        QVERIFY(device.resume().has_value());
+        const auto before = test::handlesByType();
+        for (int i = 0; i < 30; ++i) {
+            QVERIFY(device.pause().has_value());
+            QVERIFY(device.resume().has_value());
+        }
+        const auto after = test::handlesByType();
+        for (const auto& [type, count] : after) {
+            const int was = before.contains(type) ? before.at(type) : 0;
+            QVERIFY2(count <= was + 2, qPrintable(u"%1 handles went from %2 to %3"_s.arg(type).arg(was).arg(count)));
+        }
     }
 
     void unknownDeviceIsAnError()
