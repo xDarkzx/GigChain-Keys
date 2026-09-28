@@ -1,0 +1,37 @@
+@PRODUCT_NAME@ is free software under the GNU General Public License,
+version 3 or later (LICENSE.txt). It is built on the following software,
+each under its own licence. The full licence texts are in the "licenses"
+folder next to this file, or at the addresses below.
+
+Qt 6 (The Qt Company and contributors)
+  GNU Lesser General Public License v3 (LGPL-3.0).
+  The Qt libraries are the separate Qt6*.dll files and the qml and plugin
+  folders next to the app; you may replace them with your own build of the
+  same Qt version. Source code: https://download.qt.io/official_releases/qt/
+  Licence: https://doc.qt.io/qt-6/lgpl.html
+
+FFmpeg (used by Qt Multimedia for backing tracks)
+  GNU Lesser General Public License v2.1 or later. The FFmpeg libraries are
+  the separate av*.dll and sw*.dll files. Source code: https://ffmpeg.org/
+
+RtAudio (Gary P. Scavone and contributors)
+  RtAudio licence (MIT-style): licenses/rtaudio.txt
+  https://github.com/thestk/rtaudio
+
+RtMidi (Gary P. Scavone and contributors)
+  RtMidi licence (MIT-style): licenses/rtmidi.txt
+  https://github.com/thestk/rtmidi
+
+VST 3 SDK (Steinberg Media Technologies GmbH)
+  MIT licence: licenses/vst3sdk.txt
+  https://github.com/steinbergmedia/vst3sdk
+
+tl::expected (Sy Brand)
+  CC0 1.0 (public domain dedication): licenses/tl-expected.txt
+
+Microsoft Visual C++ Runtime (msvcp140.dll, vcruntime140*.dll, concrt140.dll)
+  Redistributed under the Microsoft Visual Studio licence terms.
+
+VST is a registered trademark and ASIO a trademark of Steinberg Media
+Technologies GmbH. Windows is a trademark of the Microsoft group of
+companies. All other names are trademarks of their owners.

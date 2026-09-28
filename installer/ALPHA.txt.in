@@ -1,0 +1,19 @@
+Thank you for testing this early version.
+
+This is an alpha: it plays, but things will change, and some things will
+break. Please keep a copy of your setlists.
+
+Windows may say "Windows protected your PC" when you start the installer:
+this version is not signed yet. Choose "More info", then "Run anyway".
+
+Something went wrong, or have an idea? Please tell us on the project's
+GitHub page (Issues). If the app closed unexpectedly, attach the crash
+report it names the next time it starts, and the log from the folder
+below. A crash report holds part of what the app was working on at the
+time (your setlist's text, plugin names): look before you send it.
+The log is in:
+
+  %LOCALAPPDATA%\@PRODUCT_ORGANIZATION@\@PRODUCT_NAME@\logs
+
+Your settings, setlists and plugin list stay when you install a newer
+version, and when you uninstall.

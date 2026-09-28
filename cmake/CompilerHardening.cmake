@@ -16,6 +16,16 @@ function(gigchain_harden target)
     endif()
 endfunction()
 
+# Version details on an .exe (its Properties in Explorer), from branding.cmake.
+function(gigchain_version_resource target description)
+    if(WIN32)
+        get_target_property(GC_FILE_NAME ${target} OUTPUT_NAME)
+        set(GC_FILE_DESCRIPTION "${description}")
+        configure_file(${PROJECT_SOURCE_DIR}/cmake/version.rc.in ${CMAKE_CURRENT_BINARY_DIR}/${target}-version.rc @ONLY)
+        target_sources(${target} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/${target}-version.rc)
+    endif()
+endfunction()
+
 # Call on every one of our targets.
 function(gigchain_target_defaults target)
     gigchain_harden(${target})

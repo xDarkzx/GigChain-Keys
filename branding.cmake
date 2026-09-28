@@ -29,6 +29,14 @@ set(PRODUCT_SPLASH_IMAGE "${CMAKE_CURRENT_LIST_DIR}/branding/splash.png")
 # branding/gigchain-icon.png by tools/make-icon.ps1.
 set(PRODUCT_ICON "${CMAKE_CURRENT_LIST_DIR}/branding/app.ico")
 
+# What Windows shows in the .exe's Properties and in Apps & Features, and the
+# installer's wording.
+set(PRODUCT_DESCRIPTION "${PRODUCT_NAME} - live keyboard rig host")
+set(PRODUCT_PUBLISHER "${PRODUCT_BRAND}")
+set(PRODUCT_COPYRIGHT "Copyright (C) 2026 ${PRODUCT_BRAND} contributors. GPL-3.0-or-later.")
+# The installer's identity: upgrades find the installed copy by it. Never change it.
+set(PRODUCT_INSTALLER_ID "74122740-AA8A-4712-9184-00E0369F6041")
+
 # Earlier names. Settings saved under them are carried over on first start,
 # and a test checks the source never mentions them. On a rename, add the
 # current values here.

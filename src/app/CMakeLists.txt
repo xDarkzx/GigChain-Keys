@@ -12,5 +12,28 @@ if(WIN32)
 endif()
 target_link_libraries(gigchain_app PRIVATE gigchain_ui gigchain_uiplugin Qt6::Gui Qt6::Quick Qt6::QuickControls2)
 gigchain_target_defaults(gigchain_app)
+gigchain_version_resource(gigchain_app "${PRODUCT_DESCRIPTION}")
 # The app reads new plugins through the scanner, built next to it.
 add_dependencies(gigchain_app gigchain_scanner)
+
+# ---------------------------------------------------------------- install
+# `cmake --install` lays out the app as it ships, everything in one folder:
+# the app, its scanner, the libraries they load (Qt's own are added by
+# windeployqt, see tools/package.ps1), the Visual C++ runtime (app-local, no
+# separate installer) and the licences. tools/package.ps1 packs it.
+install(TARGETS gigchain_app gigchain_scanner RUNTIME DESTINATION .)
+install(FILES "$<FILTER:$<TARGET_RUNTIME_DLLS:gigchain_app>,EXCLUDE,/Qt6[^/]*\\.dll$>" DESTINATION .)
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION .)
+set(CMAKE_INSTALL_UCRT_LIBRARIES FALSE) # part of Windows 10 and 11
+include(InstallRequiredSystemLibraries)
+install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION . RENAME LICENSE.txt)
+configure_file(${PROJECT_SOURCE_DIR}/installer/THIRD-PARTY-NOTICES.txt.in ${CMAKE_BINARY_DIR}/installer/THIRD-PARTY-NOTICES.txt @ONLY)
+install(FILES ${CMAKE_BINARY_DIR}/installer/THIRD-PARTY-NOTICES.txt DESTINATION .)
+install(FILES ${vst3sdk_SOURCE_DIR}/LICENSE.txt DESTINATION licenses RENAME vst3sdk.txt)
+foreach(_port rtaudio rtmidi tl-expected)
+    install(FILES ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/${_port}/copyright
+            DESTINATION licenses RENAME ${_port}.txt)
+endforeach()
+# The installer's names (installer/setup.iss includes it) and its note to testers.
+configure_file(${PROJECT_SOURCE_DIR}/installer/branding.iss.in ${CMAKE_BINARY_DIR}/installer/branding.iss @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/installer/ALPHA.txt.in ${CMAKE_BINARY_DIR}/installer/ALPHA.txt @ONLY)
