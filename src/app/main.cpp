@@ -12,6 +12,7 @@
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/FileLog.h"
 #include "gigchain/engine/FakeEngineFactory.h"
+#include "gigchain/engine/ProcessHardening.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
 #include <QElapsedTimer>
@@ -90,6 +91,9 @@ struct LogScope
 
 int runApp(int argc, char** argv)
 {
+    // Before anything loads a DLL: none from the folder the app was started
+    // in (a double-clicked setlist's). Logged if it cannot.
+    const auto dllSearch = engine::hardenDllSearch();
 #if defined(_MSC_VER) && defined(_DEBUG)
     // Report leaks to the debugger output at exit during development.
     _CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -108,6 +112,7 @@ int runApp(int argc, char** argv)
     } else {
         qCInfo(lcApp).noquote() << branding::name() << branding::version() << "starting; log:" << logPath;
     }
+    if (!dllSearch) qCWarning(lcApp).noquote() << dllSearch.error().message; // now in the log file too
 
     // Already running (a setlist double-clicked): the running app opens it.
     const QStringList arguments = QGuiApplication::arguments();

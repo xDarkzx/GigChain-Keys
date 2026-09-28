@@ -44,6 +44,8 @@ add_library(gigchain_engine STATIC
     internal/SafetyLimiter.h
     internal/RealEngine.h
     internal/RealEngine.cpp
+    internal/ProcessHardening.cpp
+    include/gigchain/engine/ProcessHardening.h
     include/gigchain/engine/RealEngineFactory.h
     include/gigchain/engine/IPluginEditor.h
 )

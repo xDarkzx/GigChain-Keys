@@ -209,6 +209,9 @@ private slots:
         PluginListModel model(*m_engine, artwork);
         model.setInstrumentsOnly(true);
         QCOMPARE(roleData(model, 1, "website").toString(), u"https://spy.example"_s);
+        // A plugin's "website" that is not one (a file, a program) is not offered as a link.
+        QCOMPARE(roleData(model, 0, "name").toString(), u"Spy Pad"_s);
+        QCOMPARE(roleData(model, 0, "website").toString(), QString());
         QCOMPARE(roleData(model, 1, "email").toString(), u"help@spy.example"_s);
         QCOMPARE(roleData(model, 1, "sdkVersion").toString(), u"VST 3.8.0"_s);
         QCOMPARE(roleData(model, 1, "tags").toStringList(), (QStringList{u"Instrument"_s, u"Piano"_s}));

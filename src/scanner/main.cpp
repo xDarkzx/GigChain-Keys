@@ -10,6 +10,8 @@
 // crashed it.
 #include "PluginCatalog.h"
 
+#include "gigchain/engine/ProcessHardening.h"
+
 #include <QCoreApplication>
 
 #include <windows.h>
@@ -33,6 +35,9 @@ LONG WINAPI endQuietly(EXCEPTION_POINTERS* crash)
 
 int main(int argc, char** argv)
 {
+    // It loads plugins: no DLL from the folder it was started in (said on
+    // stderr, which the app logs, if it cannot).
+    (void)gigchain::engine::hardenDllSearch();
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
     SetUnhandledExceptionFilter(&endQuietly);
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);

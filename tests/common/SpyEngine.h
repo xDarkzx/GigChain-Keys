@@ -72,9 +72,11 @@ public:
              .kind = engine::PluginKind::Instrument, .subCategories = QStringLiteral("Instrument|Piano"),
              .version = QStringLiteral("1.0"), .classId = {}, .website = QStringLiteral("https://spy.example"),
              .email = QStringLiteral("help@spy.example"), .sdkVersion = QStringLiteral("VST 3.8.0")},
+            // Its "website" would start a program: the app must never open it.
             {.id = QStringLiteral("spy/Pad.vst3"), .name = QStringLiteral("Spy Pad"), .vendor = QStringLiteral("Spy"),
              .kind = engine::PluginKind::Instrument, .subCategories = QStringLiteral("Instrument|Synth"),
-             .version = QStringLiteral("1.0"), .classId = {}, .website = {}, .email = {}, .sdkVersion = {}},
+             .version = QStringLiteral("1.0"), .classId = {}, .website = QStringLiteral("file:///C:/Windows/System32/calc.exe"),
+             .email = {}, .sdkVersion = {}},
             {.id = QStringLiteral("spy/Reverb.vst3"), .name = QStringLiteral("Spy Reverb"), .vendor = QStringLiteral("Other"),
              .kind = engine::PluginKind::Effect, .subCategories = QStringLiteral("Fx|Reverb"),
              .version = QStringLiteral("1.0"), .classId = {}, .website = {}, .email = {}, .sdkVersion = {}},
