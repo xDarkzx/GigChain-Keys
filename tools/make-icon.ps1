@@ -1,16 +1,19 @@
-# Builds the app's Windows icon (branding\app.ico, 16-256 px) from the logo
-# picture: the chain-and-keys mark, cut out of the logo, on the logo's dark
-# background with rounded corners (the name would be unreadable at 16 px).
-# Run it again after changing the logo: tools\make-icon.ps1
+# Builds the app's Windows icon (branding\app.ico, 16-256 px) from the icon
+# picture: the chain-and-keys mark on its dark background, in a rounded
+# tile. Run it again after changing the picture: tools\make-icon.ps1
 param(
-    [string]$Source = "$PSScriptRoot\..\branding\gigchain-logo.png",
+    [string]$Source = "$PSScriptRoot\..\branding\gigchain-icon.png",
     [string]$Out = "$PSScriptRoot\..\branding\app.ico",
     [string]$Preview = "$PSScriptRoot\..\branding\app-icon.png",
-    # The mark in the logo (pixels: left, top, width, height), with room
-    # round it for the soft edge (the mark itself is about 290-585, 100-245).
-    [int[]]$Mark = @(240, 62, 390, 210),
-    # How far in from the cut-out's edge the fade goes (pixels of the logo).
-    [int]$Feather = 26
+    # The part of the picture used (pixels: left, top, width, height): the
+    # mark with its background round it.
+    [int[]]$Mark = @(0, 0, 765, 542),
+    # How wide the mark itself is in that part (pixels): it fills 84% of the tile.
+    [int]$MarkWidth = 670,
+    # How far in from the part's sides, and from its top and bottom, its
+    # background fades into the tile (the mark itself must stay clear).
+    [int]$Feather = 12,
+    [int]$FeatherTopBottom = 80
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
@@ -40,13 +43,13 @@ try {
 
     # The mark cut out with soft edges: the glow round it fades into the
     # tile instead of ending in a hard box.
-    $feather = [double]$Feather
+    $smooth = { param($v) $v = [Math]::Min(1.0, $v); $v * $v * (3 - 2 * $v) }
     for ($y = 0; $y -lt $cut.Height; ++$y) {
+        $ty = & $smooth ([Math]::Min($y, $cut.Height - 1 - $y) / [double]$FeatherTopBottom)
         for ($x = 0; $x -lt $cut.Width; ++$x) {
-            $edge = [Math]::Min([Math]::Min($x, $cut.Width - 1 - $x), [Math]::Min($y, $cut.Height - 1 - $y))
-            if ($edge -ge $feather) { continue }
-            $t = $edge / $feather
-            $t = $t * $t * (3 - 2 * $t) # smooth
+            $tx = & $smooth ([Math]::Min($x, $cut.Width - 1 - $x) / [double]$Feather)
+            $t = $tx * $ty
+            if ($t -ge 1.0) { continue }
             $c = $cut.GetPixel($x, $y)
             $cut.SetPixel($x, $y, [System.Drawing.Color]::FromArgb([int]($c.A * $t), $c.R, $c.G, $c.B))
         }
@@ -73,9 +76,9 @@ try {
         $fill = New-Object System.Drawing.Drawing2D.LinearGradientBrush (New-Object System.Drawing.Rectangle 0, 0, $size, $size), $top, $bottom, 90
         $g.FillPath($fill, $path)
 
-        # The mark (about 295 of the cut-out's width) across 84% of the tile,
-        # in the middle; its soft surround may run off the edge.
-        $width = $size * 0.84 * $markRect.Width / 295
+        # The mark across 84% of the tile, in the middle; its soft surround
+        # may run off the edge.
+        $width = $size * 0.84 * $markRect.Width / $MarkWidth
         $height = $width * $markRect.Height / $markRect.Width
         $dest = New-Object System.Drawing.RectangleF (($size - $width) / 2), (($size - $height) / 2), $width, $height
         $g.SetClip($path)
