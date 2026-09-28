@@ -56,6 +56,19 @@ $env:QT_ROOT_DIR = 'C:\Qt\6.10.2\msvc2022_64'
 Other presets: `release`, and `asan` (AddressSanitizer). To build and test
 one target, pass `-Target <name> -Filter <test>`.
 
+### The installer
+
+```powershell
+winget install JRSoftware.InnoSetup   # once
+.\tools\package.ps1                   # Release build, every test, then dist\
+```
+
+`dist\` then holds `GigChainKeys-<version>-x64-setup.exe` (the Windows
+installer: for everyone or just you, upgrades in place, opens `.gigchain`
+setlists, uninstalls from Apps & Features) and a portable zip of the same
+files. The installer is described in [`installer/setup.iss`](installer/setup.iss);
+its pictures come from `tools\make-installer-art.ps1`.
+
 ## Name and branding
 
 The product's name, version, executable, settings folder, setlist file

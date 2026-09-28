@@ -6,3 +6,4 @@ target_include_directories(gigchain_scanner PRIVATE ${PROJECT_SOURCE_DIR}/src/en
 target_link_libraries(gigchain_scanner PRIVATE gigchain::engine Qt6::Core)
 target_compile_definitions(gigchain_scanner PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 gigchain_target_defaults(gigchain_scanner)
+gigchain_version_resource(gigchain_scanner "${PRODUCT_NAME} plugin scanner")
