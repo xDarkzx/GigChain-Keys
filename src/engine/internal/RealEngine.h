@@ -17,6 +17,7 @@
 #include "gigchain/engine/IEngine.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
+#include <QMediaDevices>
 #include <QThread>
 
 #include <array>
@@ -180,6 +181,9 @@ private:
     [[nodiscard]] double barFrames() const;
 
     AudioDevice m_audio;
+    // Windows' audio devices changing (plugged in or out, a new default):
+    // tells m_audio to look again.
+    std::unique_ptr<QMediaDevices> m_mediaDevices;
     MidiInput m_midi;
     MidiQueue m_injected; // main thread -> audio thread
     GraphExchange m_exchange;

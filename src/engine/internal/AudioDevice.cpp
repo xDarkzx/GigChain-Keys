@@ -97,7 +97,10 @@ core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigne
                                      unsigned int wantedRate, std::optional<DeviceChoice> input)
 {
     m_render = std::move(render);
-    m_asioRetried = false;
+    m_wanted = choice;
+    m_wantedRate = wantedRate;
+    m_wantedInput = input;
+    m_standingIn = false;
     auto opened = openUnlogged(std::move(choice), bufferFrames, wantedRate, std::move(input));
     if (opened) {
         qCInfo(lcEngine).noquote() << "Audio output:" << m_choice.name << "(" << apiName(m_choice.api) << ")"
@@ -215,11 +218,13 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     m_latencyMs = m_sampleRate > 0.0 ? 1000.0 * std::max(latencyFrames, static_cast<double>(frames)) / m_sampleRate : 0.0;
     m_choice = DeviceChoice{.api = driver, .name = QString::fromStdString(info.name)};
     m_rtaudio = std::move(rt);
+    m_expectRunning = true;
     return {};
 }
 
 void AudioDevice::close()
 {
+    m_expectRunning = false;
     if (!m_rtaudio) return;
     if (m_rtaudio->isStreamRunning() && m_rtaudio->stopStream() != RTAUDIO_NO_ERROR) {
         qCWarning(lcEngine).noquote() << "Stopping" << m_choice.name << "reported an error";
@@ -237,6 +242,7 @@ core::Result<void> AudioDevice::pause()
         m_errors.clear();
         return core::fail(core::ErrorCode::DeviceUnavailable, u"Could not pause %1: %2"_s.arg(m_choice.name, why));
     }
+    m_expectRunning = false; // stopped on purpose
     return {};
 }
 
@@ -245,13 +251,17 @@ core::Result<void> AudioDevice::resume()
     if (!m_rtaudio || !m_rtaudio->isStreamOpen()) {
         return core::fail(core::ErrorCode::DeviceUnavailable, u"No audio output is open to resume"_s);
     }
-    if (m_rtaudio->isStreamRunning()) return {};
+    if (m_rtaudio->isStreamRunning()) {
+        m_expectRunning = true;
+        return {};
+    }
     if (m_rtaudio->startStream() != RTAUDIO_NO_ERROR) {
         const std::scoped_lock lock(m_errorMutex);
         const QString why = m_errors.empty() ? u"unknown error"_s : m_errors.back();
         m_errors.clear();
         return core::fail(core::ErrorCode::DeviceUnavailable, u"Could not restart %1: %2"_s.arg(m_choice.name, why));
     }
+    m_expectRunning = true;
     return {};
 }
 
@@ -275,36 +285,142 @@ std::vector<Notice> AudioDevice::poll()
         qCWarning(lcEngine).noquote() << "Audio dropped out" << dropouts << "time(s) on" << m_choice.name;
     }
 
-    if (!m_deviceLost.exchange(false)) return notices;
-
-    const DeviceChoice lost = m_choice;
-    qCWarning(lcEngine).noquote() << "Audio device lost:" << lost.name << "(" << apiName(lost.api) << ")";
-    close();
-
-    if (lost.api == AudioApi::Asio && !m_asioRetried) {
-        m_asioRetried = true;
-        if (auto reopened = openUnlogged(lost, m_requestedFrames, m_requestedRate, m_requestedInput)) {
-            notices.push_back(Notice::info(u"%1 restarted after the driver asked for a reset"_s.arg(lost.name)));
-            qCInfo(lcEngine).noquote() << notices.back().text;
-            return notices;
-        } else {
-            qCWarning(lcEngine).noquote() << reopened.error().message;
-        }
+    // Stopped working: the driver said so (a disconnect), or the stream
+    // stopped by itself (WASAPI reports an unplugged device as a driver
+    // error and stops), or nothing could be opened last time.
+    const bool stoppedByItself = m_expectRunning && m_rtaudio && !m_rtaudio->isStreamRunning();
+    if (m_deviceLost.exchange(false) || stoppedByItself) {
+        recover(notices);
+        return notices;
     }
-
-    // System audio at its own rate: the chosen rate may not exist there. The
-    // engine re-prepares plugins for whatever rate this ends up at.
-    const bool hadInputs = m_requestedInput.has_value();
-    if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0, std::nullopt)) {
-        notices.push_back(Notice::warning(
-            u"%1 stopped working; switched to system audio (%2)%3"_s.arg(lost.name, m_choice.name,
-                                                                          hadInputs ? u", without inputs"_s : QString())));
-        qCWarning(lcEngine).noquote() << notices.back().text;
-    } else {
-        notices.push_back(Notice::error(u"No audio output is available: %1"_s.arg(fallback.error().message)));
-        qCWarning(lcEngine).noquote() << notices.back().text;
+    const bool changed = std::exchange(m_devicesChanged, false);
+    const auto now = std::chrono::steady_clock::now();
+    if (m_standingIn) { // (with the stand-in playing, or nothing at all)
+        // Waiting for the wanted device: on every device change, and every
+        // few seconds (a change can go unnoticed).
+        if (changed || now - m_lastLook >= std::chrono::seconds(3)) {
+            m_lastLook = now;
+            takeWantedBack(notices);
+        }
+    } else if (!m_wanted && changed) {
+        followDefault(notices);
     }
     return notices;
+}
+
+void AudioDevice::recover(std::vector<Notice>& notices)
+{
+    const DeviceChoice lost = m_choice;
+    qCWarning(lcEngine).noquote() << "Audio device stopped working:" << lost.name << "(" << apiName(lost.api) << ")";
+    close();
+    const auto tell = [&notices](Notice notice) {
+        qCWarning(lcEngine).noquote() << notice.text;
+        notices.push_back(std::move(notice));
+    };
+
+    // The wanted device again: a driver reset, or it is still there.
+    if (!m_wanted || outputPresent(*m_wanted)) {
+        if (auto again = openUnlogged(m_wanted, m_requestedFrames, m_wantedRate, m_wantedInput)) {
+            m_standingIn = false;
+            tell(Notice::info(m_choice.name == lost.name ? u"%1 started again after it stopped"_s.arg(lost.name)
+                                                          : u"%1 stopped: now playing through %2"_s.arg(lost.name, m_choice.name)));
+            return;
+        } else {
+            qCWarning(lcEngine).noquote() << again.error().message;
+        }
+    }
+    // Missing: the system default in the meantime (at its own rate: the
+    // chosen one may not exist there; the engine re-prepares the plugins).
+    m_standingIn = true;
+    m_lastLook = std::chrono::steady_clock::now();
+    const bool hadInputs = m_wantedInput.has_value();
+    if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0, std::nullopt)) {
+        tell(Notice::warning(u"%1 stopped (unplugged?): playing through %2%3 until it is back"_s.arg(
+            lost.name, m_choice.name, hadInputs ? u", without inputs"_s : QString())));
+    } else {
+        tell(Notice::error(u"No audio output is available (%1): the sound comes back when one is plugged in"_s.arg(
+            fallback.error().message)));
+    }
+}
+
+void AudioDevice::standIn(const DeviceChoice& missing, unsigned int rate, std::optional<DeviceChoice> input)
+{
+    m_wanted = missing;
+    m_wantedRate = rate;
+    m_wantedInput = std::move(input);
+    m_standingIn = true;
+    m_lastLook = std::chrono::steady_clock::now();
+}
+
+void AudioDevice::takeWantedBack(std::vector<Notice>& notices)
+{
+    if (m_wanted && !outputPresent(*m_wanted)) {
+        // Still missing. With nothing open at all, the system default will do.
+        const QString missing = m_wanted->name; // (the open below leaves m_wanted as it is)
+        if (!m_rtaudio) {
+            if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0, std::nullopt)) {
+                notices.push_back(Notice::warning(u"Playing through %1 until %2 is back"_s.arg(m_choice.name, missing)));
+                qCWarning(lcEngine).noquote() << notices.back().text;
+            }
+        }
+        return;
+    }
+    const QString before = m_rtaudio ? m_choice.name : QString();
+    if (auto back = openUnlogged(m_wanted, m_requestedFrames, m_wantedRate, m_wantedInput)) {
+        m_standingIn = false;
+        notices.push_back(Notice::info(m_wanted ? u"%1 is back: playing through it again"_s.arg(m_choice.name)
+                                                : u"Playing through %1"_s.arg(m_choice.name)));
+        qCInfo(lcEngine).noquote() << notices.back().text;
+        return;
+    } else {
+        qCWarning(lcEngine).noquote() << back.error().message;
+    }
+    // There, but it would not open: keep playing through the stand-in.
+    if (!before.isEmpty()) {
+        if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0, std::nullopt); !fallback) {
+            notices.push_back(Notice::error(u"No audio output is available: %1"_s.arg(fallback.error().message)));
+            qCWarning(lcEngine).noquote() << notices.back().text;
+        }
+    }
+}
+
+void AudioDevice::followDefault(std::vector<Notice>& notices)
+{
+    const QString now = defaultOutputName();
+    if (now.isEmpty() || now == m_choice.name) return;
+    if (auto moved = openUnlogged(std::nullopt, m_requestedFrames, m_wantedRate, m_wantedInput)) {
+        notices.push_back(Notice::info(u"Windows' default output changed: now playing through %1"_s.arg(m_choice.name)));
+        qCInfo(lcEngine).noquote() << notices.back().text;
+    } else {
+        qCWarning(lcEngine).noquote() << "Could not follow the default output to" << now << ":" << moved.error().message;
+        recover(notices); // back to whatever works
+    }
+}
+
+bool AudioDevice::outputPresent(const DeviceChoice& choice)
+{
+    try {
+        RtAudio probe(toRtApi(choice.api), [](RtAudioErrorType, const std::string&) {}); // (probing only)
+        return std::ranges::any_of(probe.getDeviceIds(), [&probe, &choice](unsigned int id) {
+            const RtAudio::DeviceInfo info = probe.getDeviceInfo(id);
+            return QString::fromStdString(info.name) == choice.name && info.outputChannels >= 2;
+        });
+    } catch (const std::exception& e) {
+        qCWarning(lcEngine).noquote() << "Looking for" << choice.name << "failed:" << QString::fromUtf8(e.what());
+        return false;
+    }
+}
+
+QString AudioDevice::defaultOutputName()
+{
+    try {
+        RtAudio probe(RtAudio::WINDOWS_WASAPI, [](RtAudioErrorType, const std::string&) {});
+        const unsigned int id = probe.getDefaultOutputDevice();
+        return id != 0 ? QString::fromStdString(probe.getDeviceInfo(id).name) : QString();
+    } catch (const std::exception& e) {
+        qCWarning(lcEngine).noquote() << "Looking for the default output failed:" << QString::fromUtf8(e.what());
+        return {};
+    }
 }
 
 int AudioDevice::callback(void* output, void* input, unsigned int frames, double, unsigned int status, void* user)
