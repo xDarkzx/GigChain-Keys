@@ -34,7 +34,8 @@ private slots:
                                    ErrorCode::FileWriteFailed, ErrorCode::FileTooLarge,
                                    ErrorCode::ParseFailed,     ErrorCode::UnsupportedVersion,
                                    ErrorCode::InvalidData,     ErrorCode::LimitExceeded,
-                                   ErrorCode::OutOfRange,      ErrorCode::DeviceUnavailable};
+                                   ErrorCode::OutOfRange,      ErrorCode::DeviceUnavailable,
+                                   ErrorCode::SystemRefused};
         for (const ErrorCode code : codes) {
             QVERIFY(!toString(code).isEmpty());
         }

@@ -21,6 +21,7 @@ class BrandingInfo : public QObject
     Q_PROPERTY(QString version READ version CONSTANT)
     Q_PROPERTY(QString website READ website CONSTANT)
     Q_PROPERTY(QString setlistSuffix READ setlistSuffix CONSTANT)
+    Q_PROPERTY(QString jsonSetlistSuffix READ jsonSetlistSuffix CONSTANT)
 
 public:
     using QObject::QObject;
@@ -31,6 +32,7 @@ public:
     [[nodiscard]] static QString version() { return branding::version(); }
     [[nodiscard]] static QString website() { return branding::website(); }
     [[nodiscard]] static QString setlistSuffix() { return branding::setlistSuffix(); }
+    [[nodiscard]] static QString jsonSetlistSuffix() { return branding::jsonSetlistSuffix(); }
 };
 
 } // namespace gigchain::ui

@@ -20,6 +20,7 @@ enum class ErrorCode
     LimitExceeded,
     OutOfRange,
     DeviceUnavailable,
+    SystemRefused, // Windows said no (a pipe, a registry key): the message says what and why
 };
 
 // A failure the user can be told about: `message` is ready to show in the UI.

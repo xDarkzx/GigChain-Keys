@@ -146,8 +146,41 @@ private slots:
         QVERIFY(m_doc->isDirty());
         QVERIFY(m_doc->saveAs(path(u"gig"_s)));
         QVERIFY(!m_doc->isDirty());
-        QCOMPARE(m_doc->displayName(), u"gig.gigchain.json"_s);
-        QVERIFY(QFile::exists(path(u"gig.gigchain.json"_s)));
+        QCOMPARE(m_doc->displayName(), u"gig.gigchain"_s);
+        QVERIFY(QFile::exists(path(u"gig.gigchain"_s)));
+    }
+
+    // A setlist from before the .gigchain file type: saving it moves it to
+    // the new name (the old file goes, the recent list follows).
+    void anOlderSetlistIsSavedAsTheNewFileType()
+    {
+        QVERIFY(m_doc->saveAs(path(u"old.gigchain.json"_s)));
+        QVERIFY(m_doc->open(path(u"old.gigchain.json"_s)));
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->save());
+        QCOMPARE(m_doc->filePath(), path(u"old.gigchain"_s));
+        QVERIFY(QFile::exists(path(u"old.gigchain"_s)));
+        QVERIFY(!QFile::exists(path(u"old.gigchain.json"_s)));
+        QCOMPARE(m_doc->recentFiles().first(), path(u"old.gigchain"_s));
+        QVERIFY(!m_doc->recentFiles().contains(path(u"old.gigchain.json"_s)));
+        QCOMPARE(m_doc->recentSetlists().first().toMap().value(u"name"_s).toString(), u"old"_s);
+        QVERIFY(m_doc->open(path(u"old.gigchain"_s)));
+        QCOMPARE(m_doc->setlist().songs.size(), std::size_t{2});
+    }
+
+    // ... but never over another setlist that already has the new name.
+    void savingAnOlderSetlistNeverOverwritesAnother()
+    {
+        QVERIFY(m_doc->saveAs(path(u"gig.gigchain"_s))); // one song
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->saveAs(path(u"gig.gigchain.json"_s))); // two songs
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->save());
+        QCOMPARE(m_doc->filePath(), path(u"gig.gigchain.json"_s));
+        QVERIFY(m_doc->open(path(u"gig.gigchain"_s)));
+        QCOMPARE(m_doc->setlist().songs.size(), std::size_t{1}); // untouched
+        QVERIFY(m_doc->open(path(u"gig.gigchain.json"_s)));
+        QCOMPARE(m_doc->setlist().songs.size(), std::size_t{3});
     }
 
     void saveWithoutAFileNameFails()
@@ -641,7 +674,7 @@ private slots:
         QVERIFY(!m_doc->setSongBackingTrack(0, QUrl::fromLocalFile(path(u"x.wav"_s))));
 
         QVERIFY(QDir().mkpath(path(u"show"_s)));
-        QVERIFY(m_doc->saveAs(path(u"show/set.gigchain.json"_s)));
+        QVERIFY(m_doc->saveAs(path(u"show/set.gigchain"_s)));
         const QString elsewhere = path(u"music/Hallelujah backing.wav"_s);
         QDir().mkpath(path(u"music"_s));
         {
@@ -655,7 +688,7 @@ private slots:
         QCOMPARE(QFileInfo(m_engine->track.path).absoluteFilePath(), QFileInfo(path(u"show/Hallelujah backing.wav"_s)).absoluteFilePath());
         // Saved and read back with the song.
         QVERIFY(m_doc->save());
-        QVERIFY(m_doc->open(path(u"show/set.gigchain.json"_s)));
+        QVERIFY(m_doc->open(path(u"show/set.gigchain"_s)));
         QCOMPARE(m_doc->songBackingTrack(), u"Hallelujah backing.wav"_s);
         // Removing it stops it.
         QVERIFY(m_doc->setSongBackingTrack(0, QUrl()));

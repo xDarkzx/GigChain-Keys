@@ -118,14 +118,15 @@ ApplicationWindow {
         id: openDialog
         title: qsTr("Open setlist")
         fileMode: FileDialog.OpenFile
-        nameFilters: [qsTr("%1 setlists (*%2)").arg(Branding.name).arg(Branding.setlistSuffix), qsTr("All files (*)")]
+        nameFilters: [qsTr("%1 setlists (*%2 *%3)").arg(Branding.name).arg(Branding.setlistSuffix).arg(Branding.jsonSetlistSuffix),
+                      qsTr("All files (*)")]
         onAccepted: root.doc.openUrl(selectedFile)
     }
     FileDialog {
         id: saveDialog
         title: qsTr("Save setlist")
         fileMode: FileDialog.SaveFile
-        defaultSuffix: "gigchain.json"
+        defaultSuffix: Branding.setlistSuffix.substring(1)
         nameFilters: [qsTr("%1 setlists (*%2)").arg(Branding.name).arg(Branding.setlistSuffix)]
         onAccepted: {
             if (root.doc.saveAsUrl(selectedFile) && root.pendingAction !== "")

@@ -308,6 +308,8 @@ QVariantList DocumentController::recentSetlists() const
         QString name = QFileInfo(path).fileName();
         if (name.endsWith(branding::setlistSuffix(), Qt::CaseInsensitive)) {
             name.chop(branding::setlistSuffix().size());
+        } else if (name.endsWith(branding::jsonSetlistSuffix(), Qt::CaseInsensitive)) {
+            name.chop(branding::jsonSetlistSuffix().size());
         } else if (name.endsWith(u".json"_s, Qt::CaseInsensitive)) {
             name.chop(5);
         }
@@ -1192,14 +1194,34 @@ bool DocumentController::save()
     if (m_filePath.isEmpty()) {
         return report(core::Error{core::ErrorCode::FileWriteFailed, tr("Choose where to save this setlist first")});
     }
-    return saveAs(m_filePath);
+    // Named before the setlist file type of its own: saved under the new name
+    // (unless another setlist has that name), and the old file goes.
+    const QString old = m_filePath;
+    if (!old.endsWith(branding::jsonSetlistSuffix(), Qt::CaseInsensitive)) return saveAs(old);
+    const QString renamed = old.chopped(branding::jsonSetlistSuffix().size()) + branding::setlistSuffix();
+    if (QFileInfo::exists(renamed)) {
+        qCInfo(lcUi).noquote() << "Kept the name" << old << "(" << renamed << "is another setlist )";
+        return saveAs(old);
+    }
+    if (!saveAs(renamed)) return false;
+    forgetRecent(old);
+    if (!QFile::remove(old)) {
+        reportMessage(tr("Saved as %1, but the old file %2 could not be removed").arg(QFileInfo(renamed).fileName(), old),
+                      Notifications::Warning);
+        qCWarning(lcUi).noquote() << "Could not remove" << old << "after saving it as" << renamed;
+        return true;
+    }
+    qCInfo(lcUi).noquote() << "Moved" << old << "to the setlist file type" << renamed;
+    return true;
 }
 
 bool DocumentController::saveAs(const QString& path)
 {
     GC_ONLY_MAIN_THREAD();
     QString target = path;
-    if (!target.endsWith(u".json"_s, Qt::CaseInsensitive)) target += branding::setlistSuffix();
+    if (!target.endsWith(branding::setlistSuffix(), Qt::CaseInsensitive) && !target.endsWith(u".json"_s, Qt::CaseInsensitive)) {
+        target += branding::setlistSuffix();
+    }
     // Each plugin's settings (preset, knobs) are saved with it.
     const std::vector<QString> problems = m_engine.storePluginStates(m_setlist); // each logged
     if (auto r = core::saveSetlistFile(m_setlist, target); !r) return report(r.error());
