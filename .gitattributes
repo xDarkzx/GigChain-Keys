@@ -1,2 +1,4 @@
 * text=auto eol=lf
 *.ps1 text eol=crlf
+# Fuzzer inputs are exact bytes (line ends included): never converted.
+tests/fuzz/corpus/** -text
