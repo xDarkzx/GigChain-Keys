@@ -9,6 +9,7 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -16,6 +17,7 @@
 #include <vector>
 
 class RtAudio;
+class TestAudioDevice;
 
 namespace gigchain::engine {
 
@@ -54,12 +56,17 @@ inline constexpr int kMaxAudioInputs = 16;
 // only unit that includes RtAudio. Main-thread API except for the render
 // callback it runs.
 //
-// Recovery policy (user decision 2026-09-24): if the device is lost, an ASIO
-// device is reopened once; if that fails, or a WASAPI device is lost, the
-// stream moves to the default system output. Every step is logged and
-// reported by poll().
+// Recovery (user decisions 2026-09-24 and 2026-09-28): when the device stops
+// working (unplugged, a driver reset; however the driver says so), the
+// device asked for is reopened if it is still there; if not, the sound goes
+// on through the default system output, and the device asked for is taken
+// back as soon as it is plugged in again (on a device change, and every few
+// seconds while it is missing). Following the system default, the output
+// moves with Windows' default. Every step is logged and reported by poll().
 class AudioDevice
 {
+    friend class ::TestAudioDevice; // simulates a driver stopping the stream
+
 public:
     AudioDevice();
     ~AudioDevice();
@@ -88,8 +95,23 @@ public:
     core::Result<void> resume();
 
     // Main thread, regularly: logs what went wrong since the last call,
-    // recovers from a lost device, and returns user-facing notices.
+    // recovers from a lost device (and takes the wanted one back when it
+    // returns), and returns user-facing notices.
     std::vector<Notice> poll();
+    // Main thread: the computer's audio devices changed (one plugged in or
+    // out, another default); the next poll() looks again.
+    void devicesChanged() { m_devicesChanged = true; }
+    // Playing through another device than the one asked for (it is missing).
+    [[nodiscard]] bool standingIn() const { return m_standingIn; }
+    // What was asked for (std::nullopt = the system default), its rate (0 =
+    // its own) and inputs: what Settings keeps, whatever stands in for it.
+    [[nodiscard]] const std::optional<DeviceChoice>& wanted() const { return m_wanted; }
+    [[nodiscard]] unsigned int wantedRate() const { return m_wantedRate; }
+    [[nodiscard]] const std::optional<DeviceChoice>& wantedInput() const { return m_wantedInput; }
+    // Opened on the system default because `wanted` could not be (missing
+    // at start): take it back, at that rate and with those inputs, when it
+    // is plugged in.
+    void standIn(const DeviceChoice& missing, unsigned int rate, std::optional<DeviceChoice> input);
 
     [[nodiscard]] bool isOpen() const;
     [[nodiscard]] double sampleRate() const { return m_sampleRate; }
@@ -109,6 +131,18 @@ private:
     void onError(int type, const std::string& text);
     core::Result<void> openUnlogged(std::optional<DeviceChoice> choice, unsigned int bufferFrames, unsigned int wantedRate,
                                     std::optional<DeviceChoice> input);
+    // After the stream stopped working: the wanted device again, else the
+    // system default, else nothing (tried again later).
+    void recover(std::vector<Notice>& notices);
+    // While standing in (or with nothing open): the wanted device, if it is
+    // there again.
+    void takeWantedBack(std::vector<Notice>& notices);
+    // Following the system default: move when Windows' default moved.
+    void followDefault(std::vector<Notice>& notices);
+    // Whether an output of that driver and name is plugged in (not opened).
+    [[nodiscard]] static bool outputPresent(const DeviceChoice& choice);
+    // The name of the system's default output now (empty: none).
+    [[nodiscard]] static QString defaultOutputName();
 
     std::unique_ptr<RtAudio> m_rtaudio;
     RenderCallback m_render;
@@ -122,7 +156,15 @@ private:
     double m_sampleRate = 0.0;
     int m_maxBlock = 0;
     double m_latencyMs = 0.0;
-    bool m_asioRetried = false;
+    // What was asked for (std::nullopt = the system default) at what rate and
+    // with what inputs, as open() was called: kept while standing in.
+    std::optional<DeviceChoice> m_wanted;
+    unsigned int m_wantedRate = 0;
+    std::optional<DeviceChoice> m_wantedInput;
+    bool m_expectRunning = false; // opened and not paused: a stopped stream means it stopped working
+    bool m_standingIn = false;    // on the system default while the wanted device is missing (or on nothing)
+    bool m_devicesChanged = false;
+    std::chrono::steady_clock::time_point m_lastLook{};
 
     std::atomic<bool> m_deviceLost{false};
     std::atomic<uint64_t> m_underflows{0};

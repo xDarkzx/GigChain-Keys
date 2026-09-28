@@ -2,6 +2,8 @@
 // a device skip when none exists. Output is silence: nothing audible plays.
 #include "AudioDevice.h"
 
+#include <RtAudio.h>
+
 #include <QtTest>
 
 #include <atomic>
@@ -16,7 +18,99 @@ class TestAudioDevice : public QObject
 {
     Q_OBJECT
 
+    // What WASAPI does when the device is pulled out: its thread reports a
+    // driver error (not a "disconnect") and the stream stops.
+    static void pullOut(AudioDevice& device)
+    {
+        QVERIFY(device.m_rtaudio != nullptr);
+        device.m_rtaudio->stopStream();
+        device.onError(0, "RtApiWasapi::wasapiThread: Unable to retrieve render buffer size.");
+    }
+    static void waitForBlocks(const std::atomic<int>& blocks, int atLeast)
+    {
+        for (int i = 0; i < 100 && blocks.load() < atLeast; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    static QString joined(const std::vector<Notice>& notices)
+    {
+        QStringList texts;
+        for (const Notice& n : notices) texts << n.text;
+        return texts.join(u" | "_s);
+    }
+
 private slots:
+    // Unplugged and back (or a driver hiccup): the sound starts again by itself.
+    void aStreamThatStopsByItselfStartsAgain()
+    {
+        if (AudioDevice::listOutputs().empty()) QSKIP("No audio outputs on this machine");
+        AudioDevice device;
+        std::atomic<int> blocks{0};
+        QVERIFY(device.open(std::nullopt, 256, [&](AudioBlock out, const AudioInputs&) {
+            std::fill_n(out.left, out.frames, 0.0F);
+            std::fill_n(out.right, out.frames, 0.0F);
+            blocks.fetch_add(1);
+        }).has_value());
+        waitForBlocks(blocks, 5);
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"reported: RtApiWasapi::wasapiThread"_s));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"stopped working"_s));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"started again|now playing through"_s));
+        pullOut(device);
+        const int before = blocks.load();
+        const std::vector<Notice> notices = device.poll();
+        QVERIFY2(!notices.empty(), "the stopped stream went unnoticed");
+        QVERIFY2(joined(notices).contains(u"started again"_s) || joined(notices).contains(u"now playing through"_s),
+                 qPrintable(joined(notices)));
+        QVERIFY(device.isOpen());
+        QVERIFY(!device.standingIn());
+        waitForBlocks(blocks, before + 5);
+        QVERIFY2(blocks.load() >= before + 5, "no sound after starting again");
+        QVERIFY(device.poll().empty()); // settled
+    }
+
+    // The chosen device missing: the system default plays meanwhile, and the
+    // chosen one is taken back when it is plugged in again.
+    void aMissingDeviceIsStoodInForAndTakenBack()
+    {
+        const auto outputs = AudioDevice::listOutputs();
+        const auto system = std::ranges::find_if(outputs, [](const AudioDeviceInfo& d) { return d.api == AudioApi::Wasapi && d.isDefault; });
+        if (system == outputs.end()) QSKIP("No default system output");
+        AudioDevice device;
+        std::atomic<int> blocks{0};
+        const DeviceChoice chosen{.api = AudioApi::Wasapi, .name = system->name};
+        QVERIFY(device.open(chosen, 256, [&](AudioBlock out, const AudioInputs&) {
+            std::fill_n(out.left, out.frames, 0.0F);
+            std::fill_n(out.right, out.frames, 0.0F);
+            blocks.fetch_add(1);
+        }).has_value());
+        waitForBlocks(blocks, 5);
+
+        // Pulled out, and not plugged in anywhere (as far as the device can tell).
+        device.m_wanted = DeviceChoice{.api = AudioApi::Wasapi, .name = u"Unplugged Interface"_s};
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"reported: RtApiWasapi::wasapiThread"_s));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"stopped working"_s));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"until it is back"_s));
+        pullOut(device);
+        std::vector<Notice> notices = device.poll();
+        QVERIFY2(joined(notices).contains(u"until it is back"_s), qPrintable(joined(notices)));
+        QVERIFY(device.standingIn());
+        QCOMPARE(device.deviceName(), system->name); // the stand-in: the system default
+        const int standing = blocks.load();
+        waitForBlocks(blocks, standing + 5);
+        QVERIFY2(blocks.load() >= standing + 5, "no sound while standing in");
+        QVERIFY(device.poll().empty()); // still missing: nothing new to say
+
+        // Plugged in again.
+        device.m_wanted = chosen;
+        device.devicesChanged();
+        notices = device.poll();
+        QVERIFY2(joined(notices).contains(u"is back"_s), qPrintable(joined(notices)));
+        QVERIFY(!device.standingIn());
+        QCOMPARE(device.deviceName(), system->name);
+        const int back = blocks.load();
+        waitForBlocks(blocks, back + 5);
+        QVERIFY2(blocks.load() >= back + 5, "no sound after taking the device back");
+    }
+
     void listsOutputsWithOneDefault()
     {
         const auto outputs = AudioDevice::listOutputs();

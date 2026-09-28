@@ -51,13 +51,28 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
                                  .inputDevice = {}};
     if (!opened && options.audio != systemAudio) {
         // The saved setup failed: fall back to system audio (logged by open()).
-        engine->m_pendingNotices.push_back(Notice::warning(u"%1 could not be used (%2); using system audio instead"_s.arg(
+        engine->m_pendingNotices.push_back(Notice::warning(u"%1 could not be used (%2); using system audio until it is there"_s.arg(
             options.audio.device.isEmpty() ? u"The saved audio setup"_s : options.audio.device, opened.error().message)));
         opened = engine->openAudio(systemAudio);
+        // The saved device (unplugged when the app started) is taken back
+        // when it is plugged in.
+        if (opened && !options.audio.device.isEmpty()) {
+            const AudioApi api = options.audio.driver == AudioDriver::Asio ? AudioApi::Asio : AudioApi::Wasapi;
+            std::optional<DeviceChoice> input;
+            if (!options.audio.inputDevice.isEmpty()) input = DeviceChoice{.api = api, .name = options.audio.inputDevice};
+            engine->m_audio.standIn(DeviceChoice{.api = api, .name = options.audio.device}, options.audio.sampleRate, input);
+        }
     }
     if (!opened) {
         return core::fail(core::ErrorCode::DeviceUnavailable, opened.error().message);
     }
+    // Devices plugged in or out: the audio looks again at once.
+    engine->m_mediaDevices = std::make_unique<QMediaDevices>();
+    RealEngine* self = engine.get();
+    QObject::connect(engine->m_mediaDevices.get(), &QMediaDevices::audioOutputsChanged, engine->m_mediaDevices.get(),
+                     [self] { self->m_audio.devicesChanged(); });
+    QObject::connect(engine->m_mediaDevices.get(), &QMediaDevices::audioInputsChanged, engine->m_mediaDevices.get(),
+                     [self] { self->m_audio.devicesChanged(); });
 
     engine->m_preparedRate = engine->m_audio.sampleRate();
     engine->m_preparedBlock = engine->m_audio.maxBlock();
@@ -305,6 +320,16 @@ std::vector<AudioOutput> RealEngine::audioOutputs() const
 
 AudioSetup RealEngine::audioSetup() const
 {
+    // Standing in for a missing device: the setup is still the one chosen
+    // (Settings must not quietly replace the interface with the stand-in).
+    if (m_audio.standingIn()) {
+        const std::optional<DeviceChoice>& wanted = m_audio.wanted();
+        return AudioSetup{.driver = wanted && wanted->api == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
+                          .device = wanted ? wanted->name : QString(),
+                          .sampleRate = m_audio.wantedRate(),
+                          .bufferFrames = m_audio.requestedBufferFrames(),
+                          .inputDevice = m_audio.wantedInput() ? m_audio.wantedInput()->name : QString()};
+    }
     return AudioSetup{.driver = m_audio.api() == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
                       .device = m_audio.deviceName(),
                       .sampleRate = static_cast<unsigned int>(m_audio.sampleRate()),
@@ -1467,7 +1492,10 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(c
 QString RealEngine::statusText() const
 {
     const QStringList ports = m_midi.openPortNames();
-    return u"%1 · %2 · %3 kHz · %4 ms · MIDI: %5"_s.arg(m_audio.deviceName(), apiName(m_audio.api()))
+    // Standing in for an unplugged interface: says what it waits for.
+    QString output = m_audio.isOpen() ? m_audio.deviceName() : u"No audio output"_s;
+    if (m_audio.standingIn() && m_audio.wanted()) output += u" (waiting for %1)"_s.arg(m_audio.wanted()->name);
+    return u"%1 · %2 · %3 kHz · %4 ms · MIDI: %5"_s.arg(output, apiName(m_audio.api()))
         .arg(m_audio.sampleRate() / 1000.0, 0, 'f', 1)
         .arg(m_audio.latencyMs(), 0, 'f', 1)
         .arg(ports.isEmpty() ? u"none"_s : ports.join(u", "_s));
