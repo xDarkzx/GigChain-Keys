@@ -25,6 +25,10 @@ set(PRODUCT_WEBSITE "https://github.com/xDarkzx/GigChain-Keys")
 # needs a new picture too. Rounded corners should be transparent.
 set(PRODUCT_SPLASH_IMAGE "${CMAKE_CURRENT_LIST_DIR}/branding/splash.png")
 
+# The app's icon (the .exe in Explorer, the taskbar, its windows), made from
+# branding/gigchain-logo.png by tools/make-icon.ps1.
+set(PRODUCT_ICON "${CMAKE_CURRENT_LIST_DIR}/branding/app.ico")
+
 # Earlier names. Settings saved under them are carried over on first start,
 # and a test checks the source never mentions them. On a rename, add the
 # current values here.
