@@ -152,6 +152,16 @@ Result<void> setSongLoopSync(Setlist& setlist, int songIndex, bool sync)
     return {};
 }
 
+Result<void> setSongLoopBars(Setlist& setlist, int songIndex, int bars)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (bars < 0 || bars > limits::kMaxLoopBars) {
+        return fail(ErrorCode::OutOfRange, u"A loop is 1 to %1 bars long (or open)"_s.arg(limits::kMaxLoopBars));
+    }
+    setlist.songs.at(toIndex(songIndex)).loopBars = bars;
+    return {};
+}
+
 Result<void> setLoopControls(Setlist& setlist, const LoopControls& controls)
 {
     if (auto r = validateLoopControls(controls); !r) return r;

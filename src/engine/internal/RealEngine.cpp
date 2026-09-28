@@ -1298,6 +1298,7 @@ std::vector<ChannelLoop> RealEngine::loops() const
             const double bars = static_cast<double>(loop.position) / bar;
             item.bar = static_cast<int>(bars) + 1;
             item.progress = bars - std::floor(bars);
+            item.bars = m_loops.targetLines(); // "2 of 4" (0: open)
         } else if (loop.length > 0) {
             item.progress = static_cast<double>(loop.position) / static_cast<double>(loop.length);
             if (bar > 0.0) {

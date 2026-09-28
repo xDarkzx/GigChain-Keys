@@ -166,6 +166,7 @@ public:
         }
     }
     void setLoopSync(bool) override {}
+    void setLoopBars(int) override {}
     void setTempoFromFirstLoop(bool) override {}
     void stopAllLoops() override
     {

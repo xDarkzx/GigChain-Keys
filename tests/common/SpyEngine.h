@@ -278,6 +278,8 @@ public:
     }
     std::optional<bool> loopSync;
     void setLoopSync(bool sync) override { loopSync = sync; }
+    int loopBars = -1;
+    void setLoopBars(int bars) override { loopBars = bars; }
     std::optional<bool> tempoFromLoop;
     void setTempoFromFirstLoop(bool take) override { tempoFromLoop = take; }
     int loopStops = 0;

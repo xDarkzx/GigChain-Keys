@@ -132,6 +132,9 @@ struct Song
     bool switchEarly = false;
     // Loops start and stop on the bars (true) or press to press (free).
     bool loopSync = true;
+    // A synced loop's length in bars: it closes by itself at the end (and,
+    // stopped early, keeps what fills it evenly). 0 = open: stopped where wanted.
+    int loopBars = 4;
     // What the chart's sections play; a section not listed plays the default.
     std::vector<SectionSetup> sections;
 

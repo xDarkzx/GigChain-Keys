@@ -47,7 +47,7 @@ Rectangle {
         if (keyLow > 0 || keyHigh < 127) parts.push(noteName(keyLow) + "–" + noteName(keyHigh))
         if (transpose !== 0) parts.push((transpose > 0 ? "+" : "") + transpose)
         if (velocityLow > 1 || velocityHigh < 127) parts.push(qsTr("vel %1–%2").arg(velocityLow).arg(velocityHigh))
-        if (mappingCount > 0) parts.push(qsTr("%n knob(s)", "", mappingCount))
+        if (mappingCount > 0) parts.push(mappingCount === 1 ? qsTr("1 knob") : qsTr("%1 knobs").arg(mappingCount))
         return parts.join(" · ")
     }
 

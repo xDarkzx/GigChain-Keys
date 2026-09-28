@@ -98,6 +98,7 @@ Rectangle {
                     required property int index
                     loop: mixer.loops !== null && index < mixer.loops.channelLoops.length ? mixer.loops.channelLoops[index] : undefined
                     selected: mixer.doc.selectedChannel === index
+                    loopLength: mixer.doc.songLoopSync ? mixer.doc.songLoopBars : 0
                     onRecordPressed: mixer.loops.record(index)
                     onPlayStopPressed: mixer.loops.playStop(index)
                     onUndoRequested: mixer.loops.undo(index)

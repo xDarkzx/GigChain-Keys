@@ -12,6 +12,7 @@ Rectangle {
     // From LoopController.channelLoops: {state, progress, bar, bars, layers}.
     property var loop: ({ state: "empty", progress: 0, bar: 0, bars: 0, layers: 0 })
     property bool selected: false // the channel the keyboard's looper buttons act on
+    property int loopLength: 0 // the song's loop length in bars (0 = open)
 
     signal recordPressed()
     signal playStopPressed()
@@ -177,6 +178,8 @@ Rectangle {
         // Waiting for the bar: the beats left, counting down.
         readonly property string inBeats: cell.beatsToGo > 0 ? qsTr("in %1").arg(cell.beatsToGo) : qsTr("next bar")
         text: cell.loopState === "armed" ? qsTr("REC %1").arg(inBeats)
+              // Recording: the bar, out of the loop's length ("REC 2/4").
+              : cell.recordingBase && cell.bar > 0 && cell.bars > 0 ? qsTr("REC %1/%2").arg(Math.min(cell.bar, cell.bars)).arg(cell.bars)
               : cell.loopState === "closing" ? qsTr("REC %1 · ends").arg(cell.bar)
               : cell.recordingBase ? (cell.bar > 0 ? qsTr("REC %1").arg(cell.bar) : qsTr("REC"))
               : cell.loopState === "startArmed" ? qsTr("starts %1").arg(inBeats)
@@ -185,6 +188,8 @@ Rectangle {
               : cell.sounding && cell.bars > 0 ? cell.bar + "/" + cell.bars
               : cell.sounding ? qsTr("playing")
               : cell.hasLoop ? qsTr("stopped")
+              : cell.loopLength === 1 ? qsTr("1 bar") // empty: how long a loop will be
+              : cell.loopLength > 1 ? qsTr("%1 bars").arg(cell.loopLength)
               : ""
         color: cell.recordingBase || cell.loopState === "armed" ? cell.recordRed
                : cell.layering || cell.loopState === "overdubArmed" ? cell.layerOrange

@@ -28,6 +28,7 @@ inline constexpr double kMaxTempo = 400.0;
 inline constexpr int kMaxSectionsPerSong = 64; // one bit each in the engine
 inline constexpr int kMaxSectionBars = 999;
 inline constexpr int kMaxSectionOccurrence = 64;
+inline constexpr int kMaxLoopBars = 64;
 
 inline constexpr int kMinMidiNote = 0;
 inline constexpr int kMaxMidiNote = 127;

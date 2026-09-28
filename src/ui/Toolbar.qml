@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -109,6 +111,30 @@ ToolBar {
                     checked: bar.doc.songLoopSync
                     enabled: bar.doc.hasPatch
                     onTriggered: bar.doc.setSongLoopSync(bar.doc.songIndex, !bar.doc.songLoopSync)
+                }
+                // How long a loop is: it closes by itself at the end.
+                StageMenu {
+                    id: loopLengthMenu
+                    objectName: "loopLengthMenu"
+                    title: bar.doc.songLoopBars === 1 ? qsTr("Loop length: 1 bar")
+                           : bar.doc.songLoopBars > 1 ? qsTr("Loop length: %1 bars").arg(bar.doc.songLoopBars)
+                           : qsTr("Loop length: open")
+                    enabled: bar.doc.hasPatch && bar.doc.songLoopSync
+                    Instantiator {
+                        model: [1, 2, 4, 8, 16, 0]
+                        delegate: StageMenuItem {
+                            id: lengthItem
+                            required property int modelData
+                            text: lengthItem.modelData === 1 ? qsTr("1 bar")
+                                  : lengthItem.modelData > 1 ? qsTr("%1 bars").arg(lengthItem.modelData)
+                                  : qsTr("Open: closes where I stop it")
+                            checkable: true
+                            checked: bar.doc.songLoopBars === lengthItem.modelData
+                            onTriggered: bar.doc.setSongLoopBars(bar.doc.songIndex, lengthItem.modelData)
+                        }
+                        onObjectAdded: (index, object) => loopLengthMenu.insertItem(index, object)
+                        onObjectRemoved: (index, object) => loopLengthMenu.removeItem(object)
+                    }
                 }
                 StageMenuItem {
                     text: qsTr("Free loops: the first sets the tempo")
