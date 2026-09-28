@@ -1,0 +1,3 @@
+// The .exe's icon. Windows shows it in Explorer and the taskbar, and Qt
+// gives it to every window (it looks for the name IDI_ICON1).
+IDI_ICON1 ICON "@PRODUCT_ICON@"
