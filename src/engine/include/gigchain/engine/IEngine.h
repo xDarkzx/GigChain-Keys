@@ -206,6 +206,9 @@ public:
     // Synced: loops start and stop on the bars. Free: the first loop is
     // recorded press to press and the others keep to it.
     virtual void setLoopSync(bool sync) = 0;
+    // A synced loop's length in bars: recording closes by itself at the end;
+    // stopped early, the loop keeps what fills that length evenly. 0 = open.
+    virtual void setLoopBars(int bars) = 0;
     // Free mode: the first loop also sets the tempo (1, 2 or 4 bars long,
     // whichever is nearest 60-180 BPM) and bar 1 starts with it.
     virtual void setTempoFromFirstLoop(bool take) = 0;

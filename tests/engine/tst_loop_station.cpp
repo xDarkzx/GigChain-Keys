@@ -272,6 +272,70 @@ private slots:
         QCOMPARE(barely.station.read(0).length, int64_t{1000});
     }
 
+    // A set length: the loop closes by itself at its end; stopped early, it
+    // keeps the part that fills that length evenly (no gap).
+    void aSetLengthClosesByItselfOrFillsIn()
+    {
+        Rig full;
+        full.station.setTargetLines(4); // 4 bars
+        full.give(0, 100000);
+        full.runTo(128);
+        full.station.post(0, LoopCommand::Record); // from 1000
+        full.runTo(4992);
+        QCOMPARE(full.station.read(0).state, LoopState::Recording);
+        QCOMPARE(full.station.read(0).wait, int64_t{5000 - 4992}); // it knows where it ends
+        full.runTo(5064);
+        QCOMPARE(full.station.read(0).state, LoopState::Playing); // no second press
+        QCOMPARE(full.station.read(0).length, int64_t{4000});
+        full.runTo(9000);
+        for (int64_t t = 5000; t < 9000; ++t) QCOMPARE(full.played.at(static_cast<std::size_t>(t)), live(1000 + (t - 5000)));
+
+        // Stopped after two bars (a hair late): two bars, playing twice in the four.
+        Rig two;
+        two.station.setTargetLines(4);
+        two.give(0, 100000);
+        two.runTo(128);
+        two.station.post(0, LoopCommand::Record);
+        two.runTo(3072);
+        two.station.post(0, LoopCommand::Record);
+        two.block();
+        QCOMPARE(two.station.read(0).length, int64_t{2000});
+        two.runTo(9000);
+        for (int64_t t = 3072; t < 9000; ++t) {
+            QCOMPARE(two.played.at(static_cast<std::size_t>(t)), live(1000 + ((t - 3000) % 2000)));
+        }
+
+        // Stopped in bar 3 of 4: three bars cannot fill four, so two.
+        Rig three;
+        three.station.setTargetLines(4);
+        three.give(0, 100000);
+        three.runTo(128);
+        three.station.post(0, LoopCommand::Record);
+        three.runTo(3456); // 2.46 bars in: nearest is 2
+        three.station.post(0, LoopCommand::Record);
+        three.block();
+        QCOMPARE(three.station.read(0).length, int64_t{2000});
+        Rig threeLate;
+        threeLate.station.setTargetLines(4);
+        threeLate.give(0, 100000);
+        threeLate.runTo(128);
+        threeLate.station.post(0, LoopCommand::Record);
+        threeLate.runTo(4032); // 3.03 bars in: nearest is 3, which cannot fill 4: 2
+        threeLate.station.post(0, LoopCommand::Record);
+        threeLate.block();
+        QCOMPARE(threeLate.station.read(0).length, int64_t{2000});
+        // Stopped just before bar 2 ends: it closes there (a bar that fills 4).
+        Rig one;
+        one.station.setTargetLines(4);
+        one.give(0, 100000);
+        one.runTo(128);
+        one.station.post(0, LoopCommand::Record);
+        one.runTo(1920);
+        one.station.post(0, LoopCommand::Record);
+        one.runTo(2064);
+        QCOMPARE(one.station.read(0).length, int64_t{1000});
+    }
+
     // An undone layer leaves nothing behind for the next one.
     void aLayerAfterAnUndoStartsClean()
     {

@@ -795,6 +795,40 @@ private slots:
         QVERIFY(engine.loops().empty()); // and its room given back
     }
 
+    // A set loop length: recording counts "bar 1 of 2", "2 of 2", and the
+    // loop closes by itself at the end.
+    void aLoopOfASetLengthCountsItsBarsAndClosesItself()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-90.0);
+        engine.setTempo(240.0); // a bar a second
+        engine.setLoopBars(2);
+        const core::Patch patch = pianoPatch();
+        const core::ChannelId piano = patch.channels.front().id;
+        engine.applyPatch(patch);
+        QVERIFY(engine.poll().empty());
+        const auto loop = [&engine] {
+            const std::vector<ChannelLoop> loops = engine.loops();
+            return loops.empty() ? ChannelLoop{} : loops.front();
+        };
+        engine.loopCommand(piano, LoopCommand::Record);
+        for (int i = 0; i < 200 && loop().state != LoopState::Recording; ++i) pump(engine, 10);
+        QCOMPARE(loop().state, LoopState::Recording);
+        pump(engine, 300);
+        QCOMPARE(loop().bar, 1);
+        QCOMPARE(loop().bars, 2); // "1/2"
+        QVERIFY(loop().progress > 0.1 && loop().progress < 0.9); // part way through the bar
+        for (int i = 0; i < 150 && loop().bar != 2; ++i) pump(engine, 10);
+        QCOMPARE(loop().bar, 2); // "2/2"
+        for (int i = 0; i < 150 && loop().state != LoopState::Playing; ++i) pump(engine, 10);
+        QCOMPARE(loop().state, LoopState::Playing); // closed by itself, no second press
+        QCOMPARE(loop().bars, 2);
+    }
+
     // The looper's buttons (here two pads): pressed, and both held = clear;
     // the instruments never hear them.
     void looperButtonsArePressedAndHeldTogetherClear()

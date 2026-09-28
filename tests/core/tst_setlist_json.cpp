@@ -53,6 +53,7 @@ Setlist richSetlist()
     song.sections.push_back(SectionSetup{.name = QStringLiteral("Chorus"), .occurrence = 2, .bars = 0, .assigned = true,
                                          .channels = {}}); // a silent break
     song.loopSync = false;
+    song.loopBars = 8;
     setlist.songs.push_back(song);
     setlist.loopControls.buttons.at(LoopControls::Record) = LearnedControl{.kind = 0xB0, .channel = 1, .number = 64};
     setlist.loopControls.buttons.at(LoopControls::NextChannel) = LearnedControl{.kind = 0x90, .channel = 10, .number = 36};
@@ -221,7 +222,7 @@ private slots:
         root.insert(u"formatVersion", 3);
         QJsonArray songs = root.value(u"songs").toArray();
         QJsonObject song = songs.at(0).toObject();
-        for (const auto& key : {u"timeSignature", u"switchEarly", u"sections", u"loopSync"}) song.remove(key);
+        for (const auto& key : {u"timeSignature", u"switchEarly", u"sections", u"loopSync", u"loopBars"}) song.remove(key);
         songs.replace(0, song);
         root.insert(u"songs", songs);
         const auto parsed = fromJson(QJsonDocument(root).toJson());
@@ -232,6 +233,7 @@ private slots:
         QVERIFY(!s.switchEarly);
         QVERIFY(s.sections.empty());
         QVERIFY(s.loopSync);
+        QCOMPARE(s.loopBars, 4);
     }
 
     void rejectsBadSections()
@@ -239,6 +241,9 @@ private slots:
         QVERIFY(!fromJson(withFirstSongField(u"timeSignature"_s, u"5/5"_s)));
         QVERIFY(!fromJson(withFirstSongField(u"timeSignature"_s, u"four"_s)));
         QVERIFY(!fromJson(withFirstSongField(u"switchEarly"_s, u"yes"_s)));
+        QVERIFY(!fromJson(withFirstSongField(u"loopBars"_s, 65)));
+        QVERIFY(!fromJson(withFirstSongField(u"loopBars"_s, -1)));
+        QVERIFY(fromJson(withFirstSongField(u"loopBars"_s, 0))); // open
         const auto section = [](const QJsonValue& bars, const QJsonValue& channel) {
             return QJsonArray{QJsonObject{{u"name"_s, u"Verse"_s}, {u"occurrence"_s, 1}, {u"bars"_s, bars},
                                           {u"assigned"_s, true}, {u"channels"_s, QJsonArray{channel}}}};

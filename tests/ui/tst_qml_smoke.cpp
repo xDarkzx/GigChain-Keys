@@ -631,6 +631,7 @@ private slots:
             QTest::mouseClick(w, Qt::LeftButton, {}, item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint());
         };
         const auto status = [cell] { return findItem(cell, u"loopStatus"_s)->property("text").toString(); };
+        QCOMPARE(status(), u"4 bars"_s); // empty: how long a loop will be
         press(findItem(cell, u"loopRecord"_s)); // the pad: record...
         QTRY_COMPARE(status(), u"REC"_s);
         press(findItem(cell, u"loopRecord"_s)); // ... and close: it plays

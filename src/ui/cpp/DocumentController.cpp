@@ -846,6 +846,21 @@ bool DocumentController::setSongLoopSync(int song, bool sync)
     return true;
 }
 
+int DocumentController::songLoopBars() const
+{
+    const core::Song* song = currentSong();
+    return song != nullptr ? song->loopBars : 4;
+}
+
+bool DocumentController::setSongLoopBars(int song, int bars)
+{
+    if (auto r = core::setSongLoopBars(m_setlist, song, bars); !r) return report(r.error());
+    setDirty(true);
+    if (song == m_cursor.song) m_engine.setLoopBars(bars);
+    emit songChanged();
+    return true;
+}
+
 bool DocumentController::setLoopControls(const core::LoopControls& controls)
 {
     if (!m_hasSetlist) {
@@ -1117,6 +1132,7 @@ void DocumentController::applyCurrentSongToEngine()
     if (song != nullptr && song->tempo > 0.0) m_engine.setTempo(song->tempo); // a song without one keeps the tempo playing
     if (song != nullptr) m_engine.setTimeSignature(song->timeNumerator, song->timeDenominator);
     m_engine.setLoopSync(song == nullptr || song->loopSync);
+    m_engine.setLoopBars(song != nullptr ? song->loopBars : 4);
     applyLoopControlsToEngine(); // the setlist's (a newly opened one too)
     const QString track = song != nullptr && !song->backingTrack.isEmpty() && !m_filePath.isEmpty()
                               ? QFileInfo(m_filePath).absoluteDir().filePath(song->backingTrack)

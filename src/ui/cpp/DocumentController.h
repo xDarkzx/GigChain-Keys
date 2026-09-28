@@ -71,6 +71,8 @@ class DocumentController : public QObject
     Q_PROPERTY(bool songSwitchEarly READ songSwitchEarly NOTIFY songChanged)
     // The current song's loops start and stop on the bars (or press to press).
     Q_PROPERTY(bool songLoopSync READ songLoopSync NOTIFY songChanged)
+    // Its synced loops' length in bars (0 = open: closed where stopped).
+    Q_PROPERTY(int songLoopBars READ songLoopBars NOTIFY songChanged)
     // The current song's sections (from its chart) with what each plays in
     // the current patch: [{index, name, label, bars, guessed, assigned,
     // channels: [{channel, name}], choices: [{channel, name}] (the patch's
@@ -193,6 +195,8 @@ public:
     Q_INVOKABLE bool setSongSwitchEarly(int song, bool early);
     [[nodiscard]] bool songLoopSync() const;
     Q_INVOKABLE bool setSongLoopSync(int song, bool sync);
+    [[nodiscard]] int songLoopBars() const;
+    Q_INVOKABLE bool setSongLoopBars(int song, int bars);
     // The looper's keyboard controls, kept with the setlist (an undoable edit).
     [[nodiscard]] const core::LoopControls& loopControls() const { return m_setlist.loopControls; }
     bool setLoopControls(const core::LoopControls& controls);

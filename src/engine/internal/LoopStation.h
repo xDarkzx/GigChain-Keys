@@ -83,6 +83,12 @@ public:
     // recorded press to press and sets the grid for the others.
     void setSync(bool on) { m_sync.store(on, std::memory_order_relaxed); }
     [[nodiscard]] bool sync() const { return m_sync.load(std::memory_order_relaxed); }
+    // Synced loops of a set length, in grid lines (bars): recording closes
+    // by itself at the end; stopped early, the loop keeps the part that
+    // fills that length evenly (a divisor: 1, 2 or 4 bars of 4). 0 = open:
+    // it closes where it is stopped (on the nearest bar).
+    void setTargetLines(int lines) { m_targetLines.store(std::max(lines, 0), std::memory_order_relaxed); }
+    [[nodiscard]] int targetLines() const { return m_targetLines.load(std::memory_order_relaxed); }
     [[nodiscard]] LoopReading read(int slot) const;
     // Once each: the loop closed and wants its layers; it ran out of room;
     // a layer was asked for with all layers used.
@@ -161,7 +167,8 @@ private:
     };
 
     // Audio thread.
-    static void apply(Slot& slot, LoopCommand command, int64_t blockStart, const LoopGrid& lines) noexcept;
+    // `target`: the set length in grid lines (0 = open).
+    static void apply(Slot& slot, LoopCommand command, int64_t blockStart, const LoopGrid& lines, int target) noexcept;
     void plan(Slot& slot, int64_t blockStart, int frames, const LoopGrid& lines) noexcept;
     // The grid in force: the bars (synced) or the first free loop's.
     [[nodiscard]] LoopGrid gridFor(const LoopGrid& bars) const noexcept;
@@ -172,6 +179,7 @@ private:
 
     std::array<Slot, kSlots> m_slots;
     std::atomic<bool> m_sync{true};
+    std::atomic<int> m_targetLines{0};
     int64_t m_blockStart = 0; // audio thread
     int m_frames = 0;
     // Free mode: the first loop's grid (audio thread; read by freeGrid()).

@@ -25,6 +25,8 @@ Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator
 Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early);
 // Loops start and stop on the bars (true) or press to press.
 Result<void> setSongLoopSync(Setlist& setlist, int songIndex, bool sync);
+// A synced loop's length in bars (0 = open).
+Result<void> setSongLoopBars(Setlist& setlist, int songIndex, int bars);
 // The looper's keyboard controls (validated).
 Result<void> setLoopControls(Setlist& setlist, const LoopControls& controls);
 // Stores what one section plays and how long it is, replacing the setup of

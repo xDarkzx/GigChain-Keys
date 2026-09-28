@@ -195,6 +195,9 @@ Result<void> validateSections(const Song& song, const QString& path)
                                                .arg(song.timeNumerator)
                                                .arg(song.timeDenominator));
     }
+    if (song.loopBars < 0 || song.loopBars > limits::kMaxLoopBars) {
+        return fail(ErrorCode::OutOfRange, u"%1.loopBars must be between 0 (open) and %2"_s.arg(path).arg(limits::kMaxLoopBars));
+    }
     if (song.sections.size() > static_cast<std::size_t>(limits::kMaxSectionsPerSong)) {
         return fail(ErrorCode::LimitExceeded,
                     u"%1 has more than %2 sections"_s.arg(path).arg(limits::kMaxSectionsPerSong));

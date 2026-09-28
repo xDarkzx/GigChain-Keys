@@ -51,7 +51,8 @@ Rectangle {
     HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
     TapHandler { onTapped: list.open() }
     ToolTip.visible: hover.hovered && !list.visible
-    ToolTip.text: pill.playing ? qsTr("%n loop(s) playing: click for the list", "", pill.loops.playingCount)
+    ToolTip.text: pill.loops.playingCount === 1 ? qsTr("1 loop playing: click for the list")
+                  : pill.playing ? qsTr("%1 loops playing: click for the list").arg(pill.loops.playingCount)
                                : qsTr("Loops recorded, none playing: click for the list")
 
     Popup {

@@ -1028,6 +1028,12 @@ private slots:
     void loopsStopWithTheSongAndGoWithIt()
     {
         addSectionsSong();
+        QCOMPARE(m_doc->songLoopBars(), 4); // a new song: 4-bar loops
+        QCOMPARE(m_engine->loopBars, 4);
+        QVERIFY(m_doc->setSongLoopBars(0, 8));
+        QCOMPARE(m_engine->loopBars, 8);
+        QVERIFY(!m_doc->setSongLoopBars(0, 65));
+        QCOMPARE(m_doc->songLoopBars(), 8);
         QVERIFY(m_doc->setSongLoopSync(0, false));
         QVERIFY(m_engine->loopSync.has_value() && !*m_engine->loopSync);
         const int stops = m_engine->loopStops;
@@ -1037,6 +1043,7 @@ private slots:
         QVERIFY(m_doc->addSong()); // another song is chosen
         QCOMPARE(m_engine->loopClears, clears + 1);
         QVERIFY(m_engine->loopSync.value_or(false)); // its own setting: synced
+        QCOMPARE(m_engine->loopBars, 4);             // and 4 bars
         const int after = m_engine->loopClears;
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s)); // an edit in the same song: loops stay
         QCOMPARE(m_engine->loopClears, after);

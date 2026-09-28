@@ -318,6 +318,7 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
     }
     song.switchEarly = obj.contains("switchEarly"_L1) && r.boolean(obj, "switchEarly"_L1, path);
     song.loopSync = !obj.contains("loopSync"_L1) || r.boolean(obj, "loopSync"_L1, path);
+    song.loopBars = r.optionalInteger(obj, "loopBars"_L1, path, 0, limits::kMaxLoopBars, 4);
     const QJsonArray sections = r.optionalArray(obj, "sections"_L1, path, limits::kMaxSectionsPerSong);
     for (qsizetype i = 0; i < sections.size() && !r.failed(); ++i) {
         const QString where = u"%1.sections[%2]"_s.arg(path).arg(i);
@@ -431,6 +432,7 @@ QJsonObject writeSong(const Song& song)
                        {u"timeSignature"_s, u"%1/%2"_s.arg(song.timeNumerator).arg(song.timeDenominator)},
                        {u"switchEarly"_s, song.switchEarly},
                        {u"loopSync"_s, song.loopSync},
+                       {u"loopBars"_s, song.loopBars},
                        {u"sections"_s, sections}};
 }
 

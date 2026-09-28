@@ -100,6 +100,7 @@ public:
     [[nodiscard]] SongPosition songPosition() const override { return m_transport.position(); }
     void loopCommand(const core::ChannelId& channel, LoopCommand command) override;
     void setLoopSync(bool sync) override { m_loops.setSync(sync); }
+    void setLoopBars(int bars) override { m_loops.setTargetLines(bars); }
     void setTempoFromFirstLoop(bool take) override { m_tempoFromLoop = take; }
     void stopAllLoops() override;
     void clearAllLoops() override;

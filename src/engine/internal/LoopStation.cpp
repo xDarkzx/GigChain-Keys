@@ -135,7 +135,7 @@ int64_t LoopStation::capacity(const Slot& slot) noexcept
     return slot.current != nullptr && slot.current->base ? slot.current->base->frames() : 0;
 }
 
-void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, const LoopGrid& lines) noexcept
+void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, const LoopGrid& lines, int target) noexcept
 {
     // The next grid line (at once without a grid: a free first loop).
     const int64_t line = lines.valid() ? lines.next(blockStart) : blockStart;
@@ -154,7 +154,25 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
     // Ends a recording on the nearest bar: a little late, on the bar just
     // gone (what was played after it is left out, and the loop goes on in
     // time from there); a little early, on the coming one.
-    const auto close = [&slot, &lines, &schedule, blockStart, line] {
+    const auto close = [&slot, &lines, &schedule, blockStart, line, target] {
+        // A set length stopped early: the most bars (to the nearest) that
+        // fill it evenly, so the loop plays on with no gap.
+        if (lines.valid() && target > 0) {
+            const auto recorded = static_cast<int>(std::lround(static_cast<double>(blockStart - slot.recordStart) / lines.unit));
+            int bars = std::clamp(recorded, 1, target);
+            while (target % bars != 0) --bars;
+            const int64_t end = slot.recordStart + std::llround(bars * lines.unit);
+            if (end > blockStart) {
+                schedule(S::Closing, S::Playing, end); // just ahead: it closes there
+                return;
+            }
+            slot.length = end - slot.recordStart; // (what was played after it is left out)
+            slot.written = slot.length;
+            slot.position = (blockStart - slot.recordStart) % slot.length;
+            slot.closed = true;
+            schedule(S::Playing, S::Playing, -1);
+            return;
+        }
         if (lines.valid()) {
             const int64_t gone = lines.previous(blockStart);
             if (gone > slot.recordStart && blockStart - gone < line - blockStart) {
@@ -341,6 +359,11 @@ void LoopStation::plan(Slot& slot, int64_t blockStart, int frames, const LoopGri
     }
     slot.state = after;
     slot.switchAt = -1;
+    // A recording of a set length: it knows where it ends, and closes there.
+    if (after == S::Recording && lines.valid() && m_sync.load(std::memory_order_relaxed) && targetLines() > 0) {
+        slot.switchAt = slot.recordStart + std::llround(targetLines() * lines.unit);
+        slot.target = S::Playing;
+    }
     slot.segments.at(1) =
         Segment{.state = after, .from = split, .to = frames, .index = index, .done = slot.overdubDone, .layers = slot.layers};
     slot.segmentCount = 2;
@@ -362,7 +385,7 @@ void LoopStation::beginBlock(int64_t blockStart, int frames, const LoopGrid& bar
         Commands& queue = slot.commands;
         uint32_t tail = queue.tail.load(std::memory_order_relaxed);
         while (tail != queue.head.load(std::memory_order_acquire)) {
-            apply(slot, queue.items.at(tail), blockStart, now);
+            apply(slot, queue.items.at(tail), blockStart, now, m_sync.load(std::memory_order_relaxed) ? targetLines() : 0);
             tail = (tail + 1) % Commands::kSize;
             queue.tail.store(tail, std::memory_order_release);
         }
