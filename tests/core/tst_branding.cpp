@@ -20,8 +20,12 @@ private slots:
 
     void setlistsAreJsonFiles()
     {
+        // One extension of its own, so double-clicking a setlist opens the app
+        // (Windows goes by the last dot: ".json" would take every JSON file).
         QVERIFY(branding::setlistSuffix().startsWith(u'.'));
-        QVERIFY(branding::setlistSuffix().endsWith(u".json"_s));
+        QCOMPARE(branding::setlistSuffix().count(u'.'), 1);
+        // Setlists saved before that are still JSON files named ".<extension>.json".
+        QCOMPARE(branding::jsonSetlistSuffix(), branding::setlistSuffix() + u".json"_s);
     }
 
     void everythingIsFilledIn()

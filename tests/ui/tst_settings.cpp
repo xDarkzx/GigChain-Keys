@@ -326,8 +326,9 @@ private slots:
         QSettings previous(m_dir->filePath(u"previous.ini"_s), QSettings::IniFormat);
         previous.setValue(u"audio/bufferFrames"_s, 128);
         previous.setValue(u"plugins/favorites"_s, QStringList{u"C:/x/Piano.vst3"_s});
-        // The last setlist was renamed to the new extension (the demo was).
-        QFile renamed(m_dir->filePath(u"gig"_s + branding::setlistSuffix()));
+        // The last setlist was renamed to the new extension (the demo was, to
+        // the .json form of the time).
+        QFile renamed(m_dir->filePath(u"gig"_s + branding::jsonSetlistSuffix()));
         QVERIFY(renamed.open(QIODevice::WriteOnly));
         renamed.close();
         const QString oldExtension = branding::previousFileExtensions().value(0);

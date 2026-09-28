@@ -15,8 +15,12 @@ inline QString version() { return QStringLiteral("@PRODUCT_VERSION@"); }
 inline QString organization() { return QStringLiteral("@PRODUCT_ORGANIZATION@"); }
 inline QString executable() { return QStringLiteral("@PRODUCT_EXECUTABLE@"); }
 inline QString website() { return QStringLiteral("@PRODUCT_WEBSITE@"); }
-// Setlist files end with this, e.g. ".gigchain.json".
-inline QString setlistSuffix() { return QStringLiteral(".@PRODUCT_FILE_EXTENSION@.json"); }
+// Setlist files end with this, e.g. ".gigchain": one extension of the app's
+// own, so double-clicking a setlist opens it.
+inline QString setlistSuffix() { return QStringLiteral(".@PRODUCT_FILE_EXTENSION@"); }
+// How setlists were named before that (".gigchain.json"): they still open,
+// and saving one moves it to setlistSuffix().
+inline QString jsonSetlistSuffix() { return setlistSuffix() + QStringLiteral(".json"); }
 
 // Earlier names: "organization/application" pairs whose settings are carried
 // over, and the setlist extensions they used.

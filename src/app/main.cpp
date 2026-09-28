@@ -5,6 +5,7 @@
 #include "CrashReports.h"
 #include "FreezeWatchdog.h"
 #include "SettingsMigration.h"
+#include "SingleInstance.h"
 #include "StageQuips.h"
 #include "StartupProgress.h"
 
@@ -41,6 +42,7 @@
 #include <chrono>
 #include <exception>
 #include <memory>
+#include <optional>
 
 Q_IMPORT_QML_PLUGIN(GigChain_UiPlugin)
 Q_LOGGING_CATEGORY(lcApp, "gigchain.app")
@@ -106,6 +108,24 @@ int runApp(int argc, char** argv)
     } else {
         qCInfo(lcApp).noquote() << branding::name() << branding::version() << "starting; log:" << logPath;
     }
+
+    // Already running (a setlist double-clicked): the running app opens it.
+    const QStringList arguments = QGuiApplication::arguments();
+    const QString given = arguments.size() > 1 ? QFileInfo(arguments.at(1)).absoluteFilePath() : QString();
+    ui::SingleInstance instance(ui::SingleInstance::appName());
+    if (!instance.first()) {
+        if (instance.handOver(given)) {
+            qCInfo(lcApp).noquote() << "Already running: handed over" << (given.isEmpty() ? u"(no setlist)"_s : given);
+            return 0;
+        }
+        // Running but not answering (logged): starting anyway beats not starting.
+        qCWarning(lcApp) << "Another start is running but did not answer: starting a second one";
+    } else if (auto listening = instance.listen(); !listening) {
+        qCWarning(lcApp).noquote() << listening.error().message;
+    }
+    // Handed over before the main window is up: done once it is.
+    std::optional<QString> handedEarly;
+    QObject::connect(&instance, &ui::SingleInstance::opened, &app, [&handedEarly](const QString& path) { handedEarly = path; });
 
     QQuickStyle::setStyle(u"Basic"_s); // fully themeable by Theme.qml
     QSettings settings;
@@ -175,9 +195,8 @@ int runApp(int argc, char** argv)
     // if the user chose that in Settings > General (else: the start screen).
     // Its sounds load now, behind the splash, not in a frozen main window.
     startup.report(quips.line(Quip::Setlist)); // loading the setlist
-    const QStringList arguments = QGuiApplication::arguments();
-    if (arguments.size() > 1) {
-        (void)session.document().open(arguments.at(1)); // a failure is shown in the banner and logged
+    if (!given.isEmpty()) {
+        (void)session.document().open(given); // a failure is shown in the banner and logged
     } else {
         session.document().restoreLastSession();
     }
@@ -201,11 +220,24 @@ int runApp(int argc, char** argv)
         session.loading().loading(QGuiApplication::tr("Loading sounds…"), what, done, total);
     });
 
+    // A later start's setlist opens as a recent one does (asking first about
+    // unsaved changes), and the window comes to the front.
+    const auto openHanded = [mainWindow](const QString& path) {
+        if (!path.isEmpty() &&
+            !QMetaObject::invokeMethod(mainWindow, "openRecent", Q_ARG(QVariant, QVariant(path)))) {
+            qCWarning(lcApp).noquote() << "Could not open" << path << "handed over by a later start: Main.openRecent is missing";
+        }
+        if (mainWindow->isVisible()) bringToFront(*mainWindow);
+    };
+
     // Swap the splash for the main window, brought to the front.
-    const auto reveal = [&splash, mainWindow] {
+    const auto reveal = [&splash, mainWindow, &instance, &handedEarly, openHanded] {
         mainWindow->show();
         bringToFront(*mainWindow);
         splash.reset(); // after the main window is up: the app never loses the front
+        QObject::disconnect(&instance, &ui::SingleInstance::opened, nullptr, nullptr);
+        QObject::connect(&instance, &ui::SingleInstance::opened, mainWindow, openHanded);
+        if (handedEarly) openHanded(*handedEarly);
     };
     // Always finish with the line check (every plugin named, the bar gliding
     // across), even when loading the setlist's sounds took longer than the

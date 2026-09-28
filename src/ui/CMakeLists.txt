@@ -21,6 +21,7 @@ qt_add_qml_module(gigchain_ui
         cpp/BrandingInfo.h
         cpp/SettingsMigration.h cpp/SettingsMigration.cpp
         cpp/Session.h cpp/Session.cpp
+        cpp/SingleInstance.h cpp/SingleInstance.cpp
         cpp/EditorService.h cpp/EditorService.cpp
         cpp/EffectWindows.h cpp/EffectWindows.cpp
         cpp/MasterBus.h cpp/MasterBus.cpp
@@ -117,7 +118,7 @@ qt_add_qml_module(gigchain_ui
 )
 target_include_directories(gigchain_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 target_link_libraries(gigchain_ui PUBLIC
-    gigchain::core gigchain::engine Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2)
+    gigchain::core gigchain::engine Qt6::Core Qt6::Gui Qt6::Network Qt6::Qml Qt6::Quick Qt6::QuickControls2)
 target_link_libraries(gigchain_ui PRIVATE psapi dbghelp) # RAM readout; crash dumps (MiniDumpWriteDump)
 gigchain_target_defaults(gigchain_ui)
 

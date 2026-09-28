@@ -26,8 +26,13 @@ bool carryOverSettings(const QSettings& previous, QSettings& current)
         for (const QString& extension : branding::previousFileExtensions()) {
             const QString oldSuffix = u"."_s + extension + u".json"_s;
             if (!last.endsWith(oldSuffix, Qt::CaseInsensitive)) continue;
-            const QString renamed = last.left(last.size() - oldSuffix.size()) + branding::setlistSuffix();
-            if (QFileInfo::exists(renamed)) current.setValue(lastKey, renamed);
+            for (const QString& suffix : {branding::setlistSuffix(), branding::jsonSetlistSuffix()}) {
+                const QString renamed = last.left(last.size() - oldSuffix.size()) + suffix;
+                if (QFileInfo::exists(renamed)) {
+                    current.setValue(lastKey, renamed);
+                    break;
+                }
+            }
         }
     }
     current.sync();
