@@ -165,7 +165,8 @@ bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWi
     window->setTitle(title);
     window->create();
     entry->ratio = window->devicePixelRatio();
-    if (auto attached = entry->editor->attach(static_cast<quintptr>(window->winId())); !attached) {
+    if (auto attached = entry->editor->attach({.handle = static_cast<quintptr>(window->winId()), .kind = platform::nativeWindowKind()});
+        !attached) {
         delete window;
         m_document.reportMessage(attached.error().message); // logged by the editor
         return false;

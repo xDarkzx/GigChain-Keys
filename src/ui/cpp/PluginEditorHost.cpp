@@ -112,7 +112,8 @@ void PluginEditorHost::rebuild()
     editor->setContentScale(host->devicePixelRatio());
     editor->setFitter([this](QSize wanted) { return fit(wanted); });
     m_window = pluginWindow;
-    if (auto attached = editor->attach(static_cast<quintptr>(pluginWindow->winId())); !attached) {
+    if (auto attached = editor->attach({.handle = static_cast<quintptr>(pluginWindow->winId()), .kind = platform::nativeWindowKind()});
+        !attached) {
         m_window = nullptr;
         pluginWindow->deleteLater();
         m_service->reportFailure(attached.error().message); // already logged by the editor; now shown too
