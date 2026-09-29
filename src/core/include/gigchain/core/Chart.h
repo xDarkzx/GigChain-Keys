@@ -77,6 +77,11 @@ struct ChartSection
 // are guessed as one per chord, a repeat mark ("x2") on a line or title
 // multiplying it; a section without chords guesses 4.
 [[nodiscard]] std::vector<ChartSection> chartSections(const Chart& chart);
+// How many times a line or a section is played: 2 for a line whose words
+// are only "x2" or "(x2)" (a line of chords played twice), or a title like
+// "Chorus (x2)"; 1 without a repeat mark.
+[[nodiscard]] int lineRepeats(const ChartLine& line);
+[[nodiscard]] int sectionRepeats(const ChartSection& section);
 // A time signature a player could mean: 1-32 beats of a 1, 2, 4, 8, 16 or 32.
 [[nodiscard]] bool isTimeSignature(int numerator, int denominator);
 

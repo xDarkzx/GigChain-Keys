@@ -1,0 +1,99 @@
+// A chart as the chords a player goes through (chord follow).
+#include "gigchain/core/Chart.h"
+#include "gigchain/core/SongMap.h"
+
+#include <QtTest>
+
+#include <algorithm>
+#include <iterator>
+
+using namespace gigchain::core;
+using namespace Qt::StringLiterals;
+
+namespace {
+
+QStringList names(const SongMap& map)
+{
+    QStringList out;
+    for (const SongStep& step : map.steps) out << step.name;
+    return out;
+}
+
+std::vector<int> sectionsOf(const SongMap& map)
+{
+    std::vector<int> out;
+    out.reserve(map.steps.size());
+    std::ranges::transform(map.steps, std::back_inserter(out), &SongStep::section);
+    return out;
+}
+
+using Places = std::vector<std::pair<int, int>>;
+
+} // namespace
+
+class TestSongMap : public QObject
+{
+    Q_OBJECT
+
+private slots:
+    void everyChordInOrderWithItsSection()
+    {
+        const SongMap map = buildSongMap(parseChordPro(
+            u"{sov: Verse 1}\n[Am]One [F]two\n[C]three [G]four\n{eov}\n{soc: Chorus}\n[F]Chorus [C]line\n{eoc}\n"_s));
+        QCOMPARE(names(map), (QStringList{u"Am"_s, u"F"_s, u"C"_s, u"G"_s, u"F"_s, u"C"_s}));
+        QCOMPARE(sectionsOf(map), (std::vector<int>{0, 0, 0, 0, 1, 1}));
+        QCOMPARE(map.sectionStarts, (std::vector<int>{0, 4}));
+        QCOMPARE(map.steps.at(0).places, (Places{{1, 0}}));
+        QCOMPARE(map.steps.at(3).places, (Places{{2, 1}}));
+        QVERIFY(map.followable());
+    }
+
+    void repeatsArePlayedAgain()
+    {
+        // A line of chords "(x2)", and a section "Chorus (x2)".
+        const SongMap line = buildSongMap(parseChordPro(u"[Am]  [G]  (x2)\n"_s));
+        QCOMPARE(names(line), (QStringList{u"Am"_s, u"G"_s, u"Am"_s, u"G"_s}));
+        const SongMap section = buildSongMap(parseChordPro(u"{soc: Chorus (x2)}\n[F]a [C]b\n{eoc}\n"_s));
+        QCOMPARE(names(section), (QStringList{u"F"_s, u"C"_s, u"F"_s, u"C"_s}));
+        QCOMPARE(section.sectionStarts, (std::vector<int>{0}));
+    }
+
+    void theSameChordTwiceIsOneStep()
+    {
+        const SongMap map = buildSongMap(parseChordPro(u"[C]Hello [C]world [G]now [C]then [C/E]bass moves\n"_s));
+        QCOMPARE(names(map), (QStringList{u"C"_s, u"G"_s, u"C"_s, u"C/E"_s}));
+        QCOMPARE(map.steps.at(0).places, (Places{{0, 0}, {0, 1}})); // lit in both places
+    }
+
+    void aSectionsFirstChordIsNeverMergedIntoThePrevious()
+    {
+        const SongMap map = buildSongMap(parseChordPro(u"{sov: Verse}\n[Am]a [G]b\n{eov}\n{soc: Chorus}\n[G]c [C]d\n{eoc}\n"_s));
+        QCOMPARE(names(map), (QStringList{u"Am"_s, u"G"_s, u"G"_s, u"C"_s}));
+        QCOMPARE(map.sectionStarts, (std::vector<int>{0, 2}));
+    }
+
+    void unreadableChordsAreNotSteps()
+    {
+        const SongMap map = buildSongMap(parseChordPro(u"[C]a [N.C.]b [G]c\n"_s));
+        QCOMPARE(names(map), (QStringList{u"C"_s, u"G"_s}));
+        QCOMPARE(map.steps.at(1).places, (Places{{0, 2}})); // still where it is written
+    }
+
+    void chordsBeforeTheFirstSectionBelongToNone()
+    {
+        const SongMap map = buildSongMap(parseChordPro(u"[D]intro\n{c: Verse}\n[A]words\n"_s));
+        QCOMPARE(sectionsOf(map), (std::vector<int>{-1, 0}));
+        QCOMPARE(map.sectionStarts, (std::vector<int>{1}));
+    }
+
+    void aSectionWithoutChords()
+    {
+        const SongMap map = buildSongMap(parseChordPro(u"{c: Intro}\nspoken words\n{c: Verse}\n[A]x [D]y\n"_s));
+        QCOMPARE(map.sectionStarts, (std::vector<int>{-1, 0}));
+        QVERIFY(!buildSongMap(parseChordPro(u"[C]only one"_s)).followable());
+        QVERIFY(!buildSongMap(parseChordPro(QString())).followable());
+    }
+};
+
+QTEST_GUILESS_MAIN(TestSongMap)
+#include "tst_song_map.moc"
