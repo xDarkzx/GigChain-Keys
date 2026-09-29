@@ -4,6 +4,7 @@
 
 #include "gigchain/engine/IPluginEditor.h"
 
+#include <QAbstractNativeEventFilter>
 #include <QPointer>
 #include <QQuickItem>
 #include <QWindow>
@@ -68,9 +69,9 @@ private:
     // the size the plugin wants (physical pixels in and out).
     QSize fit(QSize wanted);
 
-    // VstView::nativeEventFilter: the plugin's window is never erased (no flicker).
-    class EraseFilter;
-    std::unique_ptr<EraseFilter> m_eraseFilter;
+    // VstView::nativeEventFilter: the plugin's window is never erased (no
+    // flicker), where the system needs it (platform::makeNoFlickerFilter).
+    std::unique_ptr<QAbstractNativeEventFilter> m_eraseFilter;
 
     QPointer<EditorService> m_service;
     std::unique_ptr<engine::IPluginEditor> m_editor;

@@ -3,6 +3,7 @@
 #include "FreezeWatchdog.h"
 
 #include "gigchain/core/Checks.h"
+#include "gigchain/platform/Windows.h"
 
 #include <QAbstractNativeEventFilter>
 #include <QCoreApplication>
@@ -10,11 +11,6 @@
 #include <QLoggingCategory>
 #include <QQuickWindow>
 #include <QScreen>
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
 
 #include <algorithm>
 #include <cmath>
@@ -24,28 +20,6 @@ Q_DECLARE_LOGGING_CATEGORY(lcUi)
 using namespace Qt::StringLiterals;
 
 namespace gigchain::ui {
-
-// As VstView::nativeEventFilter: Windows is told the plugin's window (and
-// the plugin's own windows inside it) are already erased, so they do not
-// flicker while moved or sized.
-class PluginEditorHost::EraseFilter final : public QAbstractNativeEventFilter
-{
-public:
-    explicit EraseFilter(HWND window) : m_window(window) {}
-
-    bool nativeEventFilter(const QByteArray& type, void* message, qintptr* result) override
-    {
-        if (type != "windows_generic_MSG") return false;
-        const auto* msg = static_cast<const MSG*>(message);
-        if (msg->message != WM_ERASEBKGND || msg->hwnd == nullptr) return false;
-        if (msg->hwnd != m_window && IsChild(m_window, msg->hwnd) == FALSE) return false;
-        *result = 1; // "already erased"
-        return true;
-    }
-
-private:
-    HWND m_window;
-};
 
 PluginEditorHost::PluginEditorHost(QQuickItem* parent) : QQuickItem(parent) {}
 
@@ -146,8 +120,8 @@ void PluginEditorHost::rebuild()
         return;
     }
     m_editor = std::move(editor);
-    m_eraseFilter = std::make_unique<EraseFilter>(reinterpret_cast<HWND>(pluginWindow->winId())); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): a window id is an HWND on Windows
-    QCoreApplication::instance()->installNativeEventFilter(m_eraseFilter.get());
+    m_eraseFilter = platform::makeNoFlickerFilter(pluginWindow->winId());
+    if (m_eraseFilter) QCoreApplication::instance()->installNativeEventFilter(m_eraseFilter.get());
     m_editor->updateGeometry(); // VstView::updateViewGeometry
     updateVisibility();
     qCInfo(lcUi).noquote() << "Plugin window" << m_editor->title() << ": closing the previous" << closing

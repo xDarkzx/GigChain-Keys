@@ -6,10 +6,9 @@
 #include "gigchain/core/Branding.h"
 #include "gigchain/engine/MidiSetup.h"
 
-#include <rtmidi/RtMidi.h>
+#include "gigchain/platform/Timing.h"
 
-#include <windows.h>
-#include <timeapi.h>
+#include <rtmidi/RtMidi.h>
 
 #include <algorithm>
 #include <array>
@@ -85,9 +84,7 @@ void MidiClockOut::close()
 
 void MidiClockOut::run()
 {
-    // 1 ms scheduling for this thread's waits (Windows' default is 15.6 ms).
-    timeBeginPeriod(1);
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    platform::preciseTimingForThisThread();
     using Clock = std::chrono::steady_clock;
     auto next = Clock::now();
     const std::array<unsigned char, 1> tick{0xF8};
@@ -108,7 +105,7 @@ void MidiClockOut::run()
         if (Clock::now() > next + std::chrono::milliseconds(20)) next = Clock::now();
         std::this_thread::sleep_until(next);
     }
-    timeEndPeriod(1);
+    platform::endPreciseTimingForThisThread();
 }
 
 } // namespace gigchain::engine
