@@ -127,6 +127,13 @@ public:
         m_position.bar = m_position.playing ? 1 : 0;
     }
     [[nodiscard]] SongPosition songPosition() const override { return m_position; }
+    void setChordFollow(const ChordFollowMap& map) override
+    {
+        const bool active = map.steps.size() >= 2;
+        m_follow = ChordFollowPosition{.active = active, .started = false, .step = -1,
+                                       .section = active ? map.steps.front().section : -1};
+    }
+    [[nodiscard]] ChordFollowPosition chordFollow() const override { return m_follow; }
 
     // The demo's loops change state at once (no sound, no bars): a 4-bar loop.
     void loopCommand(const core::ChannelId& channel, LoopCommand command) override
@@ -185,6 +192,7 @@ private:
     std::vector<ChannelLoop> m_loops;
     SongSections m_sections;
     SongPosition m_position;
+    ChordFollowPosition m_follow;
     double m_tempo = 120.0;
     bool m_click = false;
     MidiActivity m_keyboard; // notes played on screen (the demo has no MIDI input)

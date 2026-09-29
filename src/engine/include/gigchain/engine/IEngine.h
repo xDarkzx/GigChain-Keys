@@ -199,6 +199,14 @@ public:
     virtual void jumpToSection(int section) = 0;
     [[nodiscard]] virtual SongPosition songPosition() const = 0;
 
+    // ---- Chord follow (the chart follows what is played)
+    // The current song's chords in playing order, their sections those of
+    // setSongSections in the same order. While a map is set, what is played
+    // decides the section in force (see ChordFollowMap); fewer than two
+    // steps = not following (the song's sections follow the tempo).
+    virtual void setChordFollow(const ChordFollowMap& map) = 0;
+    [[nodiscard]] virtual ChordFollowPosition chordFollow() const = 0;
+
     // ---- The loop station (one audio loop per channel, see LoopCommand)
     // Record on a channel without a loop makes room for one (at most 2
     // minutes or 64 bars; problems come through poll()).

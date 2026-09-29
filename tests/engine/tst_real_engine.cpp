@@ -4,6 +4,7 @@
 #include "PluginCatalog.h"
 #include "PluginLoadGuard.h"
 #include "RealEngine.h"
+#include "gigchain/core/Chords.h"
 #include "gigchain/core/Limits.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
@@ -789,6 +790,72 @@ private slots:
         const auto [verseAll, chorusAll] = levelsAfter(playNote);
         QVERIFY(verseAll > 0.0F && chorusAll > 0.0F);
         QCOMPARE(engine.songPosition().section, -1);
+    }
+
+    // Chord follow: playing the chorus's chord enters the chorus, and its
+    // piano sounds the chord; the verse's piano gets nothing new.
+    void playingTheChorusChordEntersTheChorus()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-90.0); // inaudible, measurable
+        const core::SongId song = core::SongId::generate();
+        core::Patch patch = pianoPatch();
+        patch.channels.push_back(pianoPatch().channels.front());
+        const core::ChannelId verse = patch.channels.at(0).id;
+        const core::ChannelId chorus = patch.channels.at(1).id;
+        engine.applyPatch(song, patch);
+        QVERIFY(engine.poll().empty());
+        engine.setSongSections(SongSections{.patch = patch.id,
+                                            .sections = {{.bars = 4, .live = {verse}}, {.bars = 4, .live = {chorus}}},
+                                            .switchEarly = false});
+        ChordFollowMap map;
+        for (const auto& [name, section] : {std::pair{"Am", 0}, {"G", 0}, {"F", 1}, {"C", 1}}) {
+            map.steps.push_back(followStepOf(*core::parseChordName(QString::fromLatin1(name)), section));
+        }
+        map.sectionStarts = {0, 2};
+        engine.setChordFollow(map);
+        pump(engine, 50);
+        QVERIFY(engine.chordFollow().active);
+        QVERIFY(!engine.chordFollow().started);
+        const auto chord = [&engine](std::initializer_list<int> keys, int velocity) {
+            for (const int key : keys) engine.injectNote(1, key, velocity);
+            pump(engine, 100);
+        };
+        chord({57, 60, 64}, 100); // Am
+        QCOMPARE(engine.chordFollow().step, 0);
+        chord({57, 60, 64}, 0);
+        pump(engine, 600);
+        chord({55, 59, 62}, 100); // G
+        QCOMPARE(engine.chordFollow().step, 1);
+        chord({55, 59, 62}, 0);
+        pump(engine, 3000); // the verse's piano fades away
+        (void)engine.channelLevel(verse);
+        (void)engine.channelLevel(chorus);
+        pump(engine, 300);
+        const float verseTail = engine.channelLevel(verse).peak; // the G's last whisper (-95 dB)
+
+        chord({53, 57, 60}, 100); // F: the chorus
+        pump(engine, 300);
+        QCOMPARE(engine.chordFollow().step, 2);
+        QCOMPARE(engine.songPosition().section, 1);
+        QVERIFY2(engine.channelLevel(chorus).peak > 0.0F, "the chorus's piano did not sound the chorus's chord");
+        QVERIFY2(engine.channelLevel(verse).peak <= verseTail, "the verse's piano sounded the chorus's chord");
+        chord({53, 57, 60}, 0);
+
+        // The pedal's "next section" and Panic.
+        engine.jumpToSection(0);
+        pump(engine, 50);
+        QCOMPARE(engine.chordFollow().step, 0);
+        engine.panic();
+        pump(engine, 50);
+        QVERIFY(!engine.chordFollow().started);
+        engine.setChordFollow({}); // off: the tempo leads again
+        pump(engine, 50);
+        QVERIFY(!engine.chordFollow().active);
     }
 
     void aCountInKeepsTheBackingTrackWaiting()

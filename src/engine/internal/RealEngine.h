@@ -2,6 +2,7 @@
 
 #include "AudioDevice.h"
 #include "AudioFile.h"
+#include "ChordFollower.h"
 #include "GraphExchange.h"
 #include "Metronome.h"
 #include "MidiClockOut.h"
@@ -102,7 +103,9 @@ public:
     void playSong(int fromSection, bool countIn) override;
     void stopSong() override { m_transport.stop(); }
     void jumpToSection(int section) override;
-    [[nodiscard]] SongPosition songPosition() const override { return m_transport.position(); }
+    [[nodiscard]] SongPosition songPosition() const override;
+    void setChordFollow(const ChordFollowMap& map) override;
+    [[nodiscard]] ChordFollowPosition chordFollow() const override { return m_follower.position(); }
     void loopCommand(const core::ChannelId& channel, LoopCommand command) override;
     void setLoopSync(bool sync) override { m_loops.setSync(sync); }
     void setLoopBars(int bars) override { m_loops.setTargetLines(bars); }
@@ -282,6 +285,17 @@ private:
     SongSections m_sections;
     HazardExchange<SongTimeline> m_timeline;
     SongTransport m_transport;
+    // Chord follow: the map the audio thread follows (a new generation starts
+    // it fresh), and the follower. m_following: a map is set (main thread).
+    struct FollowSnapshot
+    {
+        ChordFollowMap map;
+        uint64_t generation = 0;
+    };
+    HazardExchange<FollowSnapshot> m_follow;
+    uint64_t m_followGeneration = 0;
+    bool m_following = false;
+    ChordFollower m_follower;
     // The loop station: which channel owns each slot (main thread), and the
     // first free loop setting the tempo.
     LoopStation m_loops;
