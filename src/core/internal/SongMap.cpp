@@ -1,5 +1,7 @@
 #include "gigchain/core/SongMap.h"
 
+#include "gigchain/core/Limits.h"
+
 #include <algorithm>
 #include <iterator>
 #include <utility>
@@ -16,12 +18,25 @@ SongMap buildSongMap(const Chart& chart)
     std::vector<SongStep> part;   // the current section's chords, played once
     int section = -1;
     std::size_t nextSection = 0;
+    // Repeat marks multiply (a line and its section up to 16 times each):
+    // past the most chords a song can be followed through, stop reading.
+    constexpr auto limit = static_cast<std::size_t>(limits::kMaxFollowSteps);
+    const auto repeat = [&map](std::vector<SongStep>& to, const std::vector<SongStep>& chords, int times) {
+        for (int t = 0; t < times && !map.tooLong; ++t) {
+            if (to.size() + chords.size() > limit) {
+                map.tooLong = true;
+                return;
+            }
+            to.insert(to.end(), chords.begin(), chords.end());
+        }
+    };
     const auto finishPart = [&] {
         const int times = section >= 0 ? sectionRepeats(sections.at(static_cast<std::size_t>(section))) : 1;
-        for (int t = 0; t < times; ++t) played.insert(played.end(), part.begin(), part.end());
+        if (played.size() + part.size() > limit) map.tooLong = true;
+        else repeat(played, part, times);
         part.clear();
     };
-    for (std::size_t i = 0; i < chart.lines.size(); ++i) {
+    for (std::size_t i = 0; i < chart.lines.size() && !map.tooLong; ++i) {
         if (nextSection < sections.size() && std::cmp_equal(sections.at(nextSection).line, i)) {
             finishPart();
             section = static_cast<int>(nextSection++);
@@ -39,9 +54,15 @@ SongMap buildSongMap(const Chart& chart)
                                         .places = {{static_cast<int>(i), at}}});
             }
         }
-        for (int t = 0; t < lineRepeats(line); ++t) part.insert(part.end(), once.begin(), once.end());
+        if (played.size() + part.size() + once.size() > limit) map.tooLong = true;
+        else repeat(part, once, lineRepeats(line));
     }
-    finishPart();
+    if (!map.tooLong) finishPart();
+    if (map.tooLong) {
+        map.steps.clear();
+        std::ranges::fill(map.sectionStarts, -1);
+        return map;
+    }
 
     // The same chord twice in a row (in one section) is one step, lit in every place.
     for (SongStep& step : played) {
