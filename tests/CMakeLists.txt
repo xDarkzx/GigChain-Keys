@@ -29,6 +29,13 @@ add_test(NAME no_hardcoded_product_name
          COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR} "-DBRAND=${PRODUCT_BRAND}"
                  "-DOLD_NAMES=${_previous_names}" -P ${PROJECT_SOURCE_DIR}/tests/NoHardcodedName.cmake)
 
+# No system code outside the platform files (docs/superpowers/specs/2026-09-30-cross-platform-linux-design.md).
+add_test(NAME platform_boundary
+         COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR}/src -P ${PROJECT_SOURCE_DIR}/cmake/CheckPlatformBoundary.cmake)
+# Enabled once every piece of system code has moved (plan Task 7).
+set_tests_properties(platform_boundary PROPERTIES DISABLED ON)
+
+add_subdirectory(platform)
 add_subdirectory(core)
 add_subdirectory(engine)
 add_subdirectory(ui)

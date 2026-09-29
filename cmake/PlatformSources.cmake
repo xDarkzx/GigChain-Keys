@@ -1,0 +1,19 @@
+# Adds each platform piece's files for this system to `target`, from the
+# current source folder: <base>_win.cpp on Windows; elsewhere <base>_posix.cpp
+# (Linux and macOS alike, when there is one) and <base>_linux.cpp on Linux
+# (<base>_mac.mm on macOS: cross-platform piece 2).
+#   gigchain_platform_sources(<target> <base>...)
+function(gigchain_platform_sources target)
+    foreach(base IN LISTS ARGN)
+        if(WIN32)
+            target_sources(${target} PRIVATE ${base}_win.cpp)
+            continue()
+        endif()
+        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${base}_posix.cpp)
+            target_sources(${target} PRIVATE ${base}_posix.cpp)
+        endif()
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${base}_linux.cpp)
+            target_sources(${target} PRIVATE ${base}_linux.cpp)
+        endif()
+    endforeach()
+endfunction()

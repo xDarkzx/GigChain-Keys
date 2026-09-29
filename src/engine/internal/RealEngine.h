@@ -202,6 +202,7 @@ private:
     GraphExchange m_exchange;
     std::vector<PluginInfo> m_plugins;
     QString m_pluginFolder;        // where m_plugins were found
+    QStringList m_otherPluginFolders; // the system's other standard folders that exist (Linux)
     QString m_bundledPluginFolder; // the app's own plugins (empty: none)
     PluginLoadGuard m_guard; // plugins that crashed the app while loading
 

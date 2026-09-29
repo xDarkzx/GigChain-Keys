@@ -5,6 +5,8 @@
 #include "EngineLog.h"
 #include "LoaderErrors.h"
 
+#include "gigchain/platform/PluginFolders.h"
+
 #include "public.sdk/source/vst/hosting/module.h"
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 
@@ -57,7 +59,7 @@ void findBundles(const QString& folder, int depth, QStringList& bundles)
 
 QString PluginCatalog::standardFolder()
 {
-    return u"C:/Program Files/Common Files/VST3"_s;
+    return platform::standardVst3Folders().front();
 }
 
 namespace {
@@ -76,7 +78,7 @@ Fingerprint fingerprintOf(const QString& bundle)
 {
     QFileInfo file(bundle);
     if (file.isDir()) {
-        const QFileInfo module(bundle + u"/Contents/x86_64-win/"_s + file.fileName());
+        const QFileInfo module(platform::vst3ModuleFile(bundle));
         if (module.exists()) file = module;
     }
     return Fingerprint{.size = file.isFile() ? file.size() : -1, .modified = file.lastModified().toMSecsSinceEpoch()};

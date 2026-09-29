@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerHardening)
+include(PlatformSources)
 
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Network Qml Quick QuickControls2 Multimedia Test)
 find_package(tl-expected CONFIG REQUIRED)
@@ -26,6 +27,7 @@ qt_standard_project_setup(REQUIRES 6.8)
 enable_testing()
 
 add_subdirectory(src/core)
+add_subdirectory(src/platform)
 add_subdirectory(src/engine)
 add_subdirectory(src/scanner)
 add_subdirectory(src/ui)
