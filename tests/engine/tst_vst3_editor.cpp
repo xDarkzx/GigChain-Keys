@@ -1,14 +1,20 @@
-// Opens a real plugin's editor inside a hidden native window. Skips when the
-// plugin is not installed. Nothing is shown on screen.
+// Opens a real plugin's editor inside a native window: a hidden Windows
+// window with Piano V2, or an X11 window with Surge XT on Linux (through
+// WSLg's X11 layer in WSL). Skips when the plugin is not installed, or on
+// Linux when there is no display.
 #include "Vst3Node.h"
 
 #include <QFileInfo>
+#include <QGuiApplication>
+#include <QWindow>
 #include <QtTest>
 
+#ifdef Q_OS_WIN
 #include <windows.h>
 #include <ole2.h>
+#endif
 
-#include <cstdlib>
+#include <memory>
 
 using namespace gigchain;
 using namespace gigchain::engine;
@@ -16,7 +22,9 @@ using namespace Qt::StringLiterals;
 
 namespace {
 
-const QString kPiano = u"C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3"_s;
+#ifdef Q_OS_WIN
+const QString kInstrument = u"C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3"_s;
+const QString kTitle = u"Piano V2"_s;
 
 // A hidden top-level window for the plugin to attach its view to.
 class HiddenParent
@@ -38,6 +46,25 @@ public:
 private:
     HWND m_hwnd;
 };
+#else
+const QString kInstrument = u"/usr/lib/vst3/Surge XT.vst3"_s;
+const QString kTitle = u"Surge XT"_s;
+
+// An X11 window (Qt's xcb platform) for the plugin to attach its view to.
+class HiddenParent
+{
+public:
+    HiddenParent()
+    {
+        m_window.resize(800, 600);
+        m_window.create();
+    }
+    [[nodiscard]] quintptr handle() const { return static_cast<quintptr>(m_window.winId()); }
+
+private:
+    QWindow m_window;
+};
+#endif
 
 } // namespace
 
@@ -46,21 +73,29 @@ class TestVst3Editor : public QObject
     Q_OBJECT
 
 private slots:
-    // Plugin editors expect OLE on the UI thread, as in any Windows GUI app
-    // (Qt's GUI startup does this; this GUI-less test must do it itself).
-    void initTestCase() { QVERIFY(SUCCEEDED(OleInitialize(nullptr))); }
+    void initTestCase()
+    {
+#ifdef Q_OS_WIN
+        // Plugin editors expect OLE on the UI thread, as in any Windows GUI app.
+        QVERIFY(SUCCEEDED(OleInitialize(nullptr)));
+#else
+        if (QGuiApplication::platformName() != u"xcb"_s) QSKIP("Needs an X11 display (DISPLAY)");
+#endif
+    }
+#ifdef Q_OS_WIN
     void cleanupTestCase() { OleUninitialize(); }
+#endif
 
     void instrumentEditorAttachesAndDetaches()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto node = Vst3Node::load(kPiano, 48000.0, 256);
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
+        auto node = Vst3Node::load(kInstrument, 48000.0, 256);
         QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
 
         auto editor = Vst3Node::createEditor(*node);
         QVERIFY2(editor.has_value(), editor ? "" : qPrintable(editor.error().message));
-        QVERIFY(*editor != nullptr); // Piano V2 has an editor
-        QCOMPARE((*editor)->title(), u"Piano V2"_s);
+        QVERIFY(*editor != nullptr); // it has an editor
+        QCOMPARE((*editor)->title(), kTitle);
         const QSize size = (*editor)->preferredSize();
         QVERIFY2(size.width() > 100 && size.height() > 100, qPrintable(u"%1x%2"_s.arg(size.width()).arg(size.height())));
 
@@ -68,6 +103,7 @@ private slots:
         const auto attached = (*editor)->attach({.handle = parent.handle(), .kind = platform::nativeWindowKind()});
         QVERIFY2(attached.has_value(), attached ? "" : qPrintable(attached.error().message));
         QVERIFY((*editor)->isAttached());
+        QTest::qWait(300); // its own timers and events run meanwhile (Linux: the host's run loop)
 
         (*editor)->detach();
         QVERIFY(!(*editor)->isAttached());
@@ -75,8 +111,8 @@ private slots:
 
     void attachingToNothingIsAnError()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto node = Vst3Node::load(kPiano, 48000.0, 256);
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
+        auto node = Vst3Node::load(kInstrument, 48000.0, 256);
         QVERIFY(node.has_value());
         auto editor = Vst3Node::createEditor(*node);
         QVERIFY(editor.has_value() && *editor != nullptr);
@@ -87,11 +123,11 @@ private slots:
     }
 
     // A plugin given a kind of window it does not support is refused,
-    // saying which kind (a Windows plugin, a macOS view).
+    // saying which kind (here a macOS view).
     void anUnsupportedWindowKindIsRefused()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
-        auto node = Vst3Node::load(kPiano, 48000.0, 256);
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
+        auto node = Vst3Node::load(kInstrument, 48000.0, 256);
         QVERIFY(node.has_value());
         auto editor = Vst3Node::createEditor(*node);
         QVERIFY(editor.has_value() && *editor != nullptr);
@@ -104,5 +140,16 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(TestVst3Editor)
+int main(int argc, char** argv)
+{
+    // (The tests' default is off-screen; plugin windows here need the real
+    // window system, where there is one.)
+#ifndef Q_OS_WIN
+    if (!qEnvironmentVariableIsEmpty("DISPLAY")) qputenv("QT_QPA_PLATFORM", "xcb");
+#endif
+    QGuiApplication app(argc, argv);
+    TestVst3Editor test;
+    return QTest::qExec(&test, argc, argv);
+}
+
 #include "tst_vst3_editor.moc"
