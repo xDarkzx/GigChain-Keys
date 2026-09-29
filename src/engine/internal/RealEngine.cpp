@@ -731,6 +731,10 @@ std::vector<Notice> RealEngine::poll()
         if (const uint64_t oversized = graph->takeOversizedBlocks(); oversized > 0) {
             qCWarning(lcEngine) << "Skipped" << oversized << "audio blocks larger than the prepared size";
         }
+        if (const uint64_t dropped = graph->takeDroppedEvents(); dropped > 0) {
+            qCWarning(lcEngine) << "Dropped" << dropped << "MIDI events: more than" << kMaxStripEventsPerBlock
+                                << "reached one channel in one audio block";
+        }
     }
     for (const auto& [key, node] : m_nodes) {
         const auto problems = node->takeProblems();

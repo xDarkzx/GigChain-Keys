@@ -157,7 +157,7 @@ struct Vst3Node::Impl
     IPtr<Vst::IEditController> controller;
     ComponentHandler componentHandler;
     Vst::HostProcessData data;
-    Vst::EventList events{kMaxEventsPerBlock};
+    Vst::EventList events{kMaxStripEventsPerBlock};
     Vst::ParameterChanges parameterChanges;
     Vst::ProcessContext context{};
     QString name;
