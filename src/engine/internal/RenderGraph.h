@@ -7,6 +7,7 @@
 #include "gigchain/engine/EngineTypes.h"
 
 #include <atomic>
+#include <bitset>
 #include <cstdint>
 #include <memory>
 #include <span>
@@ -129,6 +130,9 @@ private:
     std::vector<float> m_left;
     std::vector<float> m_right;
     std::vector<MidiEvent> m_routed;
+    // Keys this strip's instrument was sent and not yet let go of (audio
+    // thread): a section handover never strikes them twice.
+    std::bitset<128> m_sounding;
     std::atomic<float> m_gain{1.0F};
     std::atomic<float> m_pan{0.0F};
     std::atomic<bool> m_mute{false};

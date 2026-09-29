@@ -234,6 +234,7 @@ private slots:
         // Verse 1 (C G), Chorus (F Bb), Verse 2 (C G), Bridge (Dm A).
         Player p(mapOf({{"C", 0}, {"G", 0}, {"F", 1}, {"Bb", 1}, {"C", 2}, {"G", 2}, {"Dm", 3}, {"A", 3}}));
         // From the chorus, a verse's opening goes to Verse 2 (the next one)...
+        p.block(); // (the song chosen: a section asked before it would be dropped)
         p.follower.jumpToSection(1);
         p.block();
         p.chord({C4, E4, G4});
@@ -263,6 +264,7 @@ private slots:
     void aSectionChosenByHand()
     {
         Player p(mapOf({{"Am", 0}, {"F", 0}, {"D", 1}, {"Bm", 1}}));
+        p.block();
         p.follower.jumpToSection(1);
         p.block();
         QVERIFY(p.started());
@@ -338,6 +340,83 @@ private slots:
         ++p.generation;
         p.block();
         QCOMPARE(p.step(), 2);
+    }
+
+    // A melody over a held chord is not the next chord, even with its notes:
+    // the next chord's root has to be struck.
+    void aMelodyOverAHeldChordStays()
+    {
+        Player p(mapOf({{"C", 0}, {"G", 0}}));
+        p.press({C4, E4, G4});
+        QCOMPARE(p.step(), 0);
+        p.wait(200);
+        p.press({D4 + 12}); // D over C-E-G: G and D sound, but G was not struck
+        p.release({D4 + 12});
+        p.press({B4});
+        QCOMPARE(p.step(), 0);
+        p.press({G3}); // now G is struck
+        QCOMPARE(p.step(), 1);
+    }
+
+    // The verse ends on C and the chorus opens on C: only playing the chord
+    // again enters the chorus, not a melody note over the held one.
+    void theSameChordAcrossSectionsIsPlayedAgain()
+    {
+        Player p(mapOf({{"G", 0}, {"C", 0}, {"C", 1}, {"F", 1}}));
+        p.chord({G3, B3, D4});
+        p.press({C4, E4, G4});
+        QCOMPARE(p.step(), 1);
+        p.wait(200);
+        p.press({D4 + 12});
+        p.press({C4 + 12}); // a melody C: struck, but not the chord
+        QCOMPARE(p.step(), 1);
+        p.release({C4, E4, G4, D4 + 12, C4 + 12});
+        p.wait(200);
+        p.press({C4, E4, G4}); // the chord again
+        QCOMPARE(p.step(), 2);
+        QCOMPARE(p.section(), 1);
+    }
+
+    // The chorus and the bridge both open on C: C then Em is the bridge.
+    void sectionsOpeningAlikeAreAllRemembered()
+    {
+        Player p(mapOf({{"Am", 0}, {"F", 0}, {"C", 1}, {"G", 1}, {"C", 2}, {"Em", 2}}));
+        p.chord({A3, C4, E4});
+        p.chord({C4, E4, G4});
+        p.press({E3, G3, B3});
+        QCOMPARE(p.section(), 2);
+        QCOMPARE(p.step(), 5);
+    }
+
+    // A section asked for before a new song's map is not applied to it: the
+    // new song waits for its first chord.
+    void aJumpAskedBeforeANewMapIsDropped()
+    {
+        Player p(mapOf({{"Am", 0}, {"F", 0}, {"D", 1}, {"Bm", 1}}));
+        p.block();
+        p.follower.jumpToSection(1);
+        ++p.generation;
+        p.block();
+        QVERIFY(!p.started());
+        // Nor one asked while nothing was followed.
+        ChordFollower follower;
+        follower.jumpToSection(1);
+        (void)follower.process(nullptr, 0, {}, 10, 1000.0);
+        (void)follower.process(&p.map, 1, {}, 10, 1000.0);
+        QVERIFY(!follower.position().started);
+    }
+
+    // Chords written above the first section title belong to it: its
+    // instruments play them, not every section's at once.
+    void chordsBeforeTheFirstTitlePlayTheFirstSection()
+    {
+        Player p(mapOf({{"C", -1}, {"Am", 0}, {"F", 1}}));
+        p.block();
+        QCOMPARE(p.gate.before, 0);
+        p.press({C4, E4, G4});
+        QCOMPARE(p.step(), 0);
+        QCOMPARE(p.section(), 0);
+        QCOMPARE(p.gate.after, 0);
     }
 
     void noMapIsNotFollowing()

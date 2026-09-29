@@ -578,7 +578,8 @@ private slots:
         // By the tempo: Play counts the bars, the toolbar shows where the
         // song is, the chart lights the section.
         QVERIFY(doc.setSongFollowChords(0, false));
-        QTRY_VERIFY(play->isVisible());
+        QTRY_VERIFY(play->isVisible() && play->width() > 0);
+        settle(); // (the toolbar laid out again with Play in it)
         click(u"songPlayButton"_s);
         auto* where = w->findChild<QQuickItem*>(u"songWhere"_s);
         QVERIFY(where != nullptr);

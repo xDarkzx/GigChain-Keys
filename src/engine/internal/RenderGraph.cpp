@@ -92,6 +92,10 @@ std::vector<const INode*> ChannelStrip::nodes() const
 void ChannelStrip::produce(std::span<const MidiEvent> routed, int frames, const TimeInfo& time,
                            const AudioInputs& inputs) noexcept
 {
+    for (const MidiEvent& e : routed) {
+        if (isNoteOff(e)) m_sounding.reset(e.data1 & 0x7F);
+        else if ((e.status & 0xF0) == 0x90) m_sounding.set(e.data1 & 0x7F);
+    }
     AudioBlock block{.left = m_left.data(), .right = m_right.data(), .frames = frames};
     const auto count = static_cast<std::size_t>(frames);
     // An input channel's samples for this block, or nullptr when there is
@@ -204,9 +208,21 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
             if (routedCount == m_routed.size()) break;
             const auto routed = routeEvent(event, m_route);
             if (!routed) continue;
+            const auto end = first + static_cast<std::ptrdiff_t>(routedCount);
+            // A note this strip still sounds (a key held through the other
+            // section and back) is not struck twice: one note-off would not
+            // end both.
+            if (on) {
+                bool sounding = m_sounding.test(routed->data1 & 0x7F);
+                for (auto it = first; it != end && it->sampleOffset <= routed->sampleOffset; ++it) {
+                    if ((it->data1 & 0x7F) != (routed->data1 & 0x7F)) continue;
+                    if (isNoteOff(*it)) sounding = false;
+                    else if ((it->status & 0xF0) == 0x90) sounding = true;
+                }
+                if (sounding) continue;
+            }
             // In after the events at the same sample, keeping their order (a
             // key let go and struck again stays let go first).
-            const auto end = first + static_cast<std::ptrdiff_t>(routedCount);
             m_routed.at(routedCount++) = *routed; // room checked above
             std::rotate(std::upper_bound(first, end, *routed, earlier), end, end + 1);
         }

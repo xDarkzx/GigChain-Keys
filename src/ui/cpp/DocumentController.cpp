@@ -1134,6 +1134,10 @@ void DocumentController::applySectionsToEngine()
         m_engine.clearAllLoops(); // loops belong to the song they were played in
     }
     m_engine.setSongSections(sections);
+    m_sectionCount = static_cast<int>(sections.sections.size());
+    // A new song starts at its beginning. (Before its chords: a section asked
+    // before the chords arrive does not start following them.)
+    if (newSong && m_sectionCount > 0) m_engine.jumpToSection(0);
     // Chord follow: the song's chords, when its sections follow them. An
     // edit while playing carries on from the chord at the same place.
     std::optional<std::pair<int, int>> place;
@@ -1153,8 +1157,6 @@ void DocumentController::applySectionsToEngine()
         if (here && (chords.resumeAt < 0 || std::cmp_equal(i, playing))) chords.resumeAt = static_cast<int>(i);
     }
     m_engine.setChordFollow(chords);
-    m_sectionCount = static_cast<int>(sections.sections.size());
-    if (newSong && m_sectionCount > 0) m_engine.jumpToSection(0); // a new song starts at its beginning
     m_sectionsSong = songId;
     emit sectionsChanged();
 }

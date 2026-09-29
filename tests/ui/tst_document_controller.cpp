@@ -1163,6 +1163,40 @@ private slots:
         QVERIFY(segments.at(1).toMap().value(u"steps"_s).toList().isEmpty());
     }
 
+    // Choosing a song sends its top section before its chords: the jump is
+    // then older than the map and does not start following (the song waits
+    // for its first chord).
+    void aNewSongsTopIsChosenBeforeItsChords()
+    {
+        addSectionsSong();
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->setSongChart(1, u"{comment: Intro}\n[Am]one [F]two\n"_s));
+        m_engine->jumps.clear();
+        m_doc->previousSong();
+        QCOMPARE(m_engine->jumps, std::vector<int>{0});
+        QCOMPARE(m_engine->follow.steps.size(), std::size_t{3});
+        QCOMPARE(m_engine->jumpsAtFollow, std::size_t{1}); // the jump came first
+    }
+
+    // Following chords, the backing-track pedal plays and pauses the track
+    // alone: nothing to stop (the chords lead), and the loops play on.
+    void theTrackPedalWhileFollowingPlaysTheTrack()
+    {
+        addSectionsSong();
+        EngineStatus status(*m_engine, *m_doc);
+        m_engine->setBackingTrack(u"C:/songs/backing.wav"_s);
+        m_engine->followPosition = engine::ChordFollowPosition{.active = true, .started = true, .step = 1, .section = 0};
+        m_engine->position.playing = true; // (what the real engine reports once the first chord is heard)
+        const int stops = m_engine->stops;
+        status.playPauseTrack();
+        QVERIFY(m_engine->track.playing);
+        QCOMPARE(m_engine->stops, stops);
+        QVERIFY(!m_engine->played.has_value());
+        status.playPauseTrack();
+        QVERIFY(!m_engine->track.playing);
+        QCOMPARE(m_engine->stops, stops);
+    }
+
     void anEditedChartKeepsItsPlace()
     {
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
