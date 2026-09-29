@@ -246,6 +246,9 @@ public:
     std::vector<QString> calls; // "patch", "sections", in the order asked
     engine::SongSections sections;
     int sectionsCount = 0;
+    engine::ChordFollowMap follow;
+    int followSets = 0;
+    engine::ChordFollowPosition followPosition;
     std::pair<int, int> timeSignature{4, 4};
     void setTimeSignature(int numerator, int denominator) override { timeSignature = {numerator, denominator}; }
     void setSongSections(const engine::SongSections& chosen) override
@@ -275,6 +278,12 @@ public:
     }
     engine::SongPosition position;
     [[nodiscard]] engine::SongPosition songPosition() const override { return position; }
+    void setChordFollow(const engine::ChordFollowMap& chosen) override
+    {
+        follow = chosen;
+        ++followSets;
+    }
+    [[nodiscard]] engine::ChordFollowPosition chordFollow() const override { return followPosition; }
 
     // Loops: what was asked, and what the test says there is.
     std::vector<std::pair<core::ChannelId, engine::LoopCommand>> loopCommands;
