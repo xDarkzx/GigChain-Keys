@@ -1217,6 +1217,33 @@ private slots:
         QCOMPARE(m_doc->notifications()->count(), before + 1);
     }
 
+    // Each chord played updates the toolbar ("Chorus · chord 2 of 8") and
+    // the chart's place: on the longest chart it takes less than a frame.
+    void followingALongChartKeepsUp()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QString chart;
+        for (int s = 0; chart.size() < 99'000; ++s) {
+            chart += u"{c: Part %1}\n"_s.arg(s + 1);
+            for (int line = 0; line < 4; ++line) chart += u"[Am]These are the words of a very long [G]song that goes on and on\n"_s;
+        }
+        QVERIFY(m_doc->setSongChart(0, chart.left(99'000)));
+        QVERIFY(m_doc->following());
+        QElapsedTimer timer;
+        timer.start();
+        const int step = 1500;
+        const QString label = m_doc->followLabel(step);
+        const int line = m_doc->followLine(step);
+        const qint64 perChord = timer.elapsed();
+        timer.restart();
+        const QVariantList lines = m_doc->chartLines(m_doc->currentChart());
+        const qint64 wholeChart = timer.elapsed();
+        qInfo() << "per chord:" << perChord << "ms (" << label << ", line" << line << "); chartLines:" << wholeChart << "ms,"
+                << lines.size() << "lines";
+        QVERIFY(!label.isEmpty() && line > 0);
+        QVERIFY2(perChord < 16, qPrintable(u"%1 ms per chord"_s.arg(perChord)));
+    }
+
     // The engine refusing a song's chords is shown to the player.
     void aRefusedChordMapIsShown()
     {
