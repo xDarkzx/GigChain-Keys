@@ -10,7 +10,9 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
+#ifdef Q_OS_WIN
 #include <windows.h>
+#endif
 
 using namespace gigchain;
 using namespace gigchain::ui;
@@ -58,11 +60,16 @@ void writeIco(const QString& path, const QList<int>& sides)
     QCOMPARE(file.write(ico), ico.size());
 }
 
-// Installers hide a folder's icon (and its desktop.ini).
+// Windows installers hide a folder's icon (and its desktop.ini). Other
+// systems have no hidden attribute: the file stays as it is.
 void hide(const QString& path)
 {
+#ifdef Q_OS_WIN
     const std::wstring native = QDir::toNativeSeparators(path).toStdWString();
     QVERIFY(SetFileAttributesW(native.c_str(), FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM) != 0);
+#else
+    QVERIFY(QFileInfo::exists(path));
+#endif
 }
 
 void writeFile(const QString& path)

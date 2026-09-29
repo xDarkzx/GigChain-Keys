@@ -803,14 +803,16 @@ private slots:
         ChordFollowMap map;
         for (const char* name : {"Am", "F", "C"}) map.steps.push_back(followStepOf(*core::parseChordName(QString::fromLatin1(name)), -1));
         QVERIFY(engine.setChordFollow(map).has_value());
-        pump(engine, 50);
+        // The audio thread takes it up (waited for: some sound systems run
+        // the audio in bursts).
+        for (int i = 0; i < 40 && !engine.chordFollow().active; ++i) pump(engine, 50);
         QVERIFY(engine.chordFollow().active);
         map.resumeAt = 7;
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Chord follow refused: resume at chord 8"_s));
         const auto refused = engine.setChordFollow(map);
         QVERIFY(!refused.has_value());
         QVERIFY(refused.error().message.contains(u"resume at chord 8"_s));
-        pump(engine, 50);
+        for (int i = 0; i < 40 && engine.chordFollow().active; ++i) pump(engine, 50);
         QVERIFY(!engine.chordFollow().active);
     }
 
@@ -1025,9 +1027,15 @@ private slots:
         buttons.at(static_cast<std::size_t>(LoopAction::Record)) = MidiTrigger{.kind = MidiTrigger::Note, .channel = 0, .number = 36};
         buttons.at(static_cast<std::size_t>(LoopAction::PlayStop)) = MidiTrigger{.kind = MidiTrigger::Note, .channel = 0, .number = 37};
         engine.setLoopControls(buttons, SelectorKnob{});
+        // What the buttons did, waited for (up to a second: some sound
+        // systems, WSLg's PulseAudio among them, run the audio in bursts).
         const auto actions = [&engine] {
-            pump(engine, 60);
-            return engine.takeLoopActions();
+            std::vector<LoopAction> taken;
+            for (int i = 0; i < 20 && taken.empty(); ++i) {
+                pump(engine, 50);
+                std::ranges::copy(engine.takeLoopActions(), std::back_inserter(taken));
+            }
+            return taken;
         };
 
         engine.injectNote(1, 36, 100);

@@ -17,11 +17,8 @@
   ],
   "features": {
     "alsa": {
-      "description": "Build ALSA API",
-      "supports": "linux",
-      "dependencies": [
-        "alsa"
-      ]
+      "description": "Build ALSA API (the system's libasound: libasound2-dev)",
+      "supports": "linux"
     }
   }
 }

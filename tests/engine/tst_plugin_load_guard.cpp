@@ -48,14 +48,21 @@ private slots:
         QVERIFY(!afterThat.isBlocked(kPiano));
     }
 
-    void pathsAreComparedAsWindowsDoes()
+    // Paths are compared as the system does: on Windows whatever the case and
+    // the slashes; elsewhere two names differing in case are two plugins.
+    void pathsAreComparedAsTheSystemDoes()
     {
         QTemporaryDir dir;
         PluginLoadGuard crashed(dir.path());
         const auto loading = crashed.loading(kPiano);
         PluginLoadGuard nextStart(dir.path());
         (void)nextStart.takeCrashed();
+#ifdef Q_OS_WIN
         QVERIFY(nextStart.isBlocked(u"c:\\plugins\\test plugin a.vst3"_s));
+#else
+        QVERIFY(nextStart.isBlocked(kPiano));
+        QVERIFY(!nextStart.isBlocked(kPiano.toLower())); // another plugin
+#endif
     }
 
     void withoutAFolderItDoesNothing()

@@ -2,6 +2,9 @@
 # *_win.*, *_posix.*, *_linux.* and *_mac.* may use it; nothing else in src/
 # may (docs/superpowers/specs/2026-09-30-cross-platform-linux-design.md).
 #   cmake -DSOURCE_DIR=<repo>/src -P CheckPlatformBoundary.cmake
+if(NOT IS_DIRECTORY "${SOURCE_DIR}")
+    message(FATAL_ERROR "SOURCE_DIR must be the source folder (-DSOURCE_DIR=<repo>/src before -P); got '${SOURCE_DIR}'")
+endif()
 file(GLOB_RECURSE sources "${SOURCE_DIR}/*.cpp" "${SOURCE_DIR}/*.h" "${SOURCE_DIR}/*.mm")
 set(offenders "")
 set(checked 0)

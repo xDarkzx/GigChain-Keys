@@ -2,6 +2,8 @@
 
 #include "EngineLog.h"
 
+#include "gigchain/platform/PluginFolders.h"
+
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -17,10 +19,12 @@ using namespace Qt::StringLiterals;
 namespace gigchain::engine {
 namespace {
 
-// Windows paths: one plugin, whatever the case or slashes.
+// One plugin, one path: as the system compares them (Windows: whatever the
+// case or slashes; elsewhere two names differing in case are two plugins).
 QString normalised(const QString& path)
 {
-    return QDir::cleanPath(QDir::fromNativeSeparators(path)).toLower();
+    const QString clean = QDir::cleanPath(QDir::fromNativeSeparators(path));
+    return platform::fileNameCase() == Qt::CaseInsensitive ? clean.toLower() : clean;
 }
 
 constexpr qint64 kMaxListBytes = qint64{1024} * 1024;

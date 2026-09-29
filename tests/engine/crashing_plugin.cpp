@@ -3,7 +3,13 @@
 // plugin would. Never loaded by the app.
 #include <cstdint>
 
-extern "C" __declspec(dllexport) void* GetPluginFactory()
+#ifdef _WIN32
+#define GIGCHAIN_EXPORT __declspec(dllexport)
+#else
+#define GIGCHAIN_EXPORT __attribute__((visibility("default")))
+#endif
+
+extern "C" GIGCHAIN_EXPORT void* GetPluginFactory()
 {
     volatile std::uintptr_t nowhere = 0;
     // cppcheck-suppress nullPointer ; the crash is the point

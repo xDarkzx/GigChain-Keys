@@ -3,7 +3,10 @@
 # DLLs through PATH and render QML off-screen.
 function(gigchain_add_test name)
     cmake_parse_arguments(ARG "" "" "SOURCES;LIBS" ${ARGN})
-    add_executable(${name} ${ARG_SOURCES} ${PROJECT_SOURCE_DIR}/tests/common/NoErrorDialogs.cpp)
+    add_executable(${name} ${ARG_SOURCES})
+    if(WIN32) # no Windows error dialog may wait for a click in an unattended test
+        target_sources(${name} PRIVATE ${PROJECT_SOURCE_DIR}/tests/common/NoErrorDialogs.cpp)
+    endif()
     target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/tests/common)
     target_link_libraries(${name} PRIVATE Qt6::Test ${ARG_LIBS})
     gigchain_target_defaults(${name})
@@ -32,11 +35,11 @@ add_test(NAME no_hardcoded_product_name
 # No system code outside the platform files (docs/superpowers/specs/2026-09-30-cross-platform-linux-design.md).
 add_test(NAME platform_boundary
          COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR}/src -P ${PROJECT_SOURCE_DIR}/cmake/CheckPlatformBoundary.cmake)
-# Enabled once every piece of system code has moved (plan Task 7).
-set_tests_properties(platform_boundary PROPERTIES DISABLED ON)
 
 add_subdirectory(platform)
 add_subdirectory(core)
 add_subdirectory(engine)
 add_subdirectory(ui)
-add_subdirectory(soak)
+if(WIN32) # the soak counts Windows handles; its Linux readings come in plan Task 11
+    add_subdirectory(soak)
+endif()

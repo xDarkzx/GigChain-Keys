@@ -215,7 +215,8 @@ private slots:
         QCOMPARE(roleData(model, 1, "email").toString(), u"help@spy.example"_s);
         QCOMPARE(roleData(model, 1, "sdkVersion").toString(), u"VST 3.8.0"_s);
         QCOMPARE(roleData(model, 1, "tags").toStringList(), (QStringList{u"Instrument"_s, u"Piano"_s}));
-        QCOMPARE(roleData(model, 1, "location").toString(), u"spy\\Piano.vst3"_s); // shown Windows-style
+        // Shown the system's way (Windows: backslashes).
+        QCOMPARE(roleData(model, 1, "location").toString(), QDir::toNativeSeparators(u"spy/Piano.vst3"_s));
     }
 
     void showInFolderRefusesUnknownPlugins()

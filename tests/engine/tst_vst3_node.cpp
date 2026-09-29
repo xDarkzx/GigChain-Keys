@@ -10,7 +10,9 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
+#ifdef Q_OS_WIN
 #include <windows.h>
+#endif
 
 #include <cmath>
 #include <numbers>
@@ -90,6 +92,7 @@ private slots:
             QVERIFY(file.open(QIODevice::WriteOnly));
             file.write("MZ this is not a real plugin");
         }
+#ifdef Q_OS_WIN
         // The exact Windows loader reason is both returned and logged.
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Corrupt\\.vst3.*LoadLibraryW failed"_s));
         const DWORD before = GetThreadErrorMode();
@@ -98,6 +101,14 @@ private slots:
         QVERIFY(node.error().code == core::ErrorCode::InvalidData);
         QVERIFY2(node.error().message.contains(u"LoadLibraryW failed"_s), qPrintable(node.error().message));
         QCOMPARE(GetThreadErrorMode(), before);
+#else
+        // The loader's reason is both returned and logged (no dialogs here).
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Corrupt\\.vst3"_s));
+        const auto node = Vst3Node::load(path, kRate, kBlock);
+        QVERIFY(!node);
+        QVERIFY(node.error().code == core::ErrorCode::InvalidData);
+        QVERIFY2(node.error().message.contains(u"Corrupt.vst3"_s), qPrintable(node.error().message));
+#endif
     }
 
     // Panic prepares every plugin again (deactivate, activate); a gig presses

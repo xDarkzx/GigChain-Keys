@@ -16,14 +16,18 @@ vcpkg_from_github(
 
 string(COMPARE EQUAL "${VCPKG_CRT_LINKAGE}" "static" RTAUDIO_STATIC_MSVCRT)
 
+# Linux sound systems come from the system (their -dev packages), as Linux
+# apps use them: shared libraries matching the running sound server and the
+# system's own device configuration (tools/setup-linux.sh installs them).
 vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     FEATURES
         asio  RTAUDIO_API_ASIO
         alsa  RTAUDIO_API_ALSA
+        jack  RTAUDIO_API_JACK
         pulse RTAUDIO_API_PULSE
 )
 set(PKG_OPT "")
-if("pulse" IN_LIST FEATURES)
+if("pulse" IN_LIST FEATURES OR "jack" IN_LIST FEATURES)
     vcpkg_find_acquire_program(PKGCONFIG)
     set(PKG_OPT "-DPKG_CONFIG_EXECUTABLE=${PKGCONFIG}")
 endif()
@@ -31,7 +35,6 @@ vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
         -DRTAUDIO_STATIC_MSVCRT=${RTAUDIO_STATIC_MSVCRT}
-        -DRTAUDIO_API_JACK=OFF
         ${FEATURE_OPTIONS}
         ${PKG_OPT}
 )

@@ -20,15 +20,21 @@ FetchContent_Declare(vst3sdk
 )
 FetchContent_MakeAvailable(vst3sdk)
 
-# sdk_hosting omits the module loader and PlugProvider; hosts compile these
-# themselves (as the SDK samples and Muse do). They are written for C++17
-# (path::u8string() returning std::string), so they build as their own library.
+# sdk_hosting has the module's common part (module.cpp) but not the system's
+# module loader or PlugProvider; hosts compile these themselves (as the SDK
+# samples and Muse do). They are written for C++17 (path::u8string()
+# returning std::string), so they build as their own library.
 set(VST3_HOSTING_DIR ${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/hosting)
 add_library(vst3_host_support STATIC
-    ${VST3_HOSTING_DIR}/module.cpp
-    ${VST3_HOSTING_DIR}/module_win32.cpp
     ${VST3_HOSTING_DIR}/plugprovider.cpp
     ${vst3sdk_SOURCE_DIR}/public.sdk/source/common/memorystream.cpp
 )
-set_target_properties(vst3_host_support PROPERTIES CXX_STANDARD 17 AUTOMOC OFF)
+# The module loader for this system (Steinberg's own, one per system).
+if(WIN32)
+    target_sources(vst3_host_support PRIVATE ${VST3_HOSTING_DIR}/module_win32.cpp)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_sources(vst3_host_support PRIVATE ${VST3_HOSTING_DIR}/module_linux.cpp)
+    target_link_libraries(vst3_host_support PUBLIC ${CMAKE_DL_LIBS})
+endif()
+set_target_properties(vst3_host_support PROPERTIES CXX_STANDARD 17 AUTOMOC OFF POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(vst3_host_support PUBLIC sdk_hosting)

@@ -13,11 +13,8 @@ namespace gigchain::engine {
 // push() drops the event and returns false.
 //
 // The two indices sit on separate cache lines so producer and consumer do not
-// contend; MSVC warns about that intentional padding (C4324).
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4324)
-#endif
+// contend (MSVC's warning about that padding, C4324, is off project-wide:
+// CompilerHardening.cmake).
 class MidiQueue
 {
 public:
@@ -48,8 +45,5 @@ private:
     alignas(64) std::atomic<uint32_t> m_head{0};
     alignas(64) std::atomic<uint32_t> m_tail{0};
 };
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 } // namespace gigchain::engine
