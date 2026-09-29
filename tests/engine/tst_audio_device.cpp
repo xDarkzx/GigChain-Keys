@@ -73,11 +73,11 @@ private slots:
     void aMissingDeviceIsStoodInForAndTakenBack()
     {
         const auto outputs = AudioDevice::listOutputs();
-        const auto system = std::ranges::find_if(outputs, [](const AudioDeviceInfo& d) { return d.api == AudioApi::Wasapi && d.isDefault; });
+        const auto system = std::ranges::find_if(outputs, [](const AudioDeviceInfo& d) { return d.api == AudioApi::System && d.isDefault; });
         if (system == outputs.end()) QSKIP("No default system output");
         AudioDevice device;
         std::atomic<int> blocks{0};
-        const DeviceChoice chosen{.api = AudioApi::Wasapi, .name = system->name};
+        const DeviceChoice chosen{.api = AudioApi::System, .name = system->name};
         QVERIFY(device.open(chosen, 256, [&](AudioBlock out, const AudioInputs&) {
             std::fill_n(out.left, out.frames, 0.0F);
             std::fill_n(out.right, out.frames, 0.0F);
@@ -86,7 +86,7 @@ private slots:
         waitForBlocks(blocks, 5);
 
         // Pulled out, and not plugged in anywhere (as far as the device can tell).
-        device.m_wanted = DeviceChoice{.api = AudioApi::Wasapi, .name = u"Unplugged Interface"_s};
+        device.m_wanted = DeviceChoice{.api = AudioApi::System, .name = u"Unplugged Interface"_s};
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"reported: RtApiWasapi::wasapiThread"_s));
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"stopped working"_s));
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"until it is back"_s));
@@ -125,7 +125,7 @@ private slots:
                 QVERIFY(std::find(device.sampleRates.begin(), device.sampleRates.end(), device.preferredSampleRate) !=
                         device.sampleRates.end());
             }
-            if (device.api == AudioApi::Wasapi && device.isDefault) ++wasapiDefaults;
+            if (device.api == AudioApi::System && device.isDefault) ++wasapiDefaults;
         }
         QCOMPARE(wasapiDefaults, 1);
     }
@@ -146,7 +146,7 @@ private slots:
         QVERIFY(device.isOpen());
         QVERIFY(device.sampleRate() > 0.0);
         QVERIFY(!device.deviceName().isEmpty());
-        QVERIFY(device.api() == AudioApi::Wasapi);
+        QVERIFY(device.api() == AudioApi::System);
 
         for (int i = 0; i < 50 && blocks.load() < 10; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(20));
         QVERIFY2(blocks.load() >= 10, "audio callback did not run");
@@ -161,7 +161,7 @@ private slots:
     {
         const auto outputs = AudioDevice::listOutputs();
         const auto system = std::find_if(outputs.begin(), outputs.end(),
-                                         [](const AudioDeviceInfo& d) { return d.api == AudioApi::Wasapi && d.isDefault; });
+                                         [](const AudioDeviceInfo& d) { return d.api == AudioApi::System && d.isDefault; });
         if (system == outputs.end()) QSKIP("No default system output");
         // A rate other than the device's own, when it offers one.
         unsigned int rate = system->sampleRates.front();
@@ -170,7 +170,7 @@ private slots:
         }
         AudioDevice device;
         std::atomic<int> blocks{0};
-        const auto opened = device.open(DeviceChoice{.api = AudioApi::Wasapi, .name = system->name}, 256,
+        const auto opened = device.open(DeviceChoice{.api = AudioApi::System, .name = system->name}, 256,
                                         [&](AudioBlock out, const AudioInputs&) {
             std::fill_n(out.left, out.frames, 0.0F);
             std::fill_n(out.right, out.frames, 0.0F);
@@ -218,12 +218,30 @@ private slots:
         }
     }
 
+    // Only this system's drivers, system audio first.
+    void thisSystemsDriversAreListed()
+    {
+        const std::vector<AudioDriver> drivers = systemAudioDrivers();
+        QVERIFY(!drivers.empty());
+        QCOMPARE(drivers.front(), AudioDriver::System);
+        const auto has = [&drivers](AudioDriver driver) { return std::ranges::find(drivers, driver) != drivers.end(); };
+#ifdef Q_OS_WIN
+        QVERIFY(has(AudioDriver::Asio));
+        QVERIFY(!has(AudioDriver::Jack) && !has(AudioDriver::Alsa));
+        QCOMPARE(apiName(AudioDriver::System), u"WASAPI"_s);
+#else
+        QVERIFY(has(AudioDriver::Jack) && has(AudioDriver::Alsa));
+        QVERIFY(!has(AudioDriver::Asio));
+        QCOMPARE(apiName(AudioDriver::System), u"PulseAudio"_s);
+#endif
+    }
+
     void unknownDeviceIsAnError()
     {
         AudioDevice device;
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"No audio output named \"No Such Device\""_s));
         const auto opened =
-            device.open(DeviceChoice{.api = AudioApi::Wasapi, .name = u"No Such Device"_s}, 256, [](AudioBlock, const AudioInputs&) {});
+            device.open(DeviceChoice{.api = AudioApi::System, .name = u"No Such Device"_s}, 256, [](AudioBlock, const AudioInputs&) {});
         QVERIFY(!opened);
         QVERIFY(opened.error().code == core::ErrorCode::InvalidData);
         QVERIFY(!device.isOpen());

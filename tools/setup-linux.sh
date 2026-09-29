@@ -51,7 +51,8 @@ user_part() {
     export PATH="$HOME/.local/bin:$PATH"
     # Qt, the official binaries (as on Windows).
     if [ ! -d "$QT_DIR/$QT_VERSION/gcc_64" ]; then
-        aqt install-qt linux desktop "$QT_VERSION" linux_gcc_64 -m qtmultimedia qtshadertools -O "$QT_DIR"
+        # (From /tmp: aqt leaves its log in the folder it runs in.)
+        (cd /tmp && aqt install-qt linux desktop "$QT_VERSION" linux_gcc_64 -m qtmultimedia qtshadertools -O "$QT_DIR")
     fi
     # vcpkg at the manifest's baseline.
     local baseline

@@ -11,5 +11,5 @@ if(WIN32)
     # CrashHandler_win: MiniDumpWriteDump.
     target_link_libraries(gigchain_platform PRIVATE psapi winmm dbghelp)
 endif()
-gigchain_platform_sources(gigchain_platform PluginFolders MemoryUse Process Timing Windows CrashHandler InstanceLock)
+gigchain_platform_sources(gigchain_platform PluginFolders MemoryUse Process Timing Windows CrashHandler InstanceLock Audio)
 gigchain_target_defaults(gigchain_platform)
