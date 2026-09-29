@@ -4,6 +4,8 @@
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/Chart.h"
 #include "gigchain/core/Checks.h"
+#include "gigchain/core/Chords.h"
+#include "gigchain/core/SongMap.h"
 
 #include <QStringDecoder>
 
@@ -29,6 +31,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <utility>
 
 using namespace Qt::StringLiterals;
@@ -416,6 +419,12 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
     std::map<int, int> sectionAt;
     const auto sections = core::chartSections(chart);
     for (std::size_t s = 0; s < sections.size(); ++s) sectionAt[sections.at(s).line] = static_cast<int>(s);
+    // Chord follow: which steps each chord is (lit when played).
+    const core::SongMap map = core::buildSongMap(chart);
+    std::map<std::pair<int, int>, QVariantList> stepsAt;
+    for (std::size_t s = 0; s < map.steps.size(); ++s) {
+        for (const auto& place : map.steps.at(s).places) stepsAt[place] << static_cast<int>(s);
+    }
     for (std::size_t i = 0; i < chart.lines.size(); ++i) {
         const core::ChartLine& line = chart.lines.at(i);
         QString kind;
@@ -428,8 +437,17 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
         case Kind::Meta: continue; // not shown
         }
         QVariantList segments;
+        int chordIndex = 0;
         for (const core::ChartSegment& segment : line.segments) {
-            segments << QVariantMap{{u"chord"_s, segment.chord}, {u"text"_s, segment.text}};
+            QVariantList steps;
+            bool understood = true;
+            if (!segment.chord.isEmpty()) {
+                const auto found = stepsAt.find({static_cast<int>(i), chordIndex++});
+                if (found != stepsAt.end()) steps = found->second;
+                understood = core::parseChordName(segment.chord).has_value();
+            }
+            segments << QVariantMap{{u"chord"_s, segment.chord}, {u"text"_s, segment.text},
+                                    {u"steps"_s, steps}, {u"understood"_s, understood}};
         }
         const auto section = sectionAt.find(static_cast<int>(i));
         lines << QVariantMap{{u"kind"_s, kind},
@@ -838,6 +856,58 @@ bool DocumentController::setSongSwitchEarly(int song, bool early)
     return true;
 }
 
+bool DocumentController::songFollowChords() const
+{
+    const core::Song* song = currentSong();
+    return song == nullptr || song->followChords;
+}
+
+bool DocumentController::setSongFollowChords(int song, bool on)
+{
+    if (auto r = core::setSongFollowChords(m_setlist, song, on); !r) return report(r.error());
+    setDirty(true);
+    if (song == m_cursor.song) applySectionsToEngine();
+    emit songChanged();
+    return true;
+}
+
+QString DocumentController::followFirstChord() const
+{
+    return m_songMap.steps.empty() ? QString() : m_songMap.steps.front().name;
+}
+
+QString DocumentController::followLabel(int step) const
+{
+    if (step < 0 || std::cmp_greater_equal(step, m_songMap.steps.size())) return {};
+    const auto at = [this](int i) { return m_songMap.steps.at(static_cast<std::size_t>(i)).section; };
+    const int section = at(step);
+    int first = step;
+    while (first > 0 && at(first - 1) == section) --first;
+    int last = step;
+    while (std::cmp_less(last + 1, m_songMap.steps.size()) && at(last + 1) == section) ++last;
+    QString where = tr("chord %1 of %2").arg(step - first + 1).arg(last - first + 1);
+    const core::Song* song = currentSong();
+    const std::vector<core::ChartSection> sections =
+        song != nullptr ? core::chartSections(core::parseChordPro(song->chart)) : std::vector<core::ChartSection>{};
+    if (section < 0 || std::cmp_greater_equal(section, sections.size())) return where;
+    return tr("%1 · %2").arg(sections.at(static_cast<std::size_t>(section)).name, where);
+}
+
+int DocumentController::followLine(int step) const
+{
+    const core::Song* song = currentSong();
+    if (song == nullptr || step < 0 || std::cmp_greater_equal(step, m_songMap.steps.size())) return -1;
+    const int line = m_songMap.steps.at(static_cast<std::size_t>(step)).places.front().first;
+    // chartLines() leaves out directives and section ends.
+    const core::Chart chart = core::parseChordPro(song->chart);
+    int shown = 0;
+    for (int i = 0; i < line && std::cmp_less(i, chart.lines.size()); ++i) {
+        const auto kind = chart.lines.at(static_cast<std::size_t>(i)).kind;
+        if (kind != core::ChartLine::Kind::Meta && kind != core::ChartLine::Kind::SectionEnd) ++shown;
+    }
+    return shown;
+}
+
 bool DocumentController::songLoopSync() const
 {
     const core::Song* song = currentSong();
@@ -1064,6 +1134,25 @@ void DocumentController::applySectionsToEngine()
         m_engine.clearAllLoops(); // loops belong to the song they were played in
     }
     m_engine.setSongSections(sections);
+    // Chord follow: the song's chords, when its sections follow them. An
+    // edit while playing carries on from the chord at the same place.
+    std::optional<std::pair<int, int>> place;
+    const int playing = newSong ? -1 : m_engine.chordFollow().step;
+    if (playing >= 0 && std::cmp_less(playing, m_songMap.steps.size())) {
+        place = m_songMap.steps.at(static_cast<std::size_t>(playing)).places.front();
+    }
+    m_songMap = song != nullptr && song->followChords ? core::buildSongMap(core::parseChordPro(song->chart)) : core::SongMap{};
+    if (!m_songMap.followable()) m_songMap = {};
+    engine::ChordFollowMap chords;
+    chords.sectionStarts = m_songMap.sectionStarts;
+    for (std::size_t i = 0; i < m_songMap.steps.size(); ++i) {
+        const core::SongStep& step = m_songMap.steps.at(i);
+        chords.steps.push_back(engine::followStepOf(step.shape, step.section));
+        const bool here = place && std::ranges::find(step.places, *place) != step.places.end();
+        // The same step if it is still there (a repeated line has the place several times).
+        if (here && (chords.resumeAt < 0 || std::cmp_equal(i, playing))) chords.resumeAt = static_cast<int>(i);
+    }
+    m_engine.setChordFollow(chords);
     m_sectionCount = static_cast<int>(sections.sections.size());
     if (newSong && m_sectionCount > 0) m_engine.jumpToSection(0); // a new song starts at its beginning
     m_sectionsSong = songId;
