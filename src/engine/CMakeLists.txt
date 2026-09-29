@@ -31,6 +31,7 @@ add_library(gigchain_engine STATIC
     internal/AudioDevice.h
     internal/AudioDevice.cpp
     internal/AudioApis.h
+    internal/Vst3RunLoop.h
     internal/MidiInput.h
     internal/MidiInput.cpp
     internal/MidiSetup.cpp
@@ -59,5 +60,5 @@ if(WIN32)
     target_compile_definitions(gigchain_engine PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
 # What differs by system inside the engine (next to the code that needs it).
-gigchain_platform_sources(gigchain_engine internal/AudioApis)
+gigchain_platform_sources(gigchain_engine internal/AudioApis internal/Vst3RunLoop)
 gigchain_target_defaults(gigchain_engine)

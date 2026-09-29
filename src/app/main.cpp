@@ -70,6 +70,7 @@ int runApp(int argc, char** argv)
     // in (a double-clicked setlist's). Logged if it cannot.
     const auto dllSearch = platform::hardenLibrarySearch();
     platform::reportLeaksAtExit();
+    platform::prepareGuiPlatform();
     QGuiApplication app(argc, argv);
     QGuiApplication::setOrganizationName(branding::organization());
     QGuiApplication::setApplicationName(branding::name());

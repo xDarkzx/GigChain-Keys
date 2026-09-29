@@ -11,6 +11,13 @@ NativeWindowKind nativeWindowKind()
 #endif
 }
 
+void prepareGuiPlatform()
+{
+#ifndef Q_OS_MACOS
+    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) qputenv("QT_QPA_PLATFORM", "xcb");
+#endif
+}
+
 void bringToFront(QWindow& window)
 {
     window.raise();

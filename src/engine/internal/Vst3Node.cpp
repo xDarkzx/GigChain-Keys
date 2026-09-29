@@ -4,6 +4,7 @@
 #include "EngineLog.h"
 #include "gigchain/platform/Process.h"
 #include "PluginModules.h"
+#include "Vst3RunLoop.h"
 #include "gigchain/core/Checks.h"
 
 #include "public.sdk/source/common/memorystream.h"
@@ -816,6 +817,8 @@ public:
             m_attached = false;
         }
         m_view->setFrame(nullptr);
+        // Whatever timers and handlers it left: nothing calls into a closed editor.
+        if (m_runLoop) m_runLoop->clear();
     }
 
     void setFitter(Fitter fitter) override { m_fitter = std::move(fitter); }
@@ -881,6 +884,8 @@ public:
         // The SDK's macro compares interface ids, which are char arrays.
         QUERY_INTERFACE(requested, object, FUnknown::iid, IPlugFrame) // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         QUERY_INTERFACE(requested, object, IPlugFrame::iid, IPlugFrame) // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        // Linux plugins run their timers and events through the host's loop.
+        if (m_runLoop && m_runLoop->answers(requested, object)) return kResultOk;
         *object = nullptr;
         return kNoInterface;
     }
@@ -929,6 +934,8 @@ private:
     }
 
     std::shared_ptr<Vst3Node> m_node; // keeps the plugin alive while its editor exists
+    // Before m_view: outlives it (a view going away may still unregister its timers).
+    std::unique_ptr<Vst3RunLoop> m_runLoop = makeVst3RunLoop();
     IPtr<IPlugView> m_view;
     QString m_title;
     Fitter m_fitter;

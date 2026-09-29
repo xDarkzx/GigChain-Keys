@@ -17,6 +17,12 @@ enum class NativeWindowKind
 
 [[nodiscard]] NativeWindowKind nativeWindowKind();
 
+// Before the GUI starts: the window system plugin windows need. Linux
+// plugins draw into X11 windows, so the app runs Qt's X11 platform (xcb, also
+// on Wayland desktops through their X11 layer, as Reaper and Bitwig do) unless
+// QT_QPA_PLATFORM says otherwise. Nothing to do on Windows.
+void prepareGuiPlatform();
+
 // Puts `window` in front of every other window and makes it the active one
 // (a second start handed its setlist over). Windows refuses a plain
 // "activate" from an app that is not in front, so it is done its way there;

@@ -36,6 +36,8 @@ NativeWindowKind nativeWindowKind()
     return NativeWindowKind::Win32;
 }
 
+void prepareGuiPlatform() {}
+
 void bringToFront(QWindow& window)
 {
     // Windows refuses a plain "activate" from an app that is not in front (it
