@@ -81,16 +81,35 @@ private slots:
         QVERIFY(!fresh.isDirty());
     }
 
-    void anInstrumentNeedsASetlistAndStartsTheFirstSong()
+    // The first instrument dragged in, with nothing open yet (the start
+    // screen), starts a setlist with Song 1 and plays it: no "open a
+    // setlist first" in the way.
+    void theFirstInstrumentStartsASetlistAndItsFirstSong()
     {
         DocumentController fresh(*m_engine, *m_settings);
-        QVERIFY(!fresh.addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s)); // start screen: nothing to add to
-        QCOMPARE(fresh.lastError(), u"Start or open a setlist first"_s);
-
-        fresh.newSetlist();
-        QVERIFY(fresh.addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s)); // not "Patch does not exist"
+        QVERIFY(!fresh.hasSetlist());
+        QVERIFY(fresh.addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(fresh.hasSetlist());
         QCOMPARE(fresh.setlist().songs.size(), std::size_t{1});
+        QCOMPARE(fresh.currentSongName(), u"Song 1"_s);
+        QVERIFY(fresh.currentPatch() != nullptr);
         QCOMPARE(fresh.currentPatch()->channels.size(), std::size_t{1});
+        QCOMPARE(m_engine->lastPatch.channels.size(), std::size_t{1}); // playing
+        QVERIFY(fresh.lastError().isEmpty());
+
+        // The same for an input channel (a microphone, a guitar).
+        DocumentController voice(*m_engine, *m_settings);
+        QVERIFY(voice.addInputChannel(1, 2));
+        QVERIFY(voice.hasSetlist());
+        QCOMPARE(voice.setlist().songs.size(), std::size_t{1});
+        QCOMPARE(voice.currentPatch()->channels.size(), std::size_t{1});
+
+        // A setlist open but empty: its first song too.
+        DocumentController empty(*m_engine, *m_settings);
+        empty.newSetlist();
+        QVERIFY(empty.addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s)); // not "Patch does not exist"
+        QCOMPARE(empty.setlist().songs.size(), std::size_t{1});
+        QCOMPARE(empty.currentPatch()->channels.size(), std::size_t{1});
     }
 
     void pastingIntoAnEmptySetlistCreatesTheSong()
