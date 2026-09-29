@@ -513,10 +513,9 @@ bool DocumentController::movePatch(int song, int from, int to)
 
 bool DocumentController::addChannel(const QString& pluginId, const QString& name)
 {
-    if (!m_hasSetlist) {
-        return report(core::Error{core::ErrorCode::OutOfRange, tr("Start or open a setlist first")});
-    }
-    // The first instrument of an empty setlist starts its first song.
+    // The first instrument, with nothing open yet, starts a setlist; the
+    // first of an empty setlist starts its first song.
+    if (!m_hasSetlist) newSetlist();
     if (m_setlist.songs.empty() && !addSong()) return false;
     const auto index = core::addChannel(m_setlist, m_cursor, core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = false, .state = {}});
     if (!index) return report(index.error());
@@ -688,9 +687,8 @@ bool DocumentController::setChannelVelocityRange(int channel, int low, int high)
 
 bool DocumentController::addInputChannel(int inputLeft, int inputRight)
 {
-    if (!m_hasSetlist) {
-        return report(core::Error{core::ErrorCode::OutOfRange, tr("Start or open a setlist first")});
-    }
+    // As for an instrument: the first one starts a setlist and its first song.
+    if (!m_hasSetlist) newSetlist();
     if (m_setlist.songs.empty() && !addSong()) return false;
     const QString name = inputRight > 0 ? tr("Input %1+%2").arg(inputLeft).arg(inputRight) : tr("Input %1").arg(inputLeft);
     const auto index = core::addInputChannel(m_setlist, m_cursor, name, inputLeft, inputRight);
