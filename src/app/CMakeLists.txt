@@ -1,6 +1,6 @@
-qt_add_executable(gigchain_app WIN32 main.cpp)
-# The .exe is named in branding.cmake.
-set_target_properties(gigchain_app PROPERTIES OUTPUT_NAME ${PRODUCT_EXECUTABLE})
+qt_add_executable(gigchain_app main.cpp)
+# The .exe is named in branding.cmake; on Windows a GUI app (no console).
+set_target_properties(gigchain_app PROPERTIES OUTPUT_NAME ${PRODUCT_EXECUTABLE} WIN32_EXECUTABLE $<BOOL:${WIN32}>)
 # Its icon, from branding.cmake.
 if(WIN32)
     if(NOT EXISTS "${PRODUCT_ICON}")
@@ -22,10 +22,12 @@ add_dependencies(gigchain_app gigchain_scanner)
 # windeployqt, see tools/package.ps1), the Visual C++ runtime (app-local, no
 # separate installer) and the licences. tools/package.ps1 packs it.
 install(TARGETS gigchain_app gigchain_scanner RUNTIME DESTINATION .)
-install(FILES "$<FILTER:$<TARGET_RUNTIME_DLLS:gigchain_app>,EXCLUDE,/Qt6[^/]*\\.dll$>" DESTINATION .)
-set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION .)
-set(CMAKE_INSTALL_UCRT_LIBRARIES FALSE) # part of Windows 10 and 11
-include(InstallRequiredSystemLibraries)
+if(WIN32) # (the Linux and macOS packages: cross-platform piece 3)
+    install(FILES "$<FILTER:$<TARGET_RUNTIME_DLLS:gigchain_app>,EXCLUDE,/Qt6[^/]*\\.dll$>" DESTINATION .)
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION .)
+    set(CMAKE_INSTALL_UCRT_LIBRARIES FALSE) # part of Windows 10 and 11
+    include(InstallRequiredSystemLibraries)
+endif()
 install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION . RENAME LICENSE.txt)
 configure_file(${PROJECT_SOURCE_DIR}/installer/THIRD-PARTY-NOTICES.txt.in ${CMAKE_BINARY_DIR}/installer/THIRD-PARTY-NOTICES.txt @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/installer/THIRD-PARTY-NOTICES.txt DESTINATION .)

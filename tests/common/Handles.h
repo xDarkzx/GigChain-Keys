@@ -1,22 +1,52 @@
 #pragma once
 
-// How many handles of each kind (Event, File, Key, Thread...) this process
-// holds: when handles grow, the kind that grows names the leak. From
-// NtQueryInformationProcess(ProcessHandleInformation), as Process Explorer
-// does. For the soak and for tests that prove something leaks nothing.
+// How many handles of each kind this process holds: when handles grow, the
+// kind that grows names the leak. For the soak and for tests that prove
+// something leaks nothing.
+//  - Windows: every kernel handle by type (Event, File, Key, Thread...), from
+//    NtQueryInformationProcess(ProcessHandleInformation), as Process Explorer
+//    does.
+//  - Linux: every open file descriptor by kind (file, socket, pipe, sound
+//    device, eventfd...), from /proc/self/fd, and the threads.
 
 #include <QString>
 
 #include <map>
 #include <vector>
 
+#ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #include <windows.h>
+#else
+#include <QDir>
+#include <QFileInfo>
+#endif
 
 namespace gigchain::test {
 
+#ifndef _WIN32
+inline std::map<QString, int> handlesByType()
+{
+    std::map<QString, int> counts;
+    const QDir fds(QStringLiteral("/proc/self/fd"));
+    for (const QString& fd : fds.entryList(QDir::System | QDir::Files | QDir::NoDotAndDotDot)) {
+        const QString target = QFileInfo(fds.filePath(fd)).symLinkTarget();
+        QString kind = QStringLiteral("file");
+        if (target.startsWith(QStringLiteral("socket:"))) kind = QStringLiteral("socket");
+        else if (target.startsWith(QStringLiteral("pipe:"))) kind = QStringLiteral("pipe");
+        else if (target.startsWith(QStringLiteral("anon_inode:"))) kind = target.section(u':', 1).remove(u'[').remove(u']');
+        else if (target.startsWith(QStringLiteral("/dev/snd/"))) kind = QStringLiteral("sound device");
+        else if (target.startsWith(QStringLiteral("/dev/"))) kind = QStringLiteral("device");
+        ++counts[kind];
+    }
+    --counts[QStringLiteral("file")]; // the /proc/self/fd listing's own
+    counts[QStringLiteral("Thread")] =
+        static_cast<int>(QDir(QStringLiteral("/proc/self/task")).entryList(QDir::Dirs | QDir::NoDotAndDotDot).size());
+    return counts;
+}
+#else
 inline std::map<QString, int> handlesByType()
 {
     // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-type-union-access, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays): Windows' raw structures
@@ -74,6 +104,7 @@ inline std::map<QString, int> handlesByType()
     return counts;
     // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-type-union-access, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 }
+#endif
 
 inline int handlesOfType(const QString& type)
 {

@@ -6,13 +6,29 @@ include(Sanitizers)
 function(gigchain_harden target)
     if(MSVC)
         target_compile_options(${target} PRIVATE
-            /W4 /WX /permissive- /sdl /utf-8 /Zc:__cplusplus /external:W0)
+            /W4 /WX /permissive- /sdl /utf-8 /Zc:__cplusplus /external:W0
+            # "padded due to alignment": always on purpose here (cache-line
+            # separation in the real-time queues).
+            /wd4324)
         target_link_options(${target} PRIVATE
             /DYNAMICBASE /NXCOMPAT /HIGHENTROPYVA /INCREMENTAL:NO)
         if(NOT GIGCHAIN_ASAN)
             target_compile_options(${target} PRIVATE /guard:cf)
             target_link_options(${target} PRIVATE /guard:cf)
         endif()
+    else()
+        # GCC and Clang: the same strictness, and the usual Linux hardening
+        # (stack protector, fortified library calls, position-independent
+        # code, read-only relocations, no executable stack).
+        target_compile_options(${target} PRIVATE
+            -Wall -Wextra -Wpedantic -Werror
+            # Designated initializers leaving members at their defaults are
+            # this code's style.
+            -Wno-missing-field-initializers
+            -fstack-protector-strong -fstack-clash-protection
+            $<$<NOT:$<CONFIG:Debug>>:-D_FORTIFY_SOURCE=3>)
+        target_link_options(${target} PRIVATE -Wl,-z,relro,-z,now -Wl,-z,noexecstack)
+        set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON)
     endif()
 endfunction()
 

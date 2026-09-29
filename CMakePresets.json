@@ -20,6 +20,40 @@
       }
     },
     {
+      "name": "linux-base",
+      "hidden": true,
+      "inherits": "base",
+      "description": "Linux (and WSL): tools/setup-linux.sh; the build on the machine's own disk",
+      "binaryDir": "$env{HOME}/.cache/gigchain/build/${presetName}",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux",
+        "CMAKE_C_COMPILER": "gcc-13",
+        "CMAKE_CXX_COMPILER": "g++-13"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-release",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-asan",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "GIGCHAIN_ASAN": "ON"
+      }
+    },
+    {
       "name": "debug",
       "inherits": "base",
       "cacheVariables": {
@@ -61,6 +95,18 @@
   ],
   "buildPresets": [
     {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "linux-asan",
+      "configurePreset": "linux-asan"
+    },
+    {
       "name": "debug",
       "configurePreset": "debug"
     },
@@ -88,6 +134,21 @@
       "output": {
         "outputOnFailure": true
       }
+    },
+    {
+      "name": "linux-debug",
+      "inherits": "base",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-release",
+      "inherits": "base",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "linux-asan",
+      "inherits": "base",
+      "configurePreset": "linux-asan"
     },
     {
       "name": "debug",

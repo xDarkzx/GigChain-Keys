@@ -11,9 +11,11 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
+#ifdef Q_OS_WIN
 #include <windows.h>
 
 #include <crtdbg.h>
+#endif
 
 using namespace gigchain::engine;
 using namespace Qt::StringLiterals;
@@ -37,6 +39,7 @@ class TestPluginScanner : public QObject
     QString m_cache;
 
 private slots:
+#ifdef Q_OS_WIN
     // Tests run unattended: a failed C runtime assertion is printed, never a
     // dialog box waiting for a click (tests/common/NoErrorDialogs.cpp).
     // cppcheck-suppress functionStatic ; a Qt Test slot, called through moc: cannot be static
@@ -47,6 +50,7 @@ private slots:
         QCOMPARE(_CrtSetReportMode(_CRT_ERROR, _CRTDBG_REPORT_MODE) & _CRTDBG_MODE_WNDW, 0);
         QVERIFY((GetErrorMode() & SEM_NOGPFAULTERRORBOX) != 0);
     }
+#endif
 
     void init()
     {

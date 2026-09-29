@@ -7,9 +7,17 @@
     {
       "name": "rtaudio",
       "features": [
-        "asio"
+        { "name": "asio", "platform": "windows" },
+        { "name": "pulse", "platform": "linux" },
+        { "name": "jack", "platform": "linux" },
+        { "name": "alsa", "platform": "linux" }
       ]
     },
-    "rtmidi"
+    {
+      "name": "rtmidi",
+      "features": [
+        { "name": "alsa", "platform": "linux" }
+      ]
+    }
   ]
 }
