@@ -1,3 +1,4 @@
+#include "EngineLog.h"
 #include "MidiClockOut.h"
 
 #include <QElapsedTimer>
@@ -17,6 +18,22 @@ class TestMidiClock : public QObject
     Q_OBJECT
 
 private slots:
+    // A check that runs every few seconds (listing MIDI ports) and fails the
+    // same way each time says so once, not every time; a new failure, or
+    // failing again after it worked, is said again.
+    void aRepeatedFailureIsSaidOnce()
+    {
+        gigchain::engine::RepeatedWarning warning;
+        QTest::ignoreMessage(QtWarningMsg, "Listing MIDI inputs failed: no ALSA sequencer");
+        warning.fail(QStringLiteral("Listing MIDI inputs failed: no ALSA sequencer"));
+        warning.fail(QStringLiteral("Listing MIDI inputs failed: no ALSA sequencer")); // not said again
+        QTest::ignoreMessage(QtWarningMsg, "Listing MIDI inputs failed: something else");
+        warning.fail(QStringLiteral("Listing MIDI inputs failed: something else"));
+        warning.ok();
+        QTest::ignoreMessage(QtWarningMsg, "Listing MIDI inputs failed: something else");
+        warning.fail(QStringLiteral("Listing MIDI inputs failed: something else"));
+    }
+
     void anUnknownOutputIsAnError()
     {
         MidiClockOut clock;

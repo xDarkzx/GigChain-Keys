@@ -62,6 +62,16 @@ private slots:
     void hardeningHasNothingToDo() { QVERIFY(platform::hardenLibrarySearch().has_value()); }
 #endif
 
+    // A program's file name on this system (the plugin scanner beside the app).
+    void aProgramIsNamedAsTheSystemNamesIt()
+    {
+#ifdef Q_OS_WIN
+        QCOMPARE(platform::programFileName(u"GigChainKeysScan"_s), u"GigChainKeysScan.exe"_s);
+#else
+        QCOMPARE(platform::programFileName(u"GigChainKeysScan"_s), u"GigChainKeysScan"_s);
+#endif
+    }
+
     // The scanner's crash ending: a plugin that crashes it ends the process
     // with a code (not 0, 2 or 3, which mean something else), no dialog.
     void aCrashEndsQuietlyWithACode()

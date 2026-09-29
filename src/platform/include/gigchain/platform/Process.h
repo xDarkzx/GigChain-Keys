@@ -2,6 +2,8 @@
 
 #include "gigchain/core/Error.h"
 
+#include <QString>
+
 class QProcess;
 
 namespace gigchain::platform {
@@ -41,6 +43,13 @@ void quietChildProcess(QProcess& process);
 // process ends at once with an exit code the app reads (never 0, 2 or 3),
 // with no error dialog and no debugger offered (nobody would answer them).
 void endQuietlyOnCrash();
+
+// A program's file name here ("<base>.exe" on Windows, "<base>" elsewhere).
+[[nodiscard]] QString programFileName(const QString& base);
+
+// Opens the system's file manager at `path` (Windows: Explorer with the file
+// selected; elsewhere its folder). An error with the reason when it cannot.
+core::Result<void> showInFileManager(const QString& path);
 
 // Development builds (Windows' debug C runtime): memory leaks are reported
 // to the debugger's output when the app ends. Nothing elsewhere.

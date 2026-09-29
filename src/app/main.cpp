@@ -137,7 +137,7 @@ int runApp(int argc, char** argv)
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-guard"_s;
     // Built next to the app (src/scanner): new plugins are read there.
     engineOptions.pluginScanner =
-        QCoreApplication::applicationDirPath() + u"/"_s + branding::executable() + u"Scan.exe"_s;
+        QCoreApplication::applicationDirPath() + u"/"_s + platform::programFileName(branding::executable() + u"Scan"_s);
     // Instruments that come with the app, where an installer puts them.
     engineOptions.bundledPluginFolder = QCoreApplication::applicationDirPath() + u"/plugins"_s;
     engineOptions.progress = [&startup, &quips](engine::LoadStage stage, const QString& what, int done, int total) {

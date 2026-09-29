@@ -17,6 +17,11 @@
 using namespace Qt::StringLiterals;
 
 namespace gigchain::engine {
+namespace {
+
+RepeatedWarning s_listing; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables): the listing's last failure, for listPorts (static)
+
+} // namespace
 
 std::optional<MidiEvent> parseMidi(std::span<const unsigned char> bytes) noexcept
 {
@@ -57,8 +62,11 @@ QStringList MidiInput::listPorts()
         for (unsigned int i = 0; i < probe.getPortCount(); ++i) {
             ports << QString::fromStdString(probe.getPortName(i));
         }
+        s_listing.ok();
     } catch (const std::exception& e) {
-        qCWarning(lcEngine).noquote() << "Listing MIDI inputs failed:" << QString::fromUtf8(e.what());
+        // (Listed every few seconds: a lasting failure, such as no MIDI system
+        // at all, is said once.)
+        s_listing.fail(u"Listing MIDI inputs failed: "_s + QString::fromUtf8(e.what()));
     }
     return portNames(ports);
 }

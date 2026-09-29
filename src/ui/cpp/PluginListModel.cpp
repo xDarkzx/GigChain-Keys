@@ -3,13 +3,13 @@
 #include "PluginIcons.h"
 
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/platform/Process.h"
 
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QLocale>
 #include <QLoggingCategory>
-#include <QProcess>
 #include <QSettings>
 #include <QUrl>
 #include <QUrl>
@@ -121,10 +121,9 @@ QString PluginListModel::showInFolder(const QString& pluginId) const
         qCWarning(lcUi).noquote() << "Show in folder: no plugin" << pluginId;
         return tr("No installed plugin %1").arg(pluginId);
     }
-    const QString path = QDir::toNativeSeparators(pluginId);
-    if (!QProcess::startDetached(u"explorer.exe"_s, {u"/select,"_s + path})) {
-        qCWarning(lcUi).noquote() << "Show in folder: could not start Explorer for" << path;
-        return tr("Could not open Explorer for %1").arg(path);
+    if (auto shown = platform::showInFileManager(pluginId); !shown) {
+        qCWarning(lcUi).noquote() << "Show in folder:" << shown.error().message;
+        return shown.error().message;
     }
     return {};
 }

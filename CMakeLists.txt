@@ -23,6 +23,11 @@ if(GIGCHAIN_ASAN AND MSVC)
 endif()
 include(Vst3Sdk)
 qt_standard_project_setup(REQUIRES 6.8)
+# Every program in the build folder itself, on every system (Qt does this on
+# Windows): the app finds its plugin scanner next to it, as when installed.
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
 
 enable_testing()
 
