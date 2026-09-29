@@ -2,6 +2,7 @@
 
 #include "PlatformLog.h"
 
+#include <QDir>
 #include <QProcess>
 
 #include <windows.h>
@@ -65,6 +66,20 @@ void endQuietlyOnCrash()
         _CrtSetReportFile(type, _CRTDBG_FILE_STDERR);
     }
 #endif
+}
+
+QString programFileName(const QString& base)
+{
+    return base + u".exe"_s;
+}
+
+core::Result<void> showInFileManager(const QString& path)
+{
+    const QString native = QDir::toNativeSeparators(path);
+    if (!QProcess::startDetached(u"explorer.exe"_s, {u"/select,"_s + native})) {
+        return core::fail(core::ErrorCode::SystemRefused, u"Could not open Explorer for %1"_s.arg(native));
+    }
+    return {};
 }
 
 void reportLeaksAtExit()

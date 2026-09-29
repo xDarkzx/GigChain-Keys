@@ -15,7 +15,7 @@ BUILD="$HOME/.cache/gigchain/build/$PRESET"
 cmake --preset "$PRESET" >/dev/null
 cmake --build --preset "$PRESET"
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
-APP="$(find "$BUILD" -maxdepth 3 -type f -name 'GigChain*' -perm -u+x ! -name '*Scan*' | head -1)"
+APP="$(find "$BUILD" -maxdepth 1 -type f -name 'GigChain*' -perm -u+x ! -name '*Scan*' | head -1)"
 if [ -z "$APP" ]; then
     echo "The app was not found under $BUILD" >&2
     exit 1

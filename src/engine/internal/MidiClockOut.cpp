@@ -19,6 +19,11 @@
 using namespace Qt::StringLiterals;
 
 namespace gigchain::engine {
+namespace {
+
+RepeatedWarning s_listing; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables): the listing's last failure, for listPorts (static)
+
+} // namespace
 
 MidiClockOut::MidiClockOut() = default;
 
@@ -34,8 +39,9 @@ QStringList MidiClockOut::listPorts()
         RtMidiOut out;
         const unsigned int count = out.getPortCount();
         for (unsigned int i = 0; i < count; ++i) names << QString::fromStdString(out.getPortName(i));
+        s_listing.ok();
     } catch (const std::exception& e) {
-        qCWarning(lcEngine).noquote() << "Listing MIDI outputs failed:" << QString::fromUtf8(e.what());
+        s_listing.fail(u"Listing MIDI outputs failed: "_s + QString::fromUtf8(e.what())); // said once while it lasts
     }
     return portNames(names);
 }
