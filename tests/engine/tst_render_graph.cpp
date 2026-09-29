@@ -3,6 +3,7 @@
 
 #include <QtTest>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -430,6 +431,47 @@ private slots:
         QCOMPARE(chorus->received.at(0).data1, uint8_t{64});
         QCOMPARE(chorus->received.at(1).status, uint8_t{0x80});
         QCOMPARE(out.left.at(kFrames - 1), 0.5F); // the verse's key was let go; the chorus sounds
+    }
+
+    // Chord follow entering the chorus: the chord's keys pressed a moment
+    // before (they reached the verse) move to the chorus at the switch.
+    void aHandoverMovesTheHeldChord()
+    {
+        auto verse = std::make_shared<HeldNoteNode>(0.25F);
+        auto chorus = std::make_shared<HeldNoteNode>(0.5F);
+        auto both = std::make_shared<HeldNoteNode>(0.125F);
+        for (auto* node : {verse.get(), chorus.get(), both.get()}) node->received.reserve(16);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(verse));
+        specs.push_back(strip(chorus));
+        specs.push_back(strip(both));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        graph.strip(0)->setSections(0b01);
+        graph.strip(1)->setSections(0b10);
+        graph.strip(2)->setSections(0b11); // plays in both: nothing to move
+
+        MidiEvent trigger = noteOn(53); // the key that completed the chord, at the switch
+        trigger.sampleOffset = 20;
+        MidiEvent handOn = noteOn(48);
+        handOn.sampleOffset = 20;
+        MidiEvent handOff = cc(0x80, 48, 0);
+        handOff.sampleOffset = 20;
+        const std::array events{trigger};
+        const std::array handover{handOn, handOff};
+        Output out;
+        graph.render(events, out.block(), 1.0F, {}, {},
+                     SectionGate{.before = 0, .after = 1, .switchAt = 20, .handover = handover});
+
+        // The verse lets go of 48 and gets nothing new.
+        QCOMPARE(verse->received.size(), std::size_t{1});
+        QCOMPARE(verse->received.at(0).status, uint8_t{0x80});
+        QCOMPARE(verse->received.at(0).data1, uint8_t{48});
+        // The chorus gets 48 (handed over) and 53 (the trigger).
+        QCOMPARE(chorus->received.size(), std::size_t{2});
+        QVERIFY(std::ranges::all_of(chorus->received, [](const MidiEvent& e) { return (e.status & 0xF0) == 0x90; }));
+        // A strip in both sections already had 48: only the trigger.
+        QCOMPARE(both->received.size(), std::size_t{1});
+        QCOMPARE(both->received.at(0).data1, uint8_t{53});
     }
 
     void withoutSectionsEveryStripPlays()

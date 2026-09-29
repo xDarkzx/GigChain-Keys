@@ -158,10 +158,13 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
                           const AudioInputs& inputs, const SectionGate& gate, LoopStation* loops) noexcept
 {
     const uint64_t mask = m_sections.load(std::memory_order_relaxed);
-    // Whether a new note at `offset` is for this strip: its section is in force.
-    const auto plays = [&gate, mask](int offset) {
-        const int section = offset < gate.switchAt ? gate.before : gate.after;
+    // Whether this strip plays in `section` (none, or out of range: every strip does).
+    const auto inSection = [mask](int section) {
         return section < 0 || section >= 64 || ((mask >> section) & 1U) != 0;
+    };
+    // Whether a new note at `offset` is for this strip: its section is in force.
+    const auto plays = [&gate, &inSection](int offset) {
+        return inSection(offset < gate.switchAt ? gate.before : gate.after);
     };
     std::size_t routedCount = 0;
     for (const MidiEvent& event : events) {
@@ -186,6 +189,27 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
         if (mapped) continue;
         if (routedCount == m_routed.size()) break;
         if (const auto routed = routeEvent(event, m_route)) m_routed.at(routedCount++) = *routed; // room checked above
+    }
+    // Chord follow entering a section: the chord's keys pressed a moment
+    // before move over (held keys on to the strips coming in, the chord's
+    // first keys off the strips going out), in time order with the rest.
+    if (!gate.handover.empty() && gate.before != gate.after) {
+        const bool wasIn = inSection(gate.before);
+        const bool isIn = inSection(gate.after);
+        const auto first = m_routed.begin();
+        const auto earlier = [](const MidiEvent& a, const MidiEvent& b) { return a.sampleOffset < b.sampleOffset; };
+        for (const MidiEvent& event : gate.handover) {
+            const bool on = (event.status & 0xF0) == 0x90 && event.data2 > 0;
+            if (on ? (!isIn || wasIn) : (!wasIn || isIn)) continue;
+            if (routedCount == m_routed.size()) break;
+            const auto routed = routeEvent(event, m_route);
+            if (!routed) continue;
+            // In after the events at the same sample, keeping their order (a
+            // key let go and struck again stays let go first).
+            const auto end = first + static_cast<std::ptrdiff_t>(routedCount);
+            m_routed.at(routedCount++) = *routed; // room checked above
+            std::rotate(std::upper_bound(first, end, *routed, earlier), end, end + 1);
+        }
     }
     produce(std::span<const MidiEvent>(m_routed.data(), routedCount), mix.frames, time, inputs);
 
