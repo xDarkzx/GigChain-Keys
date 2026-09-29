@@ -104,7 +104,7 @@ public:
     void stopSong() override { m_transport.stop(); }
     void jumpToSection(int section) override;
     [[nodiscard]] SongPosition songPosition() const override;
-    void setChordFollow(const ChordFollowMap& map) override;
+    core::Result<void> setChordFollow(const ChordFollowMap& map) override;
     [[nodiscard]] ChordFollowPosition chordFollow() const override { return m_follower.position(); }
     void loopCommand(const core::ChannelId& channel, LoopCommand command) override;
     void setLoopSync(bool sync) override { m_loops.setSync(sync); }

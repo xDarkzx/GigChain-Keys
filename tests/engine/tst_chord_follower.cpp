@@ -419,6 +419,43 @@ private slots:
         QCOMPARE(p.gate.after, 0);
     }
 
+    // A map that does not hang together is refused before it reaches the
+    // audio thread (where a bad index would end the app), saying what is wrong.
+    void aBrokenMapIsRefused_data()
+    {
+        QTest::addColumn<int>("breakage");
+        QTest::addColumn<QString>("said");
+        QTest::newRow("section start past the chords") << 0 << u"section 2 starts at chord 10"_s;
+        QTest::newRow("section start on another section's chord") << 1 << u"section 2 starts at chord 1"_s;
+        QTest::newRow("note out of the octave") << 2 << u"chord 1"_s;
+        QTest::newRow("section out of range") << 3 << u"chord 2"_s;
+        QTest::newRow("resume past the chords") << 4 << u"resume"_s;
+        QTest::newRow("too many sections") << 5 << u"sections"_s;
+        QTest::newRow("too many chords") << 6 << u"chords"_s;
+        QTest::newRow("no notes") << 7 << u"chord 1"_s;
+    }
+    void aBrokenMapIsRefused()
+    {
+        QFETCH(int, breakage);
+        QFETCH(QString, said);
+        ChordFollowMap map = mapOf({{"Am", 0}, {"F", 0}, {"D", 1}, {"Bm", 1}});
+        QVERIFY(ChordFollower::check(map).has_value());
+        switch (breakage) {
+        case 0: map.sectionStarts.at(1) = 9; break;
+        case 1: map.sectionStarts.at(1) = 0; break;
+        case 2: map.steps.at(0).root = 12; break;
+        case 3: map.steps.at(1).section = 7; break;
+        case 4: map.resumeAt = 4; break;
+        case 5: map.sectionStarts.assign(65, -1); break;
+        case 6: map.steps.resize(4097, map.steps.front()); break;
+        case 7: map.steps.at(0).family = 0; break;
+        default: QFAIL("no such breakage");
+        }
+        const auto checked = ChordFollower::check(map);
+        QVERIFY(!checked.has_value());
+        QVERIFY2(checked.error().message.contains(said), qPrintable(checked.error().message));
+    }
+
     void noMapIsNotFollowing()
     {
         ChordFollower follower;

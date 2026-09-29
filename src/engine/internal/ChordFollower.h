@@ -3,6 +3,7 @@
 #include "MidiEvent.h"
 #include "RenderGraph.h"
 
+#include "gigchain/core/Error.h"
 #include "gigchain/engine/EngineTypes.h"
 
 #include <array>
@@ -31,6 +32,11 @@ public:
                         double sampleRate) noexcept;
     // The notes moved at this block's switch (see SectionGate::handover).
     [[nodiscard]] std::span<const MidiEvent> handover() const noexcept { return {m_handover.data(), m_handoverCount}; }
+
+    // Whether `map` hangs together (every index in range, notes within the
+    // octave, section starts on their own sections' chords): a map that
+    // does not is never given to process(). The error says what is wrong.
+    [[nodiscard]] static core::Result<void> check(const ChordFollowMap& map);
 
     // Any thread.
     void jumpToSection(int section) noexcept { m_jumpAsked.store(section, std::memory_order_release); }

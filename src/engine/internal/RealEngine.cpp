@@ -1198,20 +1198,25 @@ void RealEngine::jumpToSection(int section)
     m_follower.jumpToSection(section); // (ignored when not following)
 }
 
-void RealEngine::setChordFollow(const ChordFollowMap& map)
+core::Result<void> RealEngine::setChordFollow(const ChordFollowMap& map)
 {
     GC_ONLY_MAIN_THREAD();
-    if (map.steps.size() > static_cast<std::size_t>(core::limits::kMaxFollowSteps)) {
-        qCWarning(lcEngine) << "Chord follow ignored:" << map.steps.size() << "chords, at most" << core::limits::kMaxFollowSteps;
-        return;
+    // Checked here, on the main thread: the audio thread trusts every index.
+    // Refused, the song before it is not followed on.
+    if (auto checked = ChordFollower::check(map); !checked) {
+        qCWarning(lcEngine).noquote() << checked.error().message;
+        m_follow.publish(nullptr);
+        m_following = false;
+        return checked;
     }
     if (map.steps.size() < 2) {
         m_follow.publish(nullptr);
         m_following = false;
-        return;
+        return {};
     }
     m_follow.publish(std::make_shared<FollowSnapshot>(FollowSnapshot{.map = map, .generation = ++m_followGeneration}));
     m_following = true;
+    return {};
 }
 
 SongPosition RealEngine::songPosition() const

@@ -1166,7 +1166,11 @@ void DocumentController::applySectionsToEngine()
         // The same step if it is still there (a repeated line has the place several times).
         if (here && (chords.resumeAt < 0 || std::cmp_equal(i, playing))) chords.resumeAt = static_cast<int>(i);
     }
-    m_engine.setChordFollow(chords);
+    if (auto set = m_engine.setChordFollow(chords); !set) {
+        // (The engine logged it.) Not followed: the tempo leads.
+        m_songMap = {};
+        reportMessage(set.error().message, Notifications::Warning);
+    }
     m_sectionsSong = songId;
     emit sectionsChanged();
 }
