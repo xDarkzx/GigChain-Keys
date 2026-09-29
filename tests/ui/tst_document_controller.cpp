@@ -1129,6 +1129,48 @@ private slots:
         status.poll();
         QVERIFY(!m_engine->track.playing);
     }
+
+    void aSongsChordsAreFollowed()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->setSongChart(0, u"{sov: Verse 1}\n[Am]One [F]two\n{eov}\n{soc: Chorus}\n[C]three [G]four\n{eoc}\n"_s));
+        QCOMPARE(m_engine->follow.steps.size(), std::size_t{4});
+        QCOMPARE(m_engine->follow.sectionStarts, (std::vector<int>{0, 2}));
+        QVERIFY(m_doc->following());
+        QCOMPARE(m_doc->followFirstChord(), u"Am"_s);
+        QCOMPARE(m_doc->followLabel(0), u"Verse 1 · chord 1 of 2"_s);
+        QCOMPARE(m_doc->followLabel(3), u"Chorus · chord 2 of 2"_s);
+        // chartLines: {sov}, the verse line, {soc}, the chorus line.
+        QCOMPARE(m_doc->followLine(2), 3);
+        const QVariantList lines = m_doc->chartLines(m_doc->currentChart());
+        const QVariantList chorus = lines.at(3).toMap().value(u"segments"_s).toList();
+        QCOMPARE(chorus.at(0).toMap().value(u"steps"_s).toList(), (QVariantList{2}));
+
+        // By tempo instead: not followed.
+        QVERIFY(m_doc->setSongFollowChords(0, false));
+        QVERIFY(!m_doc->songFollowChords());
+        QVERIFY(m_engine->follow.steps.empty());
+        QVERIFY(!m_doc->following());
+        QVERIFY(m_doc->followFirstChord().isEmpty());
+    }
+
+    void aChordTheAppCannotReadIsMarked()
+    {
+        const QVariantList lines = m_doc->chartLines(u"[Am]One [Xq7]two\n"_s);
+        const QVariantList segments = lines.at(0).toMap().value(u"segments"_s).toList();
+        QVERIFY(segments.at(0).toMap().value(u"understood"_s).toBool());
+        QVERIFY(!segments.at(1).toMap().value(u"understood"_s).toBool());
+        QVERIFY(segments.at(1).toMap().value(u"steps"_s).toList().isEmpty());
+    }
+
+    void anEditedChartKeepsItsPlace()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->setSongChart(0, u"[Am]One [F]two [C]three [G]four\n"_s));
+        m_engine->followPosition = engine::ChordFollowPosition{.active = true, .started = true, .step = 2, .section = -1};
+        QVERIFY(m_doc->setSongChart(0, u"[Am]One [F]two [C]tres [G]four\n"_s)); // a word fixed while playing C
+        QCOMPARE(m_engine->follow.resumeAt, 2);
+    }
 };
 
 QTEST_GUILESS_MAIN(TestDocumentController)

@@ -5,6 +5,7 @@
 #include "gigchain/core/Error.h"
 #include "gigchain/core/Model.h"
 #include "gigchain/core/Navigation.h"
+#include "gigchain/core/SongMap.h"
 
 #include <QObject>
 #include <QVariantList>
@@ -69,6 +70,9 @@ class DocumentController : public QObject
     Q_PROPERTY(int songTimeNumerator READ songTimeNumerator NOTIFY songChanged)
     Q_PROPERTY(int songTimeDenominator READ songTimeDenominator NOTIFY songChanged)
     Q_PROPERTY(bool songSwitchEarly READ songSwitchEarly NOTIFY songChanged)
+    Q_PROPERTY(bool songFollowChords READ songFollowChords NOTIFY songChanged)
+    Q_PROPERTY(bool following READ following NOTIFY sectionsChanged)
+    Q_PROPERTY(QString followFirstChord READ followFirstChord NOTIFY sectionsChanged)
     // The current song's loops start and stop on the bars (or press to press).
     Q_PROPERTY(bool songLoopSync READ songLoopSync NOTIFY songChanged)
     // Its synced loops' length in bars (0 = open: closed where stopped).
@@ -193,6 +197,14 @@ public:
     [[nodiscard]] bool songSwitchEarly() const;
     Q_INVOKABLE bool setSongTimeSignature(int song, int numerator, int denominator);
     Q_INVOKABLE bool setSongSwitchEarly(int song, bool early);
+    [[nodiscard]] bool songFollowChords() const;
+    Q_INVOKABLE bool setSongFollowChords(int song, bool on);
+    // Chord follow: whether this song follows its chords now, its first chord,
+    // "Chorus · chord 2 of 8" for a step, and the chartLines() index of its line.
+    [[nodiscard]] bool following() const { return m_songMap.followable(); }
+    [[nodiscard]] QString followFirstChord() const;
+    Q_INVOKABLE QString followLabel(int step) const;
+    Q_INVOKABLE int followLine(int step) const;
     [[nodiscard]] bool songLoopSync() const;
     Q_INVOKABLE bool setSongLoopSync(int song, bool sync);
     [[nodiscard]] int songLoopBars() const;
@@ -300,6 +312,7 @@ private:
     bool storeSection(int section, const std::function<void(core::SectionSetup&)>& edit);
     core::SongId m_sectionsSong; // the song whose sections the engine has
     int m_sectionCount = 0;
+    core::SongMap m_songMap; // the current song's chords, when it follows them
     [[nodiscard]] const core::Song* currentSong() const;
     // Undo: the setlist as it was before each edit. Called whenever an edit
     // is committed; edits in a row with the same `m_coalesceKey` within a
