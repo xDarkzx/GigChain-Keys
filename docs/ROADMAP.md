@@ -162,8 +162,21 @@ front of the player.
 ## 5. Charts that follow the song
 
 Charts are editable ChordPro with chords placed over the words, and Perform
-shows the whole song. Next: follow the place in the song from the chords
-being played (MIDI) and the lyrics, and scroll along.
+shows the whole song.
+
+**Done (chord follow, version 1):** the chart follows the chords played on
+the keyboard. The song waits for its first chord ("Play Am to start"); the
+root and any one other note of the next chord move on (any voicing, any
+bass, sus and power chords count); the first two chords of another section,
+played clearly, jump there; the pedal or a click picks a section. The chord
+being played is lit, the next one outlined, and the chart scrolls with it.
+Sections switch instruments on the note that entered them, with the held
+chord handed over. Each song follows its chords (the default) or its tempo
+(Play counts bars), in the song's settings.
+
+**Next:** following the tempo from the playing, a backing track kept in
+time with it, recognising which song is being played, and following from
+an audio input (guitar, voice) as well as MIDI.
 
 ## 6. Installer
 
