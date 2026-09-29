@@ -10,43 +10,19 @@
 // crashed it.
 #include "PluginCatalog.h"
 
-#include "gigchain/engine/ProcessHardening.h"
+#include "gigchain/platform/Process.h"
 
 #include <QCoreApplication>
 
-#include <windows.h>
-
-#include <crtdbg.h>
 #include <cstdio>
-#include <cstdlib>
-#include <initializer_list>
-
-namespace {
-
-// A broken plugin crashing is expected here: no Windows error dialog and no
-// debugger offered (nobody would answer them); the app reads the exit code.
-LONG WINAPI endQuietly(EXCEPTION_POINTERS* crash)
-{
-    TerminateProcess(GetCurrentProcess(), crash->ExceptionRecord->ExceptionCode);
-    return EXCEPTION_EXECUTE_HANDLER;
-}
-
-} // namespace
 
 int main(int argc, char** argv)
 {
-    // It loads plugins: no DLL from the folder it was started in (said on
-    // stderr, which the app logs, if it cannot).
-    (void)gigchain::engine::hardenDllSearch();
-    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
-    SetUnhandledExceptionFilter(&endQuietly);
-    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
-#ifdef _DEBUG // the debug C runtime's reports: printed, not a dialog (release builds have none)
-    for (const int type : {_CRT_WARN, _CRT_ERROR, _CRT_ASSERT}) {
-        _CrtSetReportMode(type, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-        _CrtSetReportFile(type, _CRTDBG_FILE_STDERR);
-    }
-#endif
+    // It loads plugins: no library from the folder it was started in (said on
+    // stderr, which the app logs, if it cannot), and a plugin crashing it ends
+    // it quietly with a code the app reads.
+    (void)gigchain::platform::hardenLibrarySearch();
+    gigchain::platform::endQuietlyOnCrash();
 
     const QCoreApplication app(argc, argv);
     const QStringList arguments = QCoreApplication::arguments();

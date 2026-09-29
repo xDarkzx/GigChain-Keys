@@ -12,7 +12,7 @@
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/FileLog.h"
 #include "gigchain/engine/FakeEngineFactory.h"
-#include "gigchain/engine/ProcessHardening.h"
+#include "gigchain/platform/Process.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
 #include <QElapsedTimer>
@@ -29,10 +29,6 @@
 #include <QTimer>
 #include <QWindow>
 #include <QtQml/qqmlextensionplugin.h>
-
-#if defined(_MSC_VER) && defined(_DEBUG)
-#include <crtdbg.h>
-#endif
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -93,11 +89,8 @@ int runApp(int argc, char** argv)
 {
     // Before anything loads a DLL: none from the folder the app was started
     // in (a double-clicked setlist's). Logged if it cannot.
-    const auto dllSearch = engine::hardenDllSearch();
-#if defined(_MSC_VER) && defined(_DEBUG)
-    // Report leaks to the debugger output at exit during development.
-    _CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
+    const auto dllSearch = platform::hardenLibrarySearch();
+    platform::reportLeaksAtExit();
     QGuiApplication app(argc, argv);
     QGuiApplication::setOrganizationName(branding::organization());
     QGuiApplication::setApplicationName(branding::name());
