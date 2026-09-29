@@ -1,6 +1,7 @@
 // The soak: a long gig on the real engine, run by tools\soak.ps1. Patches
 // change every moment with chords held across them, loops are recorded,
-// layered, played and cleared, a song's sections play and jump, a backing
+// layered, played and cleared, a song's sections follow the chords played
+// (switching instruments, handing the chord over) and jump, a backing
 // track starts and stops, the tempo moves, and now and then the audio
 // device is reopened (another buffer size) and MIDI set up again, as
 // Settings does. Silent: the master is at -inf.
@@ -13,6 +14,7 @@
 //   <soak>.exe <minutes> <csv file>
 #include "Handles.h"
 
+#include "gigchain/core/Chords.h"
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/Model.h"
 #include "gigchain/engine/RealEngineFactory.h"
@@ -33,6 +35,7 @@
 #include <tlhelp32.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <map>
 #include <vector>
@@ -235,6 +238,27 @@ int soak()
     const core::SongId song = core::SongId::generate();
     engine.applyPatch(song, patches.front());
     engine.setBackingTrack(track);
+    // The split's song: its low layer plays the verse, its high one the
+    // chorus, and the chords played lead (Am F | C G): the chart follows,
+    // sections switch on the note and the held chord is handed over.
+    const core::Patch& split = patches.at(1);
+    engine.setSongSections(SongSections{.patch = split.id,
+                                        .sections = {{.bars = 4, .live = {split.channels.at(0).id}},
+                                                     {.bars = 4, .live = {split.channels.at(1).id}}},
+                                        .switchEarly = false});
+    ChordFollowMap follow;
+    for (const auto& [name, section] : {std::pair{"Am", 0}, {"F", 0}, {"C", 1}, {"G", 1}}) {
+        follow.steps.push_back(followStepOf(*core::parseChordName(QString::fromLatin1(name)), section));
+    }
+    follow.sectionStarts = {0, 2};
+    if (auto set = engine.setChordFollow(follow); !set) {
+        say(u"chord follow refused: "_s + set.error().message);
+        return 2;
+    }
+    // Each step plays the song's next chord (on MIDI channel 1).
+    const std::array<std::array<int, 3>, 4> chords{{{57, 60, 64}, {53, 57, 60}, {48, 52, 55}, {55, 59, 62}}};
+    bool heard = false;    // an instrument sounded (the notes reached it)
+    bool followed = false; // the chart moved with the chords
 
     std::vector<Sample> samples;
     std::map<QString, int> warmTypes;
@@ -248,7 +272,8 @@ int soak()
         const core::Patch& patch = patches.at(static_cast<std::size_t>(step) % patches.size());
         engine.applyPatch(song, patch);
         // A chord held across the change, let go after it.
-        for (const int note : {48, 64, 67}) engine.injectNote(0, note, 90);
+        const std::array<int, 3>& chord = chords.at(static_cast<std::size_t>(step) % chords.size());
+        for (const int note : chord) engine.injectNote(1, note, 90);
         if (!patch.channels.empty()) {
             const core::ChannelId& channel = patch.channels.front().id;
             switch (step % 6) {
@@ -266,6 +291,7 @@ int soak()
         if (step % 4 == 2) engine.playBackingTrack(false);
         if (step % 5 == 0) engine.setTempo(80.0 + (step % 7) * 20.0);
         if (step % 50 == 25) engine.panic();
+        if (step % 30 == 10) engine.jumpToSection(step % 2); // the pedal's "next section"
         // Settings: another buffer size (the device reopens), and back.
         if (step % 200 == 100) {
             AudioSetup other = original;
@@ -284,7 +310,9 @@ int soak()
             QCoreApplication::processEvents();
             QThread::msleep(20);
         }
-        for (const int note : {48, 64, 67}) engine.injectNote(0, note, 0);
+        if (!patch.channels.empty()) heard = heard || engine.channelLevel(patch.channels.front().id).peak > 0.0F;
+        followed = followed || engine.chordFollow().step > 0;
+        for (const int note : chord) engine.injectNote(1, note, 0);
         ++step;
 
         if (clock.elapsed() >= nextSample) {
@@ -308,6 +336,10 @@ int soak()
         if (count != before) say(u"handles: %1 %2 -> %3"_s.arg(type).arg(before).arg(count));
     }
     QStringList problems;
+    // What was soaked has to have run: notes that never reach an instrument
+    // prove nothing (a soak once played on MIDI channel 0, which is none).
+    if (!instrument.isEmpty() && !heard) problems << u"no note was heard: the chords never reached the instrument"_s;
+    if (!followed) problems << u"the chart never followed the chords played"_s;
     if (samples.size() < 6) problems << u"too short to judge (at least a minute)"_s;
     else {
         // After the warm-up (the first fifth: plugins load, caches fill), the

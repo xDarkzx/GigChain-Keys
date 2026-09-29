@@ -108,7 +108,8 @@ public:
     [[nodiscard]] virtual bool masterMuted() const = 0;
 
     // Plays a note as if it came from the keyboard (on-screen keyboard,
-    // auditioning). velocity 0 = note off. Out-of-range values are ignored.
+    // auditioning). velocity 0 = note off. Out-of-range values are ignored
+    // (logged: channels are 1-16).
     virtual void injectNote(int midiChannel, int note, int velocity) = 0;
 
     // Main thread, regularly (the UI polls ~30 Hz): housekeeping, logging of
