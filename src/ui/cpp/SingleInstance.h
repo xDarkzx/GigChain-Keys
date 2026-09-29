@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gigchain/core/Error.h"
+#include "gigchain/platform/InstanceLock.h"
 
 #include <QLocalServer>
 #include <QObject>
@@ -12,9 +13,10 @@ namespace gigchain::ui {
 // runs) hands its setlist to the running app and ends: two apps would fight
 // over the audio interface and the keyboard.
 //
-// The first start owns a Windows mutex named `name` (the installer looks for
-// it to ask for the app to be closed) and listens on a pipe of that name and
-// the Windows user's; later starts write their setlist's path to that pipe.
+// The first start holds the lock named `name` (platform::InstanceLock: on
+// Windows a mutex the installer looks for) and listens on this user's local
+// socket of that name (platform::instanceSocketName); later starts write
+// their setlist's path to it.
 class SingleInstance : public QObject
 {
     Q_OBJECT
@@ -49,7 +51,7 @@ private:
 
     QString m_name;
     QString m_pipe;
-    void* m_mutex = nullptr; // HANDLE, owned while this is the first start
+    platform::InstanceLock m_lock; // held while this is the first start
     QLocalServer m_server;
 };
 

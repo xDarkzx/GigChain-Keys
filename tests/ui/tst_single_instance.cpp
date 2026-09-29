@@ -1,16 +1,26 @@
 // One app at a time: a second start hands its setlist to the running app.
 #include "SingleInstance.h"
 
+#include "gigchain/platform/InstanceLock.h"
+
+#include <QFileInfo>
+#include <QProcess>
 #include <QSignalSpy>
+#include <QStandardPaths>
+#include <QThread>
 #include <QUuid>
 #include <QtTest>
 
 #include <array>
+#include <chrono>
+#include <cstdio>
 #include <future>
 
+#ifdef Q_OS_WIN
 #include <windows.h>
 #include <aclapi.h>
 #include <sddl.h>
+#endif
 
 using namespace gigchain::ui;
 using namespace Qt::StringLiterals;
@@ -79,6 +89,43 @@ private slots:
         QCOMPARE(opened.at(0).at(0).toString(), path);
     }
 
+    // The app crashed (or was killed) while it was the first: its lock is
+    // left behind, and the next start must still become the first.
+    void aLockLeftByACrashDoesNotBlock()
+    {
+        const QString name = uniqueName();
+        QProcess crashed;
+        crashed.setProgram(QCoreApplication::applicationFilePath());
+        crashed.setArguments({u"--hold-lock"_s, name});
+        crashed.start();
+        QVERIFY(crashed.waitForReadyRead(20'000));
+        QCOMPARE(crashed.readAllStandardOutput().trimmed(), QByteArray("held"));
+        {
+            SingleInstance meanwhile(name);
+            QVERIFY(!meanwhile.first()); // it is running: not first
+        }
+        crashed.kill();
+        QVERIFY(crashed.waitForFinished(20'000));
+        SingleInstance next(name);
+        QVERIFY(next.first());
+    }
+
+    // Each user of the computer has an app of their own: the socket a later
+    // start hands its setlist to is this user's.
+    void theSocketIsPerUser()
+    {
+        const QString socket = gigchain::platform::instanceSocketName(u"GigChain-test"_s);
+#ifdef Q_OS_WIN
+        QCOMPARE(socket, u"GigChain-test-"_s + qEnvironmentVariable("USERNAME"));
+#else
+        const QString runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+        QVERIFY(!runtime.isEmpty());
+        QCOMPARE(socket, runtime + u"/GigChain-test.sock"_s);
+        QVERIFY(!(QFileInfo(runtime).permissions() & (QFile::ReadOther | QFile::WriteOther | QFile::ReadGroup | QFile::WriteGroup)));
+#endif
+    }
+
+#ifdef Q_OS_WIN
     // Only this Windows user reaches the running app's pipe: no "Everyone",
     // no anonymous, no other user of the computer.
     void onlyThisUserReachesThePipe()
@@ -121,6 +168,7 @@ private slots:
         LocalFree(descriptor);
         QVERIFY2(others.isEmpty(), qPrintable(u"the pipe also lets in: "_s + others.join(u", "_s)));
     }
+#endif
 
     // The running app not listening (it could not): said, not hidden.
     void aRunningAppThatDoesNotListenIsReported()
@@ -133,5 +181,21 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(TestSingleInstance)
+int main(int argc, char** argv)
+{
+    QCoreApplication app(argc, argv);
+    const QStringList arguments = QCoreApplication::arguments();
+    // A stand-in for a running app: takes the lock, says so, waits to be killed.
+    if (arguments.size() == 3 && arguments.at(1) == u"--hold-lock"_s) {
+        SingleInstance running(arguments.at(2));
+        if (!running.first()) return 1;
+        std::fputs("held\n", stdout);
+        std::fflush(stdout);
+        QThread::sleep(std::chrono::seconds(60));
+        return 0;
+    }
+    TestSingleInstance test;
+    return QTest::qExec(&test, argc, argv);
+}
+
 #include "tst_single_instance.moc"
