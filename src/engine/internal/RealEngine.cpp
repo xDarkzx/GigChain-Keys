@@ -6,6 +6,7 @@
 #include "gigchain/core/Checks.h"
 
 #include "gigchain/core/Limits.h"
+#include "gigchain/platform/PluginFolders.h"
 
 #include <QElapsedTimer>
 #include <QDir>
@@ -97,6 +98,24 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_pluginFolder = options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder;
     engine->m_plugins = PluginCatalog::scan(engine->m_pluginFolder, options.pluginCacheFile, nullptr, scanProgress,
                                             &engine->m_guard, options.pluginScanner);
+    // The system's other standard folders (Linux has several; Windows one),
+    // each with a cache of its own. A plugin found twice is taken once.
+    if (options.pluginFolder.isEmpty()) {
+        const QStringList standard = platform::standardVst3Folders();
+        for (qsizetype i = 1; i < standard.size(); ++i) {
+            if (!QFileInfo(standard.at(i)).isDir()) continue;
+            engine->m_otherPluginFolders << standard.at(i);
+            const QString cache =
+                options.pluginCacheFile.isEmpty() ? QString() : options.pluginCacheFile + u".%1"_s.arg(i + 1);
+            for (PluginInfo& plugin : PluginCatalog::scan(standard.at(i), cache, nullptr, scanProgress, &engine->m_guard,
+                                                          options.pluginScanner)) {
+                const bool found = std::ranges::any_of(engine->m_plugins, [&plugin](const PluginInfo& p) {
+                    return p.name == plugin.name && p.vendor == plugin.vendor;
+                });
+                if (!found) engine->m_plugins.push_back(std::move(plugin));
+            }
+        }
+    }
     // The app's own plugins, unless the same one is installed already.
     if (!options.bundledPluginFolder.isEmpty() && QFileInfo(options.bundledPluginFolder).isDir()) {
         engine->m_bundledPluginFolder = options.bundledPluginFolder;
@@ -264,10 +283,11 @@ bool RealEngine::isInstalledPlugin(const QString& pluginId) const
     // Where the file really is (empty: it is not there).
     const QString file = QFileInfo(pluginId).canonicalFilePath();
     if (file.isEmpty()) return false;
-    return std::ranges::any_of(std::array{m_pluginFolder, m_bundledPluginFolder}, [&file](const QString& folder) {
+    const QStringList folders = QStringList{m_pluginFolder, m_bundledPluginFolder} + m_otherPluginFolders;
+    return std::ranges::any_of(folders, [&file](const QString& folder) {
         const QString inside = folder.isEmpty() ? QString() : QFileInfo(folder).canonicalFilePath();
-        // Windows paths: the same whatever the case.
-        return !inside.isEmpty() && file.startsWith(inside + u'/', Qt::CaseInsensitive);
+        // Paths compared as this system does (on Windows the same whatever the case).
+        return !inside.isEmpty() && file.startsWith(inside + u'/', platform::fileNameCase());
     });
 }
 

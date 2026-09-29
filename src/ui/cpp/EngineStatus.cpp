@@ -4,15 +4,13 @@
 #include "FreezeWatchdog.h"
 
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/platform/MemoryUse.h"
 
 #include <QLoggingCategory>
 
 #include <algorithm>
 #include <cmath>
 #include <utility>
-
-#include <windows.h>
-#include <psapi.h>
 
 Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
@@ -257,17 +255,16 @@ void EngineStatus::pollMappingLearn()
 
 double EngineStatus::readMemoryMb()
 {
-    PROCESS_MEMORY_COUNTERS counters{};
-    counters.cb = sizeof(counters);
-    if (GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)) == 0) {
+    const auto bytes = platform::residentBytes();
+    if (!bytes) {
         if (!m_memoryErrorLogged) { // polled 30 times a second: say it once
             m_memoryErrorLogged = true;
-            qCWarning(lcUi) << "Could not read memory use: GetProcessMemoryInfo failed, error" << GetLastError();
+            qCWarning(lcUi).noquote() << "Could not read memory use:" << bytes.error().message;
         }
         return 0.0;
     }
     constexpr double kBytesPerMb = 1024.0 * 1024.0;
-    return std::round(static_cast<double>(counters.WorkingSetSize) / kBytesPerMb); // whole MB: no flicker
+    return std::round(static_cast<double>(*bytes) / kBytesPerMb); // whole MB: no flicker
 }
 
 void EngineStatus::poll()
