@@ -8,7 +8,8 @@ target_link_libraries(gigchain_platform PUBLIC gigchain::core Qt6::Core Qt6::Gui
 if(WIN32)
     target_compile_definitions(gigchain_platform PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
     # MemoryUse_win: GetProcessMemoryInfo; Timing_win: timeBeginPeriod.
-    target_link_libraries(gigchain_platform PRIVATE psapi winmm)
+    # CrashHandler_win: MiniDumpWriteDump.
+    target_link_libraries(gigchain_platform PRIVATE psapi winmm dbghelp)
 endif()
-gigchain_platform_sources(gigchain_platform PluginFolders MemoryUse Process Timing Windows)
+gigchain_platform_sources(gigchain_platform PluginFolders MemoryUse Process Timing Windows CrashHandler)
 gigchain_target_defaults(gigchain_platform)

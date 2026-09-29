@@ -120,7 +120,6 @@ qt_add_qml_module(gigchain_ui
 target_include_directories(gigchain_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 target_link_libraries(gigchain_ui PUBLIC
     gigchain::core gigchain::engine Qt6::Core Qt6::Gui Qt6::Network Qt6::Qml Qt6::Quick Qt6::QuickControls2)
-target_link_libraries(gigchain_ui PRIVATE dbghelp) # crash dumps (MiniDumpWriteDump)
 gigchain_target_defaults(gigchain_ui)
 
 # Qt's generated QML-to-C++ files (qmlcachegen) trip MSVC's code-generation
