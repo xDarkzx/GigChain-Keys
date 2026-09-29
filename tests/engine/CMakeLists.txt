@@ -8,6 +8,8 @@ gigchain_add_test(tst_song_transport SOURCES tst_song_transport.cpp LIBS gigchai
 target_include_directories(tst_song_transport PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_graph_exchange SOURCES tst_graph_exchange.cpp LIBS gigchain::engine)
 gigchain_add_test(tst_process_hardening SOURCES tst_process_hardening.cpp LIBS gigchain::engine)
+gigchain_add_test(tst_chord_follower SOURCES tst_chord_follower.cpp LIBS gigchain::engine)
+target_include_directories(tst_chord_follower PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 target_include_directories(tst_graph_exchange PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_vst3_node SOURCES tst_vst3_node.cpp LIBS gigchain::engine)
 target_include_directories(tst_vst3_node PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
