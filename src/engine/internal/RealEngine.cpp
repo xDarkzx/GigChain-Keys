@@ -686,7 +686,11 @@ void RealEngine::setMasterMute(bool mute)
 
 void RealEngine::injectNote(int midiChannel, int note, int velocity)
 {
-    if (midiChannel < 1 || midiChannel > 16 || note < 0 || note > 127 || velocity < 0 || velocity > 127) return;
+    if (midiChannel < 1 || midiChannel > 16 || note < 0 || note > 127 || velocity < 0 || velocity > 127) {
+        qCWarning(lcEngine) << "Note ignored: channel" << midiChannel << "(1-16), note" << note << "(0-127), velocity"
+                            << velocity << "(0-127)";
+        return;
+    }
     const auto status = static_cast<uint8_t>((velocity > 0 ? 0x90 : 0x80) | (midiChannel - 1));
     if (!m_injected.push(MidiEvent{.status = status,
                                    .data1 = static_cast<uint8_t>(note),
