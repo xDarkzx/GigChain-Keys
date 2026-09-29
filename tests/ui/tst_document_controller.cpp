@@ -1197,6 +1197,26 @@ private slots:
         QCOMPARE(m_engine->stops, stops);
     }
 
+    // A chart with more chords than can be followed (repeats played out):
+    // the player is told once, and the tempo leads.
+    void aChartTooLongToFollowIsSaid()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QString chart = u"{c: Verse x16}\n"_s;
+        for (int i = 0; i < 300; ++i) chart += u"[C]a [G]b "_s;
+        chart += u"x16\n"_s;
+        const int before = m_doc->notifications()->count();
+        QVERIFY(m_doc->setSongChart(0, chart));
+        QVERIFY(m_engine->follow.steps.empty());
+        QVERIFY(!m_doc->following());
+        QCOMPARE(m_doc->notifications()->count(), before + 1);
+        QVERIFY2(m_doc->notifications()->text(before).contains(u"too many chords"_s),
+                 qPrintable(m_doc->notifications()->text(before)));
+        // Edited again (still too long): not said again.
+        QVERIFY(m_doc->setSongChart(0, chart + u"more words\n"_s));
+        QCOMPARE(m_doc->notifications()->count(), before + 1);
+    }
+
     void anEditedChartKeepsItsPlace()
     {
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));

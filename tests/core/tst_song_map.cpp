@@ -93,6 +93,32 @@ private slots:
         QVERIFY(!buildSongMap(parseChordPro(u"[C]only one"_s)).followable());
         QVERIFY(!buildSongMap(parseChordPro(QString())).followable());
     }
+
+    // The longest chart a setlist may hold, its chords repeated as often as
+    // repeat marks allow: read in a moment (the app does not freeze), and
+    // too long to follow.
+    void theLongestChartIsReadQuickly_data()
+    {
+        QTest::addColumn<QString>("chord");
+        QTest::newRow("one chord, merged") << u"[C]"_s;
+        QTest::newRow("two chords, alternating") << u"[C][D]"_s;
+    }
+    void theLongestChartIsReadQuickly()
+    {
+        QFETCH(QString, chord);
+        QString chart = u"{c: Verse x16}\n"_s;
+        while (chart.size() < 99'000) chart += chord;
+        chart += u" x16\n"_s;
+        const Chart parsed = parseChordPro(chart);
+        QElapsedTimer timer;
+        timer.start();
+        const SongMap map = buildSongMap(parsed);
+        const qint64 ms = timer.elapsed();
+        qInfo() << "song map of" << chart.size() << "characters:" << ms << "ms," << map.steps.size() << "steps";
+        QVERIFY2(ms < 500, qPrintable(u"%1 ms"_s.arg(ms)));
+        QVERIFY(map.tooLong);
+        QVERIFY(!map.followable());
+    }
 };
 
 QTEST_GUILESS_MAIN(TestSongMap)

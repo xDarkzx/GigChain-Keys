@@ -28,9 +28,12 @@ struct SongMap
 {
     std::vector<SongStep> steps;
     std::vector<int> sectionStarts; // per chartSections() section: its first step; -1 = it has none
+    // More than limits::kMaxFollowSteps chords as played (repeats played
+    // out): not read further, nothing to follow.
+    bool tooLong = false;
 
     // Enough chords to follow.
-    [[nodiscard]] bool followable() const { return steps.size() >= 2; }
+    [[nodiscard]] bool followable() const { return !tooLong && steps.size() >= 2; }
 };
 
 [[nodiscard]] SongMap buildSongMap(const Chart& chart);

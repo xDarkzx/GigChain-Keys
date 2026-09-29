@@ -1146,6 +1146,16 @@ void DocumentController::applySectionsToEngine()
         place = m_songMap.steps.at(static_cast<std::size_t>(playing)).places.front();
     }
     m_songMap = song != nullptr && song->followChords ? core::buildSongMap(core::parseChordPro(song->chart)) : core::SongMap{};
+    // Too many chords to follow: said once (not on every edit), the tempo leads.
+    if (m_songMap.tooLong && (newSong || !m_followTooLong)) {
+        const QString message = tr("\"%1\" has too many chords to follow (more than %2 with its repeats played out): "
+                                   "its sections follow the tempo")
+                                    .arg(song->name)
+                                    .arg(core::limits::kMaxFollowSteps);
+        qCWarning(lcUi).noquote() << message;
+        reportMessage(message, Notifications::Warning);
+    }
+    m_followTooLong = m_songMap.tooLong;
     if (!m_songMap.followable()) m_songMap = {};
     engine::ChordFollowMap chords;
     chords.sectionStarts = m_songMap.sectionStarts;
