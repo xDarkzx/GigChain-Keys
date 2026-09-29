@@ -1,4 +1,5 @@
 #include "AudioDevice.h"
+#include "AudioApis.h"
 
 #include "EngineLog.h"
 
@@ -16,11 +17,6 @@ using namespace Qt::StringLiterals;
 namespace gigchain::engine {
 namespace {
 
-RtAudio::Api toRtApi(AudioApi api)
-{
-    return api == AudioApi::Asio ? RtAudio::WINDOWS_ASIO : RtAudio::WINDOWS_WASAPI;
-}
-
 // An RtAudio instance for listing devices; its complaints go straight to the log.
 std::unique_ptr<RtAudio> probe(AudioApi api)
 {
@@ -35,11 +31,6 @@ std::unique_ptr<RtAudio> probe(AudioApi api)
 
 } // namespace
 
-QString apiName(AudioApi api)
-{
-    return api == AudioApi::Asio ? u"ASIO"_s : u"WASAPI"_s;
-}
-
 AudioDevice::AudioDevice() = default;
 
 AudioDevice::~AudioDevice()
@@ -50,7 +41,7 @@ AudioDevice::~AudioDevice()
 std::vector<AudioDeviceInfo> AudioDevice::listOutputs()
 {
     std::vector<AudioDeviceInfo> outputs;
-    for (const AudioApi api : {AudioApi::Wasapi, AudioApi::Asio}) {
+    for (const AudioApi api : systemAudioDrivers()) {
         const auto rt = probe(api);
         for (const unsigned int id : rt->getDeviceIds()) {
             const RtAudio::DeviceInfo info = rt->getDeviceInfo(id);
@@ -60,7 +51,7 @@ std::vector<AudioDeviceInfo> AudioDevice::listOutputs()
             device.name = QString::fromStdString(info.name);
             device.outputChannels = static_cast<int>(info.outputChannels);
             device.preferredSampleRate = info.preferredSampleRate;
-            device.isDefault = api == AudioApi::Wasapi && info.isDefaultOutput;
+            device.isDefault = api == AudioApi::System && info.isDefaultOutput;
             device.sampleRates.assign(info.sampleRates.begin(), info.sampleRates.end());
             if (device.preferredSampleRate != 0 &&
                 std::ranges::find(device.sampleRates, device.preferredSampleRate) == device.sampleRates.end()) {
@@ -76,7 +67,7 @@ std::vector<AudioDeviceInfo> AudioDevice::listOutputs()
 std::vector<AudioDeviceInfo> AudioDevice::listInputs()
 {
     std::vector<AudioDeviceInfo> inputs;
-    for (const AudioApi api : {AudioApi::Wasapi, AudioApi::Asio}) {
+    for (const AudioApi api : systemAudioDrivers()) {
         const auto rt = probe(api);
         for (const unsigned int id : rt->getDeviceIds()) {
             const RtAudio::DeviceInfo info = rt->getDeviceInfo(id);
@@ -86,7 +77,7 @@ std::vector<AudioDeviceInfo> AudioDevice::listInputs()
                                              .outputChannels = static_cast<int>(info.outputChannels),
                                              .inputChannels = static_cast<int>(info.inputChannels),
                                              .preferredSampleRate = info.preferredSampleRate,
-                                             .isDefault = api == AudioApi::Wasapi && info.isDefaultInput,
+                                             .isDefault = api == AudioApi::System && info.isDefaultInput,
                                              .sampleRates = {info.sampleRates.begin(), info.sampleRates.end()}});
         }
     }
@@ -122,7 +113,7 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     m_requestedRate = askedRate;
     m_requestedInput = input;
     m_inputChannels = 0;
-    const AudioApi driver = choice ? choice->api : AudioApi::Wasapi;
+    const AudioApi driver = choice ? choice->api : AudioApi::System;
     auto rt = std::make_unique<RtAudio>(
         toRtApi(driver), [this](RtAudioErrorType type, const std::string& text) { onError(type, text); });
 
@@ -414,7 +405,7 @@ bool AudioDevice::outputPresent(const DeviceChoice& choice)
 QString AudioDevice::defaultOutputName()
 {
     try {
-        RtAudio probe(RtAudio::WINDOWS_WASAPI, [](RtAudioErrorType, const std::string&) {});
+        RtAudio probe(toRtApi(AudioApi::System), [](RtAudioErrorType, const std::string&) {});
         const unsigned int id = probe.getDefaultOutputDevice();
         return id != 0 ? QString::fromStdString(probe.getDeviceInfo(id).name) : QString();
     } catch (const std::exception& e) {

@@ -33,10 +33,13 @@ class SettingsController : public QObject
     QML_ELEMENT
     QML_UNCREATABLE("Created by the application")
 
-    Q_PROPERTY(QString driver READ driver WRITE setDriver NOTIFY changed)         // "system" or "asio"
+    Q_PROPERTY(QString driver READ driver WRITE setDriver NOTIFY changed)         // "system", "asio", "jack", "alsa"
     Q_PROPERTY(QString device READ device WRITE setDevice NOTIFY changed)
     Q_PROPERTY(QStringList devices READ devices NOTIFY changed)                  // for the chosen driver
     Q_PROPERTY(bool asioAvailable READ asioAvailable NOTIFY changed)
+    // The drivers to choose from: [{id, name}], this system's own audio first,
+    // then those the engine found a device on (ASIO; JACK, ALSA).
+    Q_PROPERTY(QVariantList drivers READ drivers NOTIFY changed)
     Q_PROPERTY(int sampleRate READ sampleRate WRITE setSampleRate NOTIFY changed)
     Q_PROPERTY(QVariantList sampleRates READ sampleRates NOTIFY changed)          // of the chosen device
     Q_PROPERTY(int bufferFrames READ bufferFrames WRITE setBufferFrames NOTIFY changed)
@@ -80,6 +83,7 @@ public:
     void setDevice(const QString& name);
     [[nodiscard]] QStringList devices() const;
     [[nodiscard]] bool asioAvailable() const;
+    [[nodiscard]] QVariantList drivers() const;
     [[nodiscard]] int sampleRate() const { return static_cast<int>(m_pending.sampleRate); }
     void setSampleRate(int rate);
     [[nodiscard]] QVariantList sampleRates() const;

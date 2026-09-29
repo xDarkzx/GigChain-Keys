@@ -119,10 +119,12 @@ StageDialog {
                             label: qsTr("Driver")
                             StageComboBox {
                                 objectName: "driverBox"
-                                model: dialog.settings.asioAvailable ? [qsTr("Windows Audio (WASAPI)"), qsTr("ASIO")]
-                                                                     : [qsTr("Windows Audio (WASAPI)")]
-                                currentIndex: dialog.settings.driver === "asio" ? 1 : 0
-                                onActivated: (i) => dialog.settings.driver = i === 1 ? "asio" : "system"
+                                // This system's drivers ([{id, name}]): WASAPI and ASIO on
+                                // Windows; PulseAudio, JACK and ALSA on Linux.
+                                model: dialog.settings.drivers
+                                textRole: "name"
+                                currentIndex: dialog.settings.drivers.findIndex(d => d.id === dialog.settings.driver)
+                                onActivated: (i) => dialog.settings.driver = dialog.settings.drivers[i].id
                             }
                         }
                         SettingsRow {

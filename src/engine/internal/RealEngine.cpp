@@ -58,8 +58,11 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
         opened = engine->openAudio(systemAudio);
         // The saved device (unplugged when the app started) is taken back
         // when it is plugged in.
-        if (opened && !options.audio.device.isEmpty()) {
-            const AudioApi api = options.audio.driver == AudioDriver::Asio ? AudioApi::Asio : AudioApi::Wasapi;
+        // (Not a driver this system lacks: nothing would ever plug in there.)
+        const auto drivers = systemAudioDrivers();
+        const bool here = std::ranges::find(drivers, options.audio.driver) != drivers.end();
+        if (opened && !options.audio.device.isEmpty() && here) {
+            const AudioApi api = options.audio.driver;
             std::optional<DeviceChoice> input;
             if (!options.audio.inputDevice.isEmpty()) input = DeviceChoice{.api = api, .name = options.audio.inputDevice};
             engine->m_audio.standIn(DeviceChoice{.api = api, .name = options.audio.device}, options.audio.sampleRate, input);
@@ -345,7 +348,13 @@ std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& s
 
 core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
 {
-    const AudioApi api = setup.driver == AudioDriver::Asio ? AudioApi::Asio : AudioApi::Wasapi;
+    const AudioApi api = setup.driver;
+    // A setup from another system (ASIO on Linux, JACK on Windows).
+    if (const auto here = systemAudioDrivers(); std::ranges::find(here, api) == here.end()) {
+        const QString problem = u"%1 is not available on this system"_s.arg(apiName(api));
+        qCWarning(lcEngine).noquote() << problem;
+        return core::fail(core::ErrorCode::DeviceUnavailable, problem);
+    }
     std::optional<DeviceChoice> choice;
     if (!setup.device.isEmpty()) {
         choice = DeviceChoice{.api = api, .name = setup.device};
@@ -363,7 +372,7 @@ std::vector<AudioInputDevice> RealEngine::audioInputDevices() const
 {
     std::vector<AudioInputDevice> devices;
     std::ranges::transform(AudioDevice::listInputs(), std::back_inserter(devices), [](const AudioDeviceInfo& info) {
-        return AudioInputDevice{.driver = info.api == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
+        return AudioInputDevice{.driver = info.api,
                                 .name = info.name,
                                 .channels = std::min(info.inputChannels, kMaxAudioInputs)};
     });
@@ -379,7 +388,7 @@ std::vector<AudioOutput> RealEngine::audioOutputs() const
         std::vector<unsigned int> rates;
         std::ranges::copy_if(info.sampleRates, std::back_inserter(rates),
                              [](unsigned int rate) { return std::ranges::find(kLiveRates, rate) != kLiveRates.end(); });
-        outputs.push_back(AudioOutput{.driver = info.api == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
+        outputs.push_back(AudioOutput{.driver = info.api,
                                       .name = info.name,
                                       .sampleRates = std::move(rates),
                                       .preferredSampleRate = info.preferredSampleRate,
@@ -394,13 +403,13 @@ AudioSetup RealEngine::audioSetup() const
     // (Settings must not quietly replace the interface with the stand-in).
     if (m_audio.standingIn()) {
         const std::optional<DeviceChoice>& wanted = m_audio.wanted();
-        return AudioSetup{.driver = wanted && wanted->api == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
+        return AudioSetup{.driver = wanted ? wanted->api : AudioDriver::System,
                           .device = wanted ? wanted->name : QString(),
                           .sampleRate = m_audio.wantedRate(),
                           .bufferFrames = m_audio.requestedBufferFrames(),
                           .inputDevice = m_audio.wantedInput() ? m_audio.wantedInput()->name : QString()};
     }
-    return AudioSetup{.driver = m_audio.api() == AudioApi::Asio ? AudioDriver::Asio : AudioDriver::System,
+    return AudioSetup{.driver = m_audio.api(),
                       .device = m_audio.deviceName(),
                       .sampleRate = static_cast<unsigned int>(m_audio.sampleRate()),
                       .bufferFrames = static_cast<unsigned int>(m_audio.maxBlock()),

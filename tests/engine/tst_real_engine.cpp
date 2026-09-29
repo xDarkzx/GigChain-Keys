@@ -792,6 +792,31 @@ private slots:
         QCOMPARE(engine.songPosition().section, -1);
     }
 
+    // A setup saved on another system (ASIO on Linux, JACK on Windows): the
+    // app starts on system audio and says why, once; Settings shows system
+    // audio (not a driver this system cannot offer).
+    void aDriverThisSystemLacksFallsBackToSystem()
+    {
+        RealEngineOptions options;
+        options.midiInputs = false;
+#ifdef Q_OS_WIN
+        options.audio.driver = AudioDriver::Jack;
+        const QString foreign = u"JACK"_s;
+#else
+        options.audio.driver = AudioDriver::Asio;
+        const QString foreign = u"ASIO"_s;
+#endif
+        options.audio.device = u"Studio Interface"_s;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(foreign + u" is not available on this system"_s));
+        auto created = createRealEngine(options);
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        QVERIFY(engine.audioSetup().driver == AudioDriver::System);
+        const auto notices = engine.poll();
+        QCOMPARE(std::ranges::count_if(notices, [&foreign](const Notice& n) { return n.text.contains(foreign); }), 1);
+    }
+
     // A chord map that does not hang together is refused, saying why, and
     // the song before it is no longer followed (not left running).
     void aBrokenChordMapIsRefused()

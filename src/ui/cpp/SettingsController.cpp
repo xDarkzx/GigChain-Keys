@@ -3,6 +3,7 @@
 #include "DocumentController.h"
 
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/platform/Audio.h"
 
 #include <QFileInfo>
 #include <QLoggingCategory>
@@ -59,9 +60,32 @@ double savedCeiling(const QSettings& settings)
 
 constexpr unsigned int kDefaultBuffer = 256;
 
+// The saved names of the drivers ("system" first: an unknown name is system audio).
+constexpr std::array kDriverNames{std::pair{engine::AudioDriver::System, "system"}, std::pair{engine::AudioDriver::Asio, "asio"},
+                                  std::pair{engine::AudioDriver::Jack, "jack"}, std::pair{engine::AudioDriver::Alsa, "alsa"}};
+
 QString driverName(engine::AudioDriver driver)
 {
-    return driver == engine::AudioDriver::Asio ? u"asio"_s : u"system"_s;
+    const auto found = std::ranges::find(kDriverNames, driver, &std::pair<engine::AudioDriver, const char*>::first);
+    return QString::fromLatin1(found != kDriverNames.end() ? found->second : "system");
+}
+
+engine::AudioDriver driverNamed(const QString& name)
+{
+    const auto found = std::ranges::find_if(kDriverNames, [&name](const auto& entry) { return name == QLatin1StringView(entry.second); });
+    return found != kDriverNames.end() ? found->first : engine::AudioDriver::System;
+}
+
+// How the driver box names each one.
+QString driverTitle(engine::AudioDriver driver)
+{
+    switch (driver) {
+    case engine::AudioDriver::System: return platform::systemAudioName();
+    case engine::AudioDriver::Asio: return u"ASIO"_s;
+    case engine::AudioDriver::Jack: return u"JACK"_s;
+    case engine::AudioDriver::Alsa: return u"ALSA"_s;
+    }
+    return platform::systemAudioName();
 }
 
 } // namespace
@@ -79,8 +103,7 @@ SettingsController::SettingsController(engine::IEngine& engine, DocumentControll
 engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
 {
     engine::RealEngineOptions options;
-    options.audio.driver =
-        settings.value(kDriverKey).toString() == u"asio"_s ? engine::AudioDriver::Asio : engine::AudioDriver::System;
+    options.audio.driver = driverNamed(settings.value(kDriverKey).toString());
     options.audio.device = settings.value(kDeviceKey).toString();
     options.audio.sampleRate = settings.value(kRateKey, 0).toUInt();
     options.audio.bufferFrames = settings.value(kBufferKey, kDefaultBuffer).toUInt();
@@ -269,7 +292,7 @@ QString SettingsController::driver() const
 
 void SettingsController::setDriver(const QString& name)
 {
-    const auto wanted = name == u"asio"_s ? engine::AudioDriver::Asio : engine::AudioDriver::System;
+    const auto wanted = driverNamed(name);
     if (wanted == m_pending.driver) return;
     m_pending.driver = wanted;
     if (!inputDevices().contains(m_pending.inputDevice)) m_pending.inputDevice.clear(); // inputs share the driver
@@ -304,6 +327,18 @@ QStringList SettingsController::devices() const
 bool SettingsController::asioAvailable() const
 {
     return std::ranges::any_of(m_outputs, [](const engine::AudioOutput& o) { return o.driver == engine::AudioDriver::Asio; });
+}
+
+QVariantList SettingsController::drivers() const
+{
+    // System audio always; the others when the engine found a device on them.
+    QVariantList list;
+    for (const auto& [kind, id] : kDriverNames) {
+        const bool found = std::ranges::any_of(m_outputs, [kind](const engine::AudioOutput& o) { return o.driver == kind; });
+        if (kind != engine::AudioDriver::System && !found) continue;
+        list << QVariantMap{{u"id"_s, QString::fromLatin1(id)}, {u"name"_s, driverTitle(kind)}};
+    }
+    return list;
 }
 
 const engine::AudioOutput* SettingsController::chosenOutput() const

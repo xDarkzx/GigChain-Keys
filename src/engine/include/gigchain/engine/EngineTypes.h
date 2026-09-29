@@ -44,10 +44,15 @@ enum class LoadStage
 // more when done (done == total).
 using LoadProgress = std::function<void(LoadStage stage, const QString& what, int done, int total)>;
 
+// Which of the system's audio systems drives the sound. Each system has its
+// own (systemAudioDrivers()): a setup naming one this system lacks (moved
+// from another computer) falls back to System, and the player is told.
 enum class AudioDriver
 {
-    System, // Windows audio (WASAPI): the default
-    Asio,   // lowest latency; needs the device's ASIO driver
+    System, // the system's own: Windows audio (WASAPI), PulseAudio on Linux; the default
+    Asio,   // Windows: lowest latency; needs the device's ASIO driver
+    Jack,   // Linux: the pro-audio server (low latency, routing between apps)
+    Alsa,   // Linux: straight to the hardware
 };
 
 // An output the Settings page can offer.

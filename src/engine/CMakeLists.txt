@@ -30,6 +30,7 @@ add_library(gigchain_engine STATIC
     internal/EngineLog.cpp
     internal/AudioDevice.h
     internal/AudioDevice.cpp
+    internal/AudioApis.h
     internal/MidiInput.h
     internal/MidiInput.cpp
     internal/MidiSetup.cpp
@@ -57,4 +58,6 @@ target_link_libraries(gigchain_engine PUBLIC gigchain::core gigchain::platform
 if(WIN32)
     target_compile_definitions(gigchain_engine PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
+# What differs by system inside the engine (next to the code that needs it).
+gigchain_platform_sources(gigchain_engine internal/AudioApis)
 gigchain_target_defaults(gigchain_engine)

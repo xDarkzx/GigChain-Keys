@@ -321,6 +321,32 @@ private slots:
         QCOMPARE(settings.midiInputs()[1].toMap().value(u"enabled"_s).toBool(), false);
     }
 
+    // The driver box offers what the engine found, named as this system
+    // names it (Windows: WASAPI; Linux: PulseAudio), system audio first.
+    void theDriversAreThisSystems()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        const QVariantList drivers = settings.drivers();
+        QCOMPARE(drivers.size(), 2); // the spy has system outputs and an ASIO one
+        QCOMPARE(drivers.at(0).toMap().value(u"id"_s).toString(), u"system"_s);
+#ifdef Q_OS_WIN
+        QCOMPARE(drivers.at(0).toMap().value(u"name"_s).toString(), u"Windows Audio (WASAPI)"_s);
+#else
+        QCOMPARE(drivers.at(0).toMap().value(u"name"_s).toString(), u"PulseAudio"_s);
+#endif
+        QCOMPARE(drivers.at(1).toMap().value(u"id"_s).toString(), u"asio"_s);
+        // Every driver's name reads back as itself.
+        for (const QString& id : {u"system"_s, u"asio"_s, u"jack"_s, u"alsa"_s}) {
+            m_settings->setValue(u"audio/driver"_s, id);
+            QCOMPARE(SettingsController::engineOptions(*m_settings).audio.driver,
+                     id == u"asio"_s   ? engine::AudioDriver::Asio
+                     : id == u"jack"_s ? engine::AudioDriver::Jack
+                     : id == u"alsa"_s ? engine::AudioDriver::Alsa
+                                       : engine::AudioDriver::System);
+        }
+    }
+
     void previousSettingsAreCarriedOver()
     {
         QSettings previous(m_dir->filePath(u"previous.ini"_s), QSettings::IniFormat);

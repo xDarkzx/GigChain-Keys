@@ -3,6 +3,7 @@
 #include "INode.h"
 
 #include "gigchain/core/Error.h"
+#include "gigchain/engine/EngineTypes.h"
 #include "gigchain/engine/Notice.h"
 
 #include <QString>
@@ -21,15 +22,15 @@ class TestAudioDevice;
 
 namespace gigchain::engine {
 
-enum class AudioApi
-{
-    Wasapi, // Windows system audio: the default
-    Asio,   // opt-in, lowest latency
-};
+// The audio system a device belongs to: the drivers the player chooses from.
+using AudioApi = AudioDriver;
+
+// This system's drivers, System first (AudioApis_<system>.cpp).
+[[nodiscard]] std::vector<AudioDriver> systemAudioDrivers();
 
 struct AudioDeviceInfo
 {
-    AudioApi api = AudioApi::Wasapi;
+    AudioApi api = AudioApi::System;
     QString name;
     int outputChannels = 0;
     int inputChannels = 0;
@@ -40,7 +41,7 @@ struct AudioDeviceInfo
 
 struct DeviceChoice
 {
-    AudioApi api = AudioApi::Wasapi;
+    AudioApi api = AudioApi::System;
     QString name;
 };
 
