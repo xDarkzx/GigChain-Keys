@@ -86,10 +86,14 @@ Extra notes (a melody, an added ninth) never stop it.
 
 **Rule 3 (a jump), strict:** a chord counts for a jump only when it is
 unmistakable: its root and third are held (for a sus chord its sus note;
-for a `5` chord its fifth) and no note contradicts the third (no major
-third for a minor chord and the other way round). Two such chords in a
-row, matching a section's first two chords, jump there. A chord matching
-the next step is always taken as rule 2 first.
+for a `5` chord its fifth), no note contradicts the third (no major third
+for a minor chord and the other way round), and at least three of its
+notes are held (both, for a two-note chord). (G-B-D holds B and D, Bm's
+root and third, but not F#: it is not Bm.) Two such chords in a row,
+matching a section's first two chords, jump there. The first one is
+remembered until a key is played that belongs to neither of those two
+chords: the player went somewhere else. A chord matching the next step is
+always taken as rule 2 first.
 
 A chord is checked each time a key goes down (and when the pedal goes
 down). Nothing is checked while nothing is new, so a held chord never
@@ -161,8 +165,9 @@ In "My chords" mode:
   it.
 - No MIDI keyboard: following waits; clicking a section or the pedal still
   moves it.
-- A chord the parser does not know in the chart: not a step, unlit, and
-  the chart's editor marks it ("not understood") so it can be fixed.
+- A chord the parser does not know in the chart: not a step, and the
+  chart shows it dimmed and struck through, so it can be found and fixed
+  in the editor.
 - Every failure is said and logged, never silent (as everywhere).
 
 ## 7. Testing
