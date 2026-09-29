@@ -100,6 +100,8 @@ public:
     [[nodiscard]] std::vector<const INode*> nodes() const;
     // The largest block the strip can render.
     [[nodiscard]] int maxBlock() const { return static_cast<int>(m_left.size()); }
+    // Events left out since the last call (its block was full).
+    uint64_t takeDroppedEvents() { return m_droppedEvents.exchange(0, std::memory_order_relaxed); }
     // True once a tail has gone quiet (set by the audio thread): it no longer
     // needs to run.
     [[nodiscard]] bool tailDone() const { return m_tailDone.load(std::memory_order_relaxed); }
@@ -133,6 +135,7 @@ private:
     // Keys this strip's instrument was sent and not yet let go of (audio
     // thread): a section handover never strikes them twice.
     std::bitset<128> m_sounding;
+    std::atomic<uint64_t> m_droppedEvents{0};
     std::atomic<float> m_gain{1.0F};
     std::atomic<float> m_pan{0.0F};
     std::atomic<bool> m_mute{false};
@@ -178,6 +181,9 @@ public:
     // Blocks refused (rendered as silence) because they exceeded maxBlock,
     // since the last call. The audio thread cannot log; the main thread polls.
     uint64_t takeOversizedBlocks() { return m_oversizedBlocks.exchange(0, std::memory_order_relaxed); }
+    // MIDI events left out because a strip's block was full (more than
+    // kMaxStripEventsPerBlock), over every strip and tail, since the last call.
+    uint64_t takeDroppedEvents();
     [[nodiscard]] double sampleRate() const { return m_sampleRate; }
     [[nodiscard]] int maxBlock() const { return m_maxBlock; }
 

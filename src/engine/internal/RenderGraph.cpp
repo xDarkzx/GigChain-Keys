@@ -8,6 +8,7 @@
 #include <cmath>
 #include <iterator>
 #include <numbers>
+#include <numeric>
 #include <span>
 
 namespace gigchain::engine {
@@ -56,7 +57,7 @@ ChannelStrip::ChannelStrip(StripSpec spec, int maxBlock)
       m_inputRight(spec.inputRight),
       m_left(static_cast<std::size_t>(maxBlock), 0.0F),
       m_right(static_cast<std::size_t>(maxBlock), 0.0F),
-      m_routed(static_cast<std::size_t>(kMaxEventsPerBlock))
+      m_routed(static_cast<std::size_t>(kMaxStripEventsPerBlock))
 {
     setVolumeDb(spec.volumeDb);
     setPan(spec.pan);
@@ -171,6 +172,7 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
         return inSection(offset < gate.switchAt ? gate.before : gate.after);
     };
     std::size_t routedCount = 0;
+    uint64_t dropped = 0; // no room left in the block (counted, never unseen)
     for (const MidiEvent& event : events) {
         const bool newNote = (event.status & 0xF0) == 0x90 && event.data2 > 0;
         if (newNote && !plays(event.sampleOffset)) continue;
@@ -191,8 +193,13 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
             }
         }
         if (mapped) continue;
-        if (routedCount == m_routed.size()) break;
-        if (const auto routed = routeEvent(event, m_route)) m_routed.at(routedCount++) = *routed; // room checked above
+        const auto routed = routeEvent(event, m_route);
+        if (!routed) continue;
+        if (routedCount == m_routed.size()) {
+            ++dropped;
+            continue;
+        }
+        m_routed.at(routedCount++) = *routed; // room checked above
     }
     // Chord follow entering a section: the chord's keys pressed a moment
     // before move over (held keys on to the strips coming in, the chord's
@@ -205,9 +212,12 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
         for (const MidiEvent& event : gate.handover) {
             const bool on = (event.status & 0xF0) == 0x90 && event.data2 > 0;
             if (on ? (!isIn || wasIn) : (!wasIn || isIn)) continue;
-            if (routedCount == m_routed.size()) break;
             const auto routed = routeEvent(event, m_route);
             if (!routed) continue;
+            if (routedCount == m_routed.size()) {
+                ++dropped;
+                continue;
+            }
             const auto end = first + static_cast<std::ptrdiff_t>(routedCount);
             // A note this strip still sounds (a key held through the other
             // section and back) is not struck twice: one note-off would not
@@ -227,6 +237,7 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
             std::rotate(std::upper_bound(first, end, *routed, earlier), end, end + 1);
         }
     }
+    if (dropped > 0) m_droppedEvents.fetch_add(dropped, std::memory_order_relaxed);
     produce(std::span<const MidiEvent>(m_routed.data(), routedCount), mix.frames, time, inputs);
 
     // Silenced strips still process so instruments and effect tails keep state.
@@ -241,8 +252,13 @@ void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBloc
     std::size_t routedCount = 0;
     for (const MidiEvent& event : events) {
         if (!isNoteOff(event) && !isSustain(event)) continue; // new notes belong to the new patch
-        if (routedCount == m_routed.size()) break;
-        if (const auto routed = routeEvent(event, m_route)) m_routed.at(routedCount++) = *routed; // room checked above
+        const auto routed = routeEvent(event, m_route);
+        if (!routed) continue;
+        if (routedCount == m_routed.size()) {
+            m_droppedEvents.fetch_add(1, std::memory_order_relaxed);
+            continue;
+        }
+        m_routed.at(routedCount++) = *routed; // room checked above
     }
     produce(std::span<const MidiEvent>(m_routed.data(), routedCount), mix.frames, time, {});
     const float gain = m_mute.load(std::memory_order_relaxed) ? 0.0F : m_gain.load(std::memory_order_relaxed);
@@ -306,6 +322,13 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
 ChannelStrip* RenderGraph::strip(std::size_t index)
 {
     return index < m_strips.size() ? m_strips.at(index).get() : nullptr;
+}
+
+uint64_t RenderGraph::takeDroppedEvents()
+{
+    const auto take = [](uint64_t sum, const std::shared_ptr<ChannelStrip>& one) { return sum + one->takeDroppedEvents(); };
+    const uint64_t live = std::accumulate(m_strips.begin(), m_strips.end(), uint64_t{0}, take);
+    return std::accumulate(m_tails.begin(), m_tails.end(), live, take);
 }
 
 ChannelStrip* RenderGraph::findStrip(const core::ChannelId& id)

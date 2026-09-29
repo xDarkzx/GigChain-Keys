@@ -495,6 +495,32 @@ private slots:
                  1);
     }
 
+    // A full block (a mod wheel swept) and a chord handed over on top: the
+    // handover still arrives (a lost note-off would be a stuck note). Past
+    // what a strip holds, the events left out are counted, never lost unseen.
+    void aFullBlockStillTakesTheHandover()
+    {
+        auto verse = std::make_shared<HeldNoteNode>(0.25F);
+        verse->received.reserve(1024);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(verse));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        graph.strip(0)->setSections(0b01);
+        std::vector<MidiEvent> full(static_cast<std::size_t>(kMaxEventsPerBlock));
+        for (std::size_t i = 0; i < full.size(); ++i) full.at(i) = cc(0xB0, 1, static_cast<uint8_t>(i % 128));
+        const std::array handover{cc(0x80, 48, 0)}; // the verse lets go of a key
+        Output out;
+        graph.render(full, out.block(), 1.0F, {}, {}, SectionGate{.before = 0, .after = 1, .handover = handover});
+        QVERIFY(std::ranges::any_of(verse->received, [](const MidiEvent& e) { return e.status == 0x80 && e.data1 == 48; }));
+        QCOMPARE(graph.takeDroppedEvents(), uint64_t{0});
+
+        // More than a strip ever takes in one block: counted.
+        full.resize(static_cast<std::size_t>(kMaxStripEventsPerBlock) + 3, cc(0xB0, 1, 0));
+        graph.render(full, out.block(), 1.0F);
+        QCOMPARE(graph.takeDroppedEvents(), uint64_t{3});
+        QCOMPARE(graph.takeDroppedEvents(), uint64_t{0}); // taken
+    }
+
     void withoutSectionsEveryStripPlays()
     {
         auto a = std::make_shared<HeldNoteNode>(0.25F);

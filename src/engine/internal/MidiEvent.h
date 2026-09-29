@@ -16,5 +16,8 @@ struct MidiEvent
 
 // Most events a single audio block will carry; extra events are dropped.
 inline constexpr int kMaxEventsPerBlock = 256;
+// Most events one instrument takes in a block: a full block, and a chord
+// handed over at a section switch on top (at most kMaxEventsPerBlock).
+inline constexpr int kMaxStripEventsPerBlock = 2 * kMaxEventsPerBlock;
 
 } // namespace gigchain::engine
