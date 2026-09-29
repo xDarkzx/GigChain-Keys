@@ -234,6 +234,16 @@ std::vector<ChartSection> chartSections(const Chart& chart)
     return sections;
 }
 
+int lineRepeats(const ChartLine& line)
+{
+    return repeatCount(kRepeatMark().match(line.lyrics().trimmed()));
+}
+
+int sectionRepeats(const ChartSection& section)
+{
+    return repeatCount(kRepeatInLabel().match(section.label));
+}
+
 Chart parseChordPro(const QString& text)
 {
     Chart chart;
