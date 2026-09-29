@@ -244,10 +244,12 @@ ToolBar {
         // with it), and where it is.
         Row {
             objectName: "songTransport"
-            visible: bar.doc.currentSections.length > 0
+            visible: bar.doc.currentSections.length > 0 || bar.doc.following
             spacing: -1
             StageButton {
                 objectName: "songPlayButton"
+                // Play counts bars; while following chords there is nothing to start.
+                visible: !bar.engineStatus.chordFollowing
                 iconSource: bar.engineStatus.songPlaying ? "icons/player-stop.svg" : "icons/player-play.svg"
                 checked: bar.engineStatus.songPlaying
                 tip: bar.engineStatus.songPlaying ? qsTr("Stop the song")
@@ -270,7 +272,10 @@ ToolBar {
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     elide: Text.ElideRight
-                    text: parent.section === null ? ""
+                    text: bar.engineStatus.chordFollowing
+                          ? (bar.engineStatus.chordStarted ? qsTr("Following: %1").arg(bar.doc.followLabel(bar.engineStatus.chordStep))
+                                                           : qsTr("Play %1 to start").arg(bar.doc.followFirstChord))
+                          : parent.section === null ? ""
                           : bar.engineStatus.songCountingIn ? qsTr("Count-in…")
                           : bar.engineStatus.songPlaying ? qsTr("%1 · %2/%3").arg(parent.section.name).arg(bar.engineStatus.songBar).arg(bar.engineStatus.songBars)
                           : parent.section.name

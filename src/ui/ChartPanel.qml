@@ -114,11 +114,30 @@ Rectangle {
 
         // The chart as the player reads it.
         ScrollView {
+            id: chartScroll
             visible: !panel.editing
             Layout.fillWidth: true
             Layout.fillHeight: true
             contentWidth: availableWidth
             clip: true
+
+            // Chord follow: the line being played stays in the upper third.
+            NumberAnimation {
+                id: followScroll
+                target: chartScroll.contentItem
+                property: "contentY"
+                duration: 250
+                easing.type: Easing.OutCubic
+            }
+            Connections {
+                target: panelChart
+                function onFollowYChanged() {
+                    if (panelChart.followY < 0) return
+                    followScroll.to = Math.max(0, Math.min(panelChart.followY - chartScroll.height / 3,
+                                                           chartScroll.contentHeight - chartScroll.height))
+                    followScroll.restart()
+                }
+            }
 
             Column {
                 width: parent.width
@@ -142,6 +161,7 @@ Rectangle {
                 }
 
                 ChartView {
+                    id: panelChart
                     objectName: "chartView"
                     width: parent.width
                     lines: panel.doc.chartLines(panel.doc.currentChart)
@@ -149,6 +169,8 @@ Rectangle {
                     currentSection: panel.engineStatus.songSection
                     playing: panel.engineStatus.songPlaying
                     bar: panel.engineStatus.songBar
+                    currentStep: panel.engineStatus.chordStep
+                    followStarted: panel.engineStatus.chordStarted
                 }
             }
         }

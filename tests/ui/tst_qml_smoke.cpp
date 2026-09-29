@@ -570,9 +570,15 @@ private slots:
         QTest::keyClick(w, Qt::Key_Return);
         QTRY_COMPARE(doc.currentSections().at(0).toMap().value(u"bars"_s).toInt(), 8);
 
-        // Play: the toolbar shows where the song is, the chart lights the section.
+        // Following the chords (the default), there is no Play: the first chord starts.
         auto* play = w->findChild<QQuickItem*>(u"songPlayButton"_s);
-        QVERIFY(play != nullptr && play->isVisible());
+        QVERIFY(play != nullptr);
+        QTRY_VERIFY(!play->isVisible());
+        QTRY_COMPARE(w->findChild<QQuickItem*>(u"songWhere"_s)->property("text").toString(), u"Play C to start"_s);
+        // By the tempo: Play counts the bars, the toolbar shows where the
+        // song is, the chart lights the section.
+        QVERIFY(doc.setSongFollowChords(0, false));
+        QTRY_VERIFY(play->isVisible());
         click(u"songPlayButton"_s);
         auto* where = w->findChild<QQuickItem*>(u"songWhere"_s);
         QVERIFY(where != nullptr);
@@ -917,6 +923,42 @@ private slots:
         QTest::keyClick(w, Qt::Key_Space);
         QCOMPARE(m_session->document().patchIndex(), 1);
         settle();
+    }
+
+    // The fake engine is not played: the first chord is shown and outlined.
+    void aChartWaitsForItsFirstChord()
+    {
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
+        QVERIFY(doc.setSongChart(0, u"{c: Verse}\n[Am]words [F]more\n{c: Chorus}\n[C]la [G]la\n"_s));
+        auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(tabs != nullptr);
+        QVERIFY(tabs->setProperty("currentIndex", 0));
+        settle();
+        auto* chart = w->findChild<QQuickItem*>(u"chartView"_s);
+        QVERIFY(chart != nullptr);
+        QQuickItem* start = findItem(chart, u"followStartLine"_s);
+        QVERIFY(start != nullptr);
+        QTRY_VERIFY(start->isVisible());
+        QCOMPARE(start->property("text").toString(), u"Play Am to start"_s);
+        const QList<QQuickItem*> next = findAll(chart, u"chartChordNext"_s);
+        QVERIFY(!next.isEmpty()); // the first chord, outlined
+        QVERIFY(findAll(chart, u"chartChordCurrent"_s).isEmpty()); // nothing lit before the start
+        shoot(u"follow-waiting"_s);
+
+        // One chord is not a song to follow (the song settings' hint).
+        QVERIFY(doc.setSongChart(0, u"[C]only one"_s));
+        QVERIFY(!doc.following());
+        QTRY_VERIFY(!start->isVisible());
+        QVERIFY(doc.setSongChart(0, u"{c: Verse}\n[Am]words [F]more\n"_s));
+        QTRY_VERIFY(start->isVisible());
+
+        // Following by tempo: no start line.
+        QVERIFY(doc.setSongFollowChords(0, false));
+        QTRY_VERIFY(!start->isVisible());
     }
 };
 

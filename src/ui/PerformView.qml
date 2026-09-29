@@ -92,6 +92,23 @@ Rectangle {
                         target: perform.doc
                         function onChartChanged() { performChart.contentY = 0 }
                     }
+                    // Chord follow: the line being played stays in the upper third.
+                    NumberAnimation {
+                        id: followScroll
+                        target: performChart
+                        property: "contentY"
+                        duration: 250
+                        easing.type: Easing.OutCubic
+                    }
+                    Connections {
+                        target: stageChart
+                        function onFollowYChanged() {
+                            if (stageChart.followY < 0) return
+                            followScroll.to = Math.max(0, Math.min(stageChart.followY - performChart.height / 3,
+                                                                   performChart.contentHeight - performChart.height))
+                            followScroll.restart()
+                        }
+                    }
                     ChartView {
                         id: stageChart
                         width: performChart.width - 16
@@ -101,6 +118,8 @@ Rectangle {
                         currentSection: perform.engineStatus.songSection
                         playing: perform.engineStatus.songPlaying
                         bar: perform.engineStatus.songBar
+                        currentStep: perform.engineStatus.chordStep
+                        followStarted: perform.engineStatus.chordStarted
                     }
                     Label {
                         visible: perform.doc.currentChart.trim() === ""
