@@ -1,9 +1,14 @@
 // The platform layer: what differs by system, each piece on its own.
 #include "gigchain/platform/MemoryUse.h"
 #include "gigchain/platform/PluginFolders.h"
+#include "gigchain/platform/Timing.h"
+#include "gigchain/platform/Windows.h"
 
 #include <QDir>
+#include <QWindow>
 #include <QtTest>
+
+#include <thread>
 
 using namespace gigchain;
 using namespace Qt::StringLiterals;
@@ -40,6 +45,38 @@ private slots:
 #endif
     }
 
+    void theNativeWindowKindIsThisSystems()
+    {
+#ifdef Q_OS_WIN
+        QCOMPARE(platform::nativeWindowKind(), platform::NativeWindowKind::Win32);
+#else
+        QCOMPARE(platform::nativeWindowKind(), platform::NativeWindowKind::X11);
+#endif
+    }
+
+    // Off-screen there is nothing to see: it must not fail, crash or throw.
+    void bringingAWindowForwardKeepsItShown()
+    {
+        QWindow window;
+        window.resize(100, 100);
+        window.show();
+        platform::bringToFront(window);
+        QVERIFY(window.isVisible());
+    }
+
+    // A thread asking for precise timing keeps running normally.
+    void preciseTimingIsAvailable()
+    {
+        bool ran = false;
+        std::thread worker([&ran] {
+            platform::preciseTimingForThisThread();
+            ran = true;
+            platform::endPreciseTimingForThisThread();
+        });
+        worker.join();
+        QVERIFY(ran);
+    }
+
     void theMemoryInUseIsRead()
     {
         const auto bytes = platform::residentBytes();
@@ -49,5 +86,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(TestPlatform)
+QTEST_MAIN(TestPlatform)
 #include "tst_platform.moc"

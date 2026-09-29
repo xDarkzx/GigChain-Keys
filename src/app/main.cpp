@@ -13,6 +13,7 @@
 #include "gigchain/core/FileLog.h"
 #include "gigchain/engine/FakeEngineFactory.h"
 #include "gigchain/platform/Process.h"
+#include "gigchain/platform/Windows.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
 #include <QElapsedTimer>
@@ -30,11 +31,6 @@
 #include <QWindow>
 #include <QtQml/qqmlextensionplugin.h>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-
 #include <algorithm>
 #include <chrono>
 #include <exception>
@@ -49,24 +45,7 @@ using namespace Qt::StringLiterals;
 
 namespace {
 
-// Puts `window` in front of every other window and makes it the active one.
-// Windows refuses a plain "activate" from an app that is not in front (it
-// flashes the taskbar button instead), so the window is first made
-// always-on-top for a moment, which puts it above everything, then set back.
-void bringToFront(QWindow& window)
-{
-    const auto hwnd = reinterpret_cast<HWND>(window.winId()); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): a window id is an HWND on Windows
-    constexpr UINT kKeep = SWP_NOMOVE | SWP_NOSIZE;
-    if (!SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, kKeep | SWP_SHOWWINDOW) ||
-        !SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, kKeep | SWP_SHOWWINDOW)) {
-        qCWarning(lcApp) << "Could not bring the main window to the front: SetWindowPos failed, error" << GetLastError();
-    }
-    // Keyboard focus: granted while this app is the one the user started
-    // (the splash took the focus at launch); otherwise Windows flashes the
-    // taskbar button, which is its rule, not an error.
-    if (!SetForegroundWindow(hwnd)) qCInfo(lcApp) << "Windows kept keyboard focus where it was";
-    window.requestActivate();
-}
+using platform::bringToFront;
 
 // The splash stays up at least this long, even when everything loads faster
 // (the plugin list usually comes from the cache in milliseconds).
