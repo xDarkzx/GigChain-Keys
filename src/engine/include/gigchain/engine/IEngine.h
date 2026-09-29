@@ -203,8 +203,10 @@ public:
     // The current song's chords in playing order, their sections those of
     // setSongSections in the same order. While a map is set, what is played
     // decides the section in force (see ChordFollowMap); fewer than two
-    // steps = not following (the song's sections follow the tempo).
-    virtual void setChordFollow(const ChordFollowMap& map) = 0;
+    // steps = not following (the song's sections follow the tempo). A map
+    // that does not hang together (an index out of range, too many chords)
+    // is refused with the reason, and nothing is followed.
+    virtual core::Result<void> setChordFollow(const ChordFollowMap& map) = 0;
     [[nodiscard]] virtual ChordFollowPosition chordFollow() const = 0;
 
     // ---- The loop station (one audio loop per channel, see LoopCommand)

@@ -127,11 +127,12 @@ public:
         m_position.bar = m_position.playing ? 1 : 0;
     }
     [[nodiscard]] SongPosition songPosition() const override { return m_position; }
-    void setChordFollow(const ChordFollowMap& map) override
+    core::Result<void> setChordFollow(const ChordFollowMap& map) override
     {
         const bool active = map.steps.size() >= 2;
         m_follow = ChordFollowPosition{.active = active, .started = false, .step = -1,
                                        .section = active ? map.steps.front().section : -1};
+        return {};
     }
     [[nodiscard]] ChordFollowPosition chordFollow() const override { return m_follow; }
 

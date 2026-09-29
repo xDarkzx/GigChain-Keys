@@ -279,12 +279,15 @@ public:
     }
     engine::SongPosition position;
     [[nodiscard]] engine::SongPosition songPosition() const override { return position; }
-    void setChordFollow(const engine::ChordFollowMap& chosen) override
+    core::Result<void> setChordFollow(const engine::ChordFollowMap& chosen) override
     {
         follow = chosen;
         ++followSets;
         jumpsAtFollow = jumps.size();
+        if (followRefusal) return tl::unexpected<core::Error>(*followRefusal);
+        return {};
     }
+    std::optional<core::Error> followRefusal; // set: the next maps are refused with it
     [[nodiscard]] engine::ChordFollowPosition chordFollow() const override { return followPosition; }
 
     // Loops: what was asked, and what the test says there is.

@@ -1217,6 +1217,18 @@ private slots:
         QCOMPARE(m_doc->notifications()->count(), before + 1);
     }
 
+    // The engine refusing a song's chords is shown to the player.
+    void aRefusedChordMapIsShown()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        m_engine->followRefusal = core::Error{core::ErrorCode::InvalidData, u"Chord follow refused: chord 3 is wrong"_s};
+        const int before = m_doc->notifications()->count();
+        QVERIFY(m_doc->setSongChart(0, u"[Am]One [F]two [C]three\n"_s));
+        QCOMPARE(m_doc->notifications()->count(), before + 1);
+        QCOMPARE(m_doc->notifications()->text(before), u"Chord follow refused: chord 3 is wrong"_s);
+        QVERIFY(!m_doc->following()); // not shown as following
+    }
+
     void anEditedChartKeepsItsPlace()
     {
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));

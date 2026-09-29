@@ -1,7 +1,10 @@
 #include "ChordFollower.h"
 
+#include "gigchain/core/Limits.h"
+
 #include <algorithm>
 #include <bit>
+#include <climits>
 #include <utility>
 
 namespace gigchain::engine {
@@ -47,7 +50,59 @@ bool isNoteOff(const MidiEvent& e)
     return (e.status & 0xF0) == 0x80 || ((e.status & 0xF0) == 0x90 && e.data2 == 0);
 }
 
+tl::unexpected<core::Error> broken(const QString& what)
+{
+    return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Chord follow refused: %1").arg(what));
+}
+
+// A pitch class (0-11), or -1 where "none" is allowed.
+bool pitchOk(int pitchClass, bool noneAllowed)
+{
+    return (noneAllowed && pitchClass == -1) || (pitchClass >= 0 && pitchClass < 12);
+}
+
 } // namespace
+
+core::Result<void> ChordFollower::check(const ChordFollowMap& map)
+{
+    using core::limits::kMaxFollowSteps;
+    using core::limits::kMaxSectionsPerSong;
+    const auto chords = static_cast<int>(std::min<std::size_t>(map.steps.size(), INT_MAX));
+    const auto sections = static_cast<int>(std::min<std::size_t>(map.sectionStarts.size(), INT_MAX));
+    if (chords > kMaxFollowSteps) return broken(QStringLiteral("%1 chords, at most %2").arg(chords).arg(kMaxFollowSteps));
+    if (sections > kMaxSectionsPerSong) {
+        return broken(QStringLiteral("%1 sections, at most %2").arg(sections).arg(kMaxSectionsPerSong));
+    }
+    for (int i = 0; i < chords; ++i) {
+        const ChordFollowStep& step = map.steps.at(static_cast<std::size_t>(i));
+        if (step.family == 0 || (step.family & ~0xFFFU) != 0 || !pitchOk(step.root, false) || !pitchOk(step.bass, true) ||
+            !pitchOk(step.third, true) || !pitchOk(step.otherThird, true) || !pitchOk(step.colour, true)) {
+            return broken(QStringLiteral("chord %1 has no notes or a note out of the octave").arg(i + 1));
+        }
+        if (step.section < -1 || step.section >= sections) {
+            return broken(
+                QStringLiteral("chord %1 is in section %2, but the song has %3").arg(i + 1).arg(step.section + 1).arg(sections));
+        }
+    }
+    for (int s = 0; s < sections; ++s) {
+        const int start = map.sectionStarts.at(static_cast<std::size_t>(s));
+        if (start == -1) continue;
+        if (start < 0 || start >= chords) {
+            return broken(
+                QStringLiteral("section %1 starts at chord %2, but the song has %3").arg(s + 1).arg(start + 1).arg(chords));
+        }
+        if (const int owner = map.steps.at(static_cast<std::size_t>(start)).section; owner != s) {
+            return broken(QStringLiteral("section %1 starts at chord %2, which is in section %3")
+                              .arg(s + 1)
+                              .arg(start + 1)
+                              .arg(owner + 1));
+        }
+    }
+    if (map.resumeAt < -1 || map.resumeAt >= chords) {
+        return broken(QStringLiteral("resume at chord %1, but the song has %2").arg(map.resumeAt + 1).arg(chords));
+    }
+    return {};
+}
 
 void ChordFollower::clear() noexcept
 {

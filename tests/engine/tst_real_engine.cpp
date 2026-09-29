@@ -792,6 +792,28 @@ private slots:
         QCOMPARE(engine.songPosition().section, -1);
     }
 
+    // A chord map that does not hang together is refused, saying why, and
+    // the song before it is no longer followed (not left running).
+    void aBrokenChordMapIsRefused()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        ChordFollowMap map;
+        for (const char* name : {"Am", "F", "C"}) map.steps.push_back(followStepOf(*core::parseChordName(QString::fromLatin1(name)), -1));
+        QVERIFY(engine.setChordFollow(map).has_value());
+        pump(engine, 50);
+        QVERIFY(engine.chordFollow().active);
+        map.resumeAt = 7;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Chord follow refused: resume at chord 8"_s));
+        const auto refused = engine.setChordFollow(map);
+        QVERIFY(!refused.has_value());
+        QVERIFY(refused.error().message.contains(u"resume at chord 8"_s));
+        pump(engine, 50);
+        QVERIFY(!engine.chordFollow().active);
+    }
+
     // Chord follow: playing the chorus's chord enters the chorus, and its
     // piano sounds the chord; the verse's piano gets nothing new.
     void playingTheChorusChordEntersTheChorus()
@@ -817,7 +839,7 @@ private slots:
             map.steps.push_back(followStepOf(*core::parseChordName(QString::fromLatin1(name)), section));
         }
         map.sectionStarts = {0, 2};
-        engine.setChordFollow(map);
+        QVERIFY(engine.setChordFollow(map).has_value());
         pump(engine, 50);
         QVERIFY(engine.chordFollow().active);
         QVERIFY(!engine.chordFollow().started);
@@ -853,7 +875,7 @@ private slots:
         engine.panic();
         pump(engine, 50);
         QVERIFY(!engine.chordFollow().started);
-        engine.setChordFollow({}); // off: the tempo leads again
+        QVERIFY(engine.setChordFollow({}).has_value()); // off: the tempo leads again
         pump(engine, 50);
         QVERIFY(!engine.chordFollow().active);
     }
