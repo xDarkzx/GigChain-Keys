@@ -27,3 +27,5 @@ gigchain_add_fuzzer(fuzz_plugin_files SOURCES fuzz_plugin_files.cpp LIBS gigchai
 target_include_directories(fuzz_plugin_files PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_fuzzer(fuzz_midi SOURCES fuzz_midi.cpp LIBS gigchain::engine)
 target_include_directories(fuzz_midi PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_fuzzer(fuzz_chord_follow SOURCES fuzz_chord_follow.cpp LIBS gigchain::engine)
+target_include_directories(fuzz_chord_follow PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
