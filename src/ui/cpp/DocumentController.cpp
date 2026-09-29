@@ -886,26 +886,14 @@ QString DocumentController::followLabel(int step) const
     int last = step;
     while (std::cmp_less(last + 1, m_songMap.steps.size()) && at(last + 1) == section) ++last;
     QString where = tr("chord %1 of %2").arg(step - first + 1).arg(last - first + 1);
-    const core::Song* song = currentSong();
-    const std::vector<core::ChartSection> sections =
-        song != nullptr ? core::chartSections(core::parseChordPro(song->chart)) : std::vector<core::ChartSection>{};
-    if (section < 0 || std::cmp_greater_equal(section, sections.size())) return where;
-    return tr("%1 · %2").arg(sections.at(static_cast<std::size_t>(section)).name, where);
+    if (section < 0 || std::cmp_greater_equal(section, m_followSectionNames.size())) return where;
+    return tr("%1 · %2").arg(m_followSectionNames.at(static_cast<std::size_t>(section)), where);
 }
 
 int DocumentController::followLine(int step) const
 {
-    const core::Song* song = currentSong();
-    if (song == nullptr || step < 0 || std::cmp_greater_equal(step, m_songMap.steps.size())) return -1;
-    const int line = m_songMap.steps.at(static_cast<std::size_t>(step)).places.front().first;
-    // chartLines() leaves out directives and section ends.
-    const core::Chart chart = core::parseChordPro(song->chart);
-    int shown = 0;
-    for (int i = 0; i < line && std::cmp_less(i, chart.lines.size()); ++i) {
-        const auto kind = chart.lines.at(static_cast<std::size_t>(i)).kind;
-        if (kind != core::ChartLine::Kind::Meta && kind != core::ChartLine::Kind::SectionEnd) ++shown;
-    }
-    return shown;
+    if (step < 0 || std::cmp_greater_equal(step, m_followLines.size())) return -1;
+    return m_followLines.at(static_cast<std::size_t>(step));
 }
 
 bool DocumentController::songLoopSync() const
@@ -1145,7 +1133,8 @@ void DocumentController::applySectionsToEngine()
     if (playing >= 0 && std::cmp_less(playing, m_songMap.steps.size())) {
         place = m_songMap.steps.at(static_cast<std::size_t>(playing)).places.front();
     }
-    m_songMap = song != nullptr && song->followChords ? core::buildSongMap(core::parseChordPro(song->chart)) : core::SongMap{};
+    const core::Chart chart = song != nullptr && song->followChords ? core::parseChordPro(song->chart) : core::Chart{};
+    m_songMap = song != nullptr && song->followChords ? core::buildSongMap(chart) : core::SongMap{};
     // Too many chords to follow: said once (not on every edit), the tempo leads.
     if (m_songMap.tooLong && (newSong || !m_followTooLong)) {
         const QString message = tr("\"%1\" has too many chords to follow (more than %2 with its repeats played out): "
@@ -1157,11 +1146,9 @@ void DocumentController::applySectionsToEngine()
     }
     m_followTooLong = m_songMap.tooLong;
     if (!m_songMap.followable()) m_songMap = {};
-    engine::ChordFollowMap chords;
-    chords.sectionStarts = m_songMap.sectionStarts;
+    engine::ChordFollowMap chords = engine::followMapOf(m_songMap);
     for (std::size_t i = 0; i < m_songMap.steps.size(); ++i) {
         const core::SongStep& step = m_songMap.steps.at(i);
-        chords.steps.push_back(engine::followStepOf(step.shape, step.section));
         const bool here = place && std::ranges::find(step.places, *place) != step.places.end();
         // The same step if it is still there (a repeated line has the place several times).
         if (here && (chords.resumeAt < 0 || std::cmp_equal(i, playing))) chords.resumeAt = static_cast<int>(i);
@@ -1170,6 +1157,26 @@ void DocumentController::applySectionsToEngine()
         // (The engine logged it.) Not followed: the tempo leads.
         m_songMap = {};
         reportMessage(set.error().message, Notifications::Warning);
+    }
+    // Where each chord is shown and its section's name, worked out once here
+    // (not on every chord played: a long chart takes a while to read).
+    m_followLines.clear();
+    m_followSectionNames.clear();
+    if (!m_songMap.steps.empty()) {
+        // chartLines() leaves out directives and section ends.
+        std::vector<int> shownAt(chart.lines.size() + 1, 0);
+        for (std::size_t i = 0; i < chart.lines.size(); ++i) {
+            const auto kind = chart.lines.at(i).kind;
+            const bool shown = kind != core::ChartLine::Kind::Meta && kind != core::ChartLine::Kind::SectionEnd;
+            shownAt.at(i + 1) = shownAt.at(i) + (shown ? 1 : 0);
+        }
+        m_followLines.reserve(m_songMap.steps.size());
+        for (const core::SongStep& step : m_songMap.steps) {
+            const int line = step.places.front().first;
+            m_followLines.push_back(line >= 0 && std::cmp_less(line, shownAt.size()) ? shownAt.at(static_cast<std::size_t>(line)) : -1);
+        }
+        std::ranges::transform(core::chartSections(chart), std::back_inserter(m_followSectionNames),
+                               [](const core::ChartSection& section) { return section.name; });
     }
     m_sectionsSong = songId;
     emit sectionsChanged();

@@ -314,6 +314,8 @@ private:
     int m_sectionCount = 0;
     core::SongMap m_songMap; // the current song's chords, when it follows them
     bool m_followTooLong = false; // its chart has too many chords to follow (said once)
+    std::vector<int> m_followLines;            // per step: its chartLines() index
+    std::vector<QString> m_followSectionNames; // per chart section: its name
     [[nodiscard]] const core::Song* currentSong() const;
     // Undo: the setlist as it was before each edit. Called whenever an edit
     // is committed; edits in a row with the same `m_coalesceKey` within a

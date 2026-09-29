@@ -2,6 +2,7 @@
 
 #include "gigchain/core/Chords.h"
 #include "gigchain/core/Ids.h"
+#include "gigchain/core/SongMap.h"
 
 #include <QString>
 
@@ -190,6 +191,16 @@ struct ChordFollowPosition
                            .third = at(shape.third),
                            .otherThird = at(other),
                            .colour = at(shape.colour)};
+}
+
+// A song's chords as the engine follows them (not resuming: resumeAt -1).
+[[nodiscard]] inline ChordFollowMap followMapOf(const core::SongMap& song)
+{
+    ChordFollowMap map;
+    map.sectionStarts = song.sectionStarts;
+    map.steps.reserve(song.steps.size());
+    for (const core::SongStep& step : song.steps) map.steps.push_back(followStepOf(step.shape, step.section));
+    return map;
 }
 
 // ---- The loop station (one audio loop per channel)
