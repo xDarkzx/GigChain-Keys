@@ -33,7 +33,6 @@ add_library(gigchain_engine STATIC
     internal/MidiInput.h
     internal/MidiInput.cpp
     internal/MidiSetup.cpp
-    internal/LoaderErrors.h
     internal/PluginCatalog.h
     internal/PluginCatalog.cpp
     internal/PluginModules.h
@@ -46,8 +45,6 @@ add_library(gigchain_engine STATIC
     internal/ChordFollower.cpp
     internal/RealEngine.h
     internal/RealEngine.cpp
-    internal/ProcessHardening.cpp
-    include/gigchain/engine/ProcessHardening.h
     include/gigchain/engine/RealEngineFactory.h
     include/gigchain/engine/IPluginEditor.h
 )

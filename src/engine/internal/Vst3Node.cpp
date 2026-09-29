@@ -2,7 +2,7 @@
 
 #include "ComponentHandler.h"
 #include "EngineLog.h"
-#include "LoaderErrors.h"
+#include "gigchain/platform/Process.h"
 #include "PluginModules.h"
 #include "gigchain/core/Checks.h"
 
@@ -325,7 +325,7 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
         return core::fail(core::ErrorCode::InvalidData, u"%1 is not a .vst3 plugin"_s.arg(bundlePath));
     }
     try {
-        const SilentLoaderErrors silent;
+        const platform::SilentLoaderErrors silent;
         hostContext();
         auto impl = std::make_unique<Impl>();
 

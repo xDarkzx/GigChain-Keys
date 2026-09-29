@@ -3,9 +3,8 @@
 #include "PluginModules.h"
 
 #include "EngineLog.h"
-#include "LoaderErrors.h"
-
 #include "gigchain/platform/PluginFolders.h"
+#include "gigchain/platform/Process.h"
 
 #include "public.sdk/source/vst/hosting/module.h"
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
@@ -20,8 +19,6 @@
 #include <QProcess>
 #include <QSaveFile>
 #include <QTemporaryDir>
-
-#include <windows.h>
 
 #include <algorithm>
 #include <atomic>
@@ -193,7 +190,7 @@ CacheEntry openAndRead(const QString& bundle)
     CacheEntry entry;
     entry.fingerprint = fingerprintOf(bundle);
     try {
-        const SilentLoaderErrors silent;
+        const platform::SilentLoaderErrors silent;
         std::string error;
         const auto module = PluginModules::get(bundle, error);
         if (!module) {
@@ -243,8 +240,7 @@ CacheEntry readInScanner(const QString& scanner, const QString& bundle, const QS
     process.setProgram(scanner);
     process.setArguments({bundle, resultFile});
     process.setProcessChannelMode(QProcess::ForwardedErrorChannel); // its own log lines, if any
-    process.setCreateProcessArgumentsModifier(
-        [](QProcess::CreateProcessArguments* arguments) { arguments->flags |= CREATE_NO_WINDOW; });
+    platform::quietChildProcess(process);
     process.start();
     if (!process.waitForStarted(PluginCatalog::kScanTimeoutMs)) {
         entry.error = u"the plugin scanner did not start (%1)"_s.arg(process.errorString());
