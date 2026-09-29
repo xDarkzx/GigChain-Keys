@@ -23,6 +23,8 @@ Result<void> setSongKeyAndTempo(Setlist& setlist, int songIndex, const QString& 
 Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator, int denominator);
 // Sections switch a beat early (true) or just before their first beat.
 Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early);
+// Whether the song's sections follow the chords played or its tempo.
+Result<void> setSongFollowChords(Setlist& setlist, int songIndex, bool follow);
 // Loops start and stop on the bars (true) or press to press.
 Result<void> setSongLoopSync(Setlist& setlist, int songIndex, bool sync);
 // A synced loop's length in bars (0 = open).

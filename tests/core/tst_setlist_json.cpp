@@ -425,6 +425,26 @@ private slots:
                  }),
                  0LL);
     }
+
+    void aSongFollowsItsChordsUnlessToldOtherwise()
+    {
+        Setlist setlist;
+        setlist.songs.push_back(makeSong(u"By tempo"_s));
+        setlist.songs.front().followChords = false;
+        const auto read = fromJson(toJson(setlist));
+        QVERIFY2(read.has_value(), read ? "" : qPrintable(read.error().message));
+        QVERIFY(!read->songs.front().followChords);
+        // Files from before chord follow: on.
+        QJsonObject root = QJsonDocument::fromJson(toJson(setlist)).object();
+        QJsonArray songs = root.value(u"songs"_s).toArray();
+        QJsonObject song = songs.at(0).toObject();
+        song.remove(u"followChords"_s);
+        songs.replace(0, song);
+        root.insert(u"songs"_s, songs);
+        const auto older = fromJson(QJsonDocument(root).toJson());
+        QVERIFY2(older.has_value(), older ? "" : qPrintable(older.error().message));
+        QVERIFY(older->songs.front().followChords);
+    }
 };
 
 QTEST_GUILESS_MAIN(TestSetlistJson)

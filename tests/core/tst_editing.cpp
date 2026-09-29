@@ -201,6 +201,16 @@ private slots:
                  }),
                  0LL);
     }
+
+    void followingChordsIsSetPerSong()
+    {
+        Setlist s = abc();
+        QVERIFY(s.songs.at(0).followChords);
+        QVERIFY(setSongFollowChords(s, 0, false).has_value());
+        QVERIFY(!s.songs.at(0).followChords);
+        QVERIFY(s.songs.at(1).followChords);
+        QVERIFY(setSongFollowChords(s, 5, false).error().code == ErrorCode::OutOfRange);
+    }
 };
 
 QTEST_GUILESS_MAIN(TestEditing)
