@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gigchain/core/Error.h"
+#include "gigchain/platform/Windows.h"
 
 #include <QSize>
 #include <QString>
@@ -9,6 +10,13 @@
 #include <functional>
 
 namespace gigchain::engine {
+
+// A native window a plugin editor is embedded in.
+struct NativeParent
+{
+    quintptr handle = 0;
+    platform::NativeWindowKind kind = platform::NativeWindowKind::Win32;
+};
 
 // A plugin's own editor window, embedded in a native window the UI provides.
 // Main thread only, and that thread must have OLE initialised (every Qt GUI
@@ -30,9 +38,10 @@ public:
     [[nodiscard]] virtual QSize preferredSize() const = 0;
     [[nodiscard]] virtual bool isAttached() const = 0;
 
-    // `nativeParent` is a window handle (HWND on Windows). Failures are
+    // The native window the editor goes into: its handle and which kind it is
+    // (platform::nativeWindowKind() for a Qt window's winId()). Failures are
     // returned with the precise cause and logged.
-    virtual core::Result<void> attach(quintptr nativeParent) = 0;
+    virtual core::Result<void> attach(NativeParent parent) = 0;
     virtual void detach() = 0;
 
     // Sizing, as Audacity 4's VstView (muse/framework/vst/qml/Muse/Vst/vstview.cpp).

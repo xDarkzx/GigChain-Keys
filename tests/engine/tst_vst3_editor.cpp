@@ -65,7 +65,7 @@ private slots:
         QVERIFY2(size.width() > 100 && size.height() > 100, qPrintable(u"%1x%2"_s.arg(size.width()).arg(size.height())));
 
         HiddenParent parent;
-        const auto attached = (*editor)->attach(parent.handle());
+        const auto attached = (*editor)->attach({.handle = parent.handle(), .kind = platform::nativeWindowKind()});
         QVERIFY2(attached.has_value(), attached ? "" : qPrintable(attached.error().message));
         QVERIFY((*editor)->isAttached());
 
@@ -81,8 +81,25 @@ private slots:
         auto editor = Vst3Node::createEditor(*node);
         QVERIFY(editor.has_value() && *editor != nullptr);
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"no window to attach"_s));
-        const auto attached = (*editor)->attach(0);
+        const auto attached = (*editor)->attach({.handle = 0, .kind = platform::nativeWindowKind()});
         QVERIFY(!attached);
+        QVERIFY(!(*editor)->isAttached());
+    }
+
+    // A plugin given a kind of window it does not support is refused,
+    // saying which kind (a Windows plugin, a macOS view).
+    void anUnsupportedWindowKindIsRefused()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        auto node = Vst3Node::load(kPiano, 48000.0, 256);
+        QVERIFY(node.has_value());
+        auto editor = Vst3Node::createEditor(*node);
+        QVERIFY(editor.has_value() && *editor != nullptr);
+        HiddenParent parent;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"does not support macOS windows"_s));
+        const auto refused = (*editor)->attach({.handle = parent.handle(), .kind = platform::NativeWindowKind::Cocoa});
+        QVERIFY(!refused);
+        QVERIFY2(refused.error().message.contains(u"macOS"_s), qPrintable(refused.error().message));
         QVERIFY(!(*editor)->isAttached());
     }
 };

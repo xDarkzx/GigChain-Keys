@@ -37,6 +37,7 @@
 #include <set>
 #include <span>
 #include <string>
+#include <utility>
 
 using namespace Qt::StringLiterals;
 using namespace Steinberg;
@@ -771,17 +772,29 @@ public:
 
     [[nodiscard]] bool isAttached() const override { return m_attached; }
 
-    core::Result<void> attach(quintptr nativeParent) override
+    core::Result<void> attach(NativeParent parent) override
     {
         if (m_attached) return {};
-        if (nativeParent == 0) {
+        if (parent.handle == 0) {
             return logged(core::fail(core::ErrorCode::InvalidData, u"%1: no window to attach the editor to"_s.arg(m_title)));
         }
-        if (m_view->isPlatformTypeSupported(kPlatformTypeHWND) != kResultTrue) {
-            return logged(core::fail(core::ErrorCode::InvalidData, u"%1's editor does not support Windows windows"_s.arg(m_title)));
+        // VST3's name for the kind of window, and ours for a message.
+        const auto [type, kindName] = [&parent]() -> std::pair<FIDString, QString> {
+            switch (parent.kind) {
+            case platform::NativeWindowKind::Win32: return {kPlatformTypeHWND, u"Windows"_s};
+            case platform::NativeWindowKind::X11: return {kPlatformTypeX11EmbedWindowID, u"X11"_s};
+            case platform::NativeWindowKind::Cocoa: return {kPlatformTypeNSView, u"macOS"_s};
+            }
+            return {kPlatformTypeHWND, u"Windows"_s};
+        }();
+        if (m_view->isPlatformTypeSupported(type) != kResultTrue) {
+            return logged(core::fail(core::ErrorCode::InvalidData,
+                                     u"%1's editor does not support %2 windows"_s.arg(m_title, kindName)));
         }
         m_view->setFrame(this);
-        if (m_view->attached(reinterpret_cast<void*>(nativeParent), kPlatformTypeHWND) != kResultOk) { // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): VST3 takes the HWND as a void*
+        // VST3 takes every kind of window as a void*: a Windows handle, an X11
+        // window id, an NSView pointer.
+        if (m_view->attached(reinterpret_cast<void*>(parent.handle), type) != kResultOk) { // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): VST3 takes the window as a void*
             m_view->setFrame(nullptr);
             return logged(core::fail(core::ErrorCode::InvalidData, u"%1's editor failed to open"_s.arg(m_title)));
         }
