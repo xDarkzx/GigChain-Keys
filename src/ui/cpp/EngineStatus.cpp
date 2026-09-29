@@ -164,6 +164,10 @@ void EngineStatus::pollTransport()
         m_song = song;
         emit songPositionChanged();
     }
+    if (const engine::ChordFollowPosition follow = m_engine.chordFollow(); follow != m_follow) {
+        m_follow = follow;
+        emit chordFollowChanged();
+    }
 }
 
 std::optional<core::ChannelId> EngineStatus::channelId(int channel) const
