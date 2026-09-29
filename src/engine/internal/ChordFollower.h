@@ -39,12 +39,18 @@ public:
 
     // How long a key let go still counts (broken chords, arpeggios).
     static constexpr double kMemorySeconds = 0.5;
+    // Keys landing this soon after a chord was heard are the rest of it (a
+    // chord's keys are never struck all at once), not a new strike.
+    static constexpr double kChordSpreadSeconds = 0.1;
 
 private:
+    static constexpr int64_t kLongAgo = INT64_MIN / 2;
+
     void clear() noexcept;
     [[nodiscard]] int sectionInForce(const ChordFollowMap& map) const noexcept;
     // `key` went down at `now`: whether the chart moved (rules 1 to 3).
-    bool hear(const ChordFollowMap& map, int key, int64_t now, int64_t memory) noexcept;
+    // `memory` and `spread`: kMemorySeconds and kChordSpreadSeconds in samples.
+    bool hear(const ChordFollowMap& map, int key, int64_t now, int64_t memory, int64_t spread) noexcept;
     void fillHandover(int64_t switchTime, int offset) noexcept;
     void publish(const ChordFollowMap* map) noexcept;
 
@@ -57,7 +63,8 @@ private:
     bool m_pedal = false;
     int64_t m_now = 0;
     int m_step = -1;      // the chord being played; -1 = not started
-    int m_candidate = -1; // a section whose first chord was just heard clearly (rule 3)
+    uint64_t m_candidates = 0; // sections whose first chord was just heard clearly (rule 3)
+    int64_t m_heardAt = kLongAgo; // when the last chord was heard (samples)
     uint64_t m_generation = 0;
     std::array<MidiEvent, kMaxEventsPerBlock> m_handover{};
     std::size_t m_handoverCount = 0;

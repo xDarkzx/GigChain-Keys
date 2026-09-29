@@ -127,7 +127,8 @@ void EngineStatus::setClickVolumeDb(double volumeDb)
 void EngineStatus::playPauseTrack()
 {
     // A song with sections plays as a whole: its count, and the track with it.
-    if (m_document.hasSections()) {
+    // (Following chords, there is no count: the pedal plays the track alone.)
+    if (m_document.hasSections() && !m_engine.chordFollow().active) {
         if (m_engine.songPosition().playing) m_document.stopSong();
         else m_document.playSong();
         pollTransport();

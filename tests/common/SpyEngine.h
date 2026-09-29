@@ -248,6 +248,7 @@ public:
     int sectionsCount = 0;
     engine::ChordFollowMap follow;
     int followSets = 0;
+    std::size_t jumpsAtFollow = 0; // how many section jumps were asked before the last map
     engine::ChordFollowPosition followPosition;
     std::pair<int, int> timeSignature{4, 4};
     void setTimeSignature(int numerator, int denominator) override { timeSignature = {numerator, denominator}; }
@@ -282,6 +283,7 @@ public:
     {
         follow = chosen;
         ++followSets;
+        jumpsAtFollow = jumps.size();
     }
     [[nodiscard]] engine::ChordFollowPosition chordFollow() const override { return followPosition; }
 

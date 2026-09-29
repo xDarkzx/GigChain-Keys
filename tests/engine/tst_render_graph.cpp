@@ -474,6 +474,27 @@ private slots:
         QCOMPARE(both->received.at(0).data1, uint8_t{53});
     }
 
+    // A key held down through the chorus and back into the verse (a drone)
+    // is still sounding on the verse's strip: it is not struck there twice.
+    void aHandoverSkipsANoteStillSounding()
+    {
+        auto verse = std::make_shared<HeldNoteNode>(0.25F);
+        verse->received.reserve(16);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(verse));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        graph.strip(0)->setSections(0b01);
+        Output out;
+        const std::array press{noteOn(48)};
+        graph.render(press, out.block(), 1.0F, {}, {}, SectionGate{.before = 0, .after = 0});
+        // The chorus (the verse's strip keeps the drone), then back to the verse.
+        graph.render({}, out.block(), 1.0F, {}, {}, SectionGate{.before = 0, .after = 1});
+        const std::array handover{noteOn(48)};
+        graph.render({}, out.block(), 1.0F, {}, {}, SectionGate{.before = 1, .after = 0, .handover = handover});
+        QCOMPARE(std::ranges::count_if(verse->received, [](const MidiEvent& e) { return e.status == 0x90 && e.data1 == 48; }),
+                 1);
+    }
+
     void withoutSectionsEveryStripPlays()
     {
         auto a = std::make_shared<HeldNoteNode>(0.25F);
