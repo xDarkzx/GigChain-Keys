@@ -9,4 +9,9 @@ void preciseTimingForThisThread();
 // When that thread is done: the system's timing back as it was.
 void endPreciseTimingForThisThread();
 
+// For the audio thread: denormal floats become zero (a decaying reverb tail
+// otherwise costs huge CPU). The processor's own switch: x86's MXCSR
+// (flush-to-zero and denormals-are-zero), ARM64's FPCR (flush-to-zero).
+void flushDenormalsToZeroForThisThread();
+
 } // namespace gigchain::platform

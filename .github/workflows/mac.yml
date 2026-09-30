@@ -64,8 +64,9 @@ jobs:
       - name: Configure
         run: cmake --preset mac-release
 
+      # -k 0: every file that fails is reported in one run, not only the first.
       - name: Build
-        run: cmake --build --preset mac-release
+        run: cmake --build --preset mac-release -- -k 0
 
       - name: Save the library cache
         if: always() && steps.cache.outputs.cache-hit != 'true'
