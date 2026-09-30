@@ -1,14 +1,12 @@
 name: Mac
 
 # Only when started by hand (Actions → Mac → Run workflow) or on a release
-# tag: Mac minutes count ten times on a private repo. (While cross-platform
-# piece 2 is built, also on pushes to its branch: GitHub runs a hand-started
-# workflow only once it is on the default branch.)
+# tag: Mac minutes count ten times on a private repo. (GitHub offers "Run
+# workflow" once this file is on the default branch.)
 "on":
   workflow_dispatch:
   push:
     tags: ["v*"]
-    branches: [feat/cross-platform]
 
 jobs:
   mac:
