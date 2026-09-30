@@ -31,7 +31,8 @@ class TestSingleInstance : public QObject
     Q_OBJECT
 
     // A name of this test's own, so the app running meanwhile is not asked.
-    static QString uniqueName() { return u"tst_single_instance-"_s + QUuid::createUuid().toString(QUuid::WithoutBraces); }
+    // Short: the Mac's socket paths may be 103 bytes, its $TMPDIR takes 48.
+    static QString uniqueName() { return u"tsi-"_s + QUuid::createUuid().toString(QUuid::Id128).left(12); }
 
     // A later start is another process: here, another thread (the running
     // one reads in its event loop, which QTRY_ keeps turning).

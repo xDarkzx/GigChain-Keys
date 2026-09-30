@@ -128,7 +128,8 @@ private slots:
     }
 
     // A plugin given a kind of window it does not support is refused,
-    // saying which kind (here a macOS view).
+    // saying which kind (another system's: an X11 window on the Mac, a macOS
+    // view elsewhere).
     void anUnsupportedWindowKindIsRefused()
     {
         if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
@@ -137,10 +138,17 @@ private slots:
         auto editor = Vst3Node::createEditor(*node);
         QVERIFY(editor.has_value() && *editor != nullptr);
         HiddenParent parent;
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"does not support macOS windows"_s));
-        const auto refused = (*editor)->attach({.handle = parent.handle(), .kind = platform::NativeWindowKind::Cocoa});
+#ifdef Q_OS_MACOS
+        const auto foreign = platform::NativeWindowKind::X11;
+        const QString foreignName = u"X11"_s;
+#else
+        const auto foreign = platform::NativeWindowKind::Cocoa;
+        const QString foreignName = u"macOS"_s;
+#endif
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"does not support "_s + foreignName + u" windows"_s));
+        const auto refused = (*editor)->attach({.handle = parent.handle(), .kind = foreign});
         QVERIFY(!refused);
-        QVERIFY2(refused.error().message.contains(u"macOS"_s), qPrintable(refused.error().message));
+        QVERIFY2(refused.error().message.contains(foreignName), qPrintable(refused.error().message));
         QVERIFY(!(*editor)->isAttached());
     }
 

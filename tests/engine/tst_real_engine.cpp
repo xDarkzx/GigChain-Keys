@@ -516,8 +516,7 @@ private slots:
         engine.injectNote(1, 36, 0);
 
         engine.injectNote(1, 60, 110); // any other key still plays
-        pump(engine, 300);
-        QVERIFY(engine.channelLevel(patch.channels[0].id).peak > 0.001F);
+        QVERIFY(waitUntil(engine, [&] { return engine.channelLevel(patch.channels.at(0).id).peak > 0.001F; }));
         engine.injectNote(1, 60, 0);
     }
 
@@ -598,10 +597,11 @@ private slots:
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov is not one of the installed plugins"_s));
         QVERIFY(!engine.createEditorForPlugin(copy).has_value()); // nor as an editor
 
-        // Named as if in the plugin folder, climbing out of it (it is three
-        // folders below the root on both systems): still refused.
-        const QString climbing =
-            kVst3Folder + u"/../../../"_s + QFileInfo(copy).canonicalFilePath().mid(QDir::rootPath().size());
+        // Named as if in the plugin folder, climbing out of it to the root
+        // (three folders deep on Windows and Linux, four on the Mac): still
+        // refused.
+        const QString climbing = kVst3Folder + u"/"_s + u"../"_s.repeated(static_cast<int>(kVst3Folder.count(u'/'))) +
+                                 QFileInfo(copy).canonicalFilePath().mid(QDir::rootPath().size());
         QVERIFY2(QFileInfo::exists(climbing), qPrintable(climbing));
         core::Patch sneaky = core::makePatch(u"Sneaky"_s);
         core::Channel up = core::makeChannel(u"Up"_s);
@@ -964,11 +964,12 @@ private slots:
         QVERIFY(engine.songPosition().countingIn);
         QVERIFY(!engine.backingTrack().playing); // waiting for bar 1
         QCOMPARE(engine.backingTrack().position, 0.0);
-        pump(engine, 800);
-        QVERIFY(!engine.songPosition().countingIn);
-        QVERIFY(engine.backingTrack().playing);
+        // The count-in's second is the audio's (a sound system running late,
+        // as a virtual one does, takes longer in wall-clock time).
+        QVERIFY(waitUntil(engine, [&engine] { return !engine.songPosition().countingIn; }, 3000));
+        QVERIFY(waitUntil(engine, [&engine] { return engine.backingTrack().playing; }));
         const double position = engine.backingTrack().position;
-        QVERIFY2(position > 0.1 && position < 0.5, qPrintable(QString::number(position))); // started about 0.3 s ago
+        QVERIFY2(position < 0.5, qPrintable(QString::number(position))); // just started: at bar 1, not before
         engine.stopSong();
         pump(engine, 100);
         QVERIFY(!engine.backingTrack().playing);

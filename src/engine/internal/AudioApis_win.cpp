@@ -9,6 +9,11 @@ std::vector<AudioDriver> systemAudioDrivers()
     return {AudioDriver::System, AudioDriver::Asio};
 }
 
+RtAudioStreamFlags latencyFlags(AudioApi /*api*/)
+{
+    return RTAUDIO_MINIMIZE_LATENCY; // (as always here; WASAPI and ASIO ignore it)
+}
+
 RtAudio::Api toRtApi(AudioApi api)
 {
     return api == AudioApi::Asio ? RtAudio::WINDOWS_ASIO : RtAudio::WINDOWS_WASAPI;

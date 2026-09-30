@@ -144,7 +144,7 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     output.nChannels = 2;
     output.firstChannel = 0;
     RtAudio::StreamOptions options;
-    options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
+    options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_SCHEDULE_REALTIME | latencyFlags(driver);
     options.streamName = branding::name().toStdString(); // what Windows shows for our audio
     const unsigned int ownRate = info.preferredSampleRate != 0 ? info.preferredSampleRate : 48000;
     const unsigned int rate = askedRate != 0 ? askedRate : ownRate;

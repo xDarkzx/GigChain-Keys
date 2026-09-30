@@ -15,6 +15,14 @@ RtAudio::Api toRtApi(AudioApi /*api*/)
     return RtAudio::MACOSX_CORE; // (the only driver here)
 }
 
+RtAudioStreamFlags latencyFlags(AudioApi /*api*/)
+{
+    // Not "minimise latency": Core Audio would take the device's smallest
+    // buffer (15 frames) instead of the player's; the player's choice is
+    // already the latency asked for.
+    return 0;
+}
+
 QString apiName(AudioApi api)
 {
     switch (api) {

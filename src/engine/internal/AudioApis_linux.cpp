@@ -11,6 +11,11 @@ std::vector<AudioDriver> systemAudioDrivers()
     return {AudioDriver::System, AudioDriver::Jack, AudioDriver::Alsa};
 }
 
+RtAudioStreamFlags latencyFlags(AudioApi /*api*/)
+{
+    return RTAUDIO_MINIMIZE_LATENCY; // ALSA: two periods; PulseAudio and JACK ignore it
+}
+
 RtAudio::Api toRtApi(AudioApi api)
 {
     switch (api) {
