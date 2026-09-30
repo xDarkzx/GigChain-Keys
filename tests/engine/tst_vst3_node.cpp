@@ -179,7 +179,7 @@ private slots:
 #ifndef Q_OS_WIN
         // (It needs an instrument that plays softer when struck softer: Piano
         // V2 does; Surge XT's default patch plays every note alike.)
-        QSKIP("The Linux test instrument's default sound does not follow velocity");
+        QSKIP("The test instrument here (Surge XT) has a default sound that does not follow velocity");
 #endif
         auto play = [](uint8_t velocity) {
             auto node = Vst3Node::load(kInstrument, kRate, kBlock);

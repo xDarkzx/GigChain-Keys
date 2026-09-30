@@ -66,6 +66,22 @@ private slots:
         QFile::remove(m_cache);
 #ifdef Q_OS_WIN
         QVERIFY(QFile::copy(m_crasher, m_folder + u"/Crasher.vst3"_s)); // a single-file plugin
+#elif defined(Q_OS_MACOS)
+        // Mac plugins are bundles: Crasher.vst3/Contents/MacOS/Crasher, named by its Info.plist.
+        const QString contents = m_folder + u"/Crasher.vst3/Contents"_s;
+        QVERIFY(QDir().mkpath(contents + u"/MacOS"_s));
+        QVERIFY(QFile::copy(m_crasher, contents + u"/MacOS/Crasher"_s));
+        QFile plist(contents + u"/Info.plist"_s);
+        QVERIFY(plist.open(QIODevice::WriteOnly));
+        // (Plain literals: moc misreads a multi-line raw string in a branch
+        // it skips.)
+        plist.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                    "<plist version=\"1.0\"><dict>\n"
+                    "<key>CFBundleExecutable</key><string>Crasher</string>\n"
+                    "<key>CFBundleIdentifier</key><string>nz.dkstudios.gigchainkeys.test.crasher</string>\n"
+                    "<key>CFBundlePackageType</key><string>BNDL</string>\n"
+                    "</dict></plist>\n");
+        plist.close();
 #else
         // Linux plugins are bundles: Crasher.vst3/Contents/x86_64-linux/Crasher.so.
         const QString binary = m_folder + u"/Crasher.vst3/Contents/x86_64-linux"_s;
