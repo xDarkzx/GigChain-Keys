@@ -8,6 +8,7 @@
 //    does.
 //  - Linux: every open file descriptor by kind (file, socket, pipe, sound
 //    device, eventfd...), from /proc/self/fd, and the threads.
+//  - macOS: open file descriptors from /dev/fd, and the threads (Mach).
 
 #include <QString>
 
@@ -22,11 +23,30 @@
 #else
 #include <QDir>
 #include <QFileInfo>
+#ifdef __APPLE__
+#include <mach/mach.h>
+#endif
 #endif
 
 namespace gigchain::test {
 
-#ifndef _WIN32
+#if defined(__APPLE__)
+inline std::map<QString, int> handlesByType()
+{
+    std::map<QString, int> counts;
+    const QDir fds(QStringLiteral("/dev/fd"));
+    counts[QStringLiteral("file")] =
+        static_cast<int>(fds.entryList(QDir::AllEntries | QDir::System | QDir::Hidden | QDir::NoDotAndDotDot).size()) - 1; // (the listing's own)
+    thread_act_array_t threads = nullptr;
+    mach_msg_type_number_t count = 0;
+    if (task_threads(mach_task_self(), &threads, &count) == KERN_SUCCESS) {
+        counts[QStringLiteral("Thread")] = static_cast<int>(count);
+        for (mach_msg_type_number_t i = 0; i < count; ++i) mach_port_deallocate(mach_task_self(), threads[i]); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic): Mach's array
+        vm_deallocate(mach_task_self(), reinterpret_cast<vm_address_t>(threads), count * sizeof(thread_t)); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): Mach's array
+    }
+    return counts;
+}
+#elif !defined(_WIN32)
 inline std::map<QString, int> handlesByType()
 {
     std::map<QString, int> counts;

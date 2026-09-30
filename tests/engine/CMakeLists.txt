@@ -29,7 +29,7 @@ gigchain_add_test(tst_real_engine SOURCES tst_real_engine.cpp LIBS gigchain::eng
 target_include_directories(tst_real_engine PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 # (It unplugs the MIDI clock's output: RealEngine.h and what it includes.)
 target_link_libraries(tst_real_engine PRIVATE Qt6::Multimedia vst3_host_support)
-if(NOT WIN32) # the host's run loop for plugin editors is Linux's (Windows plugins run their own)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux") # Linux's run loop for plugin editors (Windows and Mac plugins run their own)
     gigchain_add_test(tst_vst3_run_loop SOURCES tst_vst3_run_loop.cpp LIBS gigchain::engine)
     target_include_directories(tst_vst3_run_loop PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
     target_link_libraries(tst_vst3_run_loop PRIVATE vst3_host_support)

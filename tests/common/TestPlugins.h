@@ -6,6 +6,7 @@
 //    effect), as installed on the development machine.
 //  - Linux: Surge XT and Surge XT Effects (free, open source; installed by
 //    tools/setup-linux.sh).
+//  - macOS: Surge XT and Surge XT Effects (brew install --cask surge-xt).
 
 #include <QDir>
 #include <QDirIterator>
@@ -48,6 +49,12 @@ inline const TestPlugin kInstrument{QStringLiteral("C:/Program Files/Common File
                                     QStringLiteral("Piano V2"), QStringLiteral("arturia")};
 inline const TestPlugin kEffect{QStringLiteral("C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"),
                                 QStringLiteral("TDR Kotelnikov"), QStringLiteral("tokyodawn")};
+#elif defined(Q_OS_MACOS)
+inline const QString kVst3Folder = QStringLiteral("/Library/Audio/Plug-Ins/VST3");
+inline const TestPlugin kInstrument{QStringLiteral("/Library/Audio/Plug-Ins/VST3/Surge XT.vst3"), QStringLiteral("Surge XT"),
+                                    QStringLiteral("surge")};
+inline const TestPlugin kEffect{QStringLiteral("/Library/Audio/Plug-Ins/VST3/Surge XT Effects.vst3"),
+                                QStringLiteral("Surge XT Effects"), QStringLiteral("surge")};
 #else
 inline const QString kVst3Folder = QStringLiteral("/usr/lib/vst3");
 inline const TestPlugin kInstrument{QStringLiteral("/usr/lib/vst3/Surge XT.vst3"), QStringLiteral("Surge XT"),

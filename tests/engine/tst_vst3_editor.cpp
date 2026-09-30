@@ -1,7 +1,9 @@
 // Opens a real plugin's editor inside a native window: a hidden Windows
-// window with Piano V2, or an X11 window with Surge XT on Linux (through
-// WSLg's X11 layer in WSL). Skips when the plugin is not installed, or on
-// Linux when there is no display.
+// window with Piano V2, an X11 window with Surge XT on Linux (through WSLg's
+// X11 layer in WSL), or a Cocoa window's NSView with Surge XT on the Mac.
+// Skips when the plugin is not installed, or where there is no window system
+// (Linux without a display).
+#include "TestPlugins.h"
 #include "Vst3Node.h"
 
 #include <QFileInfo>
@@ -47,10 +49,11 @@ private:
     HWND m_hwnd;
 };
 #else
-const QString kInstrument = u"/usr/lib/vst3/Surge XT.vst3"_s;
-const QString kTitle = u"Surge XT"_s;
+const QString kInstrument = test::kInstrument.path;
+const QString kTitle = test::kInstrument.name;
 
-// An X11 window (Qt's xcb platform) for the plugin to attach its view to.
+// A window of the system's own (Qt's xcb on Linux: an X11 window; cocoa on
+// the Mac: an NSView) for the plugin to attach its view to.
 class HiddenParent
 {
 public:
@@ -79,7 +82,9 @@ private slots:
         // Plugin editors expect OLE on the UI thread, as in any Windows GUI app.
         QVERIFY(SUCCEEDED(OleInitialize(nullptr)));
 #else
-        if (QGuiApplication::platformName() != u"xcb"_s) QSKIP("Needs an X11 display (DISPLAY)");
+        if (platform::nativeWindowKind() == platform::NativeWindowKind::None) {
+            QSKIP("Needs the system's window system (X11 on Linux: DISPLAY)");
+        }
 #endif
     }
 #ifdef Q_OS_WIN
@@ -162,7 +167,9 @@ int main(int argc, char** argv)
 {
     // (The tests' default is off-screen; plugin windows here need the real
     // window system, where there is one.)
-#ifndef Q_OS_WIN
+#if defined(Q_OS_MACOS)
+    qputenv("QT_QPA_PLATFORM", "cocoa"); // real NSViews
+#elif !defined(Q_OS_WIN)
     if (!qEnvironmentVariableIsEmpty("DISPLAY")) qputenv("QT_QPA_PLATFORM", "xcb");
 #endif
     QGuiApplication app(argc, argv);

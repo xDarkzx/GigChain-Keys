@@ -1,5 +1,7 @@
 #include "PluginLoadGuard.h"
 
+#include "gigchain/platform/PluginFolders.h"
+
 #include <QDir>
 #include <QFile>
 #include <QTemporaryDir>
@@ -49,7 +51,8 @@ private slots:
     }
 
     // Paths are compared as the system does: on Windows whatever the case and
-    // the slashes; elsewhere two names differing in case are two plugins.
+    // the slashes; on the Mac whatever the case; on Linux two names differing
+    // in case are two plugins.
     void pathsAreComparedAsTheSystemDoes()
     {
         QTemporaryDir dir;
@@ -61,7 +64,9 @@ private slots:
         QVERIFY(nextStart.isBlocked(u"c:\\plugins\\test plugin a.vst3"_s));
 #else
         QVERIFY(nextStart.isBlocked(kPiano));
-        QVERIFY(!nextStart.isBlocked(kPiano.toLower())); // another plugin
+        // Where names differ by case they are other plugins (Linux); where
+        // they do not, the same one (the Mac).
+        QCOMPARE(nextStart.isBlocked(kPiano.toLower()), gigchain::platform::fileNameCase() == Qt::CaseInsensitive);
 #endif
     }
 
