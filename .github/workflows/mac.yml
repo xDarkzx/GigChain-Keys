@@ -93,8 +93,9 @@ jobs:
           path: build/mac-release/*.dmg
           if-no-files-found: error
 
+      # Always: which tests ran and which skipped (ctest prints only failures).
       - name: Upload test logs
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mac-test-logs
