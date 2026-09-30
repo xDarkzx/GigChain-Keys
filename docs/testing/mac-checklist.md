@@ -38,7 +38,11 @@ Tick each one, and note anything odd (a screenshot helps):
       them while holding a note.
 - [ ] **Unplug the keyboard**, wait a few seconds, plug it back in: it plays
       again. Do the same with the audio interface if you have one.
-- [ ] Quit (⌘Q) and start again: the setlist comes back.
+- [ ] Save the setlist (⌘S). In Settings, under "When GigChain Keys starts",
+      tick **Open the last setlist I used**. Quit (⌘Q) and start again: the
+      setlist comes back.
+- [ ] In Finder, right-click the saved setlist (`<name>.gigchain.json`) →
+      **Open With → GigChain Keys**: it opens in the running app.
 
 ## 3. If something goes wrong
 

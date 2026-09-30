@@ -1,4 +1,5 @@
 #include "DocumentController.h"
+#include "InputPermission.h"
 #include "SettingsController.h"
 #include "SettingsMigration.h"
 
@@ -373,6 +374,103 @@ private slots:
         previous.setValue(u"audio/bufferFrames"_s, 512);
         QVERIFY(!carryOverSettings(previous, *m_settings));
         QCOMPARE(m_settings->value(u"audio/bufferFrames"_s).toInt(), 128);
+    }
+
+    // ---- Hearing the audio inputs (the Mac asks the player; refused, its
+    // inputs are silent without any error, so the app says so)
+
+    // An input in use that the system does not let the app hear: said, with
+    // where to allow it, and logged.
+    void aRefusedInputIsSaid()
+    {
+        m_engine->setup.inputDevice = u"Spy Mic"_s;
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        int asked = 0;
+        settings.setInputPermission(InputPermission([] { return InputPermission::Answer::Denied; },
+                                                    [&asked](const auto&) { ++asked; }));
+        const int before = m_doc->notifications()->count();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Privacy & Security"_s));
+        settings.checkInputPermission();
+        QCOMPARE(asked, 0); // refused before: not asked again
+        QCOMPARE(m_doc->notifications()->count(), before + 1);
+        const QString text = m_doc->notifications()->text(before);
+        QVERIFY2(text.contains(u"Microphone"_s) && text.contains(u"Privacy & Security"_s), qPrintable(text));
+    }
+
+    // Not asked yet: the player is asked, and once allowed the input is
+    // opened again (until then it was silent).
+    void anInputIsAskedForAndOpenedOnceAllowed()
+    {
+        m_engine->setup.inputDevice = u"Spy Mic"_s;
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        std::function<void(InputPermission::Answer)> reply;
+        settings.setInputPermission(InputPermission([] { return InputPermission::Answer::Undetermined; },
+                                                    [&reply](std::function<void(InputPermission::Answer)> answer) {
+                                                        reply = std::move(answer);
+                                                    }));
+        const int changes = m_engine->setupChanges;
+        const int before = m_doc->notifications()->count();
+        settings.checkInputPermission();
+        QVERIFY(reply); // asked
+        QCOMPARE(m_engine->setupChanges, changes);
+        reply(InputPermission::Answer::Granted);
+        QCOMPARE(m_engine->setupChanges, changes + 1); // opened again
+        QCOMPARE(m_engine->setup.inputDevice, u"Spy Mic"_s);
+        QCOMPARE(m_doc->notifications()->count(), before);
+    }
+
+    void anInputAskedForAndRefusedIsSaid()
+    {
+        m_engine->setup.inputDevice = u"Spy Mic"_s;
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.setInputPermission(InputPermission([] { return InputPermission::Answer::Undetermined; },
+                                                    [](const std::function<void(InputPermission::Answer)>& answer) {
+                                                        answer(InputPermission::Answer::Denied);
+                                                    }));
+        const int before = m_doc->notifications()->count();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Privacy & Security"_s));
+        settings.checkInputPermission();
+        QCOMPARE(m_doc->notifications()->count(), before + 1);
+    }
+
+    // No input in use: nothing to ask.
+    void withoutAnInputNothingIsAsked()
+    {
+        m_engine->setup.inputDevice.clear();
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        int checked = 0;
+        settings.setInputPermission(InputPermission(
+            [&checked] {
+                ++checked;
+                return InputPermission::Answer::Denied;
+            },
+            [](const auto&) {}));
+        settings.checkInputPermission();
+        QCOMPARE(checked, 0);
+    }
+
+    // Choosing an input in Settings asks too.
+    void choosingAnInputAsks()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        settings.setInputPermission(InputPermission([] { return InputPermission::Answer::Denied; }, [](const auto&) {}));
+        settings.setInputDevice(u"Spy Mic"_s);
+        const int before = m_doc->notifications()->count();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Privacy & Security"_s));
+        QVERIFY(settings.apply());
+        QCOMPARE(m_doc->notifications()->count(), before + 1);
+    }
+
+    // Where there is no permission to ask for (Windows, Linux), the system
+    // grants it (Qt's answer): no question, no notice.
+    void theSystemGrantsInputsWhereItDoesNotAsk()
+    {
+#ifdef Q_OS_MACOS
+        QSKIP("The Mac asks the player");
+#else
+        QCOMPARE(InputPermission().answer(), InputPermission::Answer::Granted);
+#endif
     }
 
 private:

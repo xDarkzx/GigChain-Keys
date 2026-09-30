@@ -26,6 +26,8 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_masterBus, [this, &engine] {
         if (engine.takeMasterEdits()) m_masterBus.noteEdited();
     });
+    // An audio input from the last session: may the app hear it (the Mac asks)?
+    m_settingsController.checkInputPermission();
 }
 
 QVariantMap Session::initialProperties()

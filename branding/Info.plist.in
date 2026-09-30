@@ -17,5 +17,16 @@
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSMicrophoneUsageDescription</key><string>GigChain Keys uses your audio inputs for the instruments and effects you play through them.</string>
     <key>NSHumanReadableCopyright</key><string>${MACOSX_BUNDLE_COPYRIGHT}</string>
+    <!-- Setlists (<name>.gigchain.json) open with the app from Finder and the
+         Dock; only as an alternative, never the default for .json files. -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key><string>GigChain Keys setlist</string>
+            <key>CFBundleTypeExtensions</key><array><string>json</string></array>
+            <key>CFBundleTypeRole</key><string>Editor</string>
+            <key>LSHandlerRank</key><string>Alternate</string>
+        </dict>
+    </array>
 </dict>
 </plist>

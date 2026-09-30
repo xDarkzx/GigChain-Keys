@@ -7,6 +7,7 @@ name: Mac
   workflow_dispatch:
   push:
     tags: ["v*"]
+    branches: [feat/cross-platform] # (piece 2's fix-pass run; removed after it)
 
 jobs:
   mac:

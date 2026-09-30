@@ -1,5 +1,7 @@
 #pragma once
 
+#include "InputPermission.h"
+
 #include "gigchain/engine/EngineTypes.h"
 #include "gigchain/engine/MidiControl.h"
 #include "gigchain/engine/RealEngineFactory.h"
@@ -134,6 +136,12 @@ public:
     // OK: true when everything took effect (and was saved).
     Q_INVOKABLE bool apply();
 
+    // With an audio input in use: whether the system lets the app hear it
+    // (the Mac asks the player once); refused, said with where to allow it;
+    // allowed just now, the input is opened again. At start and on Apply.
+    void checkInputPermission();
+    void setInputPermission(InputPermission permission) { m_inputPermission = std::move(permission); } // (tests)
+
 signals:
     void changed();
 
@@ -163,6 +171,7 @@ private:
     QStringList m_midiOutputs;
     QString m_clockOutput;
     bool m_followClock = false;
+    InputPermission m_inputPermission;
 };
 
 } // namespace gigchain::ui

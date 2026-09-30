@@ -7,6 +7,7 @@
 
 #include <QFileInfo>
 #include <QLoggingCategory>
+#include <QPointer>
 #include <QSettings>
 #include <QVariantMap>
 
@@ -488,6 +489,27 @@ void SettingsController::resetToDefaults()
     emit changed();
 }
 
+void SettingsController::checkInputPermission()
+{
+    if (m_engine.audioSetup().inputDevice.isEmpty()) return;
+    // (The player's answer may come later: only while this still exists.)
+    const QPointer<SettingsController> self(this);
+    m_inputPermission.ensure(
+        [self] {
+            if (!self) return;
+            // Allowed just now: until then the input was opened silent.
+            qCInfo(lcUi) << "Audio inputs allowed: opening the input again";
+            if (auto reopened = self->m_engine.setAudioSetup(self->m_engine.audioSetup()); !reopened) {
+                self->m_document.reportMessage(reopened.error().message); // logged by the engine
+            }
+        },
+        [self](const QString& why) {
+            if (!self) return;
+            qCWarning(lcUi).noquote() << why;
+            self->m_document.reportMessage(why);
+        });
+}
+
 bool SettingsController::apply()
 {
     m_error.clear();
@@ -503,6 +525,7 @@ bool SettingsController::apply()
             m_settings.setValue(kRateKey, m_pending.sampleRate);
             m_settings.setValue(kBufferKey, m_pending.bufferFrames);
             m_settings.setValue(kInputDeviceKey, m_pending.inputDevice);
+            checkInputPermission();
         }
     }
 
