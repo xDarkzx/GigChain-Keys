@@ -1,0 +1,103 @@
+name: Mac
+
+# Only when started by hand (Actions → Mac → Run workflow) or on a release
+# tag: Mac minutes count ten times on a private repo. (While cross-platform
+# piece 2 is built, also on pushes to its branch: GitHub runs a hand-started
+# workflow only once it is on the default branch.)
+"on":
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+    branches: [feat/cross-platform]
+
+jobs:
+  mac:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/../vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/../vcpkg-cache,readwrite
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode
+        id: xcode
+        run: |
+          xcodebuild -version
+          echo "version=$(xcodebuild -version | head -1 | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.10.2"
+          host: mac
+          target: desktop
+          arch: clang_64
+          modules: qtmultimedia
+          cache: true
+
+      # pkg-config: vcpkg checks the libraries' .pc files with it, and on the
+      # Mac it only looks for Homebrew's (it does not download one).
+      - name: Tools
+        run: brew install ninja pkg-config
+
+      # The same vcpkg commit as vcpkg.json's builtin-baseline.
+      - name: Get vcpkg
+        run: |
+          baseline=$(python3 -c "import json;print(json.load(open('vcpkg.json'))['builtin-baseline'])")
+          git clone --quiet https://github.com/microsoft/vcpkg "$VCPKG_ROOT"
+          git -C "$VCPKG_ROOT" checkout --quiet "$baseline"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          mkdir -p "${{ github.workspace }}/../vcpkg-cache"
+
+      # Restored and saved separately: saved even when the build fails, so a
+      # second attempt skips the libraries. The Xcode version is in the key
+      # (RtAudio's exported target records Xcode's framework paths).
+      - name: Restore the library cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/../vcpkg-cache
+          key: vcpkg-mac-${{ steps.xcode.outputs.version }}-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
+          restore-keys: vcpkg-mac-${{ steps.xcode.outputs.version }}-
+
+      - name: Configure
+        run: cmake --preset mac-release
+
+      - name: Build
+        run: cmake --build --preset mac-release
+
+      - name: Save the library cache
+        if: always() && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/../vcpkg-cache
+          key: vcpkg-mac-${{ steps.xcode.outputs.version }}-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
+
+      - name: Test plugins
+        run: brew install --cask surge-xt
+
+      - name: Test
+        run: ctest --preset mac-release
+
+      - name: Package
+        run: |
+          version=$(sed -nE 's/^set\(PRODUCT_VERSION "([^"]+)"\).*/\1/p' branding.cmake)
+          bash tools/package-mac.sh build/mac-release "$version"
+
+      - name: Upload the .dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: GigChain-Keys-mac-arm64
+          path: build/mac-release/*.dmg
+          if-no-files-found: error
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-test-logs
+          path: |
+            build/mac-release/tests/**/*.log
+            build/mac-release/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
