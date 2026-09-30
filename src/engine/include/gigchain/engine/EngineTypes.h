@@ -49,7 +49,7 @@ using LoadProgress = std::function<void(LoadStage stage, const QString& what, in
 // from another computer) falls back to System, and the player is told.
 enum class AudioDriver
 {
-    System, // the system's own: Windows audio (WASAPI), PulseAudio on Linux; the default
+    System, // the system's own: Windows audio (WASAPI), PulseAudio on Linux, Core Audio on the Mac; the default
     Asio,   // Windows: lowest latency; needs the device's ASIO driver
     Jack,   // Linux: the pro-audio server (low latency, routing between apps)
     Alsa,   // Linux: straight to the hardware

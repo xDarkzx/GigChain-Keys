@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gigchain/core/Error.h"
+
 #include <QString>
 
 #include <memory>
@@ -33,5 +35,10 @@ private:
 // user. Windows: a pipe named "<name>-<user>" (pipe names are machine-wide).
 // Elsewhere: a socket file in the user's own runtime folder.
 [[nodiscard]] QString instanceSocketName(const QString& name);
+
+// Whether the system can listen on `path` as a local socket (Unix sockets
+// have a short path limit: 104 bytes on the Mac, 108 on Linux); an error
+// saying the length and the limit when it cannot. Always fine on Windows.
+[[nodiscard]] core::Result<void> checkLocalSocketName(const QString& path);
 
 } // namespace gigchain::platform

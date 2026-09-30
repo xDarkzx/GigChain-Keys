@@ -3,6 +3,7 @@
 
 #include "gigchain/platform/InstanceLock.h"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QProcess>
 #include <QSignalSpy>
@@ -118,7 +119,11 @@ private slots:
 #ifdef Q_OS_WIN
         QCOMPARE(socket, u"GigChain-test-"_s + qEnvironmentVariable("USERNAME"));
 #else
+#ifdef Q_OS_MACOS
+        const QString runtime = QDir::tempPath(); // (the Mac's per-user $TMPDIR: short, private)
+#else
         const QString runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+#endif
         QVERIFY(!runtime.isEmpty());
         QCOMPARE(socket, runtime + u"/GigChain-test.sock"_s);
         QVERIFY(!(QFileInfo(runtime).permissions() & (QFile::ReadOther | QFile::WriteOther | QFile::ReadGroup | QFile::WriteGroup)));
@@ -178,6 +183,21 @@ private slots:
         QVERIFY(running.first());
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Could not reach the running app"_s));
         QVERIFY(!SingleInstance(name).handOver(u"C:/Gigs/x.gigchain"_s));
+    }
+
+    // A socket path longer than the system allows (104 bytes on the Mac,
+    // 108 on Linux) is refused saying so, not with Qt's vague "name error".
+    void aTooLongSocketPathIsRefusedWithItsLength()
+    {
+#ifdef Q_OS_WIN
+        QSKIP("Windows pipe names have no such limit");
+#else
+        SingleInstance running(uniqueName() + QString(200, u'x'));
+        const auto listened = running.listen();
+        QVERIFY(!listened);
+        QVERIFY2(listened.error().message.contains(u"too long for this system"_s), qPrintable(listened.error().message));
+        QVERIFY2(listened.error().message.contains(u"at most"_s), qPrintable(listened.error().message));
+#endif
     }
 };
 

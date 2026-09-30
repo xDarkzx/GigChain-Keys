@@ -68,6 +68,8 @@ core::Result<void> SingleInstance::listen()
     // A socket file left by a run that crashed (Linux, macOS) is in the way;
     // this start holds the lock, so nobody else is listening on it. (Windows
     // pipes are not files: nothing to remove.)
+    // A path the system cannot take, said as such (Qt says only "name error").
+    if (auto usable = platform::checkLocalSocketName(m_pipe); !usable) return usable;
     QLocalServer::removeServer(m_pipe);
     if (m_server.listen(m_pipe)) return {};
     return core::fail(core::ErrorCode::SystemRefused,

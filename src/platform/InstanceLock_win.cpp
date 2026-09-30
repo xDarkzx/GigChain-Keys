@@ -45,4 +45,9 @@ QString instanceSocketName(const QString& name)
     return name + u'-' + qEnvironmentVariable("USERNAME");
 }
 
+core::Result<void> checkLocalSocketName(const QString& /*path*/)
+{
+    return {}; // pipe names have no such limit
+}
+
 } // namespace gigchain::platform
