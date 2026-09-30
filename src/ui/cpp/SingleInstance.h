@@ -38,13 +38,19 @@ public:
     // A later start: hands `path` (empty: none) to the first one. True when
     // it took it. Any thread; blocks for at most a second or two.
     [[nodiscard]] bool handOver(const QString& path) const;
-    // The first start: listens for later ones (opened()). Main thread. An
-    // error with the reason when it cannot.
+    // The first start: listens for later ones (opened()), and for files the
+    // system opens with it (the Mac's Finder sends those to the running app
+    // instead of starting another). Main thread. An error with the reason
+    // when it cannot listen (files from the system still arrive).
     core::Result<void> listen();
 
 signals:
-    // A later start handed this over (empty: it only asked to come to the front).
+    // A later start handed this over, or the system opened it with the app
+    // (empty: it only asked to come to the front).
     void opened(const QString& path);
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     void receive();

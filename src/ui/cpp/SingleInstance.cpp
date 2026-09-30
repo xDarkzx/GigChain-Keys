@@ -2,6 +2,8 @@
 
 #include "gigchain/core/Branding.h"
 
+#include <QCoreApplication>
+#include <QFileOpenEvent>
 #include <QLocalSocket>
 #include <QLoggingCategory>
 
@@ -60,8 +62,24 @@ bool SingleInstance::handOver(const QString& path) const
     return true;
 }
 
+bool SingleInstance::eventFilter(QObject* watched, QEvent* event)
+{
+    if (event->type() != QEvent::FileOpen) return QObject::eventFilter(watched, event);
+    const QString path = static_cast<QFileOpenEvent*>(event)->file();
+    if (path.isEmpty()) {
+        qCWarning(lcUi).noquote() << "The system asked to open something that is not a file:"
+                                  << static_cast<QFileOpenEvent*>(event)->url().toString();
+        return true;
+    }
+    qCInfo(lcUi).noquote() << "The system opened" << path << "with the app";
+    emit opened(path);
+    return true;
+}
+
 core::Result<void> SingleInstance::listen()
 {
+    // Files the system opens with the app (Finder's "Open With", the Dock).
+    QCoreApplication::instance()->installEventFilter(this);
     // Only this Windows user may reach it (Windows' default lets everyone
     // and anonymous read a pipe).
     m_server.setSocketOptions(QLocalServer::UserAccessOption);

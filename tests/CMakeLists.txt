@@ -35,6 +35,10 @@ add_test(NAME no_hardcoded_product_name
 # No system code outside the platform files (docs/superpowers/specs/2026-09-30-cross-platform-linux-design.md).
 add_test(NAME platform_boundary
          COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR}/src -P ${PROJECT_SOURCE_DIR}/cmake/CheckPlatformBoundary.cmake)
+# The third-party notices name the files this system's app really carries.
+add_test(NAME notices_name_this_systems_files
+         COMMAND ${CMAKE_COMMAND} -DNOTICES=${CMAKE_BINARY_DIR}/installer/THIRD-PARTY-NOTICES.txt
+                 -DSYSTEM=${CMAKE_SYSTEM_NAME} -P ${PROJECT_SOURCE_DIR}/cmake/CheckNotices.cmake)
 
 add_subdirectory(platform)
 add_subdirectory(core)

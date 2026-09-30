@@ -18,7 +18,12 @@ CI; piece 4: the pre-publication check and going public).
   QML and the plugin scanner inside), **ad-hoc signed** (free; the Mac can
   tell it is intact), not notarized. A tester opens it once through System
   Settings → Privacy & Security → Open Anyway. Notarization (Apple's
-  developer program, US$99 a year) can come later with nothing else changed.
+  developer program, US$99 a year) can come later, but it is more than
+  signing: it needs the hardened runtime, and with it entitlements for a
+  plugin host: `com.apple.security.cs.disable-library-validation` (to load
+  other makers' plugins), `com.apple.security.device.audio-input`, and for
+  some plugins JIT or unsigned-memory ones. Plugins the hardened runtime
+  refuses are the risk to test then. (Found by the final review.)
 - **Tested on a friend's M5** with a real keyboard and plugins (checklist
   below).
 - Windows and Linux behave exactly as today.

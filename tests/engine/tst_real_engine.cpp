@@ -971,8 +971,7 @@ private slots:
         const double position = engine.backingTrack().position;
         QVERIFY2(position < 0.5, qPrintable(QString::number(position))); // just started: at bar 1, not before
         engine.stopSong();
-        pump(engine, 100);
-        QVERIFY(!engine.backingTrack().playing);
+        QVERIFY(waitUntil(engine, [&engine] { return !engine.backingTrack().playing; }));
         QVERIFY(!engine.songPosition().playing);
     }
 

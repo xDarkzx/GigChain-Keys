@@ -5,6 +5,8 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QFileOpenEvent>
+#include <QUrl>
 #include <QProcess>
 #include <QSignalSpy>
 #include <QStandardPaths>
@@ -184,6 +186,26 @@ private slots:
         QVERIFY(running.first());
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Could not reach the running app"_s));
         QVERIFY(!SingleInstance(name).handOver(u"C:/Gigs/x.gigchain"_s));
+    }
+
+    // A setlist opened from the system's file manager (the Mac's Finder:
+    // "Open With", or dropped on the Dock icon) comes as an event to the
+    // running app, not as a second start: it opens like a hand-over.
+    void aFileOpenedByTheSystemIsOpened()
+    {
+        SingleInstance running(uniqueName());
+        QVERIFY(running.first());
+        QVERIFY(running.listen().has_value());
+        QSignalSpy opened(&running, &SingleInstance::opened);
+        QFileOpenEvent event(u"/Users/me/Gigs/Friday.gigchain.json"_s);
+        QCoreApplication::sendEvent(QCoreApplication::instance(), &event);
+        QCOMPARE(opened.size(), 1);
+        QCOMPARE(opened.at(0).at(0).toString(), u"/Users/me/Gigs/Friday.gigchain.json"_s);
+
+        QFileOpenEvent notAFile(QUrl(u"https://example.com/x"_s)); // (only files open; said)
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"not a file: https://example.com/x"_s));
+        QCoreApplication::sendEvent(QCoreApplication::instance(), &notAFile);
+        QCOMPARE(opened.size(), 1);
     }
 
     // A socket path longer than the system allows (104 bytes on the Mac,
