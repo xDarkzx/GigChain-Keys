@@ -168,6 +168,7 @@ private:
     std::chrono::steady_clock::time_point m_lastLook{};
 
     std::atomic<bool> m_deviceLost{false};
+    std::atomic<bool> m_disconnectReported{false}; // (for close: JACK is closing the stream itself)
     std::atomic<uint64_t> m_underflows{0};
     std::mutex m_errorMutex;           // guards m_errors (RtAudio may report from its own threads)
     std::vector<QString> m_errors;     // errors reported by RtAudio since the last poll

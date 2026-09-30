@@ -5,6 +5,8 @@
 
 #include <RtAudio.h>
 
+#include <QProcess>
+#include <QStandardPaths>
 #include <QtTest>
 
 #include <atomic>
@@ -235,6 +237,86 @@ private slots:
         QCOMPARE(apiName(AudioDriver::System), u"PulseAudio"_s);
 #endif
     }
+
+#ifdef Q_OS_LINUX
+    // The JACK server going away: RtAudio closes the stream itself, on a
+    // thread of its own, and reports the disconnect from inside that close.
+    // Closing it again meanwhile (as recovering does) must wait for that
+    // thread, never close what it is closing. The test holds RtAudio's thread
+    // inside the report (it waits on the error lock) to close at that moment.
+    void theJackServerGoingAwayIsSurvived()
+    {
+        if (QStandardPaths::findExecutable(u"jackd"_s).isEmpty()) QSKIP("jackd is not installed");
+        // (One name every run: JACK keeps a few servers' names, and one that
+        // ended badly keeps its place until the name is used again.)
+        const QByteArray server = "gigchain-test";
+        qputenv("JACK_DEFAULT_SERVER", server);
+        QProcess jackd;
+        const auto stop = qScopeGuard([&jackd] {
+            qunsetenv("JACK_DEFAULT_SERVER");
+            if (jackd.state() == QProcess::NotRunning) return;
+            jackd.terminate();
+            if (!jackd.waitForFinished(3000)) jackd.kill();
+            jackd.waitForFinished(3000);
+        });
+        jackd.setProcessChannelMode(QProcess::MergedChannels);
+        jackd.start(u"jackd"_s, {u"-n"_s, QString::fromLatin1(server), u"-d"_s, u"dummy"_s, u"-r"_s, u"48000"_s,
+                                 u"-p"_s, u"256"_s});
+        QVERIFY2(jackd.waitForStarted(), qPrintable(jackd.errorString()));
+        const auto jackOutput = [] {
+            const auto outputs = AudioDevice::listOutputs();
+            const auto found = std::ranges::find_if(outputs, [](const AudioDeviceInfo& d) { return d.api == AudioApi::Jack; });
+            return found == outputs.end() ? std::optional<QString>{} : std::optional<QString>{found->name};
+        };
+        std::optional<QString> name;
+        for (int i = 0; i < 100 && !(name = jackOutput()); ++i) std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        QVERIFY2(name.has_value(), jackd.readAll().constData());
+
+        AudioDevice device;
+        std::atomic<int> blocks{0};
+        const auto opened = device.open(DeviceChoice{.api = AudioApi::Jack, .name = *name}, 256,
+                                        [&](AudioBlock out, const AudioInputs&) {
+            std::fill_n(out.left, out.frames, 0.0F);
+            std::fill_n(out.right, out.frames, 0.0F);
+            blocks.fetch_add(1);
+        });
+        QVERIFY2(opened.has_value(), opened ? "" : qPrintable(opened.error().message));
+        waitForBlocks(blocks, 5);
+        QVERIFY(blocks.load() >= 5);
+
+        // RtAudio's closing thread stops in its report until released.
+        std::atomic<bool> holding{false};
+        std::atomic<bool> release{false};
+        std::thread holder([&] {
+            const std::scoped_lock lock(device.m_errorMutex);
+            holding = true;
+            while (!release) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        });
+        while (!holding) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        jackd.terminate();
+        for (int i = 0; i < 400 && !device.m_deviceLost; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        QVERIFY2(device.m_deviceLost, "the JACK server's going away was not reported");
+
+        // Closing now, as recovering does; RtAudio's thread goes on shortly.
+        std::thread releaser([&] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            release = true;
+        });
+        device.close();
+        releaser.join();
+        holder.join();
+        QVERIFY(!device.isOpen());
+        QVERIFY(jackd.waitForFinished(5000));
+
+        // And the recovery says what happened (the JACK output is gone).
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"reported:.*Jack server is shutting down"_s));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"stopped working"_s));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"until it is back|No audio output is available"_s));
+        const std::vector<Notice> notices = device.poll();
+        QVERIFY2(joined(notices).contains(u"until it is back"_s) || joined(notices).contains(u"No audio output"_s),
+                 qPrintable(joined(notices)));
+    }
+#endif
 
     void unknownDeviceIsAnError()
     {

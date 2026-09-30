@@ -10,7 +10,9 @@
 #include <xmmintrin.h>
 
 #include <algorithm>
+#include <chrono>
 #include <span>
+#include <thread>
 
 using namespace Qt::StringLiterals;
 
@@ -216,7 +218,24 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
 void AudioDevice::close()
 {
     m_expectRunning = false;
+    const bool disconnected = m_disconnectReported.exchange(false);
     if (!m_rtaudio) return;
+    // JACK closes the stream itself when its server goes away, on a thread of
+    // its own, and reports the disconnect from inside that close: wait for it
+    // to finish, never stop or close what it is closing.
+    if (disconnected && m_rtaudio->getCurrentApi() == RtAudio::UNIX_JACK) {
+        const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (m_rtaudio->isStreamOpen() && std::chrono::steady_clock::now() < until) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        if (m_rtaudio->isStreamOpen()) {
+            qCCritical(lcEngine).noquote() << "JACK did not finish closing" << m_choice.name
+                                           << "within 2 s: it is left to finish on its own (its memory is not given back)";
+            // Deleting it under JACK's closing thread would crash the app.
+            [[maybe_unused]] const RtAudio* leftToJack = m_rtaudio.release();
+            return;
+        }
+    }
     if (m_rtaudio->isStreamRunning() && m_rtaudio->stopStream() != RTAUDIO_NO_ERROR) {
         qCWarning(lcEngine).noquote() << "Stopping" << m_choice.name << "reported an error";
     }
@@ -439,7 +458,10 @@ int AudioDevice::callback(void* output, void* input, unsigned int frames, double
 
 void AudioDevice::onError(int type, const std::string& text)
 {
-    if (type == RTAUDIO_DEVICE_DISCONNECT) m_deviceLost.store(true);
+    if (type == RTAUDIO_DEVICE_DISCONNECT) {
+        m_disconnectReported.store(true);
+        m_deviceLost.store(true);
+    }
     const std::scoped_lock lock(m_errorMutex);
     m_errors.push_back(QString::fromStdString(text));
 }
