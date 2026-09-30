@@ -119,6 +119,24 @@ private slots:
         QVERIFY(map.tooLong);
         QVERIFY(!map.followable());
     }
+
+    // More sections than the engine follows (one bit each): not followed,
+    // like too many chords, never a map the engine refuses. (Found by the
+    // chord follow fuzzer: 65 bridge marks.)
+    void moreSectionsThanCanBeFollowedIsTooLong()
+    {
+        QString chart;
+        for (int i = 0; i < 65; ++i) chart += u"{sob}\n[C]a [G]b\n"_s;
+        const SongMap map = buildSongMap(parseChordPro(chart));
+        QVERIFY(map.tooLong);
+        QVERIFY(map.steps.empty());
+        QVERIFY(!map.followable());
+        QCOMPARE(map.sectionStarts.size(), std::size_t{65}); // (still one per section of the chart)
+
+        QString most;
+        for (int i = 0; i < 64; ++i) most += u"{sob}\n[C]a [G]b\n"_s;
+        QVERIFY(buildSongMap(parseChordPro(most)).followable());
+    }
 };
 
 QTEST_GUILESS_MAIN(TestSongMap)

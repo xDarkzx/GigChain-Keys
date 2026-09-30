@@ -313,7 +313,7 @@ private:
     core::SongId m_sectionsSong; // the song whose sections the engine has
     int m_sectionCount = 0;
     core::SongMap m_songMap; // the current song's chords, when it follows them
-    bool m_followTooLong = false; // its chart has too many chords to follow (said once)
+    bool m_followTooLong = false; // its chart has too many chords (or sections) to follow (said once)
     std::vector<int> m_followLines;            // per step: its chartLines() index
     std::vector<QString> m_followSectionNames; // per chart section: its name
     [[nodiscard]] const core::Song* currentSong() const;
