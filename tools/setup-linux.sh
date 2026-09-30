@@ -30,6 +30,15 @@ system_part() {
         libx11-xcb-dev libxcb1-dev libxrandr-dev libxext-dev libxcursor-dev \
         libfontconfig1-dev libfreetype6-dev libasound2-dev libpulse-dev libjack-jackd2-dev \
         libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 imagemagick x11-utils
+    # Clang 18 (apt.llvm.org): the linux-clang preset checks the code with the
+    # same compiler family as Apple's before any Mac build runs.
+    if ! command -v clang++-18 >/dev/null 2>&1; then
+        local llvm_script
+        llvm_script="$(mktemp)"
+        curl -fsSL https://apt.llvm.org/llvm.sh -o "$llvm_script"
+        bash "$llvm_script" 18
+        rm -f "$llvm_script"
+    fi
     # Surge XT: a free Linux VST3 instrument for the tests that need a real one.
     if [ ! -d /usr/lib/vst3/Surge\ XT.vst3 ]; then
         local url

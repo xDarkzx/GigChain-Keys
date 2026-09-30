@@ -46,6 +46,16 @@
       }
     },
     {
+      "name": "linux-clang",
+      "inherits": "linux-base",
+      "description": "Clang 18 with -Werror: Apple's compiler family, checked before any Mac build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang-18",
+        "CMAKE_CXX_COMPILER": "clang++-18"
+      }
+    },
+    {
       "name": "linux-asan",
       "inherits": "linux-base",
       "cacheVariables": {
@@ -113,6 +123,10 @@
       "configurePreset": "linux-release"
     },
     {
+      "name": "linux-clang",
+      "configurePreset": "linux-clang"
+    },
+    {
       "name": "linux-asan",
       "configurePreset": "linux-asan"
     },
@@ -158,6 +172,11 @@
       "name": "linux-release",
       "inherits": "base",
       "configurePreset": "linux-release"
+    },
+    {
+      "name": "linux-clang",
+      "inherits": "base",
+      "configurePreset": "linux-clang"
     },
     {
       "name": "linux-asan",
