@@ -3,6 +3,9 @@
 # stream start and never gives the handle back, so each start (the app's,
 # a panic, a new buffer size, a device coming back) leaked a kernel handle
 # (found by the soak, tests\soak). Unfixed upstream (6.0.1 and master).
+# And fix-pulse-leaks.patch: PulseAudio's device listing never gave back its
+# three requests, and closing a stream never freed its conversion buffer
+# (found by LeakSanitizer, the linux-asan build).
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO thestk/rtaudio
@@ -12,6 +15,7 @@ vcpkg_from_github(
     PATCHES
         fix-pulse.patch
         fix-mmcss-handle-leak.patch
+        fix-pulse-leaks.patch
 )
 
 string(COMPARE EQUAL "${VCPKG_CRT_LINKAGE}" "static" RTAUDIO_STATIC_MSVCRT)
