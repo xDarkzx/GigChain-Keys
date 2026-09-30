@@ -200,10 +200,15 @@ beta. Four pieces (design: `docs/superpowers/specs/2026-09-30-cross-platform-lin
    with GCC 13 and passes every test that is not about Windows, with Surge XT
    as its test instrument; ASan, the fuzzers and the soak run on Linux too.
    Windows works exactly as before.
-2. **Next: macOS.** The `_mac` files (plugin windows in an NSView, Core Audio
-   and Core MIDI, `~/Library/Audio/Plug-Ins/VST3`), a build for Apple Silicon
-   on GitHub's Mac machines, an ad-hoc-signed `.dmg`; tested on a friend's
-   M5 MacBook.
+2. **In testing: macOS** (design:
+   `docs/superpowers/specs/2026-09-30-cross-platform-mac-design.md`). The
+   `_mac` files (plugin windows in an NSView, sized in points; Core Audio and
+   Core MIDI; `~/Library/Audio/Plug-Ins/VST3`), Apple Silicon on macOS 13+,
+   built and tested on GitHub's Mac machines by hand or on a release tag
+   (`.github/workflows/mac.yml`), an ad-hoc-signed `.dmg` (not notarized:
+   testers use Open Anyway once). A Clang 18 build at home
+   (`linux-clang`) catches Apple-compiler errors before any Mac minute is
+   spent. Next: a friend's M5 MacBook runs `docs/testing/mac-checklist.md`.
 3. **Automatic builds and packages:** one GitHub workflow building and
    testing all three on every change, and making the Windows installer, the
    `.dmg` and a Linux AppImage (free for public repositories).

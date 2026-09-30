@@ -1,7 +1,7 @@
 # GigChain Keys
 
 An open-source live-performance host for keyboard players, in the spirit of
-MainStage, for Windows and Linux (macOS next). Load the VST3 instruments and effects already
+MainStage, for Windows, Linux and macOS (Apple Silicon, in testing). Load the VST3 instruments and effects already
 installed on your machine, build a setlist of songs and patches, and switch
 sounds instantly on stage.
 
@@ -62,7 +62,7 @@ Ubuntu 22.04 or newer, x64; on Windows, WSL 2 with WSLg (it shows Linux
 windows and plays their sound). The first time:
 
 ```bash
-sudo bash tools/setup-linux.sh --system   # packages, GCC 13, Clang 15, Surge XT (a free test instrument)
+sudo bash tools/setup-linux.sh --system   # packages, GCC 13, Clang 15 and 18, Surge XT (a free test instrument)
 bash tools/setup-linux.sh --user          # CMake, Qt 6.10.2, vcpkg
 bash tools/setup-linux.sh --check         # what is installed
 ```
@@ -76,16 +76,38 @@ bash tools/soak.sh 20       # the 20-minute soak, in a terminal of its own
 bash tools/fuzz.sh 300      # the fuzzers, 5 minutes each (Clang)
 ```
 
-Presets: `linux-debug`, `linux-release`, `linux-asan` (AddressSanitizer and
-UndefinedBehaviorSanitizer), `linux-fuzz`. Builds go to
+Presets: `linux-debug`, `linux-release`, `linux-clang` (Clang 18, `-Werror`),
+`linux-asan` (AddressSanitizer and UndefinedBehaviorSanitizer), `linux-fuzz`.
+Builds go to
 `~/.cache/gigchain/build/<preset>` (the machine's own disk, fast even when
 the sources are on a Windows drive). Audio: PulseAudio (also on PipeWire, and
 in WSLg), JACK or ALSA; MIDI: ALSA (WSL has no MIDI devices). Plugin windows
 are X11 windows, also on Wayland desktops.
 
 What differs by system lives in per-system files (`*_win.cpp`,
-`*_posix.cpp`, `*_linux.cpp`), mostly in `src/platform`; a test fails if
-system code appears anywhere else. macOS is next (docs/ROADMAP.md).
+`*_posix.cpp`, `*_linux.cpp`, `*_mac.cpp`), mostly in `src/platform`; a
+test fails if system code appears anywhere else.
+
+### macOS (Apple Silicon)
+
+Apple Silicon Macs on macOS 13 or newer. The Mac build runs on GitHub's Mac
+machines (`.github/workflows/mac.yml`): **Actions → Mac → Run workflow**, or
+push a release tag (`v*`). It builds with the `mac-release` preset, runs
+every test (with Surge XT from Homebrew as the test instrument), and makes
+`GigChain Keys-<version>-arm64.dmg` (the run's artifact): the app with Qt
+inside, ad-hoc signed, not notarized. Testers open it once through **System
+Settings → Privacy & Security → Open Anyway**
+([docs/testing/mac-checklist.md](docs/testing/mac-checklist.md)).
+
+On a Mac of your own: Xcode (or its command-line tools), Qt 6.10.2 for macOS,
+vcpkg, CMake and Ninja; then `cmake --preset mac-release`,
+`cmake --build --preset mac-release`, `ctest --preset mac-release`, and
+`bash tools/package-mac.sh build/mac-release <version>` for the `.dmg`.
+Audio: Core Audio; MIDI: Core MIDI; plugins from `~/Library/Audio/Plug-Ins/VST3`
+and `/Library/Audio/Plug-Ins/VST3`.
+
+Before any Mac build, `linux-clang` (Clang 18, Apple's compiler family)
+checks the code at home: `bash tools/setup-linux.sh --system` installs it.
 
 ### The installer
 
