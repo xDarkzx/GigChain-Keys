@@ -17,6 +17,12 @@ DMG="$BUILD/GigChain Keys-$VERSION-arm64.dmg"
 # (also in Contents/MacOS) gets its Qt paths fixed too.
 "$QT_ROOT_DIR/bin/macdeployqt" "$APP" -qmldir="$ROOT/src/ui" \
     -executable="$APP/Contents/MacOS/GigChainKeysScan" -verbose=1
+# Qt's database drivers for ODBC, PostgreSQL and Mimer come along, but the
+# libraries they need do not (macdeployqt: "no file at …"): they could never
+# load, and the app uses no database. SQLite's (self-contained) stays.
+rm -f "$APP/Contents/PlugIns/sqldrivers/libqsqlodbc.dylib" \
+      "$APP/Contents/PlugIns/sqldrivers/libqsqlpsql.dylib" \
+      "$APP/Contents/PlugIns/sqldrivers/libqsqlmimer.dylib"
 # Ad-hoc signed as a whole (no hardened runtime: plugins signed by anyone
 # load), then checked: a bundle that fails the check is never shipped.
 codesign --force --deep --sign - "$APP"
