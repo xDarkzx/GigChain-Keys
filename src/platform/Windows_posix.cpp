@@ -1,5 +1,7 @@
 #include "gigchain/platform/Windows.h"
 
+#include <QGuiApplication>
+
 namespace gigchain::platform {
 
 NativeWindowKind nativeWindowKind()
@@ -7,7 +9,8 @@ NativeWindowKind nativeWindowKind()
 #ifdef Q_OS_MACOS
     return NativeWindowKind::Cocoa;
 #else
-    return NativeWindowKind::X11;
+    // What Qt runs on, not what was hoped for (QT_QPA_PLATFORM may say wayland).
+    return QGuiApplication::platformName() == u"xcb" ? NativeWindowKind::X11 : NativeWindowKind::None;
 #endif
 }
 

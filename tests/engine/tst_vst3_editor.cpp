@@ -138,6 +138,24 @@ private slots:
         QVERIFY2(refused.error().message.contains(u"macOS"_s), qPrintable(refused.error().message));
         QVERIFY(!(*editor)->isAttached());
     }
+
+    // The app running where plugins have no window (Linux on Wayland without
+    // X11): the editor is refused, saying how to get one, and the plugin is
+    // never handed a window of the wrong kind (its toolkit would end the app).
+    void noWindowForPluginsIsRefusedWithTheWayOut()
+    {
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
+        auto node = Vst3Node::load(kInstrument, 48000.0, 256);
+        QVERIFY(node.has_value());
+        auto editor = Vst3Node::createEditor(*node);
+        QVERIFY(editor.has_value() && *editor != nullptr);
+        HiddenParent parent;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"QT_QPA_PLATFORM=xcb"_s));
+        const auto refused = (*editor)->attach({.handle = parent.handle(), .kind = platform::NativeWindowKind::None});
+        QVERIFY(!refused);
+        QVERIFY2(refused.error().message.contains(u"X11"_s), qPrintable(refused.error().message));
+        QVERIFY(!(*editor)->isAttached());
+    }
 };
 
 int main(int argc, char** argv)

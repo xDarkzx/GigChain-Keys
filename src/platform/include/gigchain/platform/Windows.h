@@ -13,8 +13,12 @@ enum class NativeWindowKind
     Win32, // a Windows window handle
     X11,   // an X11 window id (Linux, also on Wayland through its X11 layer)
     Cocoa, // an NSView (macOS)
+    None,  // the app runs where plugins have no window (Linux on Wayland, off-screen)
 };
 
+// The kind the app's own windows really are: on Linux X11 only when Qt runs
+// its X11 platform (xcb); a player who chose Wayland gets None, and plugin
+// editors are refused with the way out, never handed a window they cannot use.
 [[nodiscard]] NativeWindowKind nativeWindowKind();
 
 // Before the GUI starts: the window system plugin windows need. Linux
