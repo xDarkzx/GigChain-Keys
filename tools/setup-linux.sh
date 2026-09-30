@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sets up a Linux machine (or WSL) to build GigChain Keys. Safe to run again.
 #
-#   sudo bash tools/setup-linux.sh --system   system packages, GCC 13, Surge XT (root)
+#   sudo bash tools/setup-linux.sh --system   system packages, GCC 13, Clang 15 and 18, Surge XT (root)
 #   bash tools/setup-linux.sh --user          CMake, Qt 6.10.2, vcpkg (your user)
 #   bash tools/setup-linux.sh --check         what is installed, and what is missing
 #
