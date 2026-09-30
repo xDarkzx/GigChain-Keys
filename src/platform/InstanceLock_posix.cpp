@@ -7,6 +7,8 @@
 #include <QStandardPaths>
 #include <QSysInfo>
 
+#include <sys/un.h>
+
 #include <cerrno>
 #include <csignal>
 
@@ -15,11 +17,18 @@ using namespace Qt::StringLiterals;
 namespace gigchain::platform {
 namespace {
 
-// The user's own runtime folder (XDG_RUNTIME_DIR: only this user can enter
-// it; Qt makes one of its own, likewise private, where there is none).
+// The user's own runtime folder, only this user can enter it. Linux:
+// XDG_RUNTIME_DIR (Qt makes a private one where there is none). The Mac:
+// its per-user temporary folder ($TMPDIR, 0700, short): Qt's runtime
+// location there is ~/Library/Application Support, long and shared with
+// settings, and socket paths are limited to 104 bytes.
 QString runtimeFolder()
 {
+#ifdef Q_OS_MACOS
+    return QDir::tempPath();
+#else
     return QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+#endif
 }
 
 // Whether the process that wrote a lock is gone (it crashed or was killed).
@@ -73,6 +82,17 @@ bool InstanceLock::acquire(const QString& name)
 QString instanceSocketName(const QString& name)
 {
     return runtimeFolder() + u'/' + name + u".sock"_s;
+}
+
+core::Result<void> checkLocalSocketName(const QString& path)
+{
+    const qsizetype bytes = path.toUtf8().size();
+    const auto most = static_cast<qsizetype>(sizeof(sockaddr_un{}.sun_path)) - 1; // (its ending zero)
+    if (bytes > most) {
+        return core::fail(core::ErrorCode::InvalidData,
+                          u"The app's socket path is too long for this system (%1 bytes, at most %2): %3"_s.arg(bytes).arg(most).arg(path));
+    }
+    return {};
 }
 
 } // namespace gigchain::platform

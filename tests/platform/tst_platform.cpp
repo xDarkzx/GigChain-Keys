@@ -26,6 +26,8 @@ private slots:
         for (const QString& folder : folders) QVERIFY2(QDir::isAbsolutePath(folder), qPrintable(folder));
 #ifdef Q_OS_WIN
         QCOMPARE(folders, QStringList{u"C:/Program Files/Common Files/VST3"_s});
+#elif defined(Q_OS_MACOS)
+        QCOMPARE(folders, (QStringList{QDir::homePath() + u"/Library/Audio/Plug-Ins/VST3"_s, u"/Library/Audio/Plug-Ins/VST3"_s}));
 #else
         QVERIFY(folders.contains(QDir::homePath() + u"/.vst3"_s));
         QVERIFY(folders.contains(u"/usr/lib/vst3"_s));
@@ -38,6 +40,10 @@ private slots:
     {
 #ifdef Q_OS_WIN
         QCOMPARE(platform::vst3ModuleFile(u"C:/VST3/Synth.vst3"_s), u"C:/VST3/Synth.vst3/Contents/x86_64-win/Synth.vst3"_s);
+        QCOMPARE(platform::fileNameCase(), Qt::CaseInsensitive);
+#elif defined(Q_OS_MACOS)
+        QCOMPARE(platform::vst3ModuleFile(u"/Library/Audio/Plug-Ins/VST3/Surge XT.vst3"_s),
+                 u"/Library/Audio/Plug-Ins/VST3/Surge XT.vst3/Contents/MacOS/Surge XT"_s);
         QCOMPARE(platform::fileNameCase(), Qt::CaseInsensitive);
 #else
         QCOMPARE(platform::vst3ModuleFile(u"/usr/lib/vst3/Surge XT.vst3"_s),

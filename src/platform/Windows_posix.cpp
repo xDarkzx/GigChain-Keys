@@ -6,10 +6,11 @@ namespace gigchain::platform {
 
 NativeWindowKind nativeWindowKind()
 {
+    // What Qt runs on, not what was hoped for: an off-screen (or Wayland)
+    // window is no NSView or X11 window, and a plugin must never get one.
 #ifdef Q_OS_MACOS
-    return NativeWindowKind::Cocoa;
+    return QGuiApplication::platformName() == u"cocoa" ? NativeWindowKind::Cocoa : NativeWindowKind::None;
 #else
-    // What Qt runs on, not what was hoped for (QT_QPA_PLATFORM may say wayland).
     return QGuiApplication::platformName() == u"xcb" ? NativeWindowKind::X11 : NativeWindowKind::None;
 #endif
 }

@@ -322,7 +322,8 @@ private slots:
     }
 
     // The driver box offers what the engine found, named as this system
-    // names it (Windows: WASAPI; Linux: PulseAudio), system audio first.
+    // names it (Windows: WASAPI; Linux: PulseAudio; the Mac: Core Audio),
+    // system audio first.
     void theDriversAreThisSystems()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);
@@ -332,6 +333,8 @@ private slots:
         QCOMPARE(drivers.at(0).toMap().value(u"id"_s).toString(), u"system"_s);
 #ifdef Q_OS_WIN
         QCOMPARE(drivers.at(0).toMap().value(u"name"_s).toString(), u"Windows Audio (WASAPI)"_s);
+#elif defined(Q_OS_MACOS)
+        QCOMPARE(drivers.at(0).toMap().value(u"name"_s).toString(), u"Core Audio"_s);
 #else
         QCOMPARE(drivers.at(0).toMap().value(u"name"_s).toString(), u"PulseAudio"_s);
 #endif
