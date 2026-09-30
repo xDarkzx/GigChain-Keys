@@ -114,6 +114,36 @@ bool waitUntil(IEngine& engine, const Done& done, int limitMs = 2000)
     }
 }
 
+// The loudest of `read()` (a level meter's peak since its last reading)
+// until it goes over `above`, for at most `limitMs`: a sound waited for,
+// not assumed to be there after a fixed time.
+template <typename Read>
+float loudestUntilAbove(IEngine& engine, const Read& read, float above, int limitMs = 2000)
+{
+    float loudest = 0.0F;
+    (void)waitUntil(engine, [&] {
+        loudest = std::max(loudest, read());
+        return loudest > above;
+    }, limitMs);
+    return loudest;
+}
+
+// Whether `read()` (a level meter's peak since its last reading) stays at or
+// under `below` for a whole `windowMs`, within `limitMs`: silence waited for
+// (a sound system running late stops later), a whole stretch of it (never
+// one empty moment of a late sound system, or a quiet moment of a loop,
+// taken for silence).
+template <typename Read>
+bool quietWithin(IEngine& engine, const Read& read, float below, int windowMs = 200, int limitMs = 3000)
+{
+    for (int waited = 0; waited < limitMs; waited += windowMs) {
+        (void)read();
+        pump(engine, windowMs);
+        if (read() <= below) return true;
+    }
+    return false;
+}
+
 } // namespace
 
 class TestRealEngine : public QObject
@@ -186,9 +216,11 @@ private slots:
         engine.setMasterVolume(-90.0); // still inaudible, but measurable
         (void)engine.masterLevel();
         engine.injectNote(1, 60, 110);
-        pump(engine, 400);
-        const float peak = engine.channelLevel(patch.channels[0].id).peak;
-        const LevelReading master = engine.masterLevel();
+        float masterPeak = 0.0F;
+        const float peak = loudestUntilAbove(engine, [&] {
+            masterPeak = std::max(masterPeak, engine.masterLevel().peak);
+            return engine.channelLevel(patch.channels.at(0).id).peak;
+        }, 0.001F);
         QCOMPARE(int(engine.keyboardActivity().velocity.at(60)), 110); // lit on the screen's keyboard
         engine.injectNote(1, 60, 0);
         // Let go on the screen too (waited for: some sound systems run in bursts).
@@ -196,8 +228,8 @@ private slots:
         QCOMPARE(int(engine.keyboardActivity().velocity.at(60)), 0);
         QVERIFY2(peak > 0.001F, "piano channel stayed silent");
         // The master meter shows what leaves the app: after the master fader.
-        QVERIFY2(master.peak > 0.0F, "master meter stayed empty");
-        QVERIFY(master.peak < peak);
+        QVERIFY2(masterPeak > 0.0F, "master meter stayed empty");
+        QVERIFY(masterPeak < peak);
         QVERIFY(engine.cpuLoad() > 0.0F && engine.cpuLoad() < 1.0F);
     }
 
@@ -238,8 +270,7 @@ private slots:
 
         // The same plugin, re-prepared for the new rate, still plays.
         engine.injectNote(1, 64, 110);
-        pump(engine, 400);
-        const float peak = engine.channelLevel(patch.channels[0].id).peak;
+        const float peak = loudestUntilAbove(engine, [&] { return engine.channelLevel(patch.channels.at(0).id).peak; }, 0.001F);
         engine.injectNote(1, 64, 0);
         pump(engine, 50);
         QVERIFY2(peak > 0.001F, "piano went silent after the rate change");
@@ -501,8 +532,10 @@ private slots:
         // The learned hit played (learning takes nothing away): silence its tail.
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Panic: every sound stopped"_s));
         engine.panic();
-        pump(engine, 200);
-        (void)engine.channelLevel(patch.channels[0].id);
+        // (Silent before the pad, however late the sound system is: Mac run 8
+        // measured the hit's last whisper, -99 dB, 200 ms after the panic.)
+        QVERIFY2(quietWithin(engine, [&] { return engine.channelLevel(patch.channels.at(0).id).peak; }, 0.0F),
+                 "the learned hit still sounded after the panic");
         engine.injectNote(1, 36, 100); // the pad
         pump(engine, 300);
         std::vector<ControlAction> actions;
@@ -530,21 +563,17 @@ private slots:
         engine.setMasterVolume(core::limits::kMinVolumeDb);
         const core::Patch patch = pianoPatch();
         engine.applyPatch(patch);
+        const auto piano = [&] { return engine.channelLevel(patch.channels.at(0).id).peak; };
         engine.injectNote(1, 60, 110); // held: never released by the "player"
-        pump(engine, 300);
-        QVERIFY(engine.channelLevel(patch.channels[0].id).peak > 0.001F);
+        QVERIFY(loudestUntilAbove(engine, piano, 0.001F) > 0.001F);
 
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Panic: every sound stopped"_s));
         engine.panic();
-        pump(engine, 300);
-        (void)engine.channelLevel(patch.channels[0].id);
-        pump(engine, 200);
-        QVERIFY2(engine.channelLevel(patch.channels[0].id).peak < 0.0005F, "still sounding after panic");
+        QVERIFY2(quietWithin(engine, piano, 0.0005F), "still sounding after panic");
         QVERIFY(engine.poll().empty());
 
         engine.injectNote(1, 64, 110); // and it plays again straight away
-        pump(engine, 300);
-        QVERIFY(engine.channelLevel(patch.channels[0].id).peak > 0.001F);
+        QVERIFY(loudestUntilAbove(engine, piano, 0.001F) > 0.001F);
         engine.injectNote(1, 64, 0);
     }
 
@@ -655,9 +684,12 @@ private slots:
         engine.setTempo(240.0); // a beat every quarter second
         engine.setClick(true, -60.0); // measurable, not heard
         QVERIFY(engine.clickOn());
-        pump(engine, 600);
-        const float peak = engine.masterLevel().peak;
-        QVERIFY2(peak > 0.0001F && peak < 0.002F, qPrintable(QString::number(peak))); // 0.5 at -60 dB
+        // (The click waited for, however late the sound system is; then
+        // another beat, still at -60 dB.)
+        const float peak = loudestUntilAbove(engine, [&engine] { return engine.masterLevel().peak; }, 0.0001F);
+        pump(engine, 300);
+        const float louder = std::max(peak, engine.masterLevel().peak);
+        QVERIFY2(louder > 0.0001F && louder < 0.002F, qPrintable(QString::number(louder))); // 0.5 at -60 dB
         engine.setClick(false, -60.0);
     }
 
@@ -701,12 +733,16 @@ private slots:
         QCOMPARE(engine.masterLevel().peak, 0.0F); // loaded, not playing: silent
 
         engine.playBackingTrack(true);
-        pump(engine, 150);
-        const float peak = engine.masterLevel().peak;
+        // Its first 0.05 s played, however late the sound system is.
+        float peak = 0.0F;
+        QVERIFY(waitUntil(engine, [&engine, &peak] {
+            peak = std::max(peak, engine.masterLevel().peak);
+            return engine.backingTrack().position > 0.05;
+        }));
+        peak = std::max(peak, engine.masterLevel().peak);
         QVERIFY2(std::abs(peak - 0.0005F) < 0.0001F, qPrintable(QString::number(peak))); // 0.5 at -60 dB
-        QVERIFY(engine.backingTrack().position > 0.05);
-        pump(engine, 600); // past its end: it stops by itself
-        QVERIFY(!engine.backingTrack().playing);
+        // Past its end (half a second long): it stops by itself.
+        QVERIFY(waitUntil(engine, [&engine] { return !engine.backingTrack().playing; }));
 
         // A file that is not there is said, not ignored.
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Backing track not found"_s)); // logged once
@@ -739,15 +775,13 @@ private slots:
         engine.applyPatch(song, core::makePatch(u"Chorus"_s));
         pump(engine, 100);
         (void)engine.masterLevel();
-        pump(engine, 300);
-        QVERIFY2(engine.masterLevel().peak > 0.0F, "the held chord stopped at the patch change");
+        const auto master = [&engine] { return engine.masterLevel().peak; };
+        QVERIFY2(loudestUntilAbove(engine, master, 0.0F) > 0.0F, "the held chord stopped at the patch change");
 
         engine.injectNote(1, 60, 0);
         engine.injectNote(1, 64, 0);
-        pump(engine, 3000); // the piano's release, then a quiet second
-        (void)engine.masterLevel();
-        pump(engine, 300);
-        QCOMPARE(engine.masterLevel().peak, 0.0F);
+        pump(engine, 3000); // the piano's release
+        QVERIFY2(quietWithin(engine, master, 0.0F), "the let-go chord still sounded");
     }
 
     // Song sections: each channel takes notes only in its sections; the
@@ -1032,10 +1066,9 @@ private slots:
         QVERIFY(waitFor(LoopState::Playing));
 
         engine.clearAllLoops();
-        pump(engine, 200);
-        (void)engine.masterLevel();
-        pump(engine, 1200);
-        QCOMPARE(engine.masterLevel().peak, 0.0F);
+        // (Quiet for 1.2 s: longer than the one-bar loop, a second.)
+        QVERIFY2(quietWithin(engine, [&engine] { return engine.masterLevel().peak; }, 0.0F, 1200, 4000),
+                 "a cleared loop still sounded");
         QVERIFY(engine.loops().empty()); // and its room given back
     }
 
