@@ -66,6 +66,24 @@ private slots:
     }
 
     // Off-screen there is nothing to see: it must not fail, crash or throw.
+    // Plugin windows in the system's units: pixels where plugins size in
+    // pixels (Windows, Linux: the screen's ratio, and they are told the
+    // scale), points on the Mac (1.0, and the system scales them).
+    void pluginWindowsUseTheSystemsUnits()
+    {
+        QWindow window;
+        window.resize(100, 100);
+        window.create();
+        QCOMPARE(window.devicePixelRatio(), 2.0);
+#ifdef Q_OS_MACOS
+        QCOMPARE(platform::pluginPixelRatio(window), 1.0);
+        QVERIFY(!platform::pluginsTakeContentScale());
+#else
+        QCOMPARE(platform::pluginPixelRatio(window), 2.0);
+        QVERIFY(platform::pluginsTakeContentScale());
+#endif
+    }
+
     void bringingAWindowForwardKeepsItShown()
     {
         QWindow window;
@@ -97,5 +115,11 @@ private slots:
     }
 };
 
-QTEST_MAIN(TestPlatform)
+int main(int argc, char** argv)
+{
+    qputenv("QT_SCALE_FACTOR", "2"); // a "Retina" screen, off-screen
+    QGuiApplication app(argc, argv);
+    TestPlatform test;
+    return QTest::qExec(&test, argc, argv);
+}
 #include "tst_platform.moc"

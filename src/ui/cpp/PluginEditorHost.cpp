@@ -109,7 +109,7 @@ void PluginEditorHost::rebuild()
     pluginWindow->create();
     std::unique_ptr<engine::IPluginEditor> editor = std::move(*created);
     // As VstView::init: the screen's scaling, then the frame, then attach.
-    editor->setContentScale(host->devicePixelRatio());
+    if (platform::pluginsTakeContentScale()) editor->setContentScale(host->devicePixelRatio());
     editor->setFitter([this](QSize wanted) { return fit(wanted); });
     m_window = pluginWindow;
     if (auto attached = editor->attach({.handle = static_cast<quintptr>(pluginWindow->winId()), .kind = platform::nativeWindowKind()});
@@ -131,7 +131,7 @@ void PluginEditorHost::rebuild()
     // Another screen, other scaling (VstView: screenChanged).
     m_screenConnection = connect(host, &QWindow::screenChanged, this, [this](QScreen* screen) {
         if (!m_editor || screen == nullptr) return;
-        m_editor->setContentScale(screen->devicePixelRatio());
+        if (platform::pluginsTakeContentScale()) m_editor->setContentScale(screen->devicePixelRatio());
         m_editor->updateGeometry();
     });
     emit editorChanged();
@@ -161,7 +161,7 @@ void PluginEditorHost::teardown()
 QSize PluginEditorHost::fit(QSize wanted)
 {
     if (!m_window || window() == nullptr || wanted.isEmpty()) return {};
-    const double dpr = window()->devicePixelRatio();
+    const double dpr = platform::pluginPixelRatio(*window()); // (points on the Mac: 1.0)
     if (width() < 1 || height() < 1) {
         m_windowSize = {}; // no room yet: fitted when the layout gives it one
         updateVisibility();

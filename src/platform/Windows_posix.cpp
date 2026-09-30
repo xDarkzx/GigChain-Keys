@@ -15,6 +15,25 @@ NativeWindowKind nativeWindowKind()
 #endif
 }
 
+double pluginPixelRatio(const QWindow& window)
+{
+#ifdef Q_OS_MACOS
+    Q_UNUSED(window);
+    return 1.0;
+#else
+    return window.devicePixelRatio();
+#endif
+}
+
+bool pluginsTakeContentScale()
+{
+#ifdef Q_OS_MACOS
+    return false;
+#else
+    return true;
+#endif
+}
+
 void prepareGuiPlatform()
 {
 #ifndef Q_OS_MACOS
