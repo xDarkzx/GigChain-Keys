@@ -17,17 +17,25 @@ function(gigchain_harden target)
             target_link_options(${target} PRIVATE /guard:cf)
         endif()
     else()
-        # GCC and Clang: the same strictness, and the usual Linux hardening
-        # (stack protector, fortified library calls, position-independent
-        # code, read-only relocations, no executable stack).
+        # GCC and Clang: the same strictness everywhere, and a stack protector.
         target_compile_options(${target} PRIVATE
             -Wall -Wextra -Wpedantic -Werror
             # Designated initializers leaving members at their defaults are
             # this code's style.
             -Wno-missing-field-initializers
-            -fstack-protector-strong -fstack-clash-protection
-            $<$<NOT:$<CONFIG:Debug>>:-D_FORTIFY_SOURCE=3>)
-        target_link_options(${target} PRIVATE -Wl,-z,relro,-z,now -Wl,-z,noexecstack)
+            -fstack-protector-strong)
+        if(NOT APPLE)
+            # Linux: fortified library calls, stack-clash protection,
+            # read-only relocations, no executable stack. (The Mac: Apple's
+            # SDK fortifies library calls itself, and defining _FORTIFY_SOURCE
+            # again is a redefinition error; its linker makes stacks
+            # non-executable by default and has no -z options; stack-clash
+            # protection is not offered for Apple targets.)
+            target_compile_options(${target} PRIVATE
+                -fstack-clash-protection
+                $<$<NOT:$<CONFIG:Debug>>:-D_FORTIFY_SOURCE=3>)
+            target_link_options(${target} PRIVATE -Wl,-z,relro,-z,now -Wl,-z,noexecstack)
+        endif()
         set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON)
     endif()
 endfunction()

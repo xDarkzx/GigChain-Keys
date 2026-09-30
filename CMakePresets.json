@@ -105,6 +105,16 @@
       }
     },
     {
+      "name": "mac-release",
+      "inherits": "base",
+      "description": "macOS, Apple Silicon (GitHub's Mac machines: .github/workflows/mac.yml)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx-13",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets"
+      }
+    },
+    {
       "name": "spike",
       "inherits": "base",
       "cacheVariables": {
@@ -149,6 +159,10 @@
     {
       "name": "fuzz",
       "configurePreset": "fuzz"
+    },
+    {
+      "name": "mac-release",
+      "configurePreset": "mac-release"
     },
     {
       "name": "spike",
@@ -207,6 +221,11 @@
       "name": "asan",
       "inherits": "base",
       "configurePreset": "asan"
+    },
+    {
+      "name": "mac-release",
+      "inherits": "base",
+      "configurePreset": "mac-release"
     },
     {
       "name": "fuzz",

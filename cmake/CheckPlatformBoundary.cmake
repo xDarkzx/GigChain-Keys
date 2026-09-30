@@ -15,7 +15,7 @@ foreach(source IN LISTS sources)
     endif()
     math(EXPR checked "${checked} + 1")
     file(STRINGS "${source}" lines REGEX
-        "#include <(windows|winsock2|psapi|dbghelp|timeapi|crtdbg|unistd|dlfcn|signal|execinfo|pthread)\\.h>|#include <(sys|X11|mach)/|_WIN32|__linux__|__APPLE__|_MSC_VER|[^A-Za-z_]HWND[^A-Za-z_]")
+        "#include <(windows|winsock2|psapi|dbghelp|timeapi|crtdbg|unistd|dlfcn|signal|execinfo|pthread)\\.h>|#include <(sys|X11|mach)/|_WIN32|__linux__|__APPLE__|Q_OS_MAC|TARGET_OS_|_MSC_VER|[^A-Za-z_]HWND[^A-Za-z_]")
     if(lines)
         string(REPLACE "${SOURCE_DIR}/" "" relative "${source}")
         list(APPEND offenders "${relative}: ${lines}")
