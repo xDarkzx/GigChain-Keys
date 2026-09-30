@@ -1,0 +1,35 @@
+diff --git a/RtAudio.cpp b/RtAudio.cpp
+index 7bb0aa8..12447c6 100644
+--- a/RtAudio.cpp
++++ b/RtAudio.cpp
+@@ -9263,10 +9263,16 @@ static void rt_pa_context_state_callback( pa_context *context, void *userdata )
+       break;
+ 
+     case PA_CONTEXT_READY:
+-      pa_context_get_server_info( context, rt_pa_set_server_info, userdata ); // server info
+-      pa_context_get_sink_info_list( context, rt_pa_set_sink_info, userdata ); // output info ... needs to be before input
+-      pa_context_get_source_info_list( context, rt_pa_set_source_info_and_quit, userdata ); // input info
++    {
++      // (Each operation runs on after its reference is given back.)
++      pa_operation *op = pa_context_get_server_info( context, rt_pa_set_server_info, userdata ); // server info
++      if ( op ) pa_operation_unref( op );
++      op = pa_context_get_sink_info_list( context, rt_pa_set_sink_info, userdata ); // output info ... needs to be before input
++      if ( op ) pa_operation_unref( op );
++      op = pa_context_get_source_info_list( context, rt_pa_set_source_info_and_quit, userdata ); // input info
++      if ( op ) pa_operation_unref( op );
+       break;
++    }
+ 
+     case PA_CONTEXT_TERMINATED:
+       paProbeInfo->paMainLoopApi->quit( paProbeInfo->paMainLoopApi, 0 );
+@@ -9693,6 +9699,10 @@ void RtApiPulse::closeStream( void )
+     free( stream_.userBuffer[1] );
+     stream_.userBuffer[1] = 0;
+   }
++  if ( stream_.deviceBuffer ) {
++    free( stream_.deviceBuffer );
++    stream_.deviceBuffer = 0;
++  }
+ 
+   clearStreamInfo();
+ }
