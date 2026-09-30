@@ -233,6 +233,7 @@ private slots:
         QCOMPARE(apiName(AudioDriver::System), u"WASAPI"_s);
 #elif defined(Q_OS_MACOS)
         QCOMPARE(drivers.size(), std::size_t{1}); // Core Audio only
+        QVERIFY(!has(AudioDriver::Asio) && !has(AudioDriver::Jack) && !has(AudioDriver::Alsa));
         QCOMPARE(apiName(AudioDriver::System), u"Core Audio"_s);
 #else
         QVERIFY(has(AudioDriver::Jack) && has(AudioDriver::Alsa));
