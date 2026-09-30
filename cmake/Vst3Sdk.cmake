@@ -35,6 +35,17 @@ if(WIN32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_sources(vst3_host_support PRIVATE ${VST3_HOSTING_DIR}/module_linux.cpp)
     target_link_libraries(vst3_host_support PUBLIC ${CMAKE_DL_LIBS})
+elseif(APPLE)
+    # As Steinberg's editorhost sample: the Mac loader is Objective-C++ and
+    # refuses to build without ARC ("#error this file needs to be compiled
+    # with automatic reference counting enabled"). (.mm files build with the
+    # C++ compiler, which Clang reads as Objective-C++ by their extension, as
+    # the SDK's own sdk_common builds its .mm files.)
+    target_sources(vst3_host_support PRIVATE ${VST3_HOSTING_DIR}/module_mac.mm)
+    set_source_files_properties(${VST3_HOSTING_DIR}/module_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    # Cocoa (AppKit, Foundation) for module_mac.mm and sdk_common's
+    # threadchecker_mac.mm / systemclipboard_mac.mm; CoreFoundation for CFBundle.
+    target_link_libraries(vst3_host_support PUBLIC "-framework Cocoa" "-framework CoreFoundation")
 endif()
 set_target_properties(vst3_host_support PROPERTIES CXX_STANDARD 17 AUTOMOC OFF POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(vst3_host_support PUBLIC sdk_hosting)
