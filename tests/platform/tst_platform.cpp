@@ -5,6 +5,7 @@
 #include "gigchain/platform/Windows.h"
 
 #include <QDir>
+#include <QGuiApplication>
 #include <QWindow>
 #include <QtTest>
 
@@ -45,12 +46,16 @@ private slots:
 #endif
     }
 
+    // The kind of window a plugin gets is the one the app really runs on:
+    // on Linux X11 only through Qt's X11 platform (xcb); on Wayland, or
+    // off-screen as here, there is none for plugins (said, not guessed).
     void theNativeWindowKindIsThisSystems()
     {
 #ifdef Q_OS_WIN
         QCOMPARE(platform::nativeWindowKind(), platform::NativeWindowKind::Win32);
 #else
-        QCOMPARE(platform::nativeWindowKind(), platform::NativeWindowKind::X11);
+        QCOMPARE(QGuiApplication::platformName(), u"offscreen"_s); // (tests run off-screen)
+        QCOMPARE(platform::nativeWindowKind(), platform::NativeWindowKind::None);
 #endif
     }
 

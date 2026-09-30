@@ -779,12 +779,18 @@ public:
         if (parent.handle == 0) {
             return logged(core::fail(core::ErrorCode::InvalidData, u"%1: no window to attach the editor to"_s.arg(m_title)));
         }
+        if (parent.kind == platform::NativeWindowKind::None) {
+            return logged(core::fail(core::ErrorCode::InvalidData,
+                                     u"%1's window cannot open here: plugin windows need X11 (the app runs without it, "
+                                     u"on Wayland). Start the app with QT_QPA_PLATFORM=xcb"_s.arg(m_title)));
+        }
         // VST3's name for the kind of window, and ours for a message.
         const auto [type, kindName] = [&parent]() -> std::pair<FIDString, QString> {
             switch (parent.kind) {
             case platform::NativeWindowKind::Win32: return {kPlatformTypeHWND, u"Windows"_s};
             case platform::NativeWindowKind::X11: return {kPlatformTypeX11EmbedWindowID, u"X11"_s};
             case platform::NativeWindowKind::Cocoa: return {kPlatformTypeNSView, u"macOS"_s};
+            case platform::NativeWindowKind::None: break; // refused above
             }
             return {kPlatformTypeHWND, u"Windows"_s};
         }();
