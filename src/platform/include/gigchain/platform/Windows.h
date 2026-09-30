@@ -21,6 +21,16 @@ enum class NativeWindowKind
 // editors are refused with the way out, never handed a window they cannot use.
 [[nodiscard]] NativeWindowKind nativeWindowKind();
 
+// The ratio between a plugin view's size and the window's own units: the
+// screen's device pixel ratio where plugins size themselves in pixels
+// (Windows, Linux), 1.0 on the Mac, whose views are sized in points (as
+// Audacity 4's VstView).
+[[nodiscard]] double pluginPixelRatio(const QWindow& window);
+
+// Whether plugins are told the screen's scale (IPlugViewContentScaleSupport):
+// not on the Mac, where the system scales views itself.
+[[nodiscard]] bool pluginsTakeContentScale();
+
 // Before the GUI starts: the window system plugin windows need. Linux
 // plugins draw into X11 windows, so the app runs Qt's X11 platform (xcb, also
 // on Wayland desktops through their X11 layer, as Reaper and Bitwig do) unless

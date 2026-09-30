@@ -36,6 +36,16 @@ NativeWindowKind nativeWindowKind()
     return NativeWindowKind::Win32;
 }
 
+double pluginPixelRatio(const QWindow& window)
+{
+    return window.devicePixelRatio();
+}
+
+bool pluginsTakeContentScale()
+{
+    return true;
+}
+
 void prepareGuiPlatform() {}
 
 void bringToFront(QWindow& window)

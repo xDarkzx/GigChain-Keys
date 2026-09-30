@@ -5,6 +5,7 @@
 
 #include "gigchain/engine/IEngine.h"
 #include "gigchain/core/Checks.h"
+#include "gigchain/platform/Windows.h"
 
 #include <QElapsedTimer>
 #include <QEvent>
@@ -164,7 +165,7 @@ bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWi
     if (owner != nullptr) window->setTransientParent(owner); // stays above the main window
     window->setTitle(title);
     window->create();
-    entry->ratio = window->devicePixelRatio();
+    entry->ratio = platform::pluginPixelRatio(*window); // (points on the Mac: 1.0)
     if (auto attached = entry->editor->attach({.handle = static_cast<quintptr>(window->winId()), .kind = platform::nativeWindowKind()});
         !attached) {
         delete window;
