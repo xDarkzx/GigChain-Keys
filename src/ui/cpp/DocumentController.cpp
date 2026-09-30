@@ -1135,12 +1135,14 @@ void DocumentController::applySectionsToEngine()
     }
     const core::Chart chart = song != nullptr && song->followChords ? core::parseChordPro(song->chart) : core::Chart{};
     m_songMap = song != nullptr && song->followChords ? core::buildSongMap(chart) : core::SongMap{};
-    // Too many chords to follow: said once (not on every edit), the tempo leads.
+    // Too many chords (or sections) to follow: said once (not on every edit),
+    // the tempo leads.
     if (m_songMap.tooLong && (newSong || !m_followTooLong)) {
-        const QString message = tr("\"%1\" has too many chords to follow (more than %2 with its repeats played out): "
-                                   "its sections follow the tempo")
+        const QString message = tr("\"%1\" has too many chords to follow (more than %2 with its repeats played out, "
+                                   "or more than %3 sections): its sections follow the tempo")
                                     .arg(song->name)
-                                    .arg(core::limits::kMaxFollowSteps);
+                                    .arg(core::limits::kMaxFollowSteps)
+                                    .arg(core::limits::kMaxSectionsPerSong);
         qCWarning(lcUi).noquote() << message;
         reportMessage(message, Notifications::Warning);
     }

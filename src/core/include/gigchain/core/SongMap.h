@@ -29,7 +29,8 @@ struct SongMap
     std::vector<SongStep> steps;
     std::vector<int> sectionStarts; // per chartSections() section: its first step; -1 = it has none
     // More than limits::kMaxFollowSteps chords as played (repeats played
-    // out): not read further, nothing to follow.
+    // out), or more than limits::kMaxSectionsPerSong sections: not read
+    // further, nothing to follow.
     bool tooLong = false;
 
     // Enough chords to follow.

@@ -44,7 +44,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     if (song.steps.size() > static_cast<std::size_t>(core::limits::kMaxFollowSteps)) std::abort();
     if (song.tooLong && !song.steps.empty()) std::abort();
     if (song.sectionStarts.size() != core::chartSections(chart).size()) std::abort();
-    const ChordFollowMap map = followMapOf(song);
+    // (As the app does: a song it cannot follow gives the engine nothing.)
+    const ChordFollowMap map = followMapOf(song.followable() ? song : core::SongMap{});
     if (!ChordFollower::check(map)) std::abort(); // the app's own maps are never refused
     if (map.steps.empty()) return 0;
 

@@ -13,6 +13,11 @@ SongMap buildSongMap(const Chart& chart)
     const std::vector<ChartSection> sections = chartSections(chart);
     SongMap map;
     map.sectionStarts.assign(sections.size(), -1);
+    // More sections than the engine follows (one bit each): nothing to follow.
+    if (sections.size() > static_cast<std::size_t>(limits::kMaxSectionsPerSong)) {
+        map.tooLong = true;
+        return map;
+    }
 
     std::vector<SongStep> played; // every chord as played, before twins are merged
     std::vector<SongStep> part;   // the current section's chords, played once
