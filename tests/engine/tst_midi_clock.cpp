@@ -70,15 +70,23 @@ private slots:
         MidiClockOut clock;
         clock.setTempo(60.0);
         QVERIFY(clock.open(outputs.first()).has_value());
+        // Each half second as it really was (a busy machine sleeps longer).
+        QElapsedTimer timer;
+        timer.start();
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         const uint64_t slow = clock.ticksSent();
+        const double slowSeconds = static_cast<double>(timer.nsecsElapsed()) / 1e9;
         clock.setTempo(240.0);
+        timer.restart();
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         const uint64_t fast = clock.ticksSent() - slow;
+        const double fastSeconds = static_cast<double>(timer.nsecsElapsed()) / 1e9;
         clock.close();
-        // Half a second at 60 BPM is 12 ticks; at 240 BPM, 48.
-        QVERIFY2(slow >= 10 && slow <= 15, qPrintable(QString::number(slow)));
-        QVERIFY2(fast >= 44 && fast <= 51, qPrintable(QString::number(fast)));
+        // 24 ticks a beat: half a second at 60 BPM is 12 ticks; at 240 BPM, 48.
+        const double slowExpected = slowSeconds * 60.0 / 60.0 * 24.0;
+        const double fastExpected = fastSeconds * 240.0 / 60.0 * 24.0;
+        QVERIFY2(std::abs(static_cast<double>(slow) - slowExpected) <= 3.0, qPrintable(u"%1 of %2"_s.arg(slow).arg(slowExpected)));
+        QVERIFY2(std::abs(static_cast<double>(fast) - fastExpected) <= 4.0, qPrintable(u"%1 of %2"_s.arg(fast).arg(fastExpected)));
     }
 };
 

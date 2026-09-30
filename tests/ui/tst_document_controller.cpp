@@ -10,6 +10,7 @@
 #include "gigchain/core/SetlistFile.h"
 
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
@@ -795,14 +796,19 @@ private slots:
     void tapTempoFollowsTheTaps()
     {
         EngineStatus status(*m_engine, *m_doc);
+        QElapsedTimer tapped; // the taps as they really came (a busy machine sleeps longer than asked)
+        tapped.start();
         status.tapTempo();
         QVERIFY(m_engine->tempoRequests.empty()); // one tap is not a tempo
         for (int i = 0; i < 3; ++i) {
-            QTest::qSleep(300); // tapping at 200 BPM: the time between taps is what is measured
+            QTest::qSleep(300); // tapping at about 200 BPM: the time between taps is what is measured
             status.tapTempo();
         }
+        const double played = 60000.0 / (static_cast<double>(tapped.elapsed()) / 3.0); // three beats
         QVERIFY(!m_engine->tempoRequests.empty());
-        QVERIFY2(std::abs(m_engine->tempoRequests.back() - 200.0) < 15.0, qPrintable(QString::number(m_engine->tempoRequests.back())));
+        QVERIFY2(std::abs(m_engine->tempoRequests.back() - played) < 5.0,
+                 qPrintable(u"%1 BPM for taps at %2 BPM"_s.arg(m_engine->tempoRequests.back()).arg(played)));
+        QVERIFY(played > 100.0 && played <= 201.0); // (and the taps were fast enough to be one tempo)
     }
 
     // ---- Song sections
