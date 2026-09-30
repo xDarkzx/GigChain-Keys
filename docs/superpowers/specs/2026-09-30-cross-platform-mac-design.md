@@ -83,7 +83,10 @@ The three places that use the screen's ratio today
 
 - `gigchain_app` is a `MACOSX_BUNDLE` named `GigChain Keys.app`, with an
   Info.plist template in `branding/`:
-  - bundle id `io.github.xdarkzx.gigchainkeys`;
+  - bundle id `nz.dkstudios.gigchainkeys` (`PRODUCT_BUNDLE_ID` in
+    `branding.cmake`; a reverse-domain name that needs no domain bought,
+    and matches one if it ever is; macOS keys settings and permissions to
+    it, so it does not change after the first release);
   - `LSMinimumSystemVersion` 13.0;
   - `NSHighResolutionCapable`;
   - `NSMicrophoneUsageDescription`;
