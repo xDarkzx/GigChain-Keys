@@ -26,16 +26,7 @@ rm -f "$APP/Contents/PlugIns/sqldrivers/libqsqlodbc.dylib" \
 
 # Every binary loads only what is inside the app or part of macOS: a path
 # into the build machine (Homebrew, Qt's install) would fail on a player's Mac.
-bad="$(find "$APP/Contents" -type f \( -perm -u+x -o -name '*.dylib' \) -print0 |
-       while IFS= read -r -d '' f; do
-           file -b "$f" | grep -q 'Mach-O' || continue
-           otool -L "$f" | tail -n +2 | awk -v f="${f#"$APP"/}" '{print f ": " $1}'
-       done | grep -vE ': (@rpath/|@loader_path/|@executable_path/|/System/|/usr/lib/)' || true)"
-if [ -n "$bad" ]; then
-    echo "Libraries loaded from outside the app and macOS:" >&2
-    echo "$bad" >&2
-    exit 1
-fi
+bash "$ROOT/tools/check-mac-links.sh" "$APP"
 
 # The licences travel with the app (a dragged-out app has no .dmg around it)
 # and sit in the .dmg: the notices, and the texts they point to.
