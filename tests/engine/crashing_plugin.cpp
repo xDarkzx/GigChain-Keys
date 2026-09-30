@@ -9,6 +9,22 @@
 #define GIGCHAIN_EXPORT __attribute__((visibility("default")))
 #endif
 
+#ifndef _WIN32
+// Linux hosts call the module's entry first (Steinberg's module_linux):
+// the crash is there.
+extern "C" GIGCHAIN_EXPORT bool ModuleEntry(void* /*sharedLibraryHandle*/)
+{
+    volatile std::uintptr_t nowhere = 0;
+    // cppcheck-suppress nullPointer ; the crash is the point
+    *reinterpret_cast<volatile int*>(nowhere) = 1; // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): the crash is the point
+    return false;
+}
+extern "C" GIGCHAIN_EXPORT bool ModuleExit()
+{
+    return true;
+}
+#endif
+
 extern "C" GIGCHAIN_EXPORT void* GetPluginFactory()
 {
     volatile std::uintptr_t nowhere = 0;

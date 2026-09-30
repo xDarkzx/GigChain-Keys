@@ -3,6 +3,7 @@
 // never the host. Uses a fake plugin that crashes on purpose, and a small
 // real one (skipped when it is not installed).
 #include "PluginCatalog.h"
+#include "TestPlugins.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -18,11 +19,12 @@
 #endif
 
 using namespace gigchain::engine;
+using gigchain::test::removePlugin;
 using namespace Qt::StringLiterals;
 
 namespace {
 
-const QString kReal = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+const QString kReal = gigchain::test::kEffect.path; // TDR Kotelnikov; Surge XT Effects on Linux
 constexpr const char* kCrasherPath = GIGCHAIN_CRASHING_PLUGIN;
 constexpr const char* kScannerPath = GIGCHAIN_PLUGIN_SCANNER;
 
@@ -54,17 +56,23 @@ private slots:
 
     void init()
     {
-        if (!QFileInfo::exists(kReal)) QSKIP("TDR Kotelnikov not installed");
+        if (!QFileInfo::exists(kReal)) QSKIP("The test effect is not installed");
         QVERIFY(QFileInfo::exists(m_crasher));
         QVERIFY(QFileInfo::exists(m_scanner));
         m_folder = m_dir.filePath(u"VST3"_s);
         m_cache = m_dir.filePath(u"plugin-cache.json"_s);
+        QDir(m_folder).removeRecursively();
         QVERIFY(QDir().mkpath(m_folder));
-        QFile::remove(m_folder + u"/Crasher.vst3"_s);
-        QFile::remove(m_folder + u"/TDR Kotelnikov.vst3"_s);
         QFile::remove(m_cache);
-        QVERIFY(QFile::copy(m_crasher, m_folder + u"/Crasher.vst3"_s));
-        QVERIFY(QFile::copy(kReal, m_folder + u"/TDR Kotelnikov.vst3"_s));
+#ifdef Q_OS_WIN
+        QVERIFY(QFile::copy(m_crasher, m_folder + u"/Crasher.vst3"_s)); // a single-file plugin
+#else
+        // Linux plugins are bundles: Crasher.vst3/Contents/x86_64-linux/Crasher.so.
+        const QString binary = m_folder + u"/Crasher.vst3/Contents/x86_64-linux"_s;
+        QVERIFY(QDir().mkpath(binary));
+        QVERIFY(QFile::copy(m_crasher, binary + u"/Crasher.so"_s));
+#endif
+        QVERIFY(gigchain::test::copyPlugin(kReal, m_folder + u'/' + QFileInfo(kReal).fileName()));
     }
 
     void aPluginThatCrashesWhileBeingReadDoesNotTakeTheHostDown()
@@ -74,7 +82,7 @@ private slots:
         const auto plugins = PluginCatalog::scan(m_folder, m_cache, &stats, {}, nullptr, m_scanner);
         // Still here: the crash ended the scanner's process, not this one.
         QCOMPARE(plugins.size(), std::size_t{1});
-        QVERIFY(plugins.front().name.contains(u"Kotelnikov"_s));
+        QCOMPARE(plugins.front().name, gigchain::test::kEffect.name);
         QCOMPARE(stats.opened, 2);
         QCOMPARE(stats.failed, 1);
 
@@ -96,7 +104,7 @@ private slots:
         // The same plugin, read in this process and by the scanner, gives the same details.
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Skipping plugin .*Crasher"_s));
         const auto outside = PluginCatalog::scan(m_folder, {}, nullptr, {}, nullptr, m_scanner);
-        QVERIFY(QFile::remove(m_folder + u"/Crasher.vst3"_s)); // never read in this process
+        QVERIFY(removePlugin(m_folder + u"/Crasher.vst3"_s)); // never read in this process
         const auto inside = PluginCatalog::scan(m_folder, {}, nullptr, {}, nullptr, {});
         QCOMPARE(outside.size(), std::size_t{1});
         QCOMPARE(inside.size(), std::size_t{1});
@@ -113,7 +121,7 @@ private slots:
 
     void aMissingScannerFallsBackToReadingHereAndSaysSo()
     {
-        QVERIFY(QFile::remove(m_folder + u"/Crasher.vst3"_s));
+        QVERIFY(removePlugin(m_folder + u"/Crasher.vst3"_s));
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"plugin scanner .*not found.*reading plugins in this process"_s));
         const auto plugins = PluginCatalog::scan(m_folder, {}, nullptr, {}, nullptr, m_dir.filePath(u"NoScanner.exe"_s));
         QCOMPARE(plugins.size(), std::size_t{1});
