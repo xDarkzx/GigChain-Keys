@@ -159,6 +159,21 @@ private slots:
         QVERIFY(!device.isOpen());
     }
 
+    // The buffer asked for is the one used, not the device's smallest (Core
+    // Audio's "minimise latency" gives 15 frames: plugins starve, the sound
+    // crackles; seen on GitHub's Mac machines).
+    void theRequestedBufferSizeIsUsed()
+    {
+        if (AudioDevice::listOutputs().empty()) QSKIP("No audio outputs on this machine");
+        AudioDevice device;
+        const auto opened = device.open(std::nullopt, 256, [](AudioBlock out, const AudioInputs&) {
+            std::fill_n(out.left, out.frames, 0.0F);
+            std::fill_n(out.right, out.frames, 0.0F);
+        });
+        QVERIFY2(opened.has_value(), opened ? "" : qPrintable(opened.error().message));
+        QVERIFY2(device.maxBlock() >= 64, qPrintable(u"%1 frames"_s.arg(device.maxBlock())));
+    }
+
     void opensAtTheRequestedRateAndPauses()
     {
         const auto outputs = AudioDevice::listOutputs();
