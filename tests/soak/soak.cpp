@@ -18,6 +18,7 @@
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/Model.h"
 #include "gigchain/engine/RealEngineFactory.h"
+#include "gigchain/platform/MemoryUse.h"
 
 #include <QCoreApplication>
 #include <QDataStream>
@@ -30,9 +31,11 @@
 #include <QTextStream>
 #include <QThread>
 
+#ifdef _WIN32
 #include <windows.h>
 #include <psapi.h>
 #include <tlhelp32.h>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -64,7 +67,8 @@ Logged& logged()
 bool expected(const QString& text)
 {
     static const QRegularExpression pattern(
-        uR"(MidiIn(WinMM|Dummy)|no MIDI input devices|MIDI input .* reported|Skipping plugin|maps \d+ parameters|^Panic: every sound stopped)"_s);
+        uR"(MidiIn(WinMM|Dummy)|no MIDI input devices|MIDI input .* reported|Skipping plugin|maps \d+ parameters|^Panic: every sound stopped|)"
+        uR"(Listing MIDI (inputs|outputs) failed: Midi(In|Out)Alsa::initialize)"_s); // (WSL has no ALSA MIDI: said once)
     return pattern.match(text).hasMatch();
 }
 
@@ -97,12 +101,28 @@ void handler(QtMsgType type, const QMessageLogContext&, const QString& text)
 struct Sample
 {
     double minutes = 0.0;
-    double privateMb = 0.0;
-    DWORD handles = 0;
+    double privateMb = 0.0; // Windows: private bytes; Linux: resident memory
+    unsigned long handles = 0; // Windows: kernel handles; Linux: open file descriptors
     int threads = 0;
     float cpu = 0.0F;
 };
 
+#ifndef _WIN32
+Sample measure(double minutes, float cpu)
+{
+    const auto bytes = platform::residentBytes();
+    std::map<QString, int> counts = test::handlesByType();
+    const int threads = counts[u"Thread"_s];
+    counts.erase(u"Thread"_s);
+    unsigned long handles = 0;
+    for (const auto& [kind, count] : counts) handles += static_cast<unsigned long>(count);
+    return Sample{.minutes = minutes,
+                  .privateMb = bytes ? static_cast<double>(*bytes) / (1024.0 * 1024.0) : 0.0,
+                  .handles = handles,
+                  .threads = threads,
+                  .cpu = cpu};
+}
+#else
 int threadCount()
 {
     const DWORD self = GetCurrentProcessId();
@@ -131,6 +151,7 @@ Sample measure(double minutes, float cpu)
                   .threads = threadCount(),
                   .cpu = cpu};
 }
+#endif
 
 // ------------------------------------------------------------- the gig
 // A mono 48 kHz WAV of a quiet tone: the backing track.

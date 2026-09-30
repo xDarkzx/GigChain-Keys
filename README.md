@@ -1,7 +1,7 @@
 # GigChain Keys
 
-An open-source, Windows-first live-performance host for keyboard players, in
-the spirit of MainStage. Load the VST3 instruments and effects already
+An open-source live-performance host for keyboard players, in the spirit of
+MainStage, for Windows and Linux (macOS next). Load the VST3 instruments and effects already
 installed on your machine, build a setlist of songs and patches, and switch
 sounds instantly on stage.
 
@@ -56,6 +56,37 @@ $env:QT_ROOT_DIR = 'C:\Qt\6.10.2\msvc2022_64'
 Other presets: `release`, and `asan` (AddressSanitizer). To build and test
 one target, pass `-Target <name> -Filter <test>`.
 
+### Linux (and WSL)
+
+Ubuntu 22.04 or newer, x64; on Windows, WSL 2 with WSLg (it shows Linux
+windows and plays their sound). The first time:
+
+```bash
+sudo bash tools/setup-linux.sh --system   # packages, GCC 13, Clang 15, Surge XT (a free test instrument)
+bash tools/setup-linux.sh --user          # CMake, Qt 6.10.2, vcpkg
+bash tools/setup-linux.sh --check         # what is installed
+```
+
+Then:
+
+```bash
+bash tools/verify.sh        # configure, build and run every test (linux-debug)
+bash tools/run.sh           # start GigChain Keys (linux-release)
+bash tools/soak.sh 20       # the 20-minute soak, in a terminal of its own
+bash tools/fuzz.sh 300      # the fuzzers, 5 minutes each (Clang)
+```
+
+Presets: `linux-debug`, `linux-release`, `linux-asan` (AddressSanitizer and
+UndefinedBehaviorSanitizer), `linux-fuzz`. Builds go to
+`~/.cache/gigchain/build/<preset>` (the machine's own disk, fast even when
+the sources are on a Windows drive). Audio: PulseAudio (also on PipeWire, and
+in WSLg), JACK or ALSA; MIDI: ALSA (WSL has no MIDI devices). Plugin windows
+are X11 windows, also on Wayland desktops.
+
+What differs by system lives in per-system files (`*_win.cpp`,
+`*_posix.cpp`, `*_linux.cpp`), mostly in `src/platform`; a test fails if
+system code appears anywhere else. macOS is next (docs/ROADMAP.md).
+
 ### The installer
 
 ```powershell
@@ -82,6 +113,7 @@ the source. Settings saved under earlier names carry over on first start.
 | Folder | What lives there |
 |---|---|
 | `src/core` | Setlist model, JSON files, navigation and editing, logging |
+| `src/platform` | What differs by system (crash reports, one app at a time, plugin folders, windows...): one file per system |
 | `src/engine` | Audio and MIDI devices, the render graph, VST3 hosting; the only code that touches the SDKs |
 | `src/ui` | The QML interface and the C++ models behind it |
 | `src/app` | Startup: wires the engine, settings and UI together |

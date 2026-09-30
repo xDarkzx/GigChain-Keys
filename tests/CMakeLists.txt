@@ -40,6 +40,4 @@ add_subdirectory(platform)
 add_subdirectory(core)
 add_subdirectory(engine)
 add_subdirectory(ui)
-if(WIN32) # the soak counts Windows handles; its Linux readings come in plan Task 11
-    add_subdirectory(soak)
-endif()
+add_subdirectory(soak)

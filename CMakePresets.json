@@ -54,6 +54,16 @@
       }
     },
     {
+      "name": "linux-fuzz",
+      "inherits": "linux-asan",
+      "description": "The fuzzers, with Clang's libFuzzer (tools/fuzz.sh)",
+      "cacheVariables": {
+        "GIGCHAIN_FUZZ": "ON",
+        "CMAKE_C_COMPILER": "clang-15",
+        "CMAKE_CXX_COMPILER": "clang++-15"
+      }
+    },
+    {
       "name": "debug",
       "inherits": "base",
       "cacheVariables": {
@@ -107,6 +117,10 @@
       "configurePreset": "linux-asan"
     },
     {
+      "name": "linux-fuzz",
+      "configurePreset": "linux-fuzz"
+    },
+    {
       "name": "debug",
       "configurePreset": "debug"
     },
@@ -149,6 +163,16 @@
       "name": "linux-asan",
       "inherits": "base",
       "configurePreset": "linux-asan"
+    },
+    {
+      "name": "linux-fuzz",
+      "inherits": "base",
+      "configurePreset": "linux-fuzz",
+      "filter": {
+        "include": {
+          "name": "^fuzz_"
+        }
+      }
     },
     {
       "name": "debug",

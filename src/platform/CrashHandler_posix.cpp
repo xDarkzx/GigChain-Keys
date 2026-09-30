@@ -76,7 +76,9 @@ std::array<char, 24> hex(unsigned long long value)
 
 void put(int fd, const char* text)
 {
-    (void)write(fd, text, std::strlen(text));
+    // In a crash nothing more can be done if the disk refuses: the rest of
+    // the note is still tried.
+    if (write(fd, text, std::strlen(text)) < 0) return;
 }
 
 // Writes one report; false when it could not be created. `signal` 0 and

@@ -22,7 +22,7 @@ system_part() {
     add-apt-repository -y ppa:ubuntu-toolchain-r/test
     apt-get update
     apt-get install -y \
-        gcc-13 g++-13 build-essential ninja-build pkg-config git curl zip unzip tar \
+        gcc-13 g++-13 clang-15 build-essential ninja-build pkg-config git curl zip unzip tar \
         python3-pip python3-venv autoconf autoconf-archive automake libtool bison flex \
         libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 \
         libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \

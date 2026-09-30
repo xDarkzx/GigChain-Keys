@@ -11,10 +11,23 @@ function(gigchain_add_fuzzer name)
     add_executable(${name} ${ARG_SOURCES})
     target_link_libraries(${name} PRIVATE ${ARG_LIBS})
     gigchain_target_defaults(${name})
-    target_compile_options(${name} PRIVATE /fsanitize=fuzzer)
-    target_link_options(${name} PRIVATE /fsanitize=fuzzer)
+    if(MSVC)
+        target_compile_options(${name} PRIVATE /fsanitize=fuzzer)
+        target_link_options(${name} PRIVATE /fsanitize=fuzzer)
+    else() # Clang (libFuzzer is Clang's; the linux-fuzz preset)
+        target_compile_options(${name} PRIVATE -fsanitize=fuzzer)
+        target_link_options(${name} PRIVATE -fsanitize=fuzzer)
+    endif()
+    # On Linux without address randomisation: Clang 15's sanitizer runtime
+    # crashes at random at start-up on kernels randomising with more than 28
+    # bits (vm.mmap_rnd_bits = 32 in WSL's 6.6 kernel; fixed in LLVM 18).
+    # Measured: a crash every few runs with it, none in 80 runs without.
+    set(_launcher "")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(_launcher setarch ${CMAKE_SYSTEM_PROCESSOR} -R)
+    endif()
     add_test(NAME ${name}
-             COMMAND ${name} -runs=0 ${CMAKE_CURRENT_SOURCE_DIR}/corpus/${name})
+             COMMAND ${_launcher} $<TARGET_FILE:${name}> -runs=0 ${CMAKE_CURRENT_SOURCE_DIR}/corpus/${name})
     set_tests_properties(${name} PROPERTIES
         ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>")
 endfunction()
