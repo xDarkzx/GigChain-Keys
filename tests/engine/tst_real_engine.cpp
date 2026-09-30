@@ -8,6 +8,8 @@
 #include "gigchain/core/Limits.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
+#include "TestPlugins.h"
+
 #include <QDataStream>
 #include <QFile>
 #include <QFileInfo>
@@ -29,8 +31,11 @@ using namespace Qt::StringLiterals;
 
 namespace {
 
-const QString kVst3Folder = u"C:/Program Files/Common Files/VST3"_s;
-const QString kPiano = u"C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3"_s;
+// This system's test plugins (TestPlugins.h): Piano V2 and Kotelnikov on
+// Windows, Surge XT and Surge XT Effects on Linux.
+const QString kVst3Folder = test::kVst3Folder;
+const QString kPiano = test::kInstrument.path; // the test instrument
+const QString kSmall = test::kEffect.path;     // a small effect
 
 core::PluginSlot slot(const QString& pluginId, const QString& name, bool bypass = false)
 {
@@ -93,6 +98,22 @@ void pump(IEngine& engine, int milliseconds)
     }
 }
 
+// Keeps the engine going until `done` says so, for at most `limitMs`: what
+// the audio thread does is waited for, not assumed to be done in a few
+// milliseconds (some sound systems, WSLg's PulseAudio among them, run the
+// audio in bursts). True when it happened.
+// (`done` is asked once each time round, never again after it said yes: it
+// may take what it found.)
+template <typename Done>
+bool waitUntil(IEngine& engine, const Done& done, int limitMs = 2000)
+{
+    for (int waited = 0;; waited += 20) {
+        if (done()) return true;
+        if (waited >= limitMs) return false;
+        pump(engine, 20);
+    }
+}
+
 } // namespace
 
 class TestRealEngine : public QObject
@@ -102,14 +123,14 @@ class TestRealEngine : public QObject
 private slots:
     void catalogFindsInstalledPlugins()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         const auto entries = PluginCatalog::scan(kVst3Folder);
         const auto piano = std::find_if(entries.begin(), entries.end(), [](const PluginInfo& p) { return p.id == kPiano; });
         QVERIFY(piano != entries.end());
-        QCOMPARE(piano->name, u"Piano V2"_s);
+        QCOMPARE(piano->name, test::kInstrument.name);
         QVERIFY(piano->kind == PluginKind::Instrument);
         QVERIFY(!piano->vendor.isEmpty());
-        QVERIFY(piano->website.contains(u"arturia"_s, Qt::CaseInsensitive)); // for the info panel
+        QVERIFY2(piano->website.contains(test::kInstrument.website, Qt::CaseInsensitive), qPrintable(piano->website)); // for the info panel
         QVERIFY(piano->sdkVersion.startsWith(u"VST"_s));
     }
 
@@ -147,7 +168,7 @@ private slots:
 
     void playsAnInstrumentFromAnInjectedNote()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY2(created.has_value(), created ? "" : qPrintable(created.error().message));
@@ -170,7 +191,8 @@ private slots:
         const LevelReading master = engine.masterLevel();
         QCOMPARE(int(engine.keyboardActivity().velocity.at(60)), 110); // lit on the screen's keyboard
         engine.injectNote(1, 60, 0);
-        pump(engine, 50);
+        // Let go on the screen too (waited for: some sound systems run in bursts).
+        for (int i = 0; i < 40 && engine.keyboardActivity().velocity.at(60) != 0; ++i) pump(engine, 50);
         QCOMPARE(int(engine.keyboardActivity().velocity.at(60)), 0);
         QVERIFY2(peak > 0.001F, "piano channel stayed silent");
         // The master meter shows what leaves the app: after the master fader.
@@ -181,7 +203,7 @@ private slots:
 
     void changingTheSampleRateKeepsPlaying()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -260,8 +282,7 @@ private slots:
     void aSongsPatchesShareTheirPluginsAndPreloadPrunes()
     {
         // A small plugin keeps this quick; any plugin behaves the same.
-        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
-        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -308,8 +329,7 @@ private slots:
 
     void pluginSettingsAreStoredAndComeBack()
     {
-        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
-        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -353,8 +373,7 @@ private slots:
 
     void anEffectsWindowOpensWhileItIsOn()
     {
-        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
-        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -381,8 +400,7 @@ private slots:
 
     void masterEffectsStayWhateverSetlistIsOpen()
     {
-        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
-        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -415,8 +433,7 @@ private slots:
 
     void aPluginThatCrashedTheAppIsNotLoadedAgain()
     {
-        const QString kSmall = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
-        if (!QFileInfo::exists(kSmall)) QSKIP("TDR Kotelnikov not installed");
+        if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");
         QTemporaryDir guardFolder;
         RealEngineOptions options;
         options.pluginGuardFolder = guardFolder.path();
@@ -433,7 +450,7 @@ private slots:
         QCOMPARE(engine.blockedPlugins(), QStringList{kSmall});
         auto notices = engine.poll();
         QVERIFY(!notices.empty());
-        QVERIFY2(notices.back().text.contains(u"TDR Kotelnikov"_s), qPrintable(notices.back().text));
+        QVERIFY2(notices.back().text.contains(test::kEffect.name), qPrintable(notices.back().text));
         QVERIFY(notices.back().level == Notice::Level::Warning);
 
         core::Patch patch = core::makePatch(u"Verse"_s);
@@ -457,7 +474,7 @@ private slots:
 
     void aLearnedPadSwitchesSongsAndIsNotPlayed()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -471,8 +488,11 @@ private slots:
         (void)engine.takeLearnedTrigger();
         engine.injectNote(1, 36, 100);
         engine.injectNote(1, 36, 0);
-        pump(engine, 100);
-        const MidiTrigger learned = engine.takeLearnedTrigger();
+        MidiTrigger learned;
+        QVERIFY(waitUntil(engine, [&] {
+            learned = engine.takeLearnedTrigger();
+            return learned != MidiTrigger{};
+        }));
         QCOMPARE(learned, (MidiTrigger{MidiTrigger::Note, 0, 36}));
 
         ControlTriggers triggers{};
@@ -485,7 +505,11 @@ private slots:
         (void)engine.channelLevel(patch.channels[0].id);
         engine.injectNote(1, 36, 100); // the pad
         pump(engine, 300);
-        const auto actions = engine.takeControlActions();
+        std::vector<ControlAction> actions;
+        QVERIFY(waitUntil(engine, [&] {
+            std::ranges::copy(engine.takeControlActions(), std::back_inserter(actions));
+            return !actions.empty();
+        }));
         QCOMPARE(actions, std::vector<ControlAction>{ControlAction::NextSong});
         QVERIFY(engine.takeControlActions().empty()); // once
         QCOMPARE(engine.channelLevel(patch.channels[0].id).peak, 0.0F); // the piano never heard it
@@ -499,7 +523,7 @@ private slots:
 
     void panicStopsTheSoundAndPlaysOnAfter()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -549,11 +573,11 @@ private slots:
     // can never run a program that was not installed as a plugin.
     void onlyInstalledPluginsLoad()
     {
-        const QString installed = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
-        if (!QFileInfo::exists(installed)) QSKIP("TDR Kotelnikov not installed");
+        const QString installed = kSmall;
+        if (!QFileInfo::exists(installed)) QSKIP("The test effect is not installed");
         QTemporaryDir elsewhere;
         const QString copy = elsewhere.filePath(u"Kotelnikov.vst3"_s);
-        QVERIFY(QFile::copy(installed, copy));
+        QVERIFY(test::copyPlugin(installed, copy));
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -574,8 +598,10 @@ private slots:
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov is not one of the installed plugins"_s));
         QVERIFY(!engine.createEditorForPlugin(copy).has_value()); // nor as an editor
 
-        // Named as if in the plugin folder, climbing out of it: still refused.
-        const QString climbing = u"C:/Program Files/Common Files/VST3/../../../"_s + QFileInfo(copy).canonicalFilePath().mid(3);
+        // Named as if in the plugin folder, climbing out of it (it is three
+        // folders below the root on both systems): still refused.
+        const QString climbing =
+            kVst3Folder + u"/../../../"_s + QFileInfo(copy).canonicalFilePath().mid(QDir::rootPath().size());
         QVERIFY2(QFileInfo::exists(climbing), qPrintable(climbing));
         core::Patch sneaky = core::makePatch(u"Sneaky"_s);
         core::Channel up = core::makeChannel(u"Up"_s);
@@ -586,10 +612,15 @@ private slots:
         QCOMPARE(engine.loadedPluginCount(), before);
         (void)engine.poll();
 
-        // The installed one, named the way Windows may write it, loads.
+        // The installed one loads (on Windows also named the way Windows may
+        // write it: other case, backslashes).
         core::Patch real = core::makePatch(u"Installed"_s);
         core::Channel same = core::makeChannel(u"Kotelnikov"_s);
+#ifdef Q_OS_WIN
         same.instrument = slot(QString(installed).replace(u'/', u'\\').toUpper(), u"Kotelnikov"_s);
+#else
+        same.instrument = slot(installed, u"Kotelnikov"_s);
+#endif
         real.channels.push_back(same);
         engine.applyPatch(real);
         QCOMPARE(engine.loadedPluginCount(), before + 1);
@@ -690,7 +721,7 @@ private slots:
 
     void aHeldChordRingsOnAcrossAPatchChange()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -723,7 +754,7 @@ private slots:
     // count moves through them at the tempo.
     void songSectionsSendNotesToTheirChannels()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -845,7 +876,7 @@ private slots:
     // piano sounds the chord; the verse's piano gets nothing new.
     void playingTheChorusChordEntersTheChorus()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -867,19 +898,25 @@ private slots:
         }
         map.sectionStarts = {0, 2};
         QVERIFY(engine.setChordFollow(map).has_value());
-        pump(engine, 50);
-        QVERIFY(engine.chordFollow().active);
+        // What the audio thread does, waited for (up to 2 s: some sound
+        // systems, WSLg's PulseAudio among them, run the audio in bursts).
+        const auto until = [&engine](const auto& done) {
+            for (int i = 0; i < 40 && !done(); ++i) pump(engine, 50);
+            return done();
+        };
+        const auto atStep = [&engine](int step) { return [&engine, step] { return engine.chordFollow().step == step; }; };
+        QVERIFY(until([&engine] { return engine.chordFollow().active; }));
         QVERIFY(!engine.chordFollow().started);
         const auto chord = [&engine](std::initializer_list<int> keys, int velocity) {
             for (const int key : keys) engine.injectNote(1, key, velocity);
             pump(engine, 100);
         };
         chord({57, 60, 64}, 100); // Am
-        QCOMPARE(engine.chordFollow().step, 0);
+        QVERIFY(until(atStep(0)));
         chord({57, 60, 64}, 0);
         pump(engine, 600);
         chord({55, 59, 62}, 100); // G
-        QCOMPARE(engine.chordFollow().step, 1);
+        QVERIFY(until(atStep(1)));
         chord({55, 59, 62}, 0);
         pump(engine, 3000); // the verse's piano fades away
         (void)engine.channelLevel(verse);
@@ -889,7 +926,7 @@ private slots:
 
         chord({53, 57, 60}, 100); // F: the chorus
         pump(engine, 300);
-        QCOMPARE(engine.chordFollow().step, 2);
+        QVERIFY(until(atStep(2)));
         QCOMPARE(engine.songPosition().section, 1);
         QVERIFY2(engine.channelLevel(chorus).peak > 0.0F, "the chorus's piano did not sound the chorus's chord");
         QVERIFY2(engine.channelLevel(verse).peak <= verseTail, "the verse's piano sounded the chorus's chord");
@@ -897,14 +934,11 @@ private slots:
 
         // The pedal's "next section" and Panic.
         engine.jumpToSection(0);
-        pump(engine, 50);
-        QCOMPARE(engine.chordFollow().step, 0);
+        QVERIFY(until(atStep(0)));
         engine.panic();
-        pump(engine, 50);
-        QVERIFY(!engine.chordFollow().started);
+        QVERIFY(until([&engine] { return !engine.chordFollow().started; }));
         QVERIFY(engine.setChordFollow({}).has_value()); // off: the tempo leads again
-        pump(engine, 50);
-        QVERIFY(!engine.chordFollow().active);
+        QVERIFY(until([&engine] { return !engine.chordFollow().active; }));
     }
 
     void aCountInKeepsTheBackingTrackWaiting()
@@ -944,7 +978,7 @@ private slots:
     // A loop records its channel and plays on alone, through a patch change.
     void aLoopPlaysOnAfterAPatchChangeAndClears()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -985,16 +1019,16 @@ private slots:
         QVERIFY2(engine.masterLevel().peak > 0.0F, "the loop stopped at the patch change");
         QCOMPARE(stateOf(), LoopState::Playing);
 
-        // Loop stops it at once (not on the next bar, a second away).
+        // Loop stops it at once (not on the next bar, a second away; waited
+        // for up to half a second, as some sound systems run in bursts).
         engine.loopCommand(piano, LoopCommand::PlayStop);
-        pump(engine, 60);
-        QCOMPARE(stateOf(), LoopState::Stopped);
+        QVERIFY(waitUntil(engine, [&stateOf] { return stateOf() == LoopState::Stopped; }, 500));
         (void)engine.masterLevel();
         pump(engine, 300);
         QCOMPARE(engine.masterLevel().peak, 0.0F);
         engine.loopCommand(piano, LoopCommand::PlayStop); // starts again on the next bar
-        pump(engine, 60);
-        QCOMPARE(stateOf(), LoopState::StartArmed);
+        // (Armed within half a second: the bar, a second long, is still to come.)
+        QVERIFY(waitUntil(engine, [&stateOf] { return stateOf() == LoopState::StartArmed; }, 500));
         QVERIFY(waitFor(LoopState::Playing));
 
         engine.clearAllLoops();
@@ -1009,7 +1043,7 @@ private slots:
     // loop closes by itself at the end.
     void aLoopOfASetLengthCountsItsBarsAndClosesItself()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -1082,7 +1116,7 @@ private slots:
 
     void aPluginsParametersAreListedForKnobs()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
@@ -1101,19 +1135,20 @@ private slots:
 
     void bundledPluginsAreFoundWithTheInstalledOnes()
     {
-        if (!QFileInfo::exists(kPiano)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
         // A "bundled" folder holding a copy of an installed plugin (same name
         // and maker): the installed one is kept, not listed twice.
         const QTemporaryDir bundled;
-        QVERIFY(QFile::copy(kPiano, bundled.filePath(u"Piano V2.vst3"_s)));
+        QVERIFY(test::copyPlugin(kPiano, bundled.filePath(QFileInfo(kPiano).fileName())));
         RealEngineOptions options;
         options.bundledPluginFolder = bundled.path();
         auto created = createRealEngine(options);
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         const auto plugins = (*created)->availablePlugins();
-        QCOMPARE(std::ranges::count_if(plugins, [](const PluginInfo& p) { return p.name == u"Piano V2"_s; }), 1);
-        const auto piano = std::ranges::find_if(plugins, [](const PluginInfo& p) { return p.name == u"Piano V2"_s; });
+        const auto isIt = [](const PluginInfo& p) { return p.name == test::kInstrument.name; };
+        QCOMPARE(std::ranges::count_if(plugins, isIt), 1);
+        const auto piano = std::ranges::find_if(plugins, isIt);
         QCOMPARE(piano->id, kPiano);
     }
 };

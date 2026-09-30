@@ -3,6 +3,7 @@
 #include "ComponentHandler.h"
 #include "Handles.h"
 #include "PluginModules.h"
+#include "TestPlugins.h"
 #include "Vst3Node.h"
 
 #include <QFile>
@@ -24,8 +25,14 @@ using namespace Qt::StringLiterals;
 
 namespace {
 
-const QString kInstrument = u"C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3"_s;
+// This system's test plugins (TestPlugins.h): the effect passing audio
+// through is Pro-Q 3 on Windows, Surge XT Effects on Linux.
+const QString kInstrument = test::kInstrument.path;
+#ifdef Q_OS_WIN
 const QString kEffect = u"C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-Q 3.vst3"_s;
+#else
+const QString kEffect = test::kEffect.path;
+#endif
 constexpr double kRate = 48000.0;
 constexpr int kBlock = 256;
 const TimeInfo kTime{.tempo = 120.0, .sampleRate = kRate, .samplePosition = 0, .ppqPosition = 0.0,
@@ -116,8 +123,8 @@ private slots:
     void preparingAgainLeaksNoHandles_data()
     {
         QTest::addColumn<QString>("plugin");
-        QTest::newRow("Piano V2") << kInstrument;
-        QTest::newRow("Kotelnikov") << u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+        QTest::newRow("instrument") << kInstrument;
+        QTest::newRow("effect") << test::kEffect.path;
     }
     void preparingAgainLeaksNoHandles()
     {
@@ -137,7 +144,7 @@ private slots:
 
     void instrumentPlaysANote()
     {
-        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
         auto node = Vst3Node::load(kInstrument, kRate, kBlock);
         QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
         QVERIFY((*node)->isInstrument());
@@ -168,7 +175,12 @@ private slots:
     // keyboard sends them: measured 13 to 85 from an Impact GXP61).
     void softNotesPlaySofterThanHardOnes()
     {
-        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
+#ifndef Q_OS_WIN
+        // (It needs an instrument that plays softer when struck softer: Piano
+        // V2 does; Surge XT's default patch plays every note alike.)
+        QSKIP("The Linux test instrument's default sound does not follow velocity");
+#endif
         auto play = [](uint8_t velocity) {
             auto node = Vst3Node::load(kInstrument, kRate, kBlock);
             if (!node) return -1.0F;
@@ -188,7 +200,7 @@ private slots:
     // released note: it still sounds long after the key is let go.
     void theSustainPedalHoldsReleasedNotes()
     {
-        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
         constexpr int kRelease = 10;     // key let go (~53 ms at 256 frames, 48 kHz)
         constexpr int kListenFrom = 120; // ~0.6 s after
         auto afterRelease = [](bool pedal) {
@@ -214,7 +226,7 @@ private slots:
     void stateMovesToAFreshInstance()
     {
         // How a plugin is reloaded (e.g. at another window size) without losing its sound.
-        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
         auto first = Vst3Node::load(kInstrument, kRate, kBlock);
         QVERIFY(first.has_value());
         QCOMPARE((*first)->bundlePath(), kInstrument);
@@ -233,7 +245,7 @@ private slots:
 
     void stateIsStoredCompactly()
     {
-        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
         auto node = Vst3Node::load(kInstrument, kRate, kBlock);
         QVERIFY(node.has_value());
         const auto saved = (*node)->saveState();
@@ -288,7 +300,7 @@ private slots:
 
     void instancesOfAPluginShareOneLibrary()
     {
-        if (!QFileInfo::exists(kInstrument)) QSKIP("Arturia Piano V2 not installed");
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
         const std::size_t before = PluginModules::loadedCount();
         {
             auto first = Vst3Node::load(kInstrument, kRate, kBlock);
@@ -326,7 +338,7 @@ private slots:
 
     void effectPassesAudioThrough()
     {
-        if (!QFileInfo::exists(kEffect)) QSKIP("FabFilter Pro-Q 3 not installed");
+        if (!QFileInfo::exists(kEffect)) QSKIP("The test effect is not installed");
         auto node = Vst3Node::load(kEffect, kRate, kBlock);
         QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
         QVERIFY(!(*node)->isInstrument());

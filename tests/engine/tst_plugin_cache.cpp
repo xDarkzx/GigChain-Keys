@@ -1,7 +1,9 @@
 // The plugin scan cache: plugins are opened once, then read from the cache
 // until their file changes (opening 63 plugins at every start froze the PC).
 #include "PluginCatalog.h"
+#include "TestPlugins.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QTemporaryDir>
@@ -12,7 +14,7 @@ using namespace Qt::StringLiterals;
 
 namespace {
 
-const QString kSmallPlugin = u"C:/Program Files/Common Files/VST3/TDR Kotelnikov.vst3"_s;
+const QString kSmallPlugin = gigchain::test::kEffect.path; // TDR Kotelnikov; Surge XT Effects on Linux
 
 } // namespace
 
@@ -31,8 +33,9 @@ private slots:
 
     void aPluginIsOpenedOnceThenReadFromTheCache()
     {
-        if (!QFileInfo::exists(kSmallPlugin)) QSKIP("TDR Kotelnikov not installed");
-        QVERIFY(QFile::copy(kSmallPlugin, m_folder + u"/TDR Kotelnikov.vst3"_s));
+        if (!QFileInfo::exists(kSmallPlugin)) QSKIP("The test effect is not installed");
+        // (Under its own name: a Linux bundle's binary is named after it.)
+        QVERIFY(gigchain::test::copyPlugin(kSmallPlugin, m_folder + u'/' + QFileInfo(kSmallPlugin).fileName()));
 
         ScanStats first;
         const auto scanned = PluginCatalog::scan(m_folder, m_cache, &first);
@@ -118,11 +121,11 @@ private slots:
 
     void aRemovedPluginLeavesTheList()
     {
-        if (!QFileInfo::exists(kSmallPlugin)) QSKIP("TDR Kotelnikov not installed");
-        const QString copy = m_folder + u"/TDR Kotelnikov.vst3"_s;
-        QVERIFY(QFile::copy(kSmallPlugin, copy));
+        if (!QFileInfo::exists(kSmallPlugin)) QSKIP("The test effect is not installed");
+        const QString copy = m_folder + u'/' + QFileInfo(kSmallPlugin).fileName();
+        QVERIFY(gigchain::test::copyPlugin(kSmallPlugin, copy));
         QCOMPARE(PluginCatalog::scan(m_folder, m_cache).size(), std::size_t{1});
-        QVERIFY(QFile::remove(copy));
+        QVERIFY(gigchain::test::removePlugin(copy));
         QVERIFY(PluginCatalog::scan(m_folder, m_cache).empty());
     }
 
