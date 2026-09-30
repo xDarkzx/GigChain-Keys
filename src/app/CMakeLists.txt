@@ -10,6 +10,36 @@ if(WIN32)
     target_sources(gigchain_app PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/app.rc)
     set_property(SOURCE ${CMAKE_CURRENT_BINARY_DIR}/app.rc APPEND PROPERTY OBJECT_DEPENDS "${PRODUCT_ICON}")
 endif()
+# The Mac: "GigChain Keys.app" with its Info.plist (bundle id, macOS 13, the
+# microphone's reason) and its icon, made from branding/app-icon.png.
+if(APPLE)
+    set(_icns ${CMAKE_CURRENT_BINARY_DIR}/app.icns)
+    set(_iconset ${CMAKE_CURRENT_BINARY_DIR}/app.iconset)
+    set(_icon ${PRODUCT_BRAND_DIR}/app-icon.png) # 256 x 256
+    add_custom_command(OUTPUT ${_icns}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${_iconset}
+        COMMAND sips -z 16 16 ${_icon} --out ${_iconset}/icon_16x16.png
+        COMMAND sips -z 32 32 ${_icon} --out ${_iconset}/icon_16x16@2x.png
+        COMMAND sips -z 32 32 ${_icon} --out ${_iconset}/icon_32x32.png
+        COMMAND sips -z 64 64 ${_icon} --out ${_iconset}/icon_32x32@2x.png
+        COMMAND sips -z 128 128 ${_icon} --out ${_iconset}/icon_128x128.png
+        COMMAND sips -z 256 256 ${_icon} --out ${_iconset}/icon_128x128@2x.png
+        COMMAND sips -z 256 256 ${_icon} --out ${_iconset}/icon_256x256.png
+        COMMAND iconutil -c icns ${_iconset} -o ${_icns}
+        DEPENDS ${_icon}
+        COMMENT "The app's Mac icon")
+    target_sources(gigchain_app PRIVATE ${_icns})
+    set_source_files_properties(${_icns} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_target_properties(gigchain_app PROPERTIES
+        OUTPUT_NAME "${PRODUCT_NAME}"
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_INFO_PLIST ${PRODUCT_BRAND_DIR}/Info.plist.in
+        MACOSX_BUNDLE_GUI_IDENTIFIER ${PRODUCT_BUNDLE_ID}
+        MACOSX_BUNDLE_BUNDLE_NAME "${PRODUCT_NAME}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PRODUCT_VERSION}
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PRODUCT_VERSION}
+        MACOSX_BUNDLE_COPYRIGHT "${PRODUCT_COPYRIGHT}")
+endif()
 target_link_libraries(gigchain_app PRIVATE gigchain_ui gigchain_uiplugin Qt6::Gui Qt6::Quick Qt6::QuickControls2)
 gigchain_target_defaults(gigchain_app)
 gigchain_version_resource(gigchain_app "${PRODUCT_DESCRIPTION}")
@@ -21,7 +51,11 @@ add_dependencies(gigchain_app gigchain_scanner)
 # the app, its scanner, the libraries they load (Qt's own are added by
 # windeployqt, see tools/package.ps1), the Visual C++ runtime (app-local, no
 # separate installer) and the licences. tools/package.ps1 packs it.
-install(TARGETS gigchain_app gigchain_scanner RUNTIME DESTINATION .)
+if(APPLE) # the scanner is inside the bundle already (see src/scanner)
+    install(TARGETS gigchain_app BUNDLE DESTINATION .)
+else()
+    install(TARGETS gigchain_app gigchain_scanner RUNTIME DESTINATION .)
+endif()
 if(WIN32) # (the Linux and macOS packages: cross-platform piece 3)
     install(FILES "$<FILTER:$<TARGET_RUNTIME_DLLS:gigchain_app>,EXCLUDE,/Qt6[^/]*\\.dll$>" DESTINATION .)
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION .)

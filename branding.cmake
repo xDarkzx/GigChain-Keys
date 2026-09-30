@@ -18,12 +18,14 @@ set(PRODUCT_VERSION "0.1.0")
 set(PRODUCT_ORGANIZATION "${PRODUCT_BRAND}")
 
 set(PRODUCT_EXECUTABLE "GigChainKeys")         # GigChainKeys.exe
+set(PRODUCT_BUNDLE_ID "nz.dkstudios.gigchainkeys") # the Mac's app id: never changes after the first release
 set(PRODUCT_FILE_EXTENSION "gigchain")         # setlists: <name>.gigchain.json
 set(PRODUCT_WEBSITE "https://github.com/xDarkzx/GigChain-Keys")
 
 # The splash screen picture. The name is part of this picture, so a rename
 # needs a new picture too. Rounded corners should be transparent.
 set(PRODUCT_SPLASH_IMAGE "${CMAKE_CURRENT_LIST_DIR}/branding/splash.png")
+set(PRODUCT_BRAND_DIR "${CMAKE_CURRENT_LIST_DIR}/branding") # images and the Mac's Info.plist
 
 # The app's icon (the .exe in Explorer, the taskbar, its windows), made from
 # branding/gigchain-icon.png by tools/make-icon.ps1.
