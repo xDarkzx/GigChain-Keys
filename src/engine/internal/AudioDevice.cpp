@@ -5,9 +5,9 @@
 
 #include "gigchain/core/Branding.h"
 
-#include <RtAudio.h>
+#include "gigchain/platform/Timing.h"
 
-#include <xmmintrin.h>
+#include <RtAudio.h>
 
 #include <algorithm>
 #include <chrono>
@@ -437,7 +437,7 @@ int AudioDevice::callback(void* output, void* input, unsigned int frames, double
 {
     auto* self = static_cast<AudioDevice*>(user);
     // Flush denormals to zero: decaying reverb tails otherwise cost huge CPU.
-    _mm_setcsr(_mm_getcsr() | 0x8040);
+    platform::flushDenormalsToZeroForThisThread();
     if ((status & (RTAUDIO_OUTPUT_UNDERFLOW | RTAUDIO_INPUT_OVERFLOW)) != 0) {
         self->m_underflows.fetch_add(1, std::memory_order_relaxed);
     }

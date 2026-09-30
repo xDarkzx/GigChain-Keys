@@ -9,6 +9,7 @@
 #include <QWindow>
 #include <QtTest>
 
+#include <limits>
 #include <thread>
 
 using namespace gigchain;
@@ -104,6 +105,20 @@ private slots:
         });
         worker.join();
         QVERIFY(ran);
+    }
+
+    // The audio thread flushes denormal floats to zero (a decaying reverb
+    // tail otherwise costs huge CPU), on x86 and on Apple Silicon alike.
+    void denormalsAreFlushedToZero()
+    {
+        float result = -1.0F;
+        std::thread audio([&result] {
+            platform::flushDenormalsToZeroForThisThread();
+            volatile float smallest = std::numeric_limits<float>::min(); // the smallest normal float
+            result = smallest / 4.0F; // a denormal, unless flushed
+        });
+        audio.join();
+        QCOMPARE(result, 0.0F);
     }
 
     void theMemoryInUseIsRead()
