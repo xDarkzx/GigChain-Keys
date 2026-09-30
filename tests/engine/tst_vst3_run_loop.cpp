@@ -50,8 +50,7 @@ public:
     void PLUGIN_API onFDIsSet(Linux::FileDescriptor fd) override
     {
         char byte = 0;
-        (void)::read(fd, &byte, 1); // take it, so it is not "readable" again
-        ++calls;
+        if (::read(fd, &byte, 1) == 1) ++calls; // taken, so it is not "readable" again
     }
 };
 

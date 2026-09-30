@@ -186,30 +186,35 @@ separate for this. With 7: a macOS app bundle and Linux packages.
 
 ## 7. Windows, macOS and Linux
 
-**The goal:** the same app on all three. It is Windows-only today, but most
-of it is already built on cross-platform parts: Qt, RtAudio, RtMidi and the
-VST3 SDK all run on macOS and Linux, and core (setlists, charts) has no
-Windows code at all.
+**The goal:** the same app on all three, then a public, free, open-source
+beta. Four pieces (design: `docs/superpowers/specs/2026-09-30-cross-platform-linux-design.md`):
 
-What is Windows-only now, and what each needs:
-- **Audio:** WASAPI and ASIO. RtAudio also speaks Core Audio (macOS) and
-  ALSA, PulseAudio and JACK (Linux); the device settings must offer those.
-- **MIDI:** RtMidi's Windows backend; the macOS and Linux backends come with
-  it.
-- **Plugin windows:** embedded by their Windows handle (HWND). macOS needs
-  an NSView and Linux an X11 window, each with its own resizing and focus
-  rules.
-- **Plugin folders:** the standard VST3 folders differ
-  (`/Library/Audio/Plug-Ins/VST3` and `~/Library/...` on macOS;
-  `~/.vst3` and `/usr/lib/vst3` on Linux).
-- **Plugin artwork:** `PlugIn.ico` is the Windows folder icon; macOS bundles
-  carry their icon inside the bundle.
-- **Crash safety:** crash reports (minidumps), the no-error-dialog set-up
-  and the out-of-process scanner's window flags are Windows code; each needs
-  its macOS/Linux counterpart.
+1. **Done: the platform layer and Linux.** Everything that differs by system
+   lives in per-system files (`src/platform`, and a few engine files):
+   crash reports (a signal handler and backtrace on Linux), one app at a
+   time (a lock file and a per-user socket), plugin folders (`~/.vst3`,
+   `/usr/lib/vst3`, `/usr/local/lib/vst3`), plugin windows (X11, with the
+   host running the plugin's timers and events, as Reaper does), audio
+   drivers (PulseAudio, JACK, ALSA), the scanner process, memory readings,
+   timers. A test fails if system code appears anywhere else. Linux builds
+   with GCC 13 and passes every test that is not about Windows, with Surge XT
+   as its test instrument; ASan, the fuzzers and the soak run on Linux too.
+   Windows works exactly as before.
+2. **Next: macOS.** The `_mac` files (plugin windows in an NSView, Core Audio
+   and Core MIDI, `~/Library/Audio/Plug-Ins/VST3`), a build for Apple Silicon
+   on GitHub's Mac machines, an ad-hoc-signed `.dmg`; tested on a friend's
+   M5 MacBook.
+3. **Automatic builds and packages:** one GitHub workflow building and
+   testing all three on every change, and making the Windows installer, the
+   `.dmg` and a Linux AppImage (free for public repositories).
+4. **Going public:** the pre-publication check of the repository and its
+   history, licence notices, a landing page with the downloads and a
+   donate button, the first public beta.
 
 **Open:**
 - Audio Units on macOS: many Mac players have plugins as AU; is VST3 enough
   there?
-- Build and test on real Macs and Linux machines (CI), since the gate's
-  real-plugin tests need each system.
+- Real USB MIDI keyboards on Linux are untested in WSL (it has none;
+  usbipd could pass one through); a Linux desktop tester would check them.
+- Plugin artwork (`PlugIn.ico`) is a Windows folder icon; Linux and macOS
+  plugins carry theirs differently or not at all.
