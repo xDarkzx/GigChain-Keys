@@ -283,12 +283,16 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
 
 bool RealEngine::isInstalledPlugin(const QString& pluginId) const
 {
-    // Where the file really is (empty: it is not there).
-    const QString file = QFileInfo(pluginId).canonicalFilePath();
-    if (file.isEmpty()) return false;
+    // Where it is named to be, with any "../" worked out (a name climbing out
+    // of the plugin folder is refused), and it must be there. Links inside
+    // the plugin folder are not followed out of it: a folder linked in from
+    // another drive (plugins kept on a music drive) is installed there, as
+    // every DAW sees it; only an administrator can put a link there.
+    if (!QFileInfo::exists(pluginId)) return false;
+    const QString file = QDir::cleanPath(QFileInfo(pluginId).absoluteFilePath());
     const QStringList folders = QStringList{m_pluginFolder, m_bundledPluginFolder} + m_otherPluginFolders;
     return std::ranges::any_of(folders, [&file](const QString& folder) {
-        const QString inside = folder.isEmpty() ? QString() : QFileInfo(folder).canonicalFilePath();
+        const QString inside = folder.isEmpty() ? QString() : QDir::cleanPath(QFileInfo(folder).absoluteFilePath());
         // Paths compared as this system does (on Windows the same whatever the case).
         return !inside.isEmpty() && file.startsWith(inside + u'/', platform::fileNameCase());
     });

@@ -14,6 +14,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QScopeGuard>
+#include <QProcess>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -652,6 +653,49 @@ private slots:
 #endif
         real.channels.push_back(same);
         engine.applyPatch(real);
+        QCOMPARE(engine.loadedPluginCount(), before + 1);
+    }
+
+    // A plugin folder that is a link to another drive (plugins kept on a
+    // music drive, linked into the VST3 folder, as Valhalla's portable
+    // package does): installed, it loads. (It stopped loading when links
+    // were followed out of the plugin folder: 28 September.)
+    void aPluginInALinkedFolderLoads()
+    {
+        const QString installed = kSmall;
+        if (!QFileInfo::exists(installed)) QSKIP("The test effect is not installed");
+        // The plugin's own folder, linked into an otherwise empty plugin folder.
+        QTemporaryDir pluginFolder;
+        const QFileInfo musicDrive(QFileInfo(installed).absolutePath());
+        const QString linked = pluginFolder.filePath(u"Linked"_s);
+#ifdef Q_OS_WIN
+        // A directory symbolic link, as `mklink /D` makes (Windows allows it
+        // to administrators and in Developer Mode only).
+        QProcess mklink;
+        mklink.start(u"cmd.exe"_s, {u"/c"_s, u"mklink"_s, u"/D"_s, QDir::toNativeSeparators(linked),
+                                    QDir::toNativeSeparators(musicDrive.absoluteFilePath())});
+        QVERIFY(mklink.waitForFinished(10000));
+        if (mklink.exitCode() != 0) QSKIP("This Windows account may not make symbolic links (Developer Mode is off)");
+#else
+        QVERIFY(QFile::link(musicDrive.absoluteFilePath(), linked));
+#endif
+        const QString plugin = linked + u'/' + QFileInfo(installed).fileName();
+        // (Really elsewhere: outside the plugin folder once the link is followed.)
+        QVERIFY(!QFileInfo(plugin).canonicalFilePath().startsWith(QFileInfo(pluginFolder.path()).canonicalFilePath()));
+
+        RealEngineOptions options;
+        options.midiInputs = false;
+        options.pluginFolder = pluginFolder.path();
+        auto created = createRealEngine(options);
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        const std::size_t before = engine.loadedPluginCount();
+        core::Patch patch = core::makePatch(u"Linked"_s);
+        core::Channel channel = core::makeChannel(u"Kotelnikov"_s);
+        channel.instrument = slot(plugin, u"Kotelnikov"_s);
+        patch.channels.push_back(channel);
+        engine.applyPatch(patch);
         QCOMPARE(engine.loadedPluginCount(), before + 1);
     }
 
