@@ -3,12 +3,19 @@
 # files for Apple Silicon with LLVM's linker into a fake app bundle and checks
 # what the script says about them.
 #   bash tools/check-mac-links-test.sh
+#   MAC_BASH=/opt/bash32/bin/bash bash tools/check-mac-links-test.sh
+#     runs the script under the bash macOS ships (3.2), as the Mac does.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export OTOOL=llvm-otool-18
 CC=(clang-18 --target=arm64-apple-macos13 -fuse-ld=lld -nostdlib -Wl,-platform_version,macos,13.0,13.0)
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
+if [ -n "${MAC_BASH:-}" ]; then
+    mkdir -p "$work/macbash" && ln -s "$MAC_BASH" "$work/macbash/bash"
+    export PATH="$work/macbash:$PATH"
+fi
+echo "the script runs under: $(bash --version | head -1)"
 echo 'int f(void) { return 1; }' > "$work/f.c"
 echo 'int f(void); int main(void) { return f(); }' > "$work/main.c"
 # A stand-in for macOS's libSystem (every Mac program loads it from /usr/lib).

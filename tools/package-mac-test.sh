@@ -5,10 +5,17 @@
 # asked. Checks the licences land in the app and the .dmg, the order (licences
 # before signing), and that a missing licence fails the package.
 #   bash tools/package-mac-test.sh
+#   MAC_BASH=/opt/bash32/bin/bash bash tools/package-mac-test.sh
+#     runs the scripts under the bash macOS ships (3.2), as the Mac does.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
+if [ -n "${MAC_BASH:-}" ]; then
+    mkdir -p "$work/macbash" && ln -s "$MAC_BASH" "$work/macbash/bash"
+    export PATH="$work/macbash:$PATH"
+fi
+echo "the scripts run under: $(bash --version | head -1)"
 export OTOOL=llvm-otool-18
 CC=(clang-18 --target=arm64-apple-macos13 -fuse-ld=lld -nostdlib -Wl,-platform_version,macos,13.0,13.0)
 echo 'void binder(void) __asm__("dyld_stub_binder"); void binder(void) {}' > "$work/system.c"
