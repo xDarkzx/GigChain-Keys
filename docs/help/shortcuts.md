@@ -1,0 +1,47 @@
+# Keyboard shortcuts
+
+The computer keyboard shortcuts. They do nothing while you are typing in a
+text box, so typing lyrics never changes song.
+
+## Anywhere
+
+| Keys | Does |
+|---|---|
+| **F1** | This guide, at the page for what you are doing |
+| **Tab** | Swap between Edit and Perform |
+| **Esc** | Back to Edit (from Perform or Practice) |
+| **Space** or **→** | Next sound (then the next song) |
+| **←** | Previous sound |
+| **Page Down** | Next song |
+| **Page Up** | Previous song |
+
+## In Edit
+
+| Keys | Does |
+|---|---|
+| **Ctrl+N** | New setlist |
+| **Ctrl+O** | Open a setlist |
+| **Ctrl+S** | Save |
+| **Ctrl+Shift+S** | Save as… |
+| **Ctrl+,** | Settings |
+| **Ctrl+Z** | Undo |
+| **Ctrl+Shift+Z** or **Ctrl+Y** | Redo |
+| **Ctrl+V** (Chart tab) | Paste a song's chords and lyrics |
+
+## Mouse
+
+| Where | Does |
+|---|---|
+| Double-click a song | Rename it |
+| Right-click a song | Tempo, backing track, duplicate, delete |
+| Double-click an instrument | Add it as a channel |
+| Right-click a channel strip | Keyboard zone, knobs, replace, remove |
+| Click above a word in a chart | Add a chord there |
+| Double-click a section title | Rename it |
+| Double-click the top bar | Maximise or restore the window |
+
+## From your keyboard or pedals
+
+Songs, sounds, panic, tap tempo, the backing track and the looper can all be
+learned onto buttons, pads and pedals: see
+[Sound and your keyboard](help:audio-and-midi) and [Loop station](help:looper).
