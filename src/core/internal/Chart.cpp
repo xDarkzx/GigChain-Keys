@@ -321,12 +321,16 @@ QString chordSheetToChordPro(const QString& sheet)
             out << bracketed.join(u' ');
             continue;
         }
-        // Put each chord before the character it sat above; chords past the
-        // end of the lyrics follow it, a space apart.
+        // Put each chord on the word it sat above: a chord a letter or two
+        // into a word (chord sites are often a column off) goes on its first
+        // letter. Chords past the end of the lyrics follow it, a space apart.
         const QString& lyric = lines.at(++i);
         QString merged;
         qsizetype taken = 0;
-        for (const auto& [column, chord] : chords) {
+        for (auto [column, chord] : chords) {
+            if (column < lyric.size()) {
+                while (column > taken && column > 0 && !lyric.at(column).isSpace() && !lyric.at(column - 1).isSpace()) --column;
+            }
             if (column <= lyric.size()) {
                 merged += lyric.mid(taken, column - taken);
                 taken = column;

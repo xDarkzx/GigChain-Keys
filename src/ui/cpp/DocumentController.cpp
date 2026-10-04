@@ -33,6 +33,7 @@
 #include <iterator>
 #include <map>
 #include <optional>
+#include <set>
 #include <utility>
 
 using namespace Qt::StringLiterals;
@@ -54,7 +55,6 @@ DocumentController::DocumentController(engine::IEngine& engine, QSettings& setti
 {
     // A different current song (or setlist) means a different chart.
     connect(this, &DocumentController::currentChanged, this, &DocumentController::chartChanged);
-    connect(this, &DocumentController::currentChanged, this, &DocumentController::clearPasteUndo);
     resetSelectedChannel();
     applyCurrentPatchToEngine();
 }
@@ -240,6 +240,13 @@ bool DocumentController::splitChartLine(int line, int at)
     return applyChartEdit(core::splitLyricLine(currentChart(), line, at), {});
 }
 
+bool DocumentController::editLineAndSplit(int line, const QString& lyrics, int at)
+{
+    const auto edited = core::editLyrics(currentChart(), line, lyrics);
+    if (!edited) return report(edited.error());
+    return applyChartEdit(core::splitLyricLine(*edited, line, at), {});
+}
+
 bool DocumentController::joinChartLine(int line)
 {
     return applyChartEdit(core::joinWithPrevious(currentChart(), line), {});
@@ -267,6 +274,70 @@ QStringList DocumentController::currentChartChords() const
     return chords;
 }
 
+namespace {
+
+// A line of words as the chart editor's cells: [{at, text, space, chords:
+// [{name, index, steps, understood}]}]. A cell is a word (`space`: a space
+// after it), split where a chord sits inside it; a chord after the last
+// word is a cell with no words. `segments` are chartLines()'s for the line.
+QVariantList wordCells(const QString& lyrics, const QVariantList& segments)
+{
+    const int length = static_cast<int>(lyrics.size());
+    std::map<int, QVariantList> chordsAt;
+    for (const QVariant& s : segments) {
+        const QVariantMap segment = s.toMap();
+        if (segment.value(u"chord"_s).toString().isEmpty()) continue;
+        chordsAt[segment.value(u"at"_s).toInt()] << QVariantMap{{u"name"_s, segment.value(u"chord"_s)},
+                                                              {u"index"_s, segment.value(u"chordIndex"_s)},
+                                                              {u"steps"_s, segment.value(u"steps"_s)},
+                                                              {u"understood"_s, segment.value(u"understood"_s)}};
+    }
+    // Where cells start: each word, and each chord.
+    std::set<int> starts;
+    for (int c = 0; c < length; ++c) {
+        if (!lyrics.at(c).isSpace() && (c == 0 || lyrics.at(c - 1).isSpace())) starts.insert(c);
+    }
+    for (const auto& [place, chords] : chordsAt) starts.insert(std::clamp(place, 0, length));
+    if (!starts.empty() && *starts.begin() > 0) starts.insert(0); // (spaces before the first word)
+    QVariantList cells;
+    for (auto it = starts.begin(); it != starts.end(); ++it) {
+        const int from = *it;
+        const int to = std::next(it) == starts.end() ? length : *std::next(it);
+        const QString piece = lyrics.mid(from, std::max(to - from, 0));
+        const auto found = chordsAt.find(from);
+        cells << QVariantMap{{u"at"_s, from},
+                             {u"text"_s, piece.trimmed()},
+                             {u"space"_s, !piece.isEmpty() && piece.back().isSpace()},
+                             {u"chords"_s, found != chordsAt.end() ? found->second : QVariantList{}}};
+    }
+    return cells;
+}
+
+} // namespace
+
+// Edits made while one lives are one undo step, recorded when it ends.
+class DocumentController::OneUndoStep
+{
+public:
+    explicit OneUndoStep(DocumentController& doc) : m_doc(doc) { ++m_doc.m_holdUndo; }
+    OneUndoStep(const OneUndoStep&) = delete;
+    OneUndoStep& operator=(const OneUndoStep&) = delete;
+    OneUndoStep(OneUndoStep&&) = delete;
+    OneUndoStep& operator=(OneUndoStep&&) = delete;
+    ~OneUndoStep()
+    {
+        if (--m_doc.m_holdUndo != 0 || !m_doc.m_dirty) return;
+        try {
+            m_doc.recordEdit();
+        } catch (const std::exception& e) { // (out of memory for the undo copy: the edit stands, said)
+            qCCritical(lcUi) << "The edit could not be made an undo step:" << e.what();
+        }
+    }
+
+private:
+    DocumentController& m_doc;
+};
+
 bool DocumentController::pasteChart(int song, const QString& pasted)
 {
     if (pasted.trimmed().isEmpty()) {
@@ -280,6 +351,7 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
                                       .arg(core::limits::kMaxChartSourceLength)});
     }
     const core::ImportedSheet sheet = core::importChordSheet(pasted);
+    const OneUndoStep oneStep(*this); // the chart, name, key, tempo and time: one Ctrl+Z
     if (song < 0 || static_cast<std::size_t>(song) >= m_setlist.songs.size()) {
         // No song to paste into (an empty setlist): the paste makes one.
         if (!m_hasSetlist) newSetlist();
@@ -291,14 +363,6 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
         song = *index;
     }
     const core::Song& before = m_setlist.songs.at(static_cast<std::size_t>(song));
-    PasteUndo saved{.song = before.id,
-                    .name = before.name,
-                    .key = before.key,
-                    .tempo = before.tempo,
-                    .timeNumerator = before.timeNumerator,
-                    .timeDenominator = before.timeDenominator,
-                    .pasted = pasted};
-
     if (!setSongChart(song, sheet.chart)) return false; // reported
     // A placeholder name ("Song 3") takes the sheet's title; a name the user
     // chose stays.
@@ -337,38 +401,7 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
         }
         emit songChanged();
     }
-    m_pasteUndo = saved;
-    emit pasteUndoChanged();
     return true;
-}
-
-bool DocumentController::undoPaste()
-{
-    if (!m_pasteUndo) return false;
-    const PasteUndo before = *m_pasteUndo;
-    clearPasteUndo();
-    const auto it = std::ranges::find_if(m_setlist.songs, [&](const core::Song& s) { return s.id == before.song; });
-    if (it == m_setlist.songs.end()) {
-        return report(core::Error{core::ErrorCode::OutOfRange, tr("The pasted song no longer exists")});
-    }
-    const int song = static_cast<int>(it - m_setlist.songs.begin());
-    if (auto r = core::renameSong(m_setlist, song, before.name); !r) return report(r.error());
-    if (auto r = core::setSongKeyAndTempo(m_setlist, song, before.key, before.tempo); !r) return report(r.error());
-    if (auto r = core::setSongTimeSignature(m_setlist, song, before.timeNumerator, before.timeDenominator); !r) {
-        return report(r.error());
-    }
-    commitRename();
-    if (!setSongChart(song, before.pasted)) return false; // reported
-    if (song == m_cursor.song) applyCurrentSongToEngine();
-    emit songChanged();
-    return true;
-}
-
-void DocumentController::clearPasteUndo()
-{
-    if (!m_pasteUndo) return;
-    m_pasteUndo.reset();
-    emit pasteUndoChanged();
 }
 
 QStringList DocumentController::recentFiles() const
@@ -526,6 +559,7 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
                              {u"label"_s, line.label},
                              {u"lyrics"_s, line.lyrics()},
                              {u"segments"_s, segments},
+                             {u"cells"_s, line.kind == Kind::Lyrics ? wordCells(line.lyrics(), segments) : QVariantList{}},
                              {u"sectionIndex"_s, section != sectionAt.end() ? section->second : -1}};
     }
     // No empty space after the last line (a chart usually ends with a newline).
@@ -1600,6 +1634,7 @@ void DocumentController::recordEdit()
 {
     const QString key = std::exchange(m_coalesceKey, QString());
     if (m_restoring) return;
+    if (m_holdUndo > 0) return; // (one step for the whole, when it ends: OneUndoStep)
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
     constexpr qint64 kSameEditMs = 1500; // a fader dragged, a value typed: one step
     const bool sameEdit = !key.isEmpty() && key == m_lastCoalesceKey && now - m_lastEditMs < kSameEditMs && !m_undo.empty();
@@ -1647,7 +1682,6 @@ bool DocumentController::restore(std::vector<UndoStep>& from, std::vector<UndoSt
     const QScopedValueRollback restoring(m_restoring, true);
     m_setlist = std::move(step.setlist);
     m_committed = m_setlist;
-    clearPasteUndo();
     emit structureChanged();
     setCursor(core::clampCursor(m_setlist, step.cursor), true); // plays it and refreshes every view
     m_committedCursor = m_cursor;

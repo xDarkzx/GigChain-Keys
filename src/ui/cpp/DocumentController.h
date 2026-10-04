@@ -59,7 +59,6 @@ class DocumentController : public QObject
     // The current song's chart (ChordPro).
     Q_PROPERTY(QString currentChart READ currentChart NOTIFY chartChanged)
     // The last paste can be undone: exactly what was pasted, and the old name.
-    Q_PROPERTY(bool canUndoPaste READ canUndoPaste NOTIFY pasteUndoChanged)
     // Undo and redo of every edit to the setlist (Ctrl+Z, Ctrl+Shift+Z).
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY undoChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY undoChanged)
@@ -131,9 +130,8 @@ public:
     Q_INVOKABLE bool setSongChart(int song, const QString& chordPro);
     // Pasting a chord-site page: the site's clutter is removed, a song still
     // named "Song N" takes the sheet's title, and an unset key/tempo is filled.
+    // All of it is one undo step.
     Q_INVOKABLE bool pasteChart(int song, const QString& pasted);
-    [[nodiscard]] bool canUndoPaste() const { return m_pasteUndo.has_value(); }
-    Q_INVOKABLE bool undoPaste();
     // pasteChart with whatever text is on the clipboard.
     Q_INVOKABLE bool pasteChartFromClipboard(int song);
     // A downloaded text chart: .txt, .cho, .chopro, .chordpro, .crd, .pro, .onsong.
@@ -150,6 +148,9 @@ public:
     Q_INVOKABLE bool moveChordTo(int line, int chord, int toLine, int toAt);
     Q_INVOKABLE bool setLineLyrics(int line, const QString& lyrics);
     Q_INVOKABLE bool splitChartLine(int line, int at);
+    // Enter while typing a line: its words become `lyrics` and it splits at
+    // `at` (of the new words), as one undo step.
+    Q_INVOKABLE bool editLineAndSplit(int line, const QString& lyrics, int at);
     Q_INVOKABLE bool joinChartLine(int line);
     Q_INVOKABLE bool renameChartSection(int line, const QString& label);
     Q_INVOKABLE bool addChartSection(const QString& label);
@@ -287,7 +288,6 @@ signals:
     void lastErrorChanged();
     void chartChanged(); // the current song's chart, or which song is current
     void hasSetlistChanged();
-    void pasteUndoChanged();
     void recentFilesChanged();
     void undoChanged();
     void songChanged(); // the current song, or its tempo, time, backing track
@@ -352,18 +352,11 @@ private:
     QSettings& m_settings;
     core::Setlist m_setlist;
     bool m_hasSetlist = false;
-    struct PasteUndo
-    {
-        core::SongId song;
-        QString name;
-        QString key;
-        double tempo = 0.0;
-        int timeNumerator = 4;
-        int timeDenominator = 4;
-        QString pasted; // restored as the chart, exactly as pasted
-    };
-    std::optional<PasteUndo> m_pasteUndo;
-    void clearPasteUndo();
+    // Above 0: edits are not recorded one by one; the whole (a paste: the
+    // chart, the song's name, key, tempo, time) becomes one undo step when
+    // it ends (OneUndoStep).
+    int m_holdUndo = 0;
+    class OneUndoStep;
     core::Cursor m_cursor;
     int m_selectedChannel = -1;
     bool m_dirty = false;
