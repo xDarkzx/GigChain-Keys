@@ -148,6 +148,15 @@ public:
     Q_INVOKABLE bool moveChordTo(int line, int chord, int toLine, int toAt);
     Q_INVOKABLE bool setLineLyrics(int line, const QString& lyrics);
     Q_INVOKABLE bool splitChartLine(int line, int at);
+    Q_PROPERTY(QVariantMap currentChordInversions READ currentChordInversions NOTIFY chordInversionsChanged)
+    // How to play a chord (its diagram): {name, understood, inversion (the one
+    // shown: `inversion`, else the song's choice, else 0), chosen (-1: none),
+    // inversions: [names], left/right: [MIDI notes], leftNames/rightNames}.
+    Q_INVOKABLE QVariantMap chordDiagram(const QString& name, int inversion) const;
+    // The current song's inversion for a chord (-1: none); an undo step.
+    Q_INVOKABLE bool setChordInversion(const QString& name, int inversion);
+    // The current song's chosen inversions: {chord name: inversion}.
+    [[nodiscard]] QVariantMap currentChordInversions() const;
     // Enter while typing a line: its words become `lyrics` and it splits at
     // `at` (of the new words), as one undo step.
     Q_INVOKABLE bool editLineAndSplit(int line, const QString& lyrics, int at);
@@ -292,6 +301,7 @@ signals:
     void undoChanged();
     void songChanged(); // the current song, or its tempo, time, backing track
     void sectionsChanged(); // the current song's sections or what they play
+    void chordInversionsChanged(); // the current song's chosen inversions (or which song is current)
     void loopControlsChanged();
     void channelEditRequested(int channel, const QString& page);
 

@@ -13,6 +13,12 @@ Rectangle {
     id: perform
     objectName: "performView"
 
+    // A chord tapped in the chart: how to play it.
+    ChordDiagram {
+        id: performDiagram
+        doc: perform.doc
+    }
+
     required property DocumentController doc
     required property SetlistModel setlistModel
     required property PluginListModel pluginModel
@@ -208,6 +214,7 @@ Rectangle {
                         bar: perform.engineStatus.songBar
                         currentStep: perform.engineStatus.chordStep
                         followStarted: perform.engineStatus.chordStarted
+                        onChordClicked: (name) => performDiagram.show(name) // forgot it? how to play it
                     }
                 }
 

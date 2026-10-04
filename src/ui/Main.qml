@@ -356,6 +356,7 @@ ApplicationWindow {
             PracticeView {
                 practice: root.practice
                 engineStatus: root.engineStatus
+                doc: root.doc
             }
         }
 

@@ -54,6 +54,11 @@ class PracticeController : public QObject
     Q_PROPERTY(double speed READ speed WRITE setSpeed NOTIFY settingsChanged)
     // -1: the whole song, once; a section: looped.
     Q_PROPERTY(int loopSection READ loopSection WRITE setLoopSection NOTIFY settingsChanged)
+    // What each hand plays (core::LeftHand, core::RightHand): 0 the bass alone,
+    // 1 octave, 2 root and fifth, 3 the full chord; 0 smooth, 1 root position,
+    // 2 the inversions chosen in the song (its chord diagrams).
+    Q_PROPERTY(int leftHand READ leftHand WRITE setLeftHand NOTIFY settingsChanged)
+    Q_PROPERTY(int rightHand READ rightHand WRITE setRightHand NOTIFY settingsChanged)
 
 public:
     enum Mode
@@ -89,6 +94,10 @@ public:
     void setSpeed(double wanted);
     [[nodiscard]] int loopSection() const { return m_loopSection; }
     void setLoopSection(int section);
+    [[nodiscard]] int leftHand() const { return static_cast<int>(m_style.left); }
+    void setLeftHand(int wanted);
+    [[nodiscard]] int rightHand() const { return static_cast<int>(m_style.right); }
+    void setRightHand(int wanted);
 
     Q_INVOKABLE void play();
     Q_INVOKABLE void pause();
@@ -118,6 +127,7 @@ private:
     engine::IEngine& m_engine;
     DocumentController& m_document;
     core::PracticeTimeline m_timeline;
+    core::VoicingStyle m_style; // (its chosen inversions: the song's, at each rebuild)
     QVariantList m_notes;
     QVariantList m_chords;
     QVariantList m_sections;

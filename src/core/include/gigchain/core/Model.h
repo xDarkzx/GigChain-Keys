@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <vector>
 
@@ -139,6 +140,9 @@ struct Song
     int loopBars = 4;
     // What the chart's sections play; a section not listed plays the default.
     std::vector<SectionSetup> sections;
+    // The inversion the player chose for a chord of the chart (its diagram),
+    // by chord name: 0 root position ... 3 third inversion. Not listed: none chosen.
+    std::map<QString, int> chordInversions;
 
     friend bool operator==(const Song&, const Song&) = default;
 };

@@ -198,6 +198,16 @@ Result<void> validateSections(const Song& song, const QString& path)
     if (song.loopBars < 0 || song.loopBars > limits::kMaxLoopBars) {
         return fail(ErrorCode::OutOfRange, u"%1.loopBars must be between 0 (open) and %2"_s.arg(path).arg(limits::kMaxLoopBars));
     }
+    if (song.chordInversions.size() > static_cast<std::size_t>(limits::kMaxChosenInversions)) {
+        return fail(ErrorCode::LimitExceeded, u"%1.chordInversions has more than %2 chords"_s.arg(path).arg(limits::kMaxChosenInversions));
+    }
+    for (const auto& [chord, inversion] : song.chordInversions) {
+        if (chord.trimmed().isEmpty() || inversion < 0 || inversion > limits::kMaxChordInversion) {
+            return fail(ErrorCode::OutOfRange, u"%1.chordInversions: \"%2\" must be a chord with an inversion from 0 to %3"_s
+                                                   .arg(path, chord.left(40))
+                                                   .arg(limits::kMaxChordInversion));
+        }
+    }
     if (song.sections.size() > static_cast<std::size_t>(limits::kMaxSectionsPerSong)) {
         return fail(ErrorCode::LimitExceeded,
                     u"%1 has more than %2 sections"_s.arg(path).arg(limits::kMaxSectionsPerSong));
