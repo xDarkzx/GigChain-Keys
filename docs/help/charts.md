@@ -3,7 +3,7 @@
 Every song can show its **chords and lyrics**, with each chord sitting over
 the word it changes on. You edit the chart right where you read it, in the
 **Chart** tab of the Edit view. On stage the same chart fills the screen
-([Perform mode](help:perform)), and [Practice mode](help:practice) turns its
+([Perform mode](perform.md)), and [Practice mode](practice.md) turns its
 chords into notes to learn.
 
 ## Get the chords in
@@ -44,7 +44,7 @@ Solo, Outro*.
 - **Click a title** to go to that section.
 
 Under each title you see which instruments play in it and how many bars it
-lasts. See [Sections, tempo and backing tracks](help:sections-and-tempo).
+lasts. See [Sections, tempo and backing tracks](sections-and-tempo.md).
 
 ## Edit as text (ChordPro)
 

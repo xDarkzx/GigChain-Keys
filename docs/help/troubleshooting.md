@@ -6,12 +6,12 @@ Something not right? Find it below.
 
 1. Is the **MIDI** light in the top bar flashing when you play? If not, your
    keyboard is not heard: open **Settings > MIDI** and set your keyboard's
-   port to **Enabled**. See [Sound and your keyboard](help:audio-and-midi).
+   port to **Enabled**. See [Sound and your keyboard](audio-and-midi.md).
 2. Does the channel's meter move? If not, check the channel is not **muted**
    and its **keyboard zone** covers the keys you play (right-click the strip >
    **Keyboard Zone…** > **Whole keyboard**). In a song with sections, check the
    instrument is in the **section** you are in (see
-   [Sections, tempo and backing tracks](help:sections-and-tempo)).
+   [Sections, tempo and backing tracks](sections-and-tempo.md)).
 3. Does the master meter move but you still hear nothing? Check **Settings >
    Audio**: the right **Device**, and **Running now** shows it open. Check the
    master fader and that **Mute everything** is off.
@@ -49,7 +49,7 @@ changed a sound and did not save, the old sound comes back next time.
 ## Practice shows nothing
 
 The song has no chords yet. Add them in the **Chart** tab. See
-[Chord charts](help:charts) and [Practice mode](help:practice).
+[Chord charts](charts.md) and [Practice mode](practice.md).
 
 ## Still stuck?
 

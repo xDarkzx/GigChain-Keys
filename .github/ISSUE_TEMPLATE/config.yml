@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: User guide
+    url: https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/README.md
+    about: How everything works, step by step (also inside the app on F1).
+  - name: Troubleshooting
+    url: https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/troubleshooting.md
+    about: No sound, crackles, stuck notes, plugins that will not load.
+  - name: Report a security problem
+    url: https://github.com/xDarkzx/GigChain-Keys/security/advisories/new
+    about: Please report security problems privately, not as an issue.

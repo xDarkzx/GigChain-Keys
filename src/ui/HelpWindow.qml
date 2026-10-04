@@ -225,8 +225,10 @@ Window {
                         color: Theme.text
                         font.pixelSize: Theme.fontSize + 2
                         lineHeight: 1.15
+                        // Another page of the guide ("charts.md") opens here; a web link in the browser.
                         onLinkActivated: (link) => {
-                            if (link.startsWith("help:")) root.openTopic(link.slice(5))
+                            const topic = HelpLibrary.topicOfLink(link)
+                            if (topic !== "") root.openTopic(topic)
                             else Qt.openUrlExternally(link)
                         }
                         HoverHandler { cursorShape: page.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor }

@@ -1,11 +1,18 @@
 # Contributing to GigChain Keys
 
 Thanks for your interest in contributing! Bug fixes, features, tests and docs
-are all welcome.
+are all welcome. You do not need to write code to help:
+
+- **Report bugs** and **test new versions** on your own rig: see [SUPPORT.md](SUPPORT.md).
+- **Improve the user guide:** the pages in [`docs/help`](docs/help) are plain
+  Markdown and appear inside the app as well.
+- **Suggest features** through the [issue forms](https://github.com/xDarkzx/GigChain-Keys/issues/new/choose).
+
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Development setup
 
-See **Building** in the [README](README.md): Visual Studio 2022+, Qt 6.10
+See [docs/BUILDING.md](docs/BUILDING.md): Visual Studio 2022+, Qt 6.10
 (`msvc2022_64`), vcpkg, then:
 
 ```powershell
@@ -53,3 +60,8 @@ These are enforced in review, and several by the compiler (`/W4 /WX /sdl`):
 3. Open a pull request into `main`. CI must pass before merging.
 4. Add a line under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) for
    anything a user would notice.
+5. A change a user would see also updates the user guide in
+   [`docs/help`](docs/help) (its tests check every page and link).
+
+By sending a pull request you agree that your contribution is licensed under
+the project's license, the [GPL-3.0-or-later](LICENSE).

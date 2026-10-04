@@ -45,6 +45,6 @@ the next.
 These go to every instrument that is playing. The on-screen keyboard (the
 **Keys** button) shows **Pitch**, **Mod** and **Sus** as they move.
 
-See also: [Instruments and effects](help:instruments) and
-[Sections, tempo and backing tracks](help:sections-and-tempo), which change
+See also: [Instruments and effects](instruments.md) and
+[Sections, tempo and backing tracks](sections-and-tempo.md), which change
 the instruments as the song goes.

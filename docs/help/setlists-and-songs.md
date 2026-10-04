@@ -30,7 +30,7 @@ The **Setlist** panel on the left lists the songs.
 
 A quick way to fill a setlist: copy a song's chords and lyrics from a chord
 website and paste them into an empty setlist's chart (**Ctrl+V**). See
-[Chord charts](help:charts).
+[Chord charts](charts.md).
 
 ## Moving between songs
 
@@ -40,7 +40,7 @@ website and paste them into an empty setlist's chart (**Ctrl+V**). See
 | **Space** or **→** | Next sound (then the next song) |
 | **←** | Previous sound |
 
-Pedals and pads can do the same: see [Sound and your keyboard](help:audio-and-midi).
+Pedals and pads can do the same: see [Sound and your keyboard](audio-and-midi.md).
 
 ## Undo
 
@@ -51,8 +51,8 @@ step.
 ## What a song holds
 
 - **Its sounds:** the instruments and effects in the mixer while it is
-  chosen. See [Instruments and effects](help:instruments).
-- **Its chart:** the chords and lyrics. See [Chord charts](help:charts).
+  chosen. See [Instruments and effects](instruments.md).
+- **Its chart:** the chords and lyrics. See [Chord charts](charts.md).
 - **Its sections:** which instruments play in the verse, the chorus…
-  See [Sections, tempo and backing tracks](help:sections-and-tempo).
+  See [Sections, tempo and backing tracks](sections-and-tempo.md).
 - **Its tempo, time signature and backing track.**

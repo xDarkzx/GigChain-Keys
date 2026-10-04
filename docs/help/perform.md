@@ -45,11 +45,11 @@ Edit each remember their own choice.
 ## A song with no chart
 
 The view says **No lyrics or chords for this song**. Click **Add lyrics &
-chords** to go to the chart editor. See [Chord charts](help:charts).
+chords** to go to the chart editor. See [Chord charts](charts.md).
 
 ## Back to Edit
 
 Click **Edit**, or press **Esc** or **Tab**.
 
-See also: [Sections, tempo and backing tracks](help:sections-and-tempo),
-[Loop station](help:looper).
+See also: [Sections, tempo and backing tracks](sections-and-tempo.md),
+[Loop station](looper.md).
