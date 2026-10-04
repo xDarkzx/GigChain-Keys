@@ -651,6 +651,30 @@ private slots:
         QCOMPARE(rig.station.read(0).state, LoopState::Playing);
     }
 
+    // A press stays "waiting" until the audio thread has said what it did
+    // with it: between taking it (the block's start) and saying so (its
+    // end), the main thread must not see an empty loop with nothing waiting
+    // (it would free the loop, and the press would be lost).
+    void aPressWaitsUntilItsOutcomeIsSaid()
+    {
+        Rig rig;
+        rig.give(0, 10000);
+        rig.runTo(128);
+        rig.station.post(0, LoopCommand::Record);
+        QVERIFY(rig.station.pending(0));
+        std::array<float, kBlock> in{};
+        std::array<float, kBlock> left{};
+        std::array<float, kBlock> right{};
+        rig.station.beginBlock(rig.t, kBlock, kBars); // the press is taken...
+        QVERIFY(rig.station.read(0).state == LoopState::Empty); // ... not yet said
+        QVERIFY(rig.station.pending(0));
+        rig.station.record(0, in.data(), in.data(), kBlock);
+        rig.station.play(left.data(), right.data(), kBlock);
+        rig.station.endBlock(); // ... said
+        QVERIFY(!rig.station.pending(0));
+        QCOMPARE(rig.station.read(0).state, LoopState::Armed);
+    }
+
     void theAudioThreadNeverAllocates()
     {
         Rig rig;

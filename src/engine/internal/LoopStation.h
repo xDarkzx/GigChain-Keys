@@ -151,6 +151,9 @@ private:
         std::array<LoopCommand, kSize> items{};
         std::atomic<uint32_t> head{0};
         std::atomic<uint32_t> tail{0};
+        // The tail as of the last endBlock: what the audio thread has taken
+        // AND said the outcome of (pending() goes by it).
+        std::atomic<uint32_t> said{0};
     };
 
     struct Slot
