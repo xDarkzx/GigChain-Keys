@@ -1203,6 +1203,60 @@ private slots:
         QCOMPARE(m_engine->stops, stops);
     }
 
+    // The Chart tab edited in place: words typed, a chord put on a word and
+    // dragged to another, a section added and named; each an undo step, and
+    // each line of the chart says where it is so the screen can edit it.
+    void theChartIsEditedInPlace()
+    {
+        QVERIFY(m_doc->setSongChart(0, u"{comment: Verse}\nI need your love"_s));
+        const QVariantList lines = m_doc->chartLines(m_doc->currentChart());
+        QCOMPARE(lines.size(), 2);
+        QCOMPARE(lines.at(1).toMap().value(u"line"_s).toInt(), 1);
+
+        QVERIFY(m_doc->placeChordAt(1, 13, u"Gm"_s)); // dropped on "lo|ve"
+        QCOMPARE(m_doc->currentChart(), u"{comment: Verse}\nI need your [Gm]love"_s);
+        QCOMPARE(m_doc->currentChartChords(), QStringList{u"Gm"_s});
+        const QVariantList segments = m_doc->chartLines(m_doc->currentChart()).at(1).toMap().value(u"segments"_s).toList();
+        QCOMPARE(segments.at(1).toMap().value(u"at"_s).toInt(), 12);         // where its words start
+        QCOMPARE(segments.at(1).toMap().value(u"chordIndex"_s).toInt(), 0);  // the line's first chord
+
+        QVERIFY(m_doc->moveChordTo(1, 0, 1, 7)); // dragged to "your"
+        QCOMPARE(m_doc->currentChart(), u"{comment: Verse}\nI need [Gm]your love"_s);
+        QVERIFY(m_doc->setLineLyrics(1, u"I need all your love"_s)); // typed: Gm stays on "your"
+        QCOMPARE(m_doc->currentChart(), u"{comment: Verse}\nI need all [Gm]your love"_s);
+        QVERIFY(m_doc->renameChordAt(1, 0, u"Gm7"_s));
+        QVERIFY(m_doc->addChartSection(u"Chorus"_s));
+        QCOMPARE(m_doc->currentChart(), u"{comment: Verse}\nI need all [Gm7]your love\n\n{comment: Chorus}\n"_s);
+        QVERIFY(m_doc->renameChartSection(0, u"Verse 1"_s));
+        QCOMPARE(m_doc->currentSections().size(), 2);
+
+        // Each change its own undo step.
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->currentChart(), u"{comment: Verse}\nI need all [Gm7]your love\n\n{comment: Chorus}\n"_s);
+        QVERIFY(m_doc->undo());
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->currentChart(), u"{comment: Verse}\nI need all [Gm]your love"_s);
+
+        // A change that cannot be made is said, and the chart is untouched.
+        const QString before = m_doc->currentChart();
+        const int shown = m_doc->notifications()->count();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"not a line of words"_s));
+        QVERIFY(!m_doc->placeChordAt(0, 0, u"C"_s)); // on the section title
+        QCOMPARE(m_doc->currentChart(), before);
+        QCOMPARE(m_doc->notifications()->count(), shown + 1);
+    }
+
+    // Typing a line is one undo step, not one per letter.
+    void typingALineIsOneUndoStep()
+    {
+        QVERIFY(m_doc->setSongChart(0, u"Words"_s));
+        QVERIFY(m_doc->setLineLyrics(0, u"Words a"_s));
+        QVERIFY(m_doc->setLineLyrics(0, u"Words ab"_s));
+        QVERIFY(m_doc->setLineLyrics(0, u"Words abc"_s));
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->currentChart(), u"Words"_s);
+    }
+
     // A chart with more chords than can be followed (repeats played out):
     // the player is told once, and the tempo leads.
     void aChartTooLongToFollowIsSaid()

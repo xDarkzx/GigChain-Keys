@@ -141,6 +141,22 @@ public:
     // For the chart view: [{kind: "lyrics"|"section"|"comment"|"blank",
     // label, segments: [{chord, text}]}]; title/key lines are left out.
     Q_INVOKABLE QVariantList chartLines(const QString& chordPro) const;
+    // The current song's chart edited in place (the Chart tab): `line` is a
+    // chartLines() line's "line", `at` a character of its words, `chord` the
+    // line's chord number. Each is an undo step (typing a line is one); a
+    // change that cannot be made is said and logged, the chart untouched.
+    Q_INVOKABLE bool placeChordAt(int line, int at, const QString& chord);
+    Q_INVOKABLE bool renameChordAt(int line, int chord, const QString& name); // empty: removed
+    Q_INVOKABLE bool moveChordTo(int line, int chord, int toLine, int toAt);
+    Q_INVOKABLE bool setLineLyrics(int line, const QString& lyrics);
+    Q_INVOKABLE bool splitChartLine(int line, int at);
+    Q_INVOKABLE bool joinChartLine(int line);
+    Q_INVOKABLE bool renameChartSection(int line, const QString& label);
+    Q_INVOKABLE bool addChartSection(const QString& label);
+    // The chords the current song's chart uses, each once, in order (to drag
+    // onto the words again).
+    Q_PROPERTY(QStringList currentChartChords READ currentChartChords NOTIFY chartChanged)
+    [[nodiscard]] QStringList currentChartChords() const;
     Q_INVOKABLE bool duplicateSong(int song);
     Q_INVOKABLE bool duplicatePatch(int song, int patch);
     Q_INVOKABLE bool removeSong(int song);
@@ -281,6 +297,8 @@ signals:
 
 private:
     bool report(const core::Error& error);
+    // A chart edit's result into the current song (or its reason reported).
+    bool applyChartEdit(const core::Result<QString>& edited, const QString& coalesceKey);
     void setCursor(core::Cursor to, bool force = false);
     void commitStructure(core::Cursor target, const std::optional<core::PatchId>& previous);
     void commitRename();

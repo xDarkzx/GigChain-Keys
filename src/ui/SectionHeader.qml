@@ -18,6 +18,8 @@ Column {
     property var section
     property DocumentController doc: null
     property real size: 1.0
+    property bool editable: true // false on stage: read, not edited
+    property int chartLine: -1   // the title's line in the chart (to rename it)
     property bool current: false // the section in force
     property bool playing: false // the song is being counted
     property int bar: 0
@@ -54,11 +56,47 @@ Column {
             font.bold: true
             font.letterSpacing: 2 * header.size
             font.capitalization: Font.AllUppercase
-            HoverHandler { enabled: header.known; cursorShape: Qt.PointingHandCursor }
+            HoverHandler { id: titleHover; enabled: header.known; cursorShape: Qt.PointingHandCursor }
+            // On stage: a tap goes there at once.
             TapHandler {
-                enabled: header.known
+                enabled: header.known && !header.editable
                 onTapped: header.doc.selectSection(header.sectionIndex)
             }
+            // Editing: a click goes there, a double-click renames it.
+            TapHandler {
+                enabled: header.known && header.editable
+                onSingleTapped: header.doc.selectSection(header.sectionIndex)
+                onDoubleTapped: {
+                    titleInput.text = header.label
+                    titleInput.visible = true
+                    titleInput.forceActiveFocus()
+                    titleInput.selectAll()
+                }
+            }
+            ToolTip.visible: titleHover.hovered && header.editable
+            ToolTip.delay: 900
+            ToolTip.text: qsTr("Click to go to this section · double-click to rename it")
+        }
+        TextInput {
+            id: titleInput
+            objectName: "sectionTitleInput"
+            visible: false
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.max(contentWidth + 16, 160 * header.size)
+            horizontalAlignment: TextInput.AlignHCenter
+            color: header.lit
+            font.pixelSize: title.font.pixelSize
+            font.bold: true
+            font.letterSpacing: title.font.letterSpacing
+            selectByMouse: true
+            Rectangle { anchors.fill: parent; z: -1; color: Theme.readoutBackground; border.color: Theme.accent; radius: Theme.radiusSmall }
+            onAccepted: {
+                visible = false
+                if (text.trim() !== "" && text.trim() !== header.label) header.doc.renameChartSection(header.chartLine, text.trim())
+            }
+            Keys.onEscapePressed: visible = false
+            onActiveFocusChanged: if (!activeFocus) visible = false
         }
     }
 
@@ -96,6 +134,7 @@ Column {
                     }
                     Text {
                         objectName: "sectionChipRemove"
+                        visible: header.editable
                         anchors.verticalCenter: parent.verticalCenter
                         text: "✕"
                         color: removeHover.hovered ? Theme.text : "#b0ffffff"
@@ -120,6 +159,7 @@ Column {
         StageButton {
             id: addButton
             objectName: "sectionAdd"
+            visible: header.editable
             anchors.verticalCenter: parent.verticalCenter
             implicitHeight: 24 * header.size
             text: "+"
@@ -146,6 +186,7 @@ Column {
         Item {
             id: barsField
             objectName: "sectionBars"
+            readonly property bool editable: header.editable
             anchors.verticalCenter: parent.verticalCenter
             width: Math.max(barsText.implicitWidth, 40 * header.size)
             height: 24 * header.size
@@ -160,12 +201,13 @@ Column {
                 color: header.current && header.playing ? Theme.chord : Theme.textDim
                 font.pixelSize: Theme.smallFontSize * header.size
                 font.bold: header.current && header.playing
-                HoverHandler { id: barsHover; cursorShape: Qt.IBeamCursor }
-                ToolTip.visible: barsHover.hovered
+                HoverHandler { id: barsHover; enabled: header.editable; cursorShape: Qt.IBeamCursor }
+                ToolTip.visible: barsHover.hovered && header.editable
                 ToolTip.text: header.known && header.section.guessed
                                   ? qsTr("Guessed from the chords: click to type the real length")
                                   : qsTr("Click to type the length in bars")
                 TapHandler {
+                    enabled: header.editable
                     onTapped: {
                         barsInput.text = String(barsField.bars)
                         barsInput.visible = true

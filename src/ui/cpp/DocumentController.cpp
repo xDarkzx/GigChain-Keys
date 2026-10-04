@@ -3,6 +3,7 @@
 
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/Chart.h"
+#include "gigchain/core/ChartEdit.h"
 #include "gigchain/core/Checks.h"
 #include "gigchain/core/Chords.h"
 #include "gigchain/core/SongMap.h"
@@ -199,6 +200,71 @@ bool DocumentController::setSongChart(int song, const QString& chordPro)
     if (song == m_cursor.song) applySectionsToEngine(); // its sections come from the chart
     emit chartChanged();
     return true;
+}
+
+bool DocumentController::applyChartEdit(const core::Result<QString>& edited, const QString& coalesceKey)
+{
+    if (!edited) return report(edited.error());
+    const int song = m_cursor.song;
+    if (auto r = core::setSongChart(m_setlist, song, *edited); !r) return report(r.error());
+    m_coalesceKey = coalesceKey; // empty: a step of its own
+    setDirty(true);
+    applySectionsToEngine(); // its sections come from the chart
+    emit chartChanged();
+    return true;
+}
+
+bool DocumentController::placeChordAt(int line, int at, const QString& chord)
+{
+    return applyChartEdit(core::placeChord(currentChart(), line, at, chord), {});
+}
+
+bool DocumentController::renameChordAt(int line, int chord, const QString& name)
+{
+    return applyChartEdit(core::changeChord(currentChart(), line, chord, name), {});
+}
+
+bool DocumentController::moveChordTo(int line, int chord, int toLine, int toAt)
+{
+    return applyChartEdit(core::moveChord(currentChart(), line, chord, toLine, toAt), {});
+}
+
+bool DocumentController::setLineLyrics(int line, const QString& lyrics)
+{
+    // Typing a line: one undo step, not one per letter.
+    return applyChartEdit(core::editLyrics(currentChart(), line, lyrics), u"lyrics:%1:%2"_s.arg(m_cursor.song).arg(line));
+}
+
+bool DocumentController::splitChartLine(int line, int at)
+{
+    return applyChartEdit(core::splitLyricLine(currentChart(), line, at), {});
+}
+
+bool DocumentController::joinChartLine(int line)
+{
+    return applyChartEdit(core::joinWithPrevious(currentChart(), line), {});
+}
+
+bool DocumentController::renameChartSection(int line, const QString& label)
+{
+    return applyChartEdit(core::renameSection(currentChart(), line, label), {});
+}
+
+bool DocumentController::addChartSection(const QString& label)
+{
+    return applyChartEdit(core::appendSection(currentChart(), label), {});
+}
+
+QStringList DocumentController::currentChartChords() const
+{
+    QStringList chords;
+    const core::Chart chart = core::parseChordPro(currentChart());
+    for (const core::ChartLine& line : chart.lines) {
+        for (const QString& chord : line.chords()) {
+            if (!chords.contains(chord)) chords << chord;
+        }
+    }
+    return chords;
 }
 
 bool DocumentController::pasteChart(int song, const QString& pasted)
@@ -438,20 +504,27 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
         }
         QVariantList segments;
         int chordIndex = 0;
+        int at = 0; // where the segment's words start in the line's words (for editing in place)
         for (const core::ChartSegment& segment : line.segments) {
             QVariantList steps;
             bool understood = true;
+            int thisChord = -1;
             if (!segment.chord.isEmpty()) {
+                thisChord = chordIndex;
                 const auto found = stepsAt.find({static_cast<int>(i), chordIndex++});
                 if (found != stepsAt.end()) steps = found->second;
                 understood = core::parseChordName(segment.chord).has_value();
             }
             segments << QVariantMap{{u"chord"_s, segment.chord}, {u"text"_s, segment.text},
-                                    {u"steps"_s, steps}, {u"understood"_s, understood}};
+                                    {u"steps"_s, steps}, {u"understood"_s, understood},
+                                    {u"at"_s, at}, {u"chordIndex"_s, thisChord}};
+            at += static_cast<int>(segment.text.size());
         }
         const auto section = sectionAt.find(static_cast<int>(i));
         lines << QVariantMap{{u"kind"_s, kind},
+                             {u"line"_s, static_cast<int>(i)},
                              {u"label"_s, line.label},
+                             {u"lyrics"_s, line.lyrics()},
                              {u"segments"_s, segments},
                              {u"sectionIndex"_s, section != sectionAt.end() ? section->second : -1}};
     }

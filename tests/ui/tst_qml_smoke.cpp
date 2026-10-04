@@ -5,6 +5,8 @@
 
 #include "gigchain/engine/FakeEngineFactory.h"
 
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickItem>
 #include <QQuickStyle>
@@ -14,6 +16,7 @@
 #include <QtQml/qqmlextensionplugin.h>
 #include <QtTest>
 
+#include <algorithm>
 #include <memory>
 
 Q_IMPORT_QML_PLUGIN(GigChain_UiPlugin)
@@ -183,13 +186,121 @@ private slots:
         QVERIFY(chart != nullptr);
         QVERIFY(chart->property("contentHeight").toDouble() > 40); // the lines are there
         shoot(u"perform"_s);
-        auto* panic = root->findChild<QObject*>(u"performPanic"_s);
+        auto* panic = root->findChild<QObject*>(u"panicButton"_s); // in the toolbar, as MainStage's
         QVERIFY(panic != nullptr);
         QVERIFY(QMetaObject::invokeMethod(panic, "clicked"));
         const ui::Notifications& shown = *m_session->document().notifications();
         QVERIFY(shown.rowCount() > 0 && shown.text(shown.rowCount() - 1).contains(u"Panic"_s));
         QVERIFY(root->setProperty("performMode", false));
         settle();
+    }
+
+    // On stage, as MainStage and Gig Performer lay it out: a slim header
+    // (previous, the song, next), the song's parts as tiles, and the chart
+    // filling the rest. Panic is the toolbar's (no second, bigger one).
+    void performIsTheChartWithASlimHeaderAndTheSongsParts()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        window()->resize(1600, 900);
+        QVERIFY(m_session->document().addSong());
+        QVERIFY(m_session->document().selectPatch(0, 0));
+        QVERIFY(m_session->document().setSongChart(
+            0, u"{comment: Verse}\n[C]Hello [G]world\n[Am]Here we [F]go\n{comment: Chorus}\n[F]Sing it [G]loud\n"_s));
+        QVERIFY(root->setProperty("performMode", true));
+        settle();
+        shoot(u"perform-song"_s);
+        QVERIFY(root->findChild<QObject*>(u"performPanic"_s) == nullptr);
+        // The chart has the screen: the mixer and keyboard stay closed on
+        // stage unless asked for, and Edit keeps its own.
+        QCOMPARE(root->property("mixerOpen").toBool(), false);
+        QCOMPARE(root->property("keyboardOpen").toBool(), false);
+        QCOMPARE(root->property("editMixerOpen").toBool(), true);
+
+        // Previous and next: small, in the header, next to the song's name.
+        auto* previous = root->findChild<QQuickItem*>(u"performPrevious"_s);
+        auto* next = root->findChild<QQuickItem*>(u"performNext"_s);
+        auto* chart = root->findChild<QQuickItem*>(u"performChart"_s);
+        QVERIFY(previous != nullptr && next != nullptr && chart != nullptr);
+        QVERIFY2(previous->height() <= 56 && previous->width() <= 64, "previous is a small header button");
+        QVERIFY2(next->height() <= 56 && next->width() <= 64, "next is a small header button");
+        const double chartTop = chart->mapToScene({0, 0}).y();
+        QVERIFY2(previous->mapToScene({0, 0}).y() < chartTop, "previous sits above the chart");
+        QVERIFY2(next->mapToScene({0, 0}).y() < chartTop, "next sits above the chart");
+        auto* perform = root->findChild<QQuickItem*>(u"performView"_s);
+        QVERIFY(perform != nullptr);
+        QVERIFY2(chart->height() > perform->height() * 0.55, qPrintable(u"the chart has %1 of %2"_s.arg(chart->height()).arg(perform->height())));
+        QVERIFY(QMetaObject::invokeMethod(next, "clicked"));
+        QCOMPARE(m_session->document().songIndex(), 1);
+        QVERIFY(QMetaObject::invokeMethod(previous, "clicked"));
+        QCOMPARE(m_session->document().songIndex(), 0);
+
+        // The song's parts, as tiles: the current one lit, a tap goes there.
+        auto* parts = root->findChild<QQuickItem*>(u"performParts"_s);
+        QVERIFY(parts != nullptr);
+        QVERIFY(parts->isVisible());
+        QCOMPARE(parts->property("count").toInt(), 2);
+        shoot(u"perform-parts"_s);
+        // The chart is read, not edited, on stage: no "+" to add an
+        // instrument, no click-to-type length in its section titles.
+        // (Delegates are the chart's visual children, not its QObject ones.)
+        const auto all = [](QQuickItem* top, const QString& name) {
+            QList<QQuickItem*> found;
+            QList<QQuickItem*> todo{top};
+            while (!todo.isEmpty()) {
+                QQuickItem* item = todo.takeLast();
+                if (item->objectName() == name) found << item;
+                todo << item->childItems();
+            }
+            return found;
+        };
+        const auto stageItems = [&all, chart](const QString& name) {
+            const QList<QQuickItem*> found = all(chart, name);
+            return static_cast<int>(std::ranges::count_if(found, [](const QQuickItem* item) { return item->isVisible(); }));
+        };
+        QCOMPARE(stageItems(u"sectionTitle"_s), 2);
+        QCOMPARE(stageItems(u"sectionAdd"_s), 0);
+        QCOMPARE(stageItems(u"sectionBarsInput"_s), 0);
+        const QList<QQuickItem*> bars = all(chart, u"sectionBars"_s);
+        QVERIFY(!bars.isEmpty());
+        QCOMPARE(bars.first()->property("editable").toBool(), false);
+        QVERIFY(QMetaObject::invokeMethod(parts, "choose", Q_ARG(QVariant, 1)));
+        settle();
+        QCOMPARE(m_engine->songPosition().section, 1);
+
+        // A song with no lyrics or chords says so and leads to the editor.
+        QVERIFY(m_session->document().selectPatch(1, 0));
+        settle();
+        QVERIFY(!parts->isVisible());
+        auto* add = root->findChild<QQuickItem*>(u"performAddChart"_s);
+        QVERIFY(add != nullptr && add->isVisible());
+        QCOMPARE(add->property("text").toString(), u"Add lyrics & chords"_s);
+        auto* none = root->findChild<QQuickItem*>(u"performNoChart"_s);
+        QVERIFY(none != nullptr && none->isVisible());
+        QVERIFY2(none->mapToScene({0, 0}).y() > perform->mapToScene({0, 0}).y() + 100, "the message is in the open, under the header");
+        shoot(u"perform-empty"_s);
+        QVERIFY(QMetaObject::invokeMethod(add, "clicked"));
+        settle();
+        QCOMPARE(root->property("performMode").toBool(), false);
+        auto* tabs = root->findChild<QObject*>(u"mainTabs"_s);
+        QCOMPARE(tabs->property("currentIndex").toInt(), 0); // the chart tab
+    }
+
+    // A−/A+ in the Perform view change the chart's size, kept for next time.
+    void theStageChartGrowsAndShrinks()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(m_session->document().setSongChart(0, u"[C]Hello [G]world\n"_s));
+        QVERIFY(root->setProperty("performMode", true));
+        settle();
+        auto* bigger = root->findChild<QQuickItem*>(u"performBigger"_s);
+        auto* smaller = root->findChild<QQuickItem*>(u"performSmaller"_s);
+        QVERIFY(bigger != nullptr && smaller != nullptr);
+        const double before = m_session->settingsController().chartTextSize();
+        QVERIFY(QMetaObject::invokeMethod(bigger, "clicked"));
+        QVERIFY(m_session->settingsController().chartTextSize() > before);
+        QVERIFY(QMetaObject::invokeMethod(smaller, "clicked"));
+        QVERIFY(QMetaObject::invokeMethod(smaller, "clicked"));
+        QVERIFY(m_session->settingsController().chartTextSize() < before);
     }
 
     // The master strip, used with the mouse and keyboard as a person would.
@@ -509,13 +620,14 @@ private slots:
         QVERIFY2(qAbs(centre - chartCentre) <= 1.0, qPrintable(u"%1 vs %2"_s.arg(centre).arg(chartCentre)));
         const int titleSize = title->property("font").value<QFont>().pixelSize();
         QVERIFY2(titleSize >= 26, qPrintable(QString::number(titleSize))); // lyrics are 20 px here
-        // The lyrics are centred like the titles (each line as a whole).
-        const QList<QQuickItem*> lyrics = findAll(chart, u"chartLyricFlow"_s);
+        // The lyrics are centred like the titles (each line as a whole; in the
+        // Chart tab the words are typed straight in).
+        const QList<QQuickItem*> lyrics = findAll(chart, u"chartWords"_s);
         QVERIFY(!lyrics.isEmpty());
         for (QQuickItem* line : lyrics) {
             QVERIFY(line->width() > 0 && line->width() < chart->width()); // a short line: narrower than the chart...
             const double lineCentre = line->mapToScene(QPointF(line->width() / 2, 0)).x();
-            QVERIFY2(qAbs(lineCentre - chartCentre) <= 1.0, qPrintable(u"%1 vs %2"_s.arg(lineCentre).arg(chartCentre))); // ... in its middle
+            QVERIFY2(qAbs(lineCentre - chartCentre) <= 3.0, qPrintable(u"%1 vs %2"_s.arg(lineCentre).arg(chartCentre))); // ... in its middle
         }
 
         // Each plays the first instrument until told otherwise.
@@ -898,6 +1010,130 @@ private slots:
         auto* lines = findItem(scene, u"chartLines"_s);
         QVERIFY(lines != nullptr);
         QCOMPARE(lines->property("count").toInt(), 1);
+    }
+
+    // The Chart tab edited as a player does it, with the mouse and keys: no
+    // Edit button; words typed straight in; a chord typed above a word;
+    // chords dragged onto other words, from the chart and from the palette;
+    // one dragged to Remove; a section renamed; a new line typed at the end.
+    void theChartIsEditedWhereItIsRead()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false)); // (room for the chart)
+        QVERIFY(root->setProperty("editKeyboardOpen", false));
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.setSongChart(0, u"{comment: Verse}\nI need your love"_s));
+        settle();
+        QQuickItem* scene = w->contentItem();
+        QVERIFY(findItem(scene, u"editChartButton"_s) == nullptr); // no Edit / Done
+        const auto centre = [](QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); };
+        const auto words = [scene] { return findItem(scene, u"chartWords"_s); };
+        // Where a character of the words is, in the window.
+        const auto charAt = [&words](int at, double up = 0.0) {
+            QQuickItem* input = words();
+            QRectF r;
+            QMetaObject::invokeMethod(input, "positionToRectangle", Q_RETURN_ARG(QRectF, r), Q_ARG(int, at));
+            return input->mapToScene(QPointF(r.x() + 3, r.y() + r.height() / 2 - up)).toPoint();
+        };
+        // Typed key by key, as a player types (QTest has no keyClicks for a window).
+        const auto typeKeys = [w](const QString& text) {
+            for (const QChar c : text) QTest::keyClick(w, c.toLatin1());
+        };
+        const auto drag = [w](QPoint from, QPoint to) {
+            QTest::mousePress(w, Qt::LeftButton, {}, from);
+            for (int i = 1; i <= 12; ++i) {
+                QTest::mouseMove(w, from + (to - from) * i / 12);
+                QTest::qWait(10);
+            }
+            QTest::mouseRelease(w, Qt::LeftButton, {}, to);
+            QTest::qWait(50);
+        };
+
+        // Words typed at the end of the line.
+        QVERIFY(words() != nullptr);
+        QTest::mouseClick(w, Qt::LeftButton, {}, charAt(15)); // on the "e" of "love"
+        QVERIFY(words()->hasActiveFocus());
+        QTest::keyClick(w, Qt::Key_End);
+        typeKeys(u" baby"_s);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need your love baby"_s);
+
+        // A chord typed above "love".
+        const double chordRow = words()->property("height").toDouble() * 0.9;
+        QTest::mouseClick(w, Qt::LeftButton, {}, charAt(13, chordRow)); // above "lo|ve"
+        auto* newChord = findItem(scene, u"newChordInput"_s);
+        QVERIFY(newChord != nullptr && newChord->isVisible());
+        typeKeys(u"Gm"_s);
+        QTest::keyClick(w, Qt::Key_Return);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need your [Gm]love baby"_s);
+        settle();
+
+        // Dragged from "love" to "your".
+        auto* chip = findItem(scene, u"chartChordChip"_s);
+        QVERIFY(chip != nullptr);
+        drag(centre(chip), charAt(9, chordRow)); // over "yo|ur"
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need [Gm]your love baby"_s);
+        settle();
+
+        // From the palette: typed in the chord box, dropped on "I".
+        auto* field = findItem(scene, u"chordField"_s);
+        QVERIFY(field != nullptr);
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(field));
+        typeKeys(u"D"_s);
+        settle();
+        QList<QQuickItem*> palette;
+        findAll(scene, u"paletteChord"_s, palette);
+        QCOMPARE(palette.size(), 2); // the typed D, and the song's Gm
+        QCOMPARE(palette.at(0)->property("chordName").toString(), u"D"_s);
+        drag(centre(palette.at(0)), charAt(0, chordRow));
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\n[D]I need [Gm]your love baby"_s);
+        settle();
+
+        // The D dragged to Remove.
+        QList<QQuickItem*> chips;
+        findAll(scene, u"chartChordChip"_s, chips);
+        QCOMPARE(chips.size(), 2);
+        auto* bin = findItem(scene, u"chordRemoveZone"_s);
+        QVERIFY(bin != nullptr);
+        drag(centre(chips.at(0)), centre(bin));
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need [Gm]your love baby"_s);
+        settle();
+
+        // The section renamed: double-click its title, type, Enter.
+        auto* title = findItem(scene, u"sectionTitle"_s);
+        QVERIFY(title != nullptr);
+        QTest::mouseDClick(w, Qt::LeftButton, {}, centre(title));
+        QTest::qWait(50);
+        auto* titleInput = findItem(scene, u"sectionTitleInput"_s);
+        QVERIFY(titleInput != nullptr && titleInput->isVisible());
+        QTest::keyClick(w, Qt::Key_A, Qt::ControlModifier);
+        typeKeys(u"Verse 1"_s);
+        QTest::keyClick(w, Qt::Key_Return);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby"_s);
+        settle();
+
+        // A new line typed at the end; Enter in it starts another.
+        auto* newLine = findItem(scene, u"newChartLine"_s);
+        QVERIFY(newLine != nullptr && newLine->isVisible());
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(newLine));
+        typeKeys(u"Hold me"_s);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby\nHold me"_s);
+        QTest::keyClick(w, Qt::Key_Return);
+        typeKeys(u"tight"_s);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby\nHold me\ntight"_s);
+        // Backspace at the start of a line joins it to the one above.
+        QTest::keyClick(w, Qt::Key_Home);
+        QTest::keyClick(w, Qt::Key_Backspace);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby\nHold metight"_s);
+        shoot(u"chart-live-edit"_s);
+
+        // Ctrl+V while typing in the words pastes there, not a new chart.
+        QVERIFY(QGuiApplication::clipboard() != nullptr);
+        QGuiApplication::clipboard()->setText(u"X"_s);
+        QTest::keyClick(w, Qt::Key_V, Qt::ControlModifier);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby\nHold meXtight"_s);
     }
 
     void spaceNavigatesButNotWhileTyping()

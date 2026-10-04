@@ -14,6 +14,12 @@ Column {
 
     property var lines: []
     property real size: 1.0
+    property bool editable: true // false on stage: section titles are read, not edited
+    // Edited in place (the Chart tab): words typed in, chords dragged, titles
+    // renamed. Off on stage.
+    property bool liveEdit: false
+    // The caret, given back to a line after an edit rebuilds them: {line, cursor}.
+    property var focusRequest: null
     property DocumentController doc: null
     readonly property var sections: doc !== null ? doc.currentSections : []
     property int currentSection: -1
@@ -50,22 +56,51 @@ Column {
         delegate: Loader {
             id: lineLoader
             required property var modelData
+            required property int index
             readonly property int sectionIndex: modelData.sectionIndex !== undefined ? modelData.sectionIndex : -1
+            readonly property bool typable: modelData.kind === "lyrics" || modelData.kind === "blank"
+            // The lines next to it that can be typed in (for Up, Down and Backspace).
+            function neighbour(step) {
+                const next = chart.lines[lineLoader.index + step]
+                return next !== undefined && (next.kind === "lyrics" || next.kind === "blank") ? next : null
+            }
             width: chart.width
-            sourceComponent: lineLoader.sectionIndex >= 0 ? sectionHeader
+            z: (lineLoader.item as LiveChartLine) !== null && (lineLoader.item as LiveChartLine).dragging ? 5 : 0
+            sourceComponent: chart.liveEdit && lineLoader.typable ? liveLine
+                           : lineLoader.sectionIndex >= 0 ? sectionHeader
                            : modelData.kind === "lyrics" ? lyricLine
                            : modelData.kind === "section" ? sectionLine
                            : modelData.kind === "comment" ? commentLine
                            : blankLine
             Component {
+                id: liveLine
+                LiveChartLine {
+                    width: lineLoader.width
+                    line: lineLoader.modelData
+                    doc: chart.doc
+                    size: chart.size
+                    currentStep: chart.currentStep
+                    started: chart.followStarted
+                    lineAbove: lineLoader.neighbour(-1) !== null ? lineLoader.neighbour(-1).line : -1
+                    lineBelow: lineLoader.neighbour(1) !== null ? lineLoader.neighbour(1).line : -1
+                    lengthAbove: lineLoader.neighbour(-1) !== null && lineLoader.neighbour(-1).lyrics !== undefined
+                                 ? lineLoader.neighbour(-1).lyrics.length : 0
+                    focusRequest: chart.focusRequest
+                    onWantFocus: (line, cursor) => chart.focusRequest = { line: line, cursor: cursor }
+                    onFocusTaken: Qt.callLater(() => chart.focusRequest = null) // (not while lines are being built)
+                }
+            }
+            Component {
                 id: sectionHeader
                 SectionHeader {
                     width: lineLoader.width
                     label: lineLoader.modelData.label
+                    chartLine: lineLoader.modelData.line
                     sectionIndex: lineLoader.sectionIndex
                     section: lineLoader.sectionIndex < chart.sections.length ? chart.sections[lineLoader.sectionIndex] : undefined
                     doc: chart.doc
                     size: chart.size
+                    editable: chart.editable
                     current: lineLoader.sectionIndex === chart.currentSection
                     playing: chart.playing
                     bar: chart.bar
