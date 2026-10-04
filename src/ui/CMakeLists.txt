@@ -16,6 +16,7 @@ qt_add_qml_module(gigchain_ui
         cpp/SettingsController.h cpp/SettingsController.cpp
         cpp/InputPermission.h cpp/InputPermission.cpp
         cpp/PracticeController.h cpp/PracticeController.cpp
+        cpp/HelpLibrary.h cpp/HelpLibrary.cpp
         cpp/StartupProgress.h cpp/StartupProgress.cpp
         cpp/StageQuips.h cpp/StageQuips.cpp
         cpp/FreezeWatchdog.h cpp/FreezeWatchdog.cpp
@@ -85,6 +86,8 @@ qt_add_qml_module(gigchain_ui
         LiveChartLine.qml
         ChordDragSource.qml
         PracticeView.qml
+        HelpWindow.qml
+        AboutDialog.qml
         LooperCell.qml
         LoopsPill.qml
         LoopControlsDialog.qml
@@ -134,6 +137,10 @@ gigchain_target_defaults(gigchain_ui)
 # Branding pictures (branding.cmake), always at qrc:/branding/...
 set_source_files_properties(${PRODUCT_SPLASH_IMAGE} PROPERTIES QT_RESOURCE_ALIAS splash.png)
 qt_add_resources(gigchain_ui "branding" PREFIX "/branding" FILES ${PRODUCT_SPLASH_IMAGE})
+
+# The user guide (Help > User guide, HelpLibrary), at :/help/<page>.md.
+file(GLOB _gigchain_help_pages CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/docs/help/*.md")
+qt_add_resources(gigchain_ui "help" PREFIX "/help" BASE "${PROJECT_SOURCE_DIR}/docs/help" FILES ${_gigchain_help_pages})
 
 if(MSVC)
     get_target_property(_gigchain_ui_sources gigchain_ui SOURCES)

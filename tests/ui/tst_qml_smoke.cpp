@@ -3,6 +3,7 @@
 #include "Session.h"
 #include "StartupProgress.h"
 
+#include "gigchain/core/Branding.h"
 #include "gigchain/engine/FakeEngineFactory.h"
 
 #include <QClipboard>
@@ -1202,6 +1203,58 @@ private slots:
         settle();
         QVERIFY(!root->property("practiceMode").toBool());
         QVERIFY(!m_session->practice().playing());
+    }
+
+    // Help > User guide: the guide opens at a page, finds pages by their
+    // words and follows the links between them; Help > About names the app.
+    void theHelpMenuOpensTheGuideAndAbout()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->findChild<QObject*>(u"helpButton"_s) != nullptr);
+
+        QVERIFY(QMetaObject::invokeMethod(root, "openHelp", Q_ARG(QVariant, u"practice"_s)));
+        settle();
+        auto* guide = root->findChild<QQuickWindow*>(u"helpWindow"_s);
+        QVERIFY(guide != nullptr);
+        QTRY_VERIFY(guide->isVisible());
+        auto* page = root->findChild<QObject*>(u"helpPage"_s);
+        QVERIFY(page != nullptr);
+        QVERIFY(page->property("markdown").toString().startsWith(u"# Practice mode"_s));
+        QVERIFY(page->property("text").toString().contains(u"Practice mode"_s)); // shown
+        auto* topicList = root->findChild<QObject*>(u"helpTopics"_s);
+        QVERIFY(topicList != nullptr);
+        QVERIFY(topicList->property("count").toInt() >= 10);
+        if (qEnvironmentVariableIsSet("GIGCHAIN_SCREENSHOTS")) {
+            guide->grabWindow().save(qEnvironmentVariable("GIGCHAIN_SCREENSHOTS") + u"/help.png"_s);
+        }
+
+        // A link to another page goes there.
+        QVERIFY(QMetaObject::invokeMethod(page, "linkActivated", Q_ARG(QString, u"help:charts"_s)));
+        QTRY_VERIFY(page->property("markdown").toString().startsWith(u"# Chord charts"_s));
+
+        // Search lists the pages holding the words; picking one opens it.
+        auto* search = root->findChild<QObject*>(u"helpSearch"_s);
+        QVERIFY(search != nullptr);
+        QVERIFY(search->setProperty("text", u"wait for me"_s));
+        auto* results = root->findChild<QObject*>(u"helpResults"_s);
+        QVERIFY(results != nullptr);
+        QTRY_VERIFY(results->property("count").toInt() >= 1);
+        QVERIFY(results->property("visible").toBool());
+        QVERIFY(QMetaObject::invokeMethod(root->findChild<QObject*>(u"helpWindowRoot"_s), "openTopic", Q_ARG(QVariant, u"looper"_s)));
+        QTRY_VERIFY(page->property("markdown").toString().startsWith(u"# Loop station"_s));
+        guide->close();
+
+        // About: the splash picture, the name and the version.
+        QVERIFY(QMetaObject::invokeMethod(root, "openAbout"));
+        settle();
+        auto* about = root->findChild<QObject*>(u"aboutDialog"_s);
+        QVERIFY(about != nullptr);
+        QTRY_VERIFY(about->property("visible").toBool());
+        auto* version = root->findChild<QObject*>(u"aboutVersion"_s);
+        QVERIFY(version != nullptr);
+        QVERIFY(version->property("text").toString().contains(gigchain::branding::version()));
+        shoot(u"about"_s);
+        QVERIFY(QMetaObject::invokeMethod(about, "close"));
     }
 
     void spaceNavigatesButNotWhileTyping()

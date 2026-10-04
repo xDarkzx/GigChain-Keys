@@ -89,6 +89,16 @@ ApplicationWindow {
         practiceMode = true
     }
 
+    // Help: the guide at a page ("": the page for what is on screen), About.
+    function openHelp(topic) {
+        const page = topic !== "" ? topic
+                   : practiceMode ? "practice"
+                   : performMode ? "perform"
+                   : "getting-started"
+        helpWindow.show(page)
+    }
+    function openAbout() { aboutDialog.open() }
+
     // ------------------------------------------------------------- file flow
     function runPending() {
         const action = pendingAction
@@ -217,6 +227,7 @@ ApplicationWindow {
     Shortcut { sequence: "Left"; enabled: !root.typing; onActivated: root.doc.previousPatch() }
     Shortcut { sequence: "PgDown"; enabled: !root.typing; onActivated: root.doc.nextSong() }
     Shortcut { sequence: "PgUp"; enabled: !root.typing; onActivated: root.doc.previousSong() }
+    Shortcut { sequences: [StandardKey.HelpContents, "F1"]; onActivated: root.openHelp("") }
     Shortcut { sequence: "Tab"; enabled: !root.typing; onActivated: root.toggleMode() }
     Shortcut { sequence: "Esc"; enabled: root.performMode || root.practiceMode; onActivated: root.editMode() }
     Shortcut { sequences: [StandardKey.New]; enabled: !root.performMode; onActivated: root.guarded("new") }
@@ -255,6 +266,14 @@ ApplicationWindow {
         onSaveRequested: root.save()
         onSaveAsRequested: saveDialog.open()
         onSettingsRequested: settingsDialog.open()
+        onHelpRequested: (topic) => root.openHelp(topic)
+        onAboutRequested: root.openAbout()
+    }
+
+    HelpWindow { id: helpWindow }
+    AboutDialog {
+        id: aboutDialog
+        onGuideRequested: root.openHelp("")
     }
 
     ColumnLayout {
@@ -298,7 +317,7 @@ ApplicationWindow {
                         onOpenRecentRequested: (path) => root.openRecent(path)
                         // Plugin windows sit above Qt content: hide them while a dialog is up.
                         suspended: settingsDialog.visible || unsavedDialog.visible || zoneDialog.visible || knobDialog.visible
-                                   || loopControlsDialog.visible
+                                   || loopControlsDialog.visible || aboutDialog.visible
                     }
                     Mixer {
                         visible: root.mixerOpen

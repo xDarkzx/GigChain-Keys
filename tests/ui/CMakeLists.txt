@@ -6,6 +6,7 @@ gigchain_add_test(tst_official_artwork SOURCES tst_official_artwork.cpp LIBS gig
 gigchain_add_test(tst_stage_quips SOURCES tst_stage_quips.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_settings SOURCES tst_settings.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_practice_controller SOURCES tst_practice_controller.cpp LIBS gigchain_ui)
+gigchain_add_test(tst_help_library SOURCES tst_help_library.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_crash_reports SOURCES tst_crash_reports.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_notifications SOURCES tst_notifications.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_single_instance SOURCES tst_single_instance.cpp LIBS gigchain_ui $<$<BOOL:${WIN32}>:advapi32>)

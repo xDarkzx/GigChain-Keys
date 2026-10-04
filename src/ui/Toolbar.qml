@@ -31,6 +31,8 @@ ToolBar {
     signal saveRequested()
     signal saveAsRequested()
     signal settingsRequested()
+    signal helpRequested(string topic) // "": the page for what is on screen
+    signal aboutRequested()
 
     implicitHeight: 48
     // This bar is the window's title bar: drag it to move the window,
@@ -480,6 +482,24 @@ ToolBar {
             text: qsTr("Settings")
             tip: qsTr("Audio, MIDI, pedals and plugins (Ctrl+,)")
             onClicked: bar.settingsRequested()
+        }
+        // Help: the user guide, the shortcuts, about the app.
+        StageButton {
+            objectName: "helpButton"
+            text: qsTr("Help")
+            iconSource: "icons/info-circle.svg"
+            tip: qsTr("The user guide (F1)")
+            onClicked: helpMenu.popup(0, height)
+            StageMenu {
+                id: helpMenu
+                StageMenuItem { text: qsTr("User guide"); onTriggered: bar.helpRequested("") }
+                StageMenuItem { text: qsTr("Getting started"); onTriggered: bar.helpRequested("getting-started") }
+                StageMenuItem { text: qsTr("How Practice works"); onTriggered: bar.helpRequested("practice") }
+                StageMenuItem { text: qsTr("Keyboard shortcuts"); onTriggered: bar.helpRequested("shortcuts") }
+                StageMenuItem { text: qsTr("Troubleshooting"); onTriggered: bar.helpRequested("troubleshooting") }
+                MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+                StageMenuItem { text: qsTr("About %1").arg(Branding.name); onTriggered: bar.aboutRequested() }
+            }
         }
 
         // Minimise, maximise, close: at the right end, as on Windows.
