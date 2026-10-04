@@ -1165,6 +1165,10 @@ private slots:
         // The first chord's middle C falls over the C4 key.
         auto* key = findItem(scene, u"practiceKey60"_s);
         QVERIFY(key != nullptr);
+        // The keys keep a piano's shape: a wide window shows more of them, not wider ones.
+        QVERIFY2(key->width() <= 40.0 && key->height() >= key->width() * 3.5,
+                 qPrintable(u"key %1 x %2"_s.arg(key->width()).arg(key->height())));
+        QVERIFY(findItem(scene, u"practiceKey35"_s) != nullptr); // below C2: the window is filled
         QQuickItem* middleC = nullptr;
         for (QQuickItem* note : notes) {
             const QVariantMap data = note->property("modelData").toMap();
@@ -1185,6 +1189,11 @@ private slots:
         QVERIFY(QMetaObject::invokeMethod(play, "clicked"));
         QTRY_VERIFY(middleC->y() > before + 20);
         QTRY_COMPARE(findItem(scene, u"practiceNow"_s)->property("text").toString(), u"C"_s);
+        // The notes landing now sparkle where they hit the keys (YouTube-style).
+        QList<QQuickItem*> sparks;
+        findAll(scene, u"practiceSpark"_s, sparks);
+        const auto shown = std::ranges::count_if(sparks, [](QQuickItem* s) { return s->isVisible(); });
+        QCOMPARE(shown, 4); // the C chord: C2; C4, E4, G4
         shoot(u"practice-playing"_s);
         // Back to Edit: it pauses.
         auto* editButton = window()->findChild<QObject*>(u"editButton"_s);
