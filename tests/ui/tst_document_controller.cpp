@@ -631,6 +631,38 @@ private slots:
         QCOMPARE(m_doc->currentChart(), u"[G]I found a love"_s);
     }
 
+    // A chord's diagram: which keys each hand presses, by name, in each
+    // inversion; the one chosen for the song is kept (an undo step), and
+    // the diagram opens on it.
+    void aChordsDiagramShowsTheKeysAndKeepsAChoice()
+    {
+        QVariantMap d = m_doc->chordDiagram(u"E/D#"_s, -1);
+        QVERIFY(d.value(u"understood"_s).toBool());
+        QCOMPARE(d.value(u"inversion"_s).toInt(), 0); // nothing chosen: root position
+        QCOMPARE(d.value(u"chosen"_s).toInt(), -1);
+        QCOMPARE(d.value(u"left"_s).toList(), (QVariantList{39}));          // D#2
+        QCOMPARE(d.value(u"right"_s).toList(), (QVariantList{64, 68, 71})); // E4 G#4 B4
+        QCOMPARE(d.value(u"leftNames"_s).toString(), u"D#"_s);
+        QCOMPARE(d.value(u"rightNames"_s).toString(), u"E G# B"_s);
+        QCOMPARE(d.value(u"inversions"_s).toStringList(), (QStringList{u"Root position"_s, u"1st inversion"_s, u"2nd inversion"_s}));
+        d = m_doc->chordDiagram(u"E/D#"_s, 1);
+        QCOMPARE(d.value(u"right"_s).toList(), (QVariantList{68, 71, 76})); // G# B E
+        QCOMPARE(d.value(u"rightNames"_s).toString(), u"G# B E"_s);
+        // Flat chords read in flats.
+        QCOMPARE(m_doc->chordDiagram(u"Bb"_s, 0).value(u"rightNames"_s).toString(), u"Bb D F"_s);
+        // Not a chord: said so, no keys.
+        QVERIFY(!m_doc->chordDiagram(u"N.C."_s, 0).value(u"understood"_s).toBool());
+
+        QVERIFY(m_doc->setChordInversion(u"E/D#"_s, 1));
+        QCOMPARE(m_doc->chordDiagram(u"E/D#"_s, -1).value(u"inversion"_s).toInt(), 1); // opens on the choice
+        QCOMPARE(m_doc->chordDiagram(u"E/D#"_s, -1).value(u"chosen"_s).toInt(), 1);
+        QCOMPARE(m_doc->setlist().songs.at(0).chordInversions.at(u"E/D#"_s), 1);
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->chordDiagram(u"E/D#"_s, -1).value(u"chosen"_s).toInt(), -1);
+        QVERIFY(!m_doc->setChordInversion(u"E/D#"_s, 3)); // a triad has no 3rd inversion
+        QVERIFY(m_doc->lastError().contains(u"inversion"_s));
+    }
+
     void pastingKeepsANameTheUserChose()
     {
         QVERIFY(m_doc->renameSong(0, u"Opener"_s));

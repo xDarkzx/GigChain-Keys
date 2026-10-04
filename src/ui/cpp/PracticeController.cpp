@@ -35,6 +35,7 @@ PracticeController::PracticeController(engine::IEngine& engine, DocumentControll
     connect(&m_document, &DocumentController::chartChanged, this, &PracticeController::rebuild);
     connect(&m_document, &DocumentController::sectionsChanged, this, &PracticeController::rebuild);
     connect(&m_document, &DocumentController::songChanged, this, &PracticeController::rebuild);
+    connect(&m_document, &DocumentController::chordInversionsChanged, this, &PracticeController::rebuild);
     rebuild();
 }
 
@@ -58,7 +59,10 @@ void PracticeController::rebuild()
     }
     const int beats = m_document.songTimeNumerator() > 0 ? m_document.songTimeNumerator() : 4;
     m_tempo = m_document.songTempo() > 0.0 ? m_document.songTempo() : 120.0;
-    m_timeline = core::practiceTimeline(map, bars, names, beats);
+    m_style.chosen.clear();
+    const QVariantMap chosen = m_document.currentChordInversions();
+    for (auto it = chosen.begin(); it != chosen.end(); ++it) m_style.chosen[it.key()] = it.value().toInt();
+    m_timeline = core::practiceTimeline(map, bars, names, beats, m_style);
 
     m_notes.clear();
     m_chords.clear();
@@ -72,7 +76,7 @@ void PracticeController::rebuild()
             m_notes << QVariantMap{{u"pitch"_s, pitch}, {u"start"_s, chord.start}, {u"length"_s, chord.length},
                                    {u"left"_s, left}, {u"chord"_s, static_cast<int>(i)}};
         };
-        note(chord.bass, true);
+        for (const int pitch : chord.left) note(pitch, true);
         for (const int pitch : chord.right) note(pitch, false);
     }
     for (const core::PracticeSectionMark& mark : m_timeline.sections) {
@@ -107,9 +111,27 @@ QVariantList PracticeController::targetNotes() const
     const int at = chordAt(m_position);
     if (at < 0) return list;
     const core::PracticeChord& chord = m_timeline.chords.at(static_cast<std::size_t>(at));
-    list << chord.bass;
+    for (const int pitch : chord.left) list << pitch;
     for (const int pitch : chord.right) list << pitch;
     return list;
+}
+
+void PracticeController::setLeftHand(int wanted)
+{
+    const auto kept = static_cast<core::LeftHand>(std::clamp(wanted, 0, static_cast<int>(core::LeftHand::Full)));
+    if (kept == m_style.left) return;
+    m_style.left = kept;
+    emit settingsChanged();
+    rebuild();
+}
+
+void PracticeController::setRightHand(int wanted)
+{
+    const auto kept = static_cast<core::RightHand>(std::clamp(wanted, 0, static_cast<int>(core::RightHand::Chosen)));
+    if (kept == m_style.right) return;
+    m_style.right = kept;
+    emit settingsChanged();
+    rebuild();
 }
 
 void PracticeController::setMode(int wanted)
@@ -175,7 +197,7 @@ bool PracticeController::held(const core::PracticeChord& chord) const
 {
     const engine::MidiActivity keys = m_engine.keyboardActivity();
     const auto down = [&keys](int pitch) { return pitch >= 0 && pitch < 128 && keys.velocity.at(static_cast<std::size_t>(pitch)) > 0; };
-    return down(chord.bass) && std::ranges::all_of(chord.right, down);
+    return std::ranges::all_of(chord.left, down) && std::ranges::all_of(chord.right, down);
 }
 
 void PracticeController::play()
@@ -261,14 +283,16 @@ void PracticeController::sound(double from, double to)
         for (const int pitch : chord.right) {
             if (m_sounding.erase(pitch) > 0) m_engine.injectNote(kChannel, pitch, 0);
         }
-        if (m_sounding.erase(chord.bass) > 0) m_engine.injectNote(kChannel, chord.bass, 0);
+        for (const int pitch : chord.left) {
+            if (m_sounding.erase(pitch) > 0) m_engine.injectNote(kChannel, pitch, 0);
+        }
     }
     for (const core::PracticeChord& chord : m_timeline.chords) {
         if (chord.start < from || chord.start >= to) continue;
         const auto press = [this](int pitch) {
             if (m_sounding.insert(pitch).second) m_engine.injectNote(kChannel, pitch, kVelocity);
         };
-        press(chord.bass);
+        for (const int pitch : chord.left) press(pitch);
         for (const int pitch : chord.right) press(pitch);
     }
 }

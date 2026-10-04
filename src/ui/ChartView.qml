@@ -23,6 +23,8 @@ Column {
     property var focusRequest: null
     // The line being edited (its empty chord boxes shown), -1: none.
     property int openLine: -1
+    // A chord tapped (on stage) or asked for (its menu, in the editor): how to play it.
+    signal chordClicked(string name)
     property DocumentController doc: null
     readonly property var sections: doc !== null ? doc.currentSections : []
     property int currentSection: -1
@@ -93,6 +95,7 @@ Column {
                     focusRequest: chart.focusRequest
                     onWantFocus: (line, cursor) => chart.focusRequest = { line: line, cursor: cursor }
                     onWantCell: (line, cell, what) => chart.focusRequest = { line: line, cell: cell, what: what }
+                    onChordDiagramRequested: (name) => chart.chordClicked(name)
                     onFocusTaken: Qt.callLater(() => chart.focusRequest = null) // (not while lines are being built)
                 }
             }
@@ -145,6 +148,7 @@ Column {
                                 size: chart.size
                                 currentStep: chart.currentStep
                                 started: chart.followStarted
+                                onChordClicked: (name) => chart.chordClicked(name)
                             }
                         }
                     }

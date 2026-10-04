@@ -1013,6 +1013,59 @@ private slots:
         QCOMPARE(lines->property("count").toInt(), 1);
     }
 
+    // A chord tapped on stage shows how to play it: a dot on each key (the
+    // slash note in the left hand), its inversions to look through, and the
+    // one kept for the song (Practice then plays it).
+    void aChordTappedOnStageShowsHowToPlayIt()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.setSongChart(0, u"{comment: Verse}\n[E/D#]Slow [C#m]down\n"_s));
+        QVERIFY(root->setProperty("performMode", true));
+        settle();
+        QQuickWindow* w = window();
+        QQuickItem* scene = w->contentItem();
+        auto* stage = findItem(scene, u"performView"_s);
+        QVERIFY(stage != nullptr && stage->isVisible());
+        // The E/D# chord's text in the stage chart.
+        QList<QQuickItem*> texts;
+        findAll(stage, QString(), texts);
+        QQuickItem* chordText = nullptr;
+        for (QQuickItem* t : texts) {
+            if (t->property("text").toString() == u"E/D#"_s && t->isVisible()) chordText = t;
+        }
+        QVERIFY(chordText != nullptr);
+        QTest::mouseClick(w, Qt::LeftButton, {}, chordText->mapToScene(QPointF(chordText->width() / 2, chordText->height() / 2)).toPoint());
+        // (One diagram in each view: Perform's is the one that opens.)
+        const auto shownDiagram = [root]() -> QObject* {
+            const QList<QObject*> all = root->findChildren<QObject*>(u"chordDiagram"_s);
+            const auto it = std::ranges::find_if(all, [](QObject* d) { return d->property("visible").toBool(); });
+            return it == all.end() ? nullptr : *it;
+        };
+        QTRY_VERIFY(shownDiagram() != nullptr);
+        QObject* diagram = shownDiagram();
+        QCOMPARE(diagram->property("chord").toString(), u"E/D#"_s);
+        QList<QQuickItem*> dots;
+        findAll(scene, u"chordDiagramDot"_s, dots);
+        QCOMPARE(dots.size(), 4); // D#; E G# B
+        auto* right = findItem(scene, u"chordDiagramRight"_s);
+        QVERIFY(right != nullptr);
+        QVERIFY2(right->property("text").toString().contains(u"E G# B"_s), qPrintable(right->property("text").toString()));
+        shoot(u"chord-diagram"_s);
+        // The 1st inversion looked at, then kept for the song.
+        auto* first = findItem(scene, u"chordInversion1"_s);
+        QVERIFY(first != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(first, "clicked"));
+        QTRY_VERIFY(findItem(scene, u"chordDiagramRight"_s)->property("text").toString().contains(u"G# B E"_s));
+        auto* keep = findItem(scene, u"chordDiagramKeep"_s);
+        QVERIFY(keep != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(keep, "clicked"));
+        QCOMPARE(doc.setlist().songs.at(0).chordInversions.at(u"E/D#"_s), 1);
+        QVERIFY(QMetaObject::invokeMethod(diagram, "close"));
+        QVERIFY(root->setProperty("performMode", false));
+        settle();
+    }
+
     // A long chart scrolls with the mouse wheel (the page itself is not
     // dragged: dragging moves chords).
     void aLongChartScrollsWithTheWheel()

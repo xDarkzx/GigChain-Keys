@@ -12,6 +12,8 @@ Column {
     property int currentStep: -1
     property bool started: false
     property bool measuring: false // the hidden copy that only measures a line
+    // Its chord tapped: how to play it (the chord diagram).
+    signal chordClicked(string name)
     readonly property var steps: segment.modelData.steps !== undefined ? segment.modelData.steps : []
     readonly property bool current: segment.started && segment.steps.indexOf(segment.currentStep) >= 0
     readonly property bool next: !segment.current && segment.steps.indexOf(segment.started ? segment.currentStep + 1 : 0) >= 0
@@ -29,6 +31,15 @@ Column {
         // Chords with no words under them (an intro, a turnaround) keep a
         // gap between them.
         rightPadding: segment.modelData.text.trim() === "" ? 18 * segment.size : 0
+        HoverHandler {
+            enabled: !segment.measuring && segment.modelData.chord !== ""
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            objectName: "chordTap"
+            enabled: !segment.measuring && segment.modelData.chord !== ""
+            onTapped: segment.chordClicked(segment.modelData.chord)
+        }
         Rectangle {
             // The next chord: outlined, so the eye finds it.
             visible: segment.next && segment.modelData.chord !== ""

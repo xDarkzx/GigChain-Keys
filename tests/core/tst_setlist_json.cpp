@@ -445,6 +445,33 @@ private slots:
         QVERIFY2(older.has_value(), older ? "" : qPrintable(older.error().message));
         QVERIFY(older->songs.front().followChords);
     }
+
+    // The inversion chosen for each chord (the chord diagram) is kept with the
+    // song; an older file has none; a bad one is refused with where it is.
+    void aSongKeepsItsChosenInversions()
+    {
+        Setlist setlist;
+        setlist.songs.push_back(makeSong(u"Slow"_s));
+        setlist.songs.front().chordInversions = {{u"E/D#"_s, 1}, {u"C#m"_s, 2}};
+        const auto read = fromJson(toJson(setlist));
+        QVERIFY2(read.has_value(), read ? "" : qPrintable(read.error().message));
+        QCOMPARE(read->songs.front().chordInversions, (std::map<QString, int>{{u"E/D#"_s, 1}, {u"C#m"_s, 2}}));
+        QJsonObject root = QJsonDocument::fromJson(toJson(setlist)).object();
+        QJsonArray songs = root.value(u"songs"_s).toArray();
+        QJsonObject song = songs.at(0).toObject();
+        song.remove(u"chordInversions"_s);
+        songs.replace(0, song);
+        root.insert(u"songs"_s, songs);
+        const auto older = fromJson(QJsonDocument(root).toJson());
+        QVERIFY2(older.has_value(), older ? "" : qPrintable(older.error().message));
+        QVERIFY(older->songs.front().chordInversions.empty());
+        song.insert(u"chordInversions"_s, QJsonObject{{u"C"_s, 9}});
+        songs.replace(0, song);
+        root.insert(u"songs"_s, songs);
+        const auto bad = fromJson(QJsonDocument(root).toJson());
+        QVERIFY(!bad.has_value());
+        QVERIFY2(bad.error().message.contains(u"chordInversions"_s), qPrintable(bad.error().message));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestSetlistJson)

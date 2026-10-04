@@ -320,6 +320,30 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
     song.followChords = !obj.contains("followChords"_L1) || r.boolean(obj, "followChords"_L1, path);
     song.loopSync = !obj.contains("loopSync"_L1) || r.boolean(obj, "loopSync"_L1, path);
     song.loopBars = r.optionalInteger(obj, "loopBars"_L1, path, 0, limits::kMaxLoopBars, 4);
+    // The inversions chosen for its chords: {"E/D#": 1, ...} (absent in older files).
+    if (!r.failed() && obj.contains("chordInversions"_L1)) {
+        const QString where = path + u".chordInversions"_s;
+        const QJsonValue value = obj.value("chordInversions"_L1);
+        if (!value.isObject()) {
+            r.invalid(u"%1 must be an object of chord names and inversions"_s.arg(where));
+            return song;
+        }
+        const QJsonObject chosen = value.toObject();
+        if (chosen.size() > limits::kMaxChosenInversions) {
+            r.invalid(u"%1 has %2 chords (at most %3)"_s.arg(where).arg(chosen.size()).arg(limits::kMaxChosenInversions));
+            return song;
+        }
+        for (auto it = chosen.begin(); it != chosen.end(); ++it) {
+            const double inversion = it.value().toDouble(-1.0);
+            if (it.key().trimmed().isEmpty() || it.key().size() > limits::kMaxNameLength || !it.value().isDouble() ||
+                inversion != std::floor(inversion) || inversion < 0 || inversion > limits::kMaxChordInversion) {
+                r.invalid(u"%1.\"%2\" must be a chord name with an inversion from 0 to %3"_s.arg(where, it.key().left(40))
+                              .arg(limits::kMaxChordInversion));
+                return song;
+            }
+            song.chordInversions[it.key()] = static_cast<int>(inversion);
+        }
+    }
     const QJsonArray sections = r.optionalArray(obj, "sections"_L1, path, limits::kMaxSectionsPerSong);
     for (qsizetype i = 0; i < sections.size() && !r.failed(); ++i) {
         const QString where = u"%1.sections[%2]"_s.arg(path).arg(i);
@@ -420,8 +444,11 @@ QJsonObject writeSong(const Song& song)
                                     {u"assigned"_s, section.assigned},
                                     {u"channels"_s, channels}});
     }
+    QJsonObject inversions;
+    for (const auto& [chord, inversion] : song.chordInversions) inversions.insert(chord, inversion);
     return QJsonObject{{u"id"_s, song.id.value()},
                        {u"name"_s, song.name},
+                       {u"chordInversions"_s, inversions},
                        {u"patches"_s, patches},
                        {u"chart"_s, song.chart},
                        {u"key"_s, song.key},

@@ -82,6 +82,58 @@ private slots:
         QCOMPARE(timeline.chords.at(1).bass, 41);
     }
 
+    // A chord's inversions for the right hand, from middle C up: root
+    // position, then each next note of the chord at the bottom.
+    void aChordHasItsInversions()
+    {
+        QCOMPARE(inversionCount(chord(u"C"_s)), 3);
+        QCOMPARE(chordInversion(chord(u"C"_s), 0), (std::vector<int>{60, 64, 67})); // C E G
+        QCOMPARE(chordInversion(chord(u"C"_s), 1), (std::vector<int>{64, 67, 72})); // E G C
+        QCOMPARE(chordInversion(chord(u"C"_s), 2), (std::vector<int>{67, 72, 76})); // G C E
+        QVERIFY(chordInversion(chord(u"C"_s), 3).empty());                          // a triad has three
+        QCOMPARE(inversionCount(chord(u"Cmaj7"_s)), 4);
+        QCOMPARE(chordInversion(chord(u"Cmaj7"_s), 3), (std::vector<int>{71, 72, 76, 79})); // B C E G
+        // A slash chord: the inversions of its chord (the slash note is the left hand's).
+        QCOMPARE(chordInversion(chord(u"E/D#"_s), 0), (std::vector<int>{64, 68, 71})); // E G# B
+        QCOMPARE(inversionName(0), u"Root position"_s);
+        QCOMPARE(inversionName(1), u"1st inversion"_s);
+        QCOMPARE(inversionName(2), u"2nd inversion"_s);
+        QCOMPARE(inversionName(3), u"3rd inversion"_s);
+    }
+
+    // What the left hand plays: the bass alone, its octave, root and fifth,
+    // or the whole chord low (from the bass note, between G2 and F#3).
+    void theLeftHandHasItsStyles()
+    {
+        QCOMPARE(leftHandNotes(chord(u"C"_s), LeftHand::Bass), (std::vector<int>{36}));
+        QCOMPARE(leftHandNotes(chord(u"C"_s), LeftHand::Octave), (std::vector<int>{36, 48}));
+        QCOMPARE(leftHandNotes(chord(u"C"_s), LeftHand::RootFifth), (std::vector<int>{36, 43}));
+        QCOMPARE(leftHandNotes(chord(u"C"_s), LeftHand::Full), (std::vector<int>{48, 52, 55}));
+        QCOMPARE(leftHandNotes(chord(u"E/D#"_s), LeftHand::Bass), (std::vector<int>{39})); // the slash note
+        QCOMPARE(leftHandNotes(chord(u"E/D#"_s), LeftHand::Full), (std::vector<int>{51, 52, 56, 59})); // D# E G# B
+    }
+
+    // A timeline in a style: root position everywhere, an octave in the left
+    // hand, and one chord (F) in the inversion chosen for it.
+    void aTimelineFollowsTheStyle()
+    {
+        const SongMap map = buildSongMap(parseChordPro(u"[C]a [F]b [G]c"_s));
+        VoicingStyle root;
+        root.right = RightHand::Root;
+        root.left = LeftHand::Octave;
+        const PracticeTimeline plain = practiceTimeline(map, {}, {}, 4, root);
+        QCOMPARE(plain.chords.at(1).right, (std::vector<int>{65, 69, 72})); // F A C, root position
+        QCOMPARE(plain.chords.at(1).left, (std::vector<int>{41, 53}));
+        QCOMPARE(plain.chords.at(1).bass, 41);
+        VoicingStyle chosen;
+        chosen.right = RightHand::Chosen;
+        chosen.chosen = {{u"F"_s, 2}};
+        const PracticeTimeline mine = practiceTimeline(map, {}, {}, 4, chosen);
+        QCOMPARE(mine.chords.at(1).right, chordInversion(chord(u"F"_s), 2)); // the chosen one
+        QCOMPARE(mine.chords.at(0).right, (std::vector<int>{60, 64, 67}));   // the others: smooth
+        QCOMPARE(mine.chords.at(1).left, (std::vector<int>{41}));            // the bass alone (the default)
+    }
+
     // No sections: a bar a chord; no chords: nothing to play.
     void aPlainChartGetsABarAChord()
     {

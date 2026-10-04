@@ -71,6 +71,37 @@ private slots:
         QCOMPARE(m_practice->chords().size(), 3);
     }
 
+    // The hands' styles: an octave in the left hand doubles its notes; the
+    // right hand in root position; the inversion saved for a chord of the
+    // song played when "your choices" is on, and its change heard at once.
+    void theHandsPlayInTheChosenStyle()
+    {
+        QCOMPARE(m_practice->leftHand(), 0);  // the bass alone (the default)
+        QCOMPARE(m_practice->rightHand(), 0); // smooth
+        QSignalSpy changed(m_practice.get(), &PracticeController::songChanged);
+        m_practice->setLeftHand(1); // octave
+        QVERIFY(changed.size() >= 1);
+        QCOMPARE(m_practice->notes().size(), 20); // 4 chords: 2 + 3 notes each
+        const auto rightOf = [this](int chord) {
+            QList<int> pitches;
+            for (const QVariant& n : m_practice->notes()) {
+                const QVariantMap note = n.toMap();
+                if (note.value(u"chord"_s).toInt() == chord && !note.value(u"left"_s).toBool()) pitches << note.value(u"pitch"_s).toInt();
+            }
+            std::ranges::sort(pitches);
+            return pitches;
+        };
+        m_practice->setRightHand(1); // root position
+        QCOMPARE(rightOf(1), (QList<int>{65, 69, 72})); // F A C
+        QVERIFY(m_doc->setChordInversion(u"F"_s, 2));
+        m_practice->setRightHand(2); // your choices
+        QCOMPARE(rightOf(1), (QList<int>{60, 65, 69})); // F's 2nd inversion: C F A
+        QVERIFY(m_doc->setChordInversion(u"F"_s, 1)); // changed in the diagram: heard at once
+        QCOMPARE(rightOf(1), (QList<int>{69, 72, 77})); // A C F
+        m_practice->setLeftHand(9);
+        QCOMPARE(m_practice->leftHand(), 3); // (the last there is: full)
+    }
+
     // Listen: the notes are played through the patch as they land, and let go.
     void listenPlaysTheNotes()
     {

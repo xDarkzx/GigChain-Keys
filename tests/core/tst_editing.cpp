@@ -211,6 +211,20 @@ private slots:
         QVERIFY(s.songs.at(1).followChords);
         QVERIFY(setSongFollowChords(s, 5, false).error().code == ErrorCode::OutOfRange);
     }
+
+    // The inversion chosen for a chord of a song; -1 forgets it.
+    void anInversionIsChosenForAChord()
+    {
+        Setlist s = abc();
+        QVERIFY(setChordInversion(s, 0, u"E/D#"_s, 1).has_value());
+        QCOMPARE(s.songs.at(0).chordInversions.at(u"E/D#"_s), 1);
+        QVERIFY(s.songs.at(1).chordInversions.empty());
+        QVERIFY(setChordInversion(s, 0, u"E/D#"_s, -1).has_value());
+        QVERIFY(s.songs.at(0).chordInversions.empty());
+        QVERIFY(setChordInversion(s, 0, u"C"_s, 4).error().code == ErrorCode::OutOfRange); // 0 to 3
+        QVERIFY(setChordInversion(s, 0, u""_s, 1).error().code == ErrorCode::InvalidData);
+        QVERIFY(setChordInversion(s, 7, u"C"_s, 1).error().code == ErrorCode::OutOfRange);
+    }
 };
 
 QTEST_GUILESS_MAIN(TestEditing)

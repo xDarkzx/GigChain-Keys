@@ -15,8 +15,15 @@ Rectangle {
 
     required property PracticeController practice
     required property EngineStatus engineStatus
+    required property DocumentController doc
 
     color: "#05060a"
+
+    // A chord's name tapped: how to play it, and the inversion to use for it.
+    ChordDiagram {
+        id: practiceDiagram
+        doc: view.doc
+    }
 
     // Leaving the mode pauses (its notes let go).
     onVisibleChanged: if (!visible) view.practice.pause()
@@ -78,7 +85,8 @@ Rectangle {
     readonly property var pressed: view.engineStatus.keyVelocities
     function isPressed(note) { return (view.pressed[note] || 0) > 0 }
     function isTarget(note) { return view.targets.indexOf(note) >= 0 }
-    function isBass(note) { return view.targets.length > 0 && view.targets[0] === note }
+    // The left hand's notes are all below middle C, the right hand's from it up.
+    function isBass(note) { return note < 60 }
     function isLanding(start, length) {
         return view.practice.position >= start - 1e-9 && view.practice.position < start + length - 1e-9
     }
@@ -169,6 +177,29 @@ Rectangle {
                     }
                     onActivated: (index) => view.practice.loopSection = index === 0 ? -1 : view.practice.sections[index - 1].section
                 }
+                // What each hand plays.
+                Label { text: qsTr("Left"); color: Theme.textDim }
+                StageComboBox {
+                    objectName: "practiceLeftHand"
+                    Layout.preferredWidth: 140
+                    model: [qsTr("Bass note"), qsTr("Octave"), qsTr("Root and fifth"), qsTr("Full chord")]
+                    currentIndex: view.practice.leftHand
+                    onActivated: (index) => view.practice.leftHand = index
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 600
+                    ToolTip.text: qsTr("What the left hand plays")
+                }
+                Label { text: qsTr("Right"); color: Theme.textDim }
+                StageComboBox {
+                    objectName: "practiceRightHand"
+                    Layout.preferredWidth: 150
+                    model: [qsTr("Smooth"), qsTr("Root position"), qsTr("My inversions")]
+                    currentIndex: view.practice.rightHand
+                    onActivated: (index) => view.practice.rightHand = index
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 600
+                    ToolTip.text: qsTr("Smooth: each chord where the hand moves least. My inversions: the ones you chose (tap a chord's name)")
+                }
                 Item { Layout.fillWidth: true }
                 Column {
                     Label {
@@ -184,6 +215,11 @@ Rectangle {
                         color: Theme.chord
                         font.pixelSize: 26
                         font.bold: true
+                        HoverHandler { enabled: view.practice.nowChord !== ""; cursorShape: Qt.PointingHandCursor }
+                        TapHandler {
+                            enabled: view.practice.nowChord !== ""
+                            onTapped: practiceDiagram.show(view.practice.nowChord)
+                        }
                     }
                 }
                 Column {
@@ -439,6 +475,9 @@ Rectangle {
                     font.bold: true
                     style: Text.Outline
                     styleColor: "black"
+                    objectName: "practiceChordName"
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: practiceDiagram.show(chordName.modelData.name) }
                 }
             }
         }

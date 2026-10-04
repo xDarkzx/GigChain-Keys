@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <map>
 #include <numeric>
 
@@ -51,7 +52,71 @@ double movement(const std::vector<int>& previous, const std::vector<int>& next)
            static_cast<double>(next.size());
 }
 
+int bassClassOf(const ChordShape& chord)
+{
+    return (((chord.bass >= 0 ? chord.bass : chord.root) % 12) + 12) % 12;
+}
+
+// The notes of `classes` from `bottom` up, each the next one above the last.
+std::vector<int> stacked(int bottom, const std::vector<int>& classes, std::size_t first)
+{
+    std::vector<int> notes{bottom};
+    for (std::size_t k = 1; k < classes.size(); ++k) {
+        int next = notes.back() + 1;
+        while (next % 12 != classes.at((first + k) % classes.size())) ++next;
+        notes.push_back(next);
+    }
+    return notes;
+}
+
 } // namespace
+
+int inversionCount(const ChordShape& chord)
+{
+    return static_cast<int>(pitchClasses(chord).size());
+}
+
+std::vector<int> chordInversion(const ChordShape& chord, int inversion)
+{
+    const std::vector<int> classes = pitchClasses(chord);
+    if (inversion < 0 || std::cmp_greater_equal(inversion, classes.size())) return {};
+    const int lowest = classes.at(static_cast<std::size_t>(inversion));
+    const int bottom = kRightLowest + ((lowest - kRightLowest) % 12 + 12) % 12;
+    return stacked(bottom, classes, static_cast<std::size_t>(inversion));
+}
+
+QString inversionName(int inversion)
+{
+    switch (inversion) {
+    case 0: return QStringLiteral("Root position");
+    case 1: return QStringLiteral("1st inversion");
+    case 2: return QStringLiteral("2nd inversion");
+    case 3: return QStringLiteral("3rd inversion");
+    default: return QStringLiteral("%1th inversion").arg(inversion);
+    }
+}
+
+std::vector<int> leftHandNotes(const ChordShape& chord, LeftHand style)
+{
+    const int bass = kBassLowest + bassClassOf(chord);
+    switch (style) {
+    case LeftHand::Bass: return {bass};
+    case LeftHand::Octave: return {bass, bass + 12};
+    case LeftHand::RootFifth: return {bass, bass + 7};
+    case LeftHand::Full: {
+        // The bass note from G2 (43) up, then the chord's own notes above it.
+        constexpr int kFullLowest = 43;
+        const int bottom = kFullLowest + ((bassClassOf(chord) - kFullLowest) % 12 + 12) % 12;
+        std::vector<int> notes{bottom};
+        std::vector<int> classes = pitchClasses(chord);
+        std::erase(classes, bassClassOf(chord));
+        std::ranges::transform(classes, std::back_inserter(notes), [bottom](int pc) { return bottom + ((pc - bottom) % 12 + 12) % 12; });
+        std::ranges::sort(notes);
+        return notes;
+    }
+    }
+    return {bass};
+}
 
 Voicing voiceChord(const ChordShape& chord, const std::vector<int>& previous)
 {
@@ -83,7 +148,7 @@ Voicing voiceChord(const ChordShape& chord, const std::vector<int>& previous)
 }
 
 PracticeTimeline practiceTimeline(const SongMap& song, const std::vector<int>& sectionBars, const QStringList& sectionNames,
-                                  int beatsPerBar)
+                                  int beatsPerBar, const VoicingStyle& style)
 {
     PracticeTimeline timeline;
     timeline.beatsPerBar = std::max(1, beatsPerBar);
@@ -106,10 +171,20 @@ PracticeTimeline practiceTimeline(const SongMap& song, const std::vector<int>& s
             timeline.sections.push_back({.start = at, .name = name, .section = section});
         }
         lastSection = section;
-        const Voicing voicing = voiceChord(step.shape, hand);
-        hand = voicing.right;
-        timeline.chords.push_back(
-            {.name = step.name, .section = section, .start = at, .length = length, .bass = voicing.bass, .right = voicing.right});
+        std::vector<int> right;
+        const auto chosen = style.chosen.find(step.name);
+        if (style.right == RightHand::Root) right = chordInversion(step.shape, 0);
+        else if (style.right == RightHand::Chosen && chosen != style.chosen.end()) right = chordInversion(step.shape, chosen->second);
+        if (right.empty()) right = voiceChord(step.shape, hand).right; // smooth (also a choice the chord does not have)
+        hand = right;
+        const std::vector<int> left = leftHandNotes(step.shape, style.left);
+        timeline.chords.push_back({.name = step.name,
+                                   .section = section,
+                                   .start = at,
+                                   .length = length,
+                                   .bass = left.empty() ? kBassLowest : left.front(),
+                                   .left = left,
+                                   .right = right});
         at += length;
     }
     timeline.length = at;

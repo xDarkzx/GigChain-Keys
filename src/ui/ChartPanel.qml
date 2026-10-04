@@ -31,6 +31,12 @@ Rectangle {
         onActivated: panel.doc.pasteChartFromClipboard(panel.doc.songIndex)
     }
 
+    // A chord's "How to play" (its menu): its diagram.
+    ChordDiagram {
+        id: editDiagram
+        doc: panel.doc
+    }
+
     FileDialog {
         id: importDialog
         title: qsTr("Import a chart")
@@ -352,6 +358,7 @@ Rectangle {
                     bar: panel.engineStatus.songBar
                     currentStep: panel.engineStatus.chordStep
                     followStarted: panel.engineStatus.chordStarted
+                    onChordClicked: (name) => editDiagram.show(name)
                 }
 
                 // A new line of words at the end (the first one in an empty chart).

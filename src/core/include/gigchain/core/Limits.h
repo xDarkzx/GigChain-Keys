@@ -33,6 +33,8 @@ inline constexpr int kMaxSectionBars = 999;
 inline constexpr int kMaxSectionOccurrence = 64;
 inline constexpr int kMaxFollowSteps = 4096; // the chords of a song, repeats played out
 inline constexpr int kMaxLoopBars = 64;
+inline constexpr int kMaxChordInversion = 3;   // root position, then 1st to 3rd (a four-note chord)
+inline constexpr int kMaxChosenInversions = 512; // per song (a chord name each)
 
 inline constexpr int kMinMidiNote = 0;
 inline constexpr int kMaxMidiNote = 127;

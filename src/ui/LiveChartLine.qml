@@ -35,6 +35,7 @@ Item {
     signal wantCell(int line, int cell, string what)
     signal focusTaken()
     signal openRequested(int line)
+    signal chordDiagramRequested(string name) // a chord's menu: how to play it
 
     readonly property int chartLine: live.line.line
     readonly property string lyrics: live.line.lyrics !== undefined ? live.line.lyrics : ""
@@ -274,6 +275,11 @@ Item {
                                     StageMenu {
                                         id: chipMenu
                                         StageMenuItem {
+                                            objectName: "chordHowToPlay"
+                                            text: qsTr("How to play %1…").arg(slot.modelData.name)
+                                            onTriggered: live.chordDiagramRequested(slot.modelData.name)
+                                        }
+                                        StageMenuItem {
                                             text: qsTr("Change %1…").arg(slot.modelData.name)
                                             onTriggered: cell.editChord(slot.modelData.index, slot.modelData.name)
                                         }
@@ -284,7 +290,7 @@ Item {
                                     }
                                     ToolTip.visible: hover.hovered && !dragger.active
                                     ToolTip.delay: 900
-                                    ToolTip.text: qsTr("Click to change · drag onto another word · right-click to remove")
+                                    ToolTip.text: qsTr("Click to change · drag onto another word · right-click: how to play it, remove")
                                 }
                             }
                         }

@@ -152,6 +152,20 @@ Result<void> setSongFollowChords(Setlist& setlist, int songIndex, bool follow)
     return {};
 }
 
+Result<void> setChordInversion(Setlist& setlist, int songIndex, const QString& chord, int inversion)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (chord.trimmed().isEmpty()) return fail(ErrorCode::InvalidData, u"Which chord? (no name given)"_s);
+    if (inversion < -1 || inversion > limits::kMaxChordInversion) {
+        return fail(ErrorCode::OutOfRange,
+                    u"A chord's inversion is 0 (root position) to %1 (got %2)"_s.arg(limits::kMaxChordInversion).arg(inversion));
+    }
+    auto& chosen = setlist.songs.at(toIndex(songIndex)).chordInversions;
+    if (inversion < 0) chosen.erase(chord.trimmed());
+    else chosen[chord.trimmed()] = inversion;
+    return {};
+}
+
 Result<void> setSongLoopSync(Setlist& setlist, int songIndex, bool sync)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));

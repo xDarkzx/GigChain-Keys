@@ -6,6 +6,7 @@
 #include "gigchain/core/ChartEdit.h"
 #include "gigchain/core/Checks.h"
 #include "gigchain/core/Chords.h"
+#include "gigchain/core/Practice.h"
 #include "gigchain/core/SongMap.h"
 
 #include <QStringDecoder>
@@ -55,6 +56,7 @@ DocumentController::DocumentController(engine::IEngine& engine, QSettings& setti
 {
     // A different current song (or setlist) means a different chart.
     connect(this, &DocumentController::currentChanged, this, &DocumentController::chartChanged);
+    connect(this, &DocumentController::currentChanged, this, &DocumentController::chordInversionsChanged);
     resetSelectedChannel();
     applyCurrentPatchToEngine();
 }
@@ -238,6 +240,67 @@ bool DocumentController::setLineLyrics(int line, const QString& lyrics)
 bool DocumentController::splitChartLine(int line, int at)
 {
     return applyChartEdit(core::splitLyricLine(currentChart(), line, at), {});
+}
+
+QVariantMap DocumentController::currentChordInversions() const
+{
+    QVariantMap map;
+    const int song = songIndex();
+    if (song < 0 || static_cast<std::size_t>(song) >= m_setlist.songs.size()) return map;
+    for (const auto& [chord, inversion] : m_setlist.songs.at(static_cast<std::size_t>(song)).chordInversions) map.insert(chord, inversion);
+    return map;
+}
+
+QVariantMap DocumentController::chordDiagram(const QString& name, int inversion) const
+{
+    const auto shape = core::parseChordName(name);
+    QVariantMap diagram{{u"name"_s, name}, {u"understood"_s, shape.has_value()}};
+    if (!shape) return diagram;
+    const QVariantMap chosenAll = currentChordInversions();
+    const int chosen = chosenAll.contains(name) ? chosenAll.value(name).toInt() : -1;
+    const int count = core::inversionCount(*shape);
+    int shown = inversion >= 0 ? inversion : std::max(chosen, 0);
+    if (shown >= count) shown = 0;
+    // Note names in the chord's own spelling: flats for a flat chord.
+    static const QStringList kSharps{u"C"_s, u"C#"_s, u"D"_s, u"D#"_s, u"E"_s, u"F"_s, u"F#"_s, u"G"_s, u"G#"_s, u"A"_s, u"A#"_s, u"B"_s};
+    static const QStringList kFlats{u"C"_s, u"Db"_s, u"D"_s, u"Eb"_s, u"E"_s, u"F"_s, u"Gb"_s, u"G"_s, u"Ab"_s, u"A"_s, u"Bb"_s, u"B"_s};
+    const bool flat = name.size() > 1 && name.at(1) == u'b';
+    const auto names = [&](const std::vector<int>& notes) {
+        QStringList list;
+        for (const int n : notes) list << (flat ? kFlats : kSharps).at(n % 12);
+        return list.join(u' ');
+    };
+    const auto asList = [](const std::vector<int>& notes) {
+        QVariantList list;
+        for (const int n : notes) list << n;
+        return list;
+    };
+    QStringList inversions;
+    for (int i = 0; i < count; ++i) inversions << core::inversionName(i);
+    const std::vector<int> left = core::leftHandNotes(*shape, core::LeftHand::Bass);
+    const std::vector<int> right = core::chordInversion(*shape, shown);
+    diagram.insert(u"inversion"_s, shown);
+    diagram.insert(u"chosen"_s, chosen);
+    diagram.insert(u"inversions"_s, inversions);
+    diagram.insert(u"left"_s, asList(left));
+    diagram.insert(u"right"_s, asList(right));
+    diagram.insert(u"leftNames"_s, names(left));
+    diagram.insert(u"rightNames"_s, names(right));
+    return diagram;
+}
+
+bool DocumentController::setChordInversion(const QString& name, int inversion)
+{
+    const auto shape = core::parseChordName(name);
+    if (!shape) return report(core::Error{core::ErrorCode::InvalidData, tr("\"%1\" is not a chord this app knows").arg(name)});
+    if (inversion >= core::inversionCount(*shape)) {
+        return report(core::Error{core::ErrorCode::OutOfRange,
+                                  tr("%1 has %2 inversions: there is no inversion %3").arg(name).arg(core::inversionCount(*shape)).arg(inversion)});
+    }
+    if (auto r = core::setChordInversion(m_setlist, songIndex(), name, inversion); !r) return report(r.error());
+    setDirty(true);
+    emit chordInversionsChanged();
+    return true;
 }
 
 bool DocumentController::editLineAndSplit(int line, const QString& lyrics, int at)
@@ -1683,6 +1746,7 @@ bool DocumentController::restore(std::vector<UndoStep>& from, std::vector<UndoSt
     m_setlist = std::move(step.setlist);
     m_committed = m_setlist;
     emit structureChanged();
+    emit chordInversionsChanged();
     setCursor(core::clampCursor(m_setlist, step.cursor), true); // plays it and refreshes every view
     m_committedCursor = m_cursor;
     setDirty(true);
