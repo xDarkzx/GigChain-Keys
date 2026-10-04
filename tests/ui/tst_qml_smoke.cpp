@@ -1136,6 +1136,55 @@ private slots:
         QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby\nHold meXtight"_s);
     }
 
+    // The Practice tab: the song's chords falling onto the keyboard, each
+    // note over its key; Play moves them down; the modes are buttons.
+    void thePracticeTabShowsTheNotesFalling()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        QVERIFY(root->setProperty("editKeyboardOpen", false));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.setSongChart(0, u"{comment: Verse}\n[C]a [F]b [G]c [Am]d\n{comment: Chorus}\n[F]e [G]f [C]g\n"_s));
+        auto* tabs = window()->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(tabs != nullptr);
+        QVERIFY(tabs->setProperty("currentIndex", 2));
+        settle();
+        QQuickItem* scene = window()->contentItem();
+        auto* view = findItem(scene, u"practiceView"_s);
+        QVERIFY(view != nullptr && view->isVisible());
+        QList<QQuickItem*> notes;
+        findAll(scene, u"practiceNote"_s, notes);
+        QCOMPARE(notes.size(), 28); // 7 chords, 4 notes each
+        // The first chord's middle C falls over the C4 key.
+        auto* key = findItem(scene, u"practiceKey60"_s);
+        QVERIFY(key != nullptr);
+        QQuickItem* middleC = nullptr;
+        for (QQuickItem* note : notes) {
+            const QVariantMap data = note->property("modelData").toMap();
+            if (data.value(u"pitch"_s).toInt() == 60 && data.value(u"chord"_s).toInt() == 0) middleC = note;
+        }
+        QVERIFY(middleC != nullptr && middleC->isVisible());
+        const double noteCentre = middleC->mapToScene(QPointF(middleC->width() / 2, 0)).x();
+        const double keyCentre = key->mapToScene(QPointF(key->width() / 2, 0)).x();
+        QVERIFY2(qAbs(noteCentre - keyCentre) <= 2.0, qPrintable(u"%1 vs %2"_s.arg(noteCentre).arg(keyCentre)));
+        shoot(u"practice"_s);
+
+        // Play: the notes come down; the chord now is shown.
+        const double before = middleC->y();
+        auto* play = findItem(scene, u"practicePlay"_s);
+        QVERIFY(play != nullptr);
+        auto* listen = findItem(scene, u"practiceMode1"_s); // Play along: the demo engine plays nothing anyway
+        QVERIFY(QMetaObject::invokeMethod(listen, "clicked"));
+        QVERIFY(QMetaObject::invokeMethod(play, "clicked"));
+        QTRY_VERIFY(middleC->y() > before + 20);
+        QTRY_COMPARE(findItem(scene, u"practiceNow"_s)->property("text").toString(), u"C"_s);
+        shoot(u"practice-playing"_s);
+        // Another tab: it pauses.
+        QVERIFY(tabs->setProperty("currentIndex", 0));
+        settle();
+        QVERIFY(!m_session->practice().playing());
+    }
+
     void spaceNavigatesButNotWhileTyping()
     {
         QVERIFY(m_session->document().addPatch(0));

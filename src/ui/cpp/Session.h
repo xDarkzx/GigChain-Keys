@@ -9,6 +9,7 @@
 #include "EngineStatus.h"
 #include "LoopController.h"
 #include "PluginListModel.h"
+#include "PracticeController.h"
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
 #include "SettingsController.h"
@@ -41,6 +42,8 @@ public:
     [[nodiscard]] QVariantMap initialProperties();
     [[nodiscard]] DocumentController& document() { return m_document; }
     [[nodiscard]] StartupProgress& loading() { return m_loading; }
+    [[nodiscard]] SettingsController& settingsController() { return m_settingsController; }
+    [[nodiscard]] PracticeController& practice() { return m_practice; }
 
 private:
     OfficialArtwork m_artwork; // first: the models below read it
@@ -56,6 +59,7 @@ private:
     MasterBus m_masterBus; // after the windows it opens
     SettingsController m_settingsController;
     StartupProgress m_loading; // the loading overlay (after start-up)
+    PracticeController m_practice; // the Practice tab (after the document it reads)
 };
 
 } // namespace gigchain::ui

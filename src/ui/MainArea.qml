@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -10,6 +11,7 @@ Rectangle {
     required property DocumentController doc
     required property EditorService editorService
     required property EngineStatus engineStatus
+    property PracticeController practice: null
     property bool suspended: false
     property alias currentTab: tabs.currentIndex
 
@@ -47,6 +49,7 @@ Rectangle {
             spacing: 0
             StageTabButton { text: qsTr("Chart"); width: implicitWidth + 40 }
             StageTabButton { text: qsTr("Instrument"); width: implicitWidth + 40 }
+            StageTabButton { objectName: "practiceTab"; text: qsTr("Practice"); width: implicitWidth + 40; visible: area.practice !== null }
             background: Rectangle { color: Theme.barBottom }
         }
         StageDivider { Layout.fillWidth: true }
@@ -66,6 +69,13 @@ Rectangle {
                 editorService: area.editorService
                 // The plugin's window sits above everything: hide it behind the chart tab and dialogs.
                 suspended: area.suspended || tabs.currentIndex !== 1 || !area.doc.hasSetlist
+            }
+            Loader {
+                active: area.practice !== null
+                sourceComponent: PracticeView {
+                    practice: area.practice
+                    engineStatus: area.engineStatus
+                }
             }
         }
     }

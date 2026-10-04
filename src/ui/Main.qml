@@ -17,12 +17,20 @@ ApplicationWindow {
     required property EffectWindows effectWindows
     required property MasterBus masterBus
     required property SettingsController settings
+    required property PracticeController practice
     required property StartupProgress loading
 
     property bool performMode: false
     property bool sidePanelOpen: true
-    property bool mixerOpen: true
-    property bool keyboardOpen: true
+    // The mixer and the keyboard, open in Edit; in Perform closed unless
+    // asked for (the chart is what is read on stage, as MainStage's Perform
+    // mode shows only its layout). Each mode keeps its own.
+    property bool editMixerOpen: true
+    property bool editKeyboardOpen: true
+    property bool performMixerOpen: false
+    property bool performKeyboardOpen: false
+    readonly property bool mixerOpen: performMode ? performMixerOpen : editMixerOpen
+    readonly property bool keyboardOpen: performMode ? performKeyboardOpen : editKeyboardOpen
     property string pendingAction: ""
     property string pendingPath: "" // a recent setlist waiting to be opened
     property bool closeConfirmed: false
@@ -209,11 +217,17 @@ ApplicationWindow {
         mixerOpen: root.mixerOpen
         keyboardOpen: root.keyboardOpen
         loops: root.loops
-        onToggleKeyboard: root.keyboardOpen = !root.keyboardOpen
+        onToggleKeyboard: {
+            if (root.performMode) root.performKeyboardOpen = !root.performKeyboardOpen
+            else root.editKeyboardOpen = !root.editKeyboardOpen
+        }
         onLoopControlsRequested: loopControlsDialog.open()
         onToggleMode: root.performMode = !root.performMode
         onToggleSidePanel: root.sidePanelOpen = !root.sidePanelOpen
-        onToggleMixer: root.mixerOpen = !root.mixerOpen
+        onToggleMixer: {
+            if (root.performMode) root.performMixerOpen = !root.performMixerOpen
+            else root.editMixerOpen = !root.editMixerOpen
+        }
         onNewRequested: root.guarded("new")
         onOpenRequested: root.guarded("open")
         onOpenRecentRequested: (path) => root.openRecent(path)
@@ -252,6 +266,8 @@ ApplicationWindow {
                     handle: StageSplitHandle {}
 
                     MainArea {
+                        id: mainArea
+                        practice: root.practice
                         SplitView.fillHeight: true
                         SplitView.minimumHeight: 200
                         doc: root.doc
@@ -281,6 +297,12 @@ ApplicationWindow {
 
             PerformView {
                 doc: root.doc
+                settings: root.settings
+                // "Add lyrics & chords": back to Edit, on the Chart tab.
+                onEditChartRequested: {
+                    root.performMode = false
+                    mainArea.currentTab = 0
+                }
                 setlistModel: root.setlistModel
                 channelModel: root.channelModel
                 mixerOpen: root.mixerOpen
