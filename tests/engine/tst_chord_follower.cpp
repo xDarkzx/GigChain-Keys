@@ -164,6 +164,21 @@ private slots:
         QCOMPARE(p.step(), 0);
     }
 
+    // A chord changed in one move (legato: the old keys up and the new down
+    // in the same few milliseconds, or the audio running late and handing
+    // both over in one block): the new chord is heard, not the old one too.
+    void aChordChangedInOneMoveMovesOn()
+    {
+        Player p(mapOf({{"Am", 0}, {"G", 0}, {"F", 1}, {"C", 1}}));
+        p.press({A3, C4, E4});
+        QCOMPARE(p.step(), 0);
+        p.wait(500);
+        for (const int k : {A3, C4, E4}) p.events.push_back(key(0x80, k, 0));
+        for (const int k : {G3, B3, D4}) p.events.push_back(key(0x90, k, 100));
+        p.block();
+        QCOMPARE(p.step(), 1);
+    }
+
     void aKeyLetGoLongAgoIsForgotten()
     {
         Player p(mapOf({{"Am", 0}, {"F", 0}}));

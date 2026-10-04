@@ -65,8 +65,10 @@ bool LoopStation::post(int slot, LoopCommand command)
 
 bool LoopStation::pending(int slot) const
 {
+    // Taken by the audio thread is not enough: until its outcome is said
+    // (endBlock), read() still shows the state before it.
     const Commands& queue = m_slots.at(static_cast<std::size_t>(slot)).commands;
-    return queue.head.load(std::memory_order_acquire) != queue.tail.load(std::memory_order_acquire);
+    return queue.head.load(std::memory_order_acquire) != queue.said.load(std::memory_order_acquire);
 }
 
 LoopReading LoopStation::read(int slot) const
@@ -639,6 +641,8 @@ void LoopStation::endBlock() noexcept
         s.outDirty.store(s.dirty, std::memory_order_release);
         s.outTake.store(s.take, std::memory_order_relaxed);
         s.outTail.store(s.tailWritten, std::memory_order_relaxed);
+        // The presses taken this block are said now (after the state above).
+        s.commands.said.store(s.commands.tail.load(std::memory_order_relaxed), std::memory_order_release);
         // Closed, and what rang on past it is in: its layers (and the base
         // cut to the take and that) are asked for (what is above goes with it).
         if (s.layersPending && s.tailWritten >= s.tailTarget) {

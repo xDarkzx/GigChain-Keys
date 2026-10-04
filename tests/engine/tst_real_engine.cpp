@@ -976,10 +976,11 @@ private slots:
         }
         map.sectionStarts = {0, 2};
         QVERIFY(engine.setChordFollow(map).has_value());
-        // What the audio thread does, waited for (up to 2 s: some sound
-        // systems, WSLg's PulseAudio among them, run the audio in bursts).
+        // What the audio thread does, waited for (up to 5 s: some sound
+        // systems, WSLg's PulseAudio among them, run the audio in bursts, and
+        // the Mac runner's virtual device once missed 2 s).
         const auto until = [&engine](const auto& done) {
-            for (int i = 0; i < 40 && !done(); ++i) pump(engine, 50);
+            for (int i = 0; i < 100 && !done(); ++i) pump(engine, 50);
             return done();
         };
         const auto atStep = [&engine](int step) { return [&engine, step] { return engine.chordFollow().step == step; }; };
@@ -994,7 +995,9 @@ private slots:
         chord({57, 60, 64}, 0);
         pump(engine, 600);
         chord({55, 59, 62}, 100); // G
-        QVERIFY(until(atStep(1)));
+        QVERIFY2(until(atStep(1)), qPrintable(u"at step %1 (active %2, started %3)"_s.arg(engine.chordFollow().step)
+                                                   .arg(engine.chordFollow().active)
+                                                   .arg(engine.chordFollow().started)));
         chord({55, 59, 62}, 0);
         pump(engine, 3000); // the verse's piano fades away
         (void)engine.channelLevel(verse);

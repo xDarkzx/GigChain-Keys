@@ -1321,7 +1321,7 @@ void RealEngine::loopCommand(const core::ChannelId& channel, LoopCommand command
         if (RenderGraph* graph = m_exchange.current()) applyLoopSlots(*graph);
     }
     const auto index = static_cast<std::size_t>(slot);
-    if (command == LoopCommand::Record && m_loops.read(slot).state == LoopState::Empty && !m_loops.pending(slot)) {
+    if (command == LoopCommand::Record && !m_loops.pending(slot) && m_loops.read(slot).state == LoopState::Empty) {
         // Room for the longest loop: 2 minutes, or 64 bars when that is shorter.
         const double rate = m_audio.sampleRate();
         const double bars = barFrames() * kLongestLoopBars;
@@ -1438,8 +1438,10 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
                 tell(Notice::warning(u"Not enough memory to record another layer on that loop"_s));
             }
         }
-        // Cleared (and no press on its way): its room is given back.
-        if (loop.state == LoopState::Empty && !m_loops.pending(slot)) {
+        // Cleared (and no press on its way): its room is given back. (Nothing
+        // waiting first, then the state as it is now: a press just taken
+        // has had its outcome said by then.)
+        if (!m_loops.pending(slot) && m_loops.read(slot).state == LoopState::Empty) {
             m_loops.setData(slot, nullptr);
             m_loopOwners.at(index) = {};
             freed = true;
