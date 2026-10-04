@@ -8,7 +8,7 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
-## [0.1.0] - first public beta (not yet released)
+## [0.1.0] - 2026-10-05 (first public beta)
 
 The first version for players to try: Windows 10 and 11 (64-bit), and
 Apple Silicon Macs in testing.

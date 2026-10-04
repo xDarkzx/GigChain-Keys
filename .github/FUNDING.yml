@@ -1,8 +1,2 @@
-# The "Sponsor" button on the project page. Fill in the services you sign up
-# for, then delete the # in front of them. Leave the rest commented out.
-# (Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository)
-
-# github: [xDarkzx]            # GitHub Sponsors (once your profile is approved)
-# ko_fi: your-ko-fi-name       # https://ko-fi.com/your-ko-fi-name
-# buy_me_a_coffee: your-name   # https://buymeacoffee.com/your-name
-# custom: ["https://paypal.me/your-name"]
+# The "Sponsor" button on the project page.
+github: [xDarkzx]

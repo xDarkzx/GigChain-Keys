@@ -17,7 +17,8 @@
   <a href="docs/help/getting-started.md"><b>Getting started</b></a> ·
   <a href="docs/help/README.md"><b>User guide</b></a> ·
   <a href="SUPPORT.md"><b>Get help</b></a> ·
-  <a href="CHANGELOG.md"><b>What's new</b></a>
+  <a href="CHANGELOG.md"><b>What's new</b></a> ·
+  <a href="https://github.com/sponsors/xDarkzx"><b>♥ Sponsor</b></a>
 </p>
 
 ---
@@ -132,9 +133,17 @@ is also here on GitHub:
 
 ### Support the project
 
-GigChain Keys is free and stays free. If it helps your gigs, a donation keeps
-it going and pays for code signing, so Windows and macOS stop warning about
-it. Use the **Sponsor** button at the top of this page.
+GigChain Keys is free and stays free: no adverts, no paid version, no keys.
+If it helps your gigs, a donation keeps it going. It pays for the time to
+fix and build things, and for code signing so Windows and macOS stop warning
+about the download.
+
+<p>
+  <a href="https://github.com/sponsors/xDarkzx"><img alt="Sponsor GigChain Keys on GitHub" src="https://img.shields.io/badge/♥%20Sponsor-GigChain%20Keys-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
+</p>
+
+One-off or monthly, any amount, through
+[**GitHub Sponsors**](https://github.com/sponsors/xDarkzx). Thank you!
 
 ## Versions
 
