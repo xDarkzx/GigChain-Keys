@@ -47,7 +47,7 @@ open source too, under the GPL.
 |---|---|---|
 | **Windows 10 / 11** (64-bit) | [**Installer** (`GigChainKeys-<version>-x64-setup.exe`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Recommended. Installs for you or for everyone, upgrades in place, uninstalls from *Apps & features*. |
 | | [Portable zip (`GigChainKeys-<version>-x64-portable.zip`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | No install: unzip anywhere (a USB stick, too) and run `GigChainKeys.exe`. |
-| **macOS 13+** (Apple Silicon) | [Disk image (`GigChain Keys-<version>-arm64.dmg`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Beta. See *First start on a Mac* below. |
+| **macOS 13+** (Apple Silicon) | [Disk image (`GigChainKeys-<version>-arm64.dmg`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Beta. See *First start on a Mac* below. |
 | **Linux** | [Build from source](docs/BUILDING.md#linux-and-wsl) | Ubuntu 22.04+ and similar. A ready-made package is planned. |
 
 All versions, with their release notes, are on the
