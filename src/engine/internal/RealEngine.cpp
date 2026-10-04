@@ -1368,7 +1368,6 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
     for (int slot = 0; slot < LoopStation::kSlots; ++slot) {
         const auto index = static_cast<std::size_t>(slot);
         if (m_loopOwners.at(index).isNull()) continue;
-        const LoopReading loop = m_loops.read(slot);
         if (m_loops.takeFull(slot)) {
             tell(Notice::warning(u"A loop reached its longest (2 minutes or 64 bars) and closed there"_s));
         }
