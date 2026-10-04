@@ -18,8 +18,11 @@ Column {
     // Edited in place (the Chart tab): words typed in, chords dragged, titles
     // renamed. Off on stage.
     property bool liveEdit: false
-    // The caret, given back to a line after an edit rebuilds them: {line, cursor}.
+    // The caret, given back to a line after an edit rebuilds them: {line,
+    // cursor}, or {line, cell, what} (a chord box or a word).
     property var focusRequest: null
+    // The line being edited (its empty chord boxes shown), -1: none.
+    property int openLine: -1
     property DocumentController doc: null
     readonly property var sections: doc !== null ? doc.currentSections : []
     property int currentSection: -1
@@ -85,8 +88,11 @@ Column {
                     lineBelow: lineLoader.neighbour(1) !== null ? lineLoader.neighbour(1).line : -1
                     lengthAbove: lineLoader.neighbour(-1) !== null && lineLoader.neighbour(-1).lyrics !== undefined
                                  ? lineLoader.neighbour(-1).lyrics.length : 0
+                    open: chart.openLine === lineLoader.modelData.line
+                    onOpenRequested: (line) => chart.openLine = line
                     focusRequest: chart.focusRequest
                     onWantFocus: (line, cursor) => chart.focusRequest = { line: line, cursor: cursor }
+                    onWantCell: (line, cell, what) => chart.focusRequest = { line: line, cell: cell, what: what }
                     onFocusTaken: Qt.callLater(() => chart.focusRequest = null) // (not while lines are being built)
                 }
             }

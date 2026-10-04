@@ -263,48 +263,29 @@ Rectangle {
             }
         }
 
-        // Just pasted: the site's clutter was removed; one click brings back
-        // exactly what was pasted.
-        Rectangle {
-            objectName: "pasteUndoBar"
-            visible: panel.doc.canUndoPaste && !panel.editing
-            Layout.fillWidth: true
-            Layout.preferredHeight: 38
-            radius: Theme.radiusCard
-            border.color: Theme.outline
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: Theme.barTop }
-                GradientStop { position: 1.0; color: Theme.barBottom }
-            }
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 6
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("Cleaned up: the site's extras were removed and chords placed over the words.")
-                    color: Theme.textDim
-                    elide: Text.ElideRight
-                }
-                StageButton {
-                    objectName: "undoPasteButton"
-                    text: qsTr("Undo")
-                    iconSource: "icons/undo.svg"
-                    onClicked: panel.doc.undoPaste()
-                }
-            }
-        }
-
         // The chart, edited where it is read.
         ScrollView {
             id: chartScroll
+            objectName: "chartScroll"
             visible: !panel.editing
             Layout.fillWidth: true
             Layout.fillHeight: true
             contentWidth: availableWidth
             clip: true
-            // Dragging the mouse moves chords, not the page (the wheel scrolls).
+            // Dragging the mouse moves chords, not the page. (A Flickable that
+            // is not interactive ignores the wheel too: the wheel is turned
+            // into scrolling here, as a page scrolls.)
             Component.onCompleted: contentItem.interactive = false
+            WheelHandler {
+                objectName: "chartWheel"
+                target: null
+                onWheel: (event) => {
+                    const page = chartScroll.contentItem as Flickable
+                    if (page === null) return
+                    const step = event.pixelDelta.y !== 0 ? event.pixelDelta.y : event.angleDelta.y / 120 * 3 * Theme.fontSize * 2
+                    page.contentY = Math.max(0, Math.min(page.contentHeight - page.height, page.contentY - step))
+                }
+            }
             function toEnd() {
                 Qt.callLater(() => chartScroll.ScrollBar.vertical.position = 1.0 - chartScroll.ScrollBar.vertical.size)
             }

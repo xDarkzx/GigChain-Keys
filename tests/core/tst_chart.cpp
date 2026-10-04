@@ -152,19 +152,38 @@ private slots:
                                           "{comment: Verse 1}\n"
                                           "[C]I heard there was a [Am]secret chord\n"
                                           "\n"
-                                          "[F]That D[G]avid played [C]\n"_s);
+                                          "[F]That [G]David played [C]\n"_s);
     }
 
     void tabsCountAsColumns()
     {
-        // A tab character moves to the next multiple of 8, as in a text editor.
-        QCOMPARE(tidyChordSheet(u"C\tG\nHello there\n"_s), u"[C]Hello th[G]ere\n"_s);
+        // A tab character moves to the next multiple of 8, as in a text editor
+        // (G over column 8, "friend"; a tab of one column would put it on "Hello").
+        QCOMPARE(tidyChordSheet(u"C\tG\nHello my friend\n"_s), u"[C]Hello my [G]friend\n"_s);
     }
 
     void chordProIsOnlyTidied()
     {
         const QString chordPro = u"{title: X}\n[G]One   [D]two   \n\n\n\nthree\n"_s;
         QCOMPARE(tidyChordSheet(chordPro), u"{title: X}\n[G]One [D]two\n\nthree\n"_s);
+    }
+
+    // Chord sites' chords often sit a letter or two into a word (over the
+    // "o" of "close"): pasted, a chord goes on the start of the word it
+    // sits over, where a keys player reads it.
+    void aPastedChordInsideAWordGoesOnTheWordsStart()
+    {
+        // From "Slow" (SHY Martin), as Ultimate Guitar copies it.
+        const ImportedSheet sheet = importChordSheet(u"[Pre-Chorus]\n"
+                                                     "E          E/D#          C#m\n"
+                                                     "Every time you get too close\n"
+                                                     "[Verse 1]\n"
+                                                     "C#m             E/D#                      E\n"
+                                                     "     I've spent way too much time moving on\n"_s);
+        QCOMPARE(sheet.chart, u"{comment: Pre-Chorus}\n"
+                               "[E]Every time [E/D#]you get too [C#m]close\n"
+                               "{comment: Verse 1}\n"
+                               "[C#m]I've spent [E/D#]way too much time moving [E]on\n"_s);
     }
 
     void aChordOverTheSpaceBeforeAWordGoesOnTheWord()
@@ -222,7 +241,7 @@ private slots:
                                                      "Today is gonna be the day\n"_s);
         QCOMPARE(sheet.title, u"Wonderwall"_s);
         QCOMPARE(sheet.artist, u"Oasis"_s);
-        QCOMPARE(sheet.chart, u"[Em7]Today is go[G]nna be the day\n"_s);
+        QCOMPARE(sheet.chart, u"[Em7]Today is [G]gonna be the day\n"_s); // (a chord inside a word: on its start)
     }
 
     void chordProKeepsItsTitle()
@@ -251,12 +270,12 @@ private slots:
             QVERIFY2(!sheet.chart.contains(clutter), qPrintable(clutter));
         }
         // Chords over the syllables the site put them on.
-        QVERIFY(sheet.chart.contains(u"When you were here be[G]fore, couldn't look you in the [B]eyes"_s));
+        QVERIFY(sheet.chart.contains(u"When you were here [G]before, couldn't look you in the [B]eyes"_s));
         // "[Chorus] (play loud)" is a heading with its note, not a chord.
         QVERIFY(sheet.chart.contains(u"{comment: Chorus (play loud)}"_s));
         QVERIFY(!sheet.chart.contains(u"[Chorus]"_s));
         QVERIFY(sheet.chart.contains(u"{comment: Verse 3 (play soft until the end)}"_s));
-        QVERIFY(sheet.chart.trimmed().endsWith(u"I don't be[G]long here"_s)); // the last G sits over "long"
+        QVERIFY(sheet.chart.trimmed().endsWith(u"I don't [G]belong here"_s)); // the last G sits over "long": on the word
     }
 
     // Sections: what each gets called, which one it is, and how many bars.

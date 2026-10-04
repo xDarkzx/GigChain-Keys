@@ -622,8 +622,8 @@ private slots:
         const int titleSize = title->property("font").value<QFont>().pixelSize();
         QVERIFY2(titleSize >= 26, qPrintable(QString::number(titleSize))); // lyrics are 20 px here
         // The lyrics are centred like the titles (each line as a whole; in the
-        // Chart tab the words are typed straight in).
-        const QList<QQuickItem*> lyrics = findAll(chart, u"chartWords"_s);
+        // Chart tab a line is its word cells).
+        const QList<QQuickItem*> lyrics = findAll(chart, u"chartCells"_s);
         QVERIFY(!lyrics.isEmpty());
         for (QQuickItem* line : lyrics) {
             QVERIFY(line->width() > 0 && line->width() < chart->width()); // a short line: narrower than the chart...
@@ -1013,10 +1013,116 @@ private slots:
         QCOMPARE(lines->property("count").toInt(), 1);
     }
 
-    // The Chart tab edited as a player does it, with the mouse and keys: no
-    // Edit button; words typed straight in; a chord typed above a word;
-    // chords dragged onto other words, from the chart and from the palette;
-    // one dragged to Remove; a section renamed; a new line typed at the end.
+    // A long chart scrolls with the mouse wheel (the page itself is not
+    // dragged: dragging moves chords).
+    void aLongChartScrollsWithTheWheel()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        QVERIFY(root->setProperty("editKeyboardOpen", false));
+        QString chart = u"{comment: Verse}\n"_s;
+        for (int i = 0; i < 80; ++i) chart += u"[C]Line number %1 of the song\n"_s.arg(i);
+        QVERIFY(m_session->document().setSongChart(0, chart));
+        settle();
+        QQuickWindow* w = window();
+        auto* scroll = findItem(w->contentItem(), u"chartScroll"_s);
+        QVERIFY(scroll != nullptr);
+        auto* page = scroll->property("contentItem").value<QQuickItem*>();
+        QVERIFY(page != nullptr);
+        QCOMPARE(page->property("contentY").toDouble(), 0.0);
+        const QPointF at = scroll->mapToScene(QPointF(scroll->width() / 2, scroll->height() / 2));
+        for (int i = 0; i < 3; ++i) {
+            QWheelEvent wheel(at, w->mapToGlobal(at), QPoint(), QPoint(0, -120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+            QCoreApplication::sendEvent(w, &wheel);
+        }
+        QTRY_VERIFY2(page->property("contentY").toDouble() > 50.0, qPrintable(page->property("contentY").toString()));
+    }
+
+    // A song pasted from a chord site (chords on their own lines over the
+    // words), then its chords dragged along their lines, one line after
+    // another, as a player tidies it: each lands where it is dropped and
+    // stays there (none snaps back), and Ctrl+Z takes back the last drag
+    // only.
+    void theChordsOfAPastedSongAreDragged()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        QVERIFY(root->setProperty("editKeyboardOpen", false));
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.pasteChart(0, u"[Verse 1]\n"
+                                   "G              D\n"
+                                   "I found a love for me\n"
+                                   "Em                C\n"
+                                   "Darling just dive right in\n"_s));
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[G]I found a love [D]for me\n[Em]Darling just dive [C]right in\n"_s);
+        settle();
+        QQuickItem* scene = w->contentItem();
+        const auto centre = [](QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); };
+        // The cell of the word `text`, its box, its chip.
+        const auto cellOf = [scene](const QString& text) -> QQuickItem* {
+            QList<QQuickItem*> all;
+            findAll(scene, u"chartCell"_s, all);
+            const auto it = std::ranges::find_if(all, [&text](QQuickItem* c) { return c->property("modelData").toMap().value(u"text"_s).toString() == text; });
+            return it == all.end() ? nullptr : *it;
+        };
+        const auto boxOf = [&cellOf](const QString& text) { QQuickItem* c = cellOf(text); return c != nullptr ? findItem(c, u"chordBox"_s) : nullptr; };
+        const auto chipNamed = [scene](const QString& name) -> QQuickItem* {
+            QList<QQuickItem*> chips;
+            findAll(scene, u"chartChordChip"_s, chips);
+            const auto it = std::ranges::find_if(chips, [&name](QQuickItem* c) { return c->property("chordName").toString() == name; });
+            return it == chips.end() ? nullptr : *it;
+        };
+        const auto drag = [w](QPoint from, QPoint to) {
+            QTest::mousePress(w, Qt::LeftButton, {}, from);
+            for (int i = 1; i <= 12; ++i) {
+                QTest::mouseMove(w, from + (to - from) * i / 12);
+                QTest::qWait(10);
+            }
+            QTest::mouseRelease(w, Qt::LeftButton, {}, to);
+            QTest::qWait(50);
+        };
+
+        // Line 1: D from "for" to "love".
+        QQuickItem* d = chipNamed(u"D"_s);
+        QVERIFY(d != nullptr && boxOf(u"love"_s) != nullptr);
+        drag(centre(d), centre(boxOf(u"love"_s)));
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[G]I found a [D]love for me\n[Em]Darling just dive [C]right in\n"_s);
+        settle();
+
+        // Line 2: C from "right" to "in"; line 1 keeps its move.
+        QQuickItem* c = chipNamed(u"C"_s);
+        QVERIFY(c != nullptr && boxOf(u"in"_s) != nullptr);
+        drag(centre(c), centre(boxOf(u"in"_s)));
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[G]I found a [D]love for me\n[Em]Darling just dive right [C]in\n"_s);
+        settle();
+        // Every chip is drawn over its word (not swept to the line's start).
+        for (const auto& [chord, wordText] : {std::pair{u"G"_s, u"I"_s}, {u"D"_s, u"love"_s}, {u"Em"_s, u"Darling"_s}, {u"C"_s, u"in"_s}}) {
+            QQuickItem* chip = chipNamed(chord);
+            QQuickItem* cell = cellOf(wordText);
+            QVERIFY(chip != nullptr && cell != nullptr);
+            const double chipX = chip->mapToScene(QPointF(0, 0)).x();
+            const double cellX = cell->mapToScene(QPointF(0, 0)).x();
+            QVERIFY2(qAbs(chipX - cellX) < 2.0, qPrintable(u"%1 drawn at %2, its word at %3"_s.arg(chord).arg(chipX).arg(cellX)));
+        }
+
+        // Ctrl+Z: the last drag only, the chart as it looked before it.
+        QTest::keyClick(w, Qt::Key_Z, Qt::ControlModifier);
+        settle();
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[G]I found a [D]love for me\n[Em]Darling just dive [C]right in\n"_s);
+        QTest::keyClick(w, Qt::Key_Z, Qt::ControlModifier);
+        settle();
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[G]I found a love [D]for me\n[Em]Darling just dive [C]right in\n"_s);
+    }
+
+    // The Chart tab edited as a player does it, with the mouse and keys, as
+    // cells: a click opens a line (a bar over each word without a chord); a
+    // word double-clicked and changed where it is; a chord typed in a word's
+    // box, Tab on to the next box; a chord clicked and changed; chords
+    // dragged onto other words, from the chart and from the palette; one
+    // dragged to Remove; a section renamed; new lines typed at the end.
     void theChartIsEditedWhereItIsRead()
     {
         QObject* root = m_qml->rootObjects().value(0);
@@ -1031,13 +1137,17 @@ private slots:
         QQuickItem* scene = w->contentItem();
         QVERIFY(findItem(scene, u"editChartButton"_s) == nullptr); // no Edit / Done
         const auto centre = [](QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); };
-        const auto words = [scene] { return findItem(scene, u"chartWords"_s); };
-        // Where a character of the words is, in the window.
-        const auto charAt = [&words](int at, double up = 0.0) {
-            QQuickItem* input = words();
-            QRectF r;
-            QMetaObject::invokeMethod(input, "positionToRectangle", Q_RETURN_ARG(QRectF, r), Q_ARG(int, at));
-            return input->mapToScene(QPointF(r.x() + 3, r.y() + r.height() / 2 - up)).toPoint();
+        const auto cellOf = [scene](const QString& text) -> QQuickItem* {
+            QList<QQuickItem*> all;
+            findAll(scene, u"chartCell"_s, all);
+            const auto it = std::ranges::find_if(all, [&text](QQuickItem* c) { return c->property("modelData").toMap().value(u"text"_s).toString() == text; });
+            return it == all.end() ? nullptr : *it;
+        };
+        const auto part = [&cellOf](const QString& text, const QString& name) { QQuickItem* c = cellOf(text); return c != nullptr ? findItem(c, name) : nullptr; };
+        const auto visibleCount = [scene](const QString& name) {
+            QList<QQuickItem*> all;
+            findAll(scene, name, all);
+            return std::ranges::count_if(all, [](QQuickItem* i) { return i->isVisible(); });
         };
         // Typed key by key, as a player types (QTest has no keyClicks for a window).
         const auto typeKeys = [w](const QString& text) {
@@ -1053,32 +1163,59 @@ private slots:
             QTest::qWait(50);
         };
 
-        // Words typed at the end of the line.
-        QVERIFY(words() != nullptr);
-        QTest::mouseClick(w, Qt::LeftButton, {}, charAt(15)); // on the "e" of "love"
-        QVERIFY(words()->hasActiveFocus());
-        QTest::keyClick(w, Qt::Key_End);
-        typeKeys(u" baby"_s);
-        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need your love baby"_s);
+        // A click on the line opens it: a bar over each word (no chords yet).
+        QCOMPARE(visibleCount(u"chordBar"_s), 0);
+        QVERIFY(part(u"love"_s, u"chartWord"_s) != nullptr);
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(part(u"love"_s, u"chartWord"_s)));
+        QTRY_COMPARE(visibleCount(u"chordBar"_s), 4);
 
-        // A chord typed above "love".
-        const double chordRow = words()->property("height").toDouble() * 0.9;
-        QTest::mouseClick(w, Qt::LeftButton, {}, charAt(13, chordRow)); // above "lo|ve"
-        auto* newChord = findItem(scene, u"newChordInput"_s);
-        QVERIFY(newChord != nullptr && newChord->isVisible());
-        typeKeys(u"Gm"_s);
+        // "love" double-clicked and changed where it is: "love baby".
+        QTest::mouseDClick(w, Qt::LeftButton, {}, centre(part(u"love"_s, u"chartWord"_s)));
+        QTRY_VERIFY(part(u"love"_s, u"wordEditInput"_s) != nullptr && part(u"love"_s, u"wordEditInput"_s)->isVisible());
+        typeKeys(u"love baby"_s); // (the word is selected: typed over)
         QTest::keyClick(w, Qt::Key_Return);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need your love baby"_s);
+        settle();
+
+        // A chord typed in the box over "love"; Tab: the next box ("baby").
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(part(u"love"_s, u"chordBox"_s)));
+        QTRY_VERIFY(part(u"love"_s, u"chordEditInput"_s) != nullptr && part(u"love"_s, u"chordEditInput"_s)->isVisible());
+        typeKeys(u"Gm"_s);
+        QTest::keyClick(w, Qt::Key_Tab);
         QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need your [Gm]love baby"_s);
+        QTRY_VERIFY(part(u"baby"_s, u"chordEditInput"_s) != nullptr && part(u"baby"_s, u"chordEditInput"_s)->isVisible());
+        typeKeys(u"C"_s);
+        QTest::keyClick(w, Qt::Key_Return);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need your [Gm]love [C]baby"_s);
         settle();
 
-        // Dragged from "love" to "your".
-        auto* chip = findItem(scene, u"chartChordChip"_s);
-        QVERIFY(chip != nullptr);
-        drag(centre(chip), charAt(9, chordRow)); // over "yo|ur"
-        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need [Gm]your love baby"_s);
+        // A chord clicked and changed: Gm to Gm7.
+        QList<QQuickItem*> chips;
+        findAll(scene, u"chartChordChip"_s, chips);
+        QCOMPARE(chips.size(), 2);
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(chips.at(0)));
+        QTRY_VERIFY(part(u"love"_s, u"chordEditInput"_s)->isVisible());
+        QTest::keyClick(w, Qt::Key_A, Qt::ControlModifier);
+        typeKeys(u"Gm7"_s);
+        QTest::keyClick(w, Qt::Key_Return);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need your [Gm7]love [C]baby"_s);
         settle();
 
-        // From the palette: typed in the chord box, dropped on "I".
+        // Dragged from "love" to "your"; the C to Remove.
+        chips.clear();
+        findAll(scene, u"chartChordChip"_s, chips);
+        drag(centre(chips.at(0)), centre(part(u"your"_s, u"chordBox"_s)));
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need [Gm7]your love [C]baby"_s);
+        settle();
+        chips.clear();
+        findAll(scene, u"chartChordChip"_s, chips);
+        auto* bin = findItem(scene, u"chordRemoveZone"_s);
+        QVERIFY(bin != nullptr && chips.size() == 2);
+        drag(centre(chips.at(1)), centre(bin));
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need [Gm7]your love baby"_s);
+        settle();
+
+        // From the palette: typed in the chord field, dropped on "I".
         auto* field = findItem(scene, u"chordField"_s);
         QVERIFY(field != nullptr);
         QTest::mouseClick(w, Qt::LeftButton, {}, centre(field));
@@ -1086,20 +1223,10 @@ private slots:
         settle();
         QList<QQuickItem*> palette;
         findAll(scene, u"paletteChord"_s, palette);
-        QCOMPARE(palette.size(), 2); // the typed D, and the song's Gm
+        QCOMPARE(palette.size(), 2); // the typed D, and the song's Gm7
         QCOMPARE(palette.at(0)->property("chordName").toString(), u"D"_s);
-        drag(centre(palette.at(0)), charAt(0, chordRow));
-        QCOMPARE(doc.currentChart(), u"{comment: Verse}\n[D]I need [Gm]your love baby"_s);
-        settle();
-
-        // The D dragged to Remove.
-        QList<QQuickItem*> chips;
-        findAll(scene, u"chartChordChip"_s, chips);
-        QCOMPARE(chips.size(), 2);
-        auto* bin = findItem(scene, u"chordRemoveZone"_s);
-        QVERIFY(bin != nullptr);
-        drag(centre(chips.at(0)), centre(bin));
-        QCOMPARE(doc.currentChart(), u"{comment: Verse}\nI need [Gm]your love baby"_s);
+        drag(centre(palette.at(0)), centre(part(u"I"_s, u"chordBox"_s)));
+        QCOMPARE(doc.currentChart(), u"{comment: Verse}\n[D]I need [Gm7]your love baby"_s);
         settle();
 
         // The section renamed: double-click its title, type, Enter.
@@ -1112,29 +1239,34 @@ private slots:
         QTest::keyClick(w, Qt::Key_A, Qt::ControlModifier);
         typeKeys(u"Verse 1"_s);
         QTest::keyClick(w, Qt::Key_Return);
-        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby"_s);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[D]I need [Gm7]your love baby"_s);
         settle();
+        shoot(u"chart-live-edit"_s);
 
-        // A new line typed at the end; Enter in it starts another.
+        // A new line typed at the end; Enter in it saves it and starts another.
         auto* newLine = findItem(scene, u"newChartLine"_s);
         QVERIFY(newLine != nullptr && newLine->isVisible());
         QTest::mouseClick(w, Qt::LeftButton, {}, centre(newLine));
         typeKeys(u"Hold me"_s);
-        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby\nHold me"_s);
         QTest::keyClick(w, Qt::Key_Return);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[D]I need [Gm7]your love baby\nHold me\n"_s);
         typeKeys(u"tight"_s);
-        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby\nHold me\ntight"_s);
-        // Backspace at the start of a line joins it to the one above.
+        // Backspace at the start of a line: saved, then joined to the one above.
         QTest::keyClick(w, Qt::Key_Home);
         QTest::keyClick(w, Qt::Key_Backspace);
-        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby\nHold metight"_s);
-        shoot(u"chart-live-edit"_s);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[D]I need [Gm7]your love baby\nHold metight"_s);
 
-        // Ctrl+V while typing in the words pastes there, not a new chart.
+        // Ctrl+V while typing a line pastes into it, not a new chart.
         QVERIFY(QGuiApplication::clipboard() != nullptr);
         QGuiApplication::clipboard()->setText(u"X"_s);
         QTest::keyClick(w, Qt::Key_V, Qt::ControlModifier);
-        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\nI need [Gm]your love baby\nHold meXtight"_s);
+        auto* lineText = findItem(scene, u"lineTextInput"_s);
+        QList<QQuickItem*> typed;
+        findAll(scene, u"lineTextInput"_s, typed);
+        const auto shown = std::ranges::find_if(typed, [](QQuickItem* i) { return i->isVisible(); });
+        QVERIFY(lineText != nullptr && shown != typed.end());
+        QCOMPARE((*shown)->property("text").toString(), u"Hold meXtight"_s);
+        QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[D]I need [Gm7]your love baby\nHold metight"_s); // (saved on Enter)
     }
 
     // The Practice tab: the song's chords falling onto the keyboard, each

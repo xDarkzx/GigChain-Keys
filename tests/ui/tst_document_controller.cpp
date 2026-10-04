@@ -564,12 +564,71 @@ private slots:
         QCOMPARE(m_doc->setlist().songs[0].tempo, 56.0);
         QVERIFY(!m_doc->currentChart().contains(u"Difficulty"_s)); // clutter gone
         QVERIFY(!m_doc->currentChart().contains(u"Last update"_s));
-        QVERIFY(m_doc->canUndoPaste());
 
-        QVERIFY(m_doc->undoPaste()); // exactly what was pasted, and the old name
-        QCOMPARE(m_doc->currentChart(), page);
+        // One Ctrl+Z takes the whole paste back: the chart, the name, the key
+        // and the tempo, as they were before it (not one of them at a time).
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->currentChart(), QString());
         QCOMPARE(m_doc->currentSongName(), u"Song 1"_s);
-        QVERIFY(!m_doc->canUndoPaste());
+        QCOMPARE(m_doc->setlist().songs.at(0).key, QString());
+        QCOMPARE(m_doc->setlist().songs.at(0).tempo, 0.0);
+        QVERIFY(m_doc->redo()); // and back again, all of it
+        QCOMPARE(m_doc->currentSongName(), u"Hallelujah"_s);
+        QCOMPARE(m_doc->setlist().songs.at(0).tempo, 56.0);
+        QVERIFY(m_doc->currentChart().contains(u"[C]I heard [Am]there was"_s));
+    }
+
+    // The chart editor's cells: each word of a line with the chords on it
+    // (a word split where a chord sits inside it; a chord after the last word
+    // in a cell of its own), so a chord is drawn over its word by layout.
+    void aLineIsGivenAsWordCells()
+    {
+        const QVariantList lines = m_doc->chartLines(u"[G]I found a [D]love for me\nm[E]o[F]n\n[C]la [G]\n"_s);
+        QCOMPARE(lines.size(), 3);
+        const auto cells = [&lines](int line) { return lines.at(line).toMap().value(u"cells"_s).toList(); };
+        const auto cell = [&cells](int line, int i) { return cells(line).at(i).toMap(); };
+        const auto names = [&cell](int line, int i) {
+            QStringList list;
+            for (const QVariant& chord : cell(line, i).value(u"chords"_s).toList()) list << chord.toMap().value(u"name"_s).toString();
+            return list.join(u' ');
+        };
+        // "I found a love for me": a cell a word, G on "I", D on "love".
+        QCOMPARE(cells(0).size(), 6);
+        QCOMPARE(cell(0, 0).value(u"text"_s).toString(), u"I"_s);
+        QCOMPARE(names(0, 0), u"G"_s);
+        QCOMPARE(cell(0, 0).value(u"space"_s).toBool(), true); // a space after it
+        QCOMPARE(cell(0, 3).value(u"text"_s).toString(), u"love"_s);
+        QCOMPARE(cell(0, 3).value(u"at"_s).toInt(), 10);
+        QCOMPARE(names(0, 3), u"D"_s);
+        QCOMPARE(cell(0, 3).value(u"chords"_s).toList().front().toMap().value(u"index"_s).toInt(), 1); // the line's chord 1
+        QCOMPARE(names(0, 4), QString());
+        QCOMPARE(cell(0, 5).value(u"space"_s).toBool(), false); // the last word
+        // "mon" with E and F inside it: split at each chord, no space between.
+        QCOMPARE(cells(1).size(), 3);
+        QCOMPARE(cell(1, 0).value(u"text"_s).toString(), u"m"_s);
+        QCOMPARE(cell(1, 1).value(u"text"_s).toString(), u"o"_s);
+        QCOMPARE(names(1, 1), u"E"_s);
+        QCOMPARE(cell(1, 1).value(u"space"_s).toBool(), false);
+        QCOMPARE(names(1, 2), u"F"_s);
+        // A chord after the last word: a cell with no words.
+        QCOMPARE(cells(2).size(), 2);
+        QCOMPARE(cell(2, 1).value(u"text"_s).toString(), QString());
+        QCOMPARE(names(2, 1), u"G"_s);
+        QCOMPARE(cell(2, 1).value(u"at"_s).toInt(), 3);
+    }
+
+    // Enter while typing a line: the words typed and the new line after the
+    // caret, one undo step (chords stay on their words).
+    void enterSavesTheLineAndSplitsItInOneStep()
+    {
+        QVERIFY(m_doc->setSongChart(0, u"[G]I found a love"_s));
+        QVERIFY(m_doc->setSongChart(0, u"[G]I found a love"_s)); // (a recorded starting point)
+        QVERIFY(m_doc->editLineAndSplit(0, u"I found a love for me"_s, 15));
+        QCOMPARE(m_doc->currentChart(), u"[G]I found a love \nfor me"_s);
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->currentChart(), u"[G]I found a love"_s);
+        QVERIFY(!m_doc->editLineAndSplit(7, u"x"_s, 0)); // no such line: said, nothing changed
+        QCOMPARE(m_doc->currentChart(), u"[G]I found a love"_s);
     }
 
     void pastingKeepsANameTheUserChose()
@@ -952,9 +1011,10 @@ private slots:
         // A tempo the song already has stays.
         QVERIFY(m_doc->pasteChart(0, u"Tempo: 140\n[Verse]\nC G\n"_s));
         QCOMPARE(m_doc->songTempo(), 96.0);
-        // Undoing the paste puts the time back.
-        QVERIFY(m_doc->undoPaste());
-        QCOMPARE(m_doc->songTimeNumerator(), 6); // the first paste's
+        // Undoing the paste (one step) puts the chart back; the time stays the first paste's.
+        QVERIFY(m_doc->undo());
+        QVERIFY(m_doc->currentChart().contains(u"[C]la [G]la"_s)); // the first paste's chart
+        QCOMPARE(m_doc->songTimeNumerator(), 6);
         QVERIFY(m_doc->setSongTimeSignature(0, 3, 4));
         QCOMPARE(m_engine->timeSignature, (std::pair{3, 4}));
         QVERIFY(!m_doc->setSongTimeSignature(0, 3, 5));
