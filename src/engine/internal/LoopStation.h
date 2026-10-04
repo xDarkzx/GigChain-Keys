@@ -54,10 +54,21 @@ struct LoopReading
     int64_t position = 0; // where it plays (or how much is recorded, while recording)
     int layers = 0;
     int64_t wait = 0; // frames until what it waits for (a start, a close) happens; 0 = nothing
+    // The base's music: `take` frames (the loop plays it length / take
+    // times), then `tail` frames recorded past its end, which ring on over
+    // its start from the second time round. The main thread keeps both.
+    int64_t take = 0;
+    int64_t tail = 0;
 };
 
 // The loop pedal: up to kSlots loops, one per channel, each recording a
 // channel's sound and playing it back in a loop, with layers on top.
+//
+// The seam, where a loop comes round: the take starts from silence (faded
+// in over kDeclickFrames) and what rang on past its end (notes held over
+// the bar, a press a little late, a reverb) is recorded too and played
+// over its start, fading out, from the second time round. A take shorter
+// than a set length plays over and over to fill it.
 //
 // Main thread: gives each slot its buffers (LoopData, through a hazard
 // exchange: never freed while the audio thread uses them), posts commands,
@@ -70,6 +81,12 @@ class LoopStation
 public:
     static constexpr int kSlots = 32;
     static constexpr int kMaxLayers = 8;
+    // The fade-in at a take's start (and fade-out at its end when nothing
+    // rang on past it): long enough to take out a click, too short to hear.
+    static constexpr int64_t kDeclickFrames = 128;
+    // How long what rang on past a take's end takes to fade out: an eighth
+    // of a bar (synced), else a sixteenth of the take; at most half of it.
+    [[nodiscard]] static int64_t tailFadeFrames(const LoopGrid& lines, int64_t take) noexcept;
 
     // ---- Main thread
     // A slot's buffers (null: none). Its state must be Empty when the base changes.
@@ -95,6 +112,9 @@ public:
     bool takeNeedsLayers(int slot);
     bool takeFull(int slot);
     bool takeNoLayerLeft(int slot);
+    // Its buffers were too small for the loop: it was silenced, not read
+    // past them (the engine never gives such; said once).
+    bool takeFault(int slot);
     // Layers undone (bit n = layer n) whose buffers still hold their sound:
     // the main thread gives fresh ones (LoopData::freshMask) before they are
     // recorded on again.
@@ -121,6 +141,7 @@ private:
         int64_t index = 0; // the base (recording) or loop position at `from`
         int64_t done = 0;  // frames of the layer being recorded, at `from`
         int layers = 0;    // committed layers during it (the one being recorded is the next)
+        int64_t played = 0; // Slot::played at `from`
     };
 
     // Commands from the main thread: a small single-producer queue.
@@ -144,11 +165,20 @@ private:
         int64_t written = 0;                 // base frames recorded
         int64_t recordStart = 0;             // sample the base recording started at
         int64_t length = 0;
+        int64_t take = 0;                    // the base's music (length is a whole number of them)
+        int repeats = 1;                     // what a closing take will be: length / take
+        int64_t tailTarget = 0;              // frames past the take to keep (what rang on)
+        int64_t tailWritten = 0;             // ... recorded so far
+        int64_t tailFade = 0;                // its fade-out
+        int64_t played = 0;                  // frames into the take since the loop (re)started, up to `take`:
+                                             // at `take` it has come round, and the tail rings over its start
+        bool layersPending = false;          // closed: the layers are asked for once the tail is in
         int64_t position = 0;                // loop position at the start of the block
         int layers = 0;                      // committed layers
         int64_t overdubDone = 0;             // frames of the layer being recorded
         bool recordedThisBlock = false;
-        bool closed = false; // the loop closed in this block
+        bool usable = true;  // its buffers hold what it reads, this block (fits)
+        const LoopData* faultData = nullptr; // the buffers last found too small (said once)
         uint32_t dirty = 0;  // undone layers still holding their sound
         const LoopData* seen = nullptr; // the buffers last acquired
         LoopData* current = nullptr;         // acquired for the block
@@ -162,7 +192,10 @@ private:
         std::atomic<bool> needsLayers{false};
         std::atomic<bool> full{false};
         std::atomic<bool> noLayerLeft{false};
+        std::atomic<bool> fault{false};
         std::atomic<int64_t> outWait{0};
+        std::atomic<int64_t> outTake{0};
+        std::atomic<int64_t> outTail{0};
         std::atomic<uint32_t> outDirty{0};
     };
 
@@ -176,6 +209,12 @@ private:
     // A layer can be recorded now: its buffer is there and silent.
     [[nodiscard]] static bool canLayer(const Slot& slot) noexcept;
     [[nodiscard]] static int64_t capacity(const Slot& slot) noexcept;
+    // The take ends: `take` frames of the base, `overlap` recorded past it
+    // already (a press a little late), played `repeats` times in the loop.
+    static void closeTake(Slot& slot, int64_t take, int64_t overlap, int repeats, const LoopGrid& lines) noexcept;
+    // The buffers hold what the loop reads (the base its take and tail, the
+    // layers its length); else it is silenced and says so.
+    [[nodiscard]] static bool fits(Slot& slot) noexcept;
 
     std::array<Slot, kSlots> m_slots;
     std::atomic<bool> m_sync{true};

@@ -76,7 +76,9 @@ LoopReading LoopStation::read(int slot) const
                        .length = s.outLength.load(std::memory_order_relaxed),
                        .position = s.outPosition.load(std::memory_order_relaxed),
                        .layers = s.outLayers.load(std::memory_order_relaxed),
-                       .wait = s.outWait.load(std::memory_order_relaxed)};
+                       .wait = s.outWait.load(std::memory_order_relaxed),
+                       .take = s.outTake.load(std::memory_order_relaxed),
+                       .tail = s.outTail.load(std::memory_order_relaxed)};
 }
 
 uint32_t LoopStation::dirtyLayers(int slot) const
@@ -97,6 +99,18 @@ bool LoopStation::takeFull(int slot)
 bool LoopStation::takeNoLayerLeft(int slot)
 {
     return m_slots.at(static_cast<std::size_t>(slot)).noLayerLeft.exchange(false, std::memory_order_acq_rel);
+}
+
+bool LoopStation::takeFault(int slot)
+{
+    return m_slots.at(static_cast<std::size_t>(slot)).fault.exchange(false, std::memory_order_acq_rel);
+}
+
+int64_t LoopStation::tailFadeFrames(const LoopGrid& lines, int64_t take) noexcept
+{
+    if (take <= 1) return 0;
+    const int64_t fade = lines.valid() ? std::llround(lines.unit / 8.0) : take / 16;
+    return std::clamp<int64_t>(fade, 1, take / 2);
 }
 
 LoopGrid LoopStation::freeGrid() const
@@ -135,6 +149,47 @@ int64_t LoopStation::capacity(const Slot& slot) noexcept
     return slot.current != nullptr && slot.current->base ? slot.current->base->frames() : 0;
 }
 
+void LoopStation::closeTake(Slot& slot, int64_t take, int64_t overlap, int repeats, const LoopGrid& lines) noexcept
+{
+    overlap = take > 0 ? std::clamp<int64_t>(overlap, 0, take - 1) : 0;
+    slot.take = take;
+    slot.length = take * std::max(repeats, 1);
+    slot.written = take;
+    slot.repeats = 1;
+    // What rang on past the end: what was played after it (a press a
+    // little late; a quarter of the take at most: past that it is another
+    // part, not a spill) and a little more to fade out over. Never more
+    // than half the take, nor than the room left.
+    const int64_t fade = tailFadeFrames(lines, take);
+    const int64_t room = std::max<int64_t>(capacity(slot) - take, 0);
+    slot.tailTarget = std::min({std::min(overlap, take / 4) + fade, take / 2, room});
+    slot.tailWritten = std::min(overlap, slot.tailTarget); // (already recorded)
+    slot.tailFade = std::min(fade, slot.tailTarget);
+    // It plays on from where the recording is now: the take's second time
+    // through (in a loop of one take, its start again).
+    slot.position = slot.length > 0 ? (take + overlap) % slot.length : 0;
+    slot.played = overlap;
+    slot.layersPending = slot.length > 0;
+}
+
+bool LoopStation::fits(Slot& slot) noexcept
+{
+    const LoopData* data = slot.current;
+    const auto bad = [&slot, data] {
+        if (slot.faultData != data) slot.fault.store(true, std::memory_order_release); // (once for these buffers)
+        slot.faultData = data;
+        return false;
+    };
+    if (data == nullptr || !data->base) return slot.length <= 0;
+    if (slot.length <= 0) return true; // recording: the plan keeps within the base
+    if (slot.take <= 0 || slot.length % slot.take != 0 || data->base->frames() < slot.take + slot.tailTarget) return bad();
+    const auto used = std::min<std::size_t>(data->layers.size(), static_cast<std::size_t>(slot.layers) + 1);
+    for (std::size_t i = 0; i < used; ++i) {
+        if (!data->layers.at(i) || data->layers.at(i)->frames() < slot.length) return bad();
+    }
+    return true;
+}
+
 void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, const LoopGrid& lines, int target) noexcept
 {
     // The next grid line (at once without a grid: a free first loop).
@@ -151,39 +206,43 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
         slot.overdubDone = 0;
         slot.commitOnSwitch = false;
     };
+    // Stopped: what rang on past the take is what has been recorded of it.
+    const auto endTail = [&slot] {
+        slot.tailTarget = std::min(slot.tailTarget, slot.tailWritten);
+        slot.tailFade = std::min(slot.tailFade, slot.tailTarget);
+        slot.played = 0; // (it starts again after silence: no spill over its start)
+    };
     // Ends a recording on the nearest bar: a little late, on the bar just
-    // gone (what was played after it is left out, and the loop goes on in
-    // time from there); a little early, on the coming one.
+    // gone (what was played after it rings on over the start, and the loop
+    // goes on in time from there); a little early, on the coming one.
     const auto close = [&slot, &lines, &schedule, blockStart, line, target] {
-        // A set length stopped early: the most bars (to the nearest) that
-        // fill it evenly, so the loop plays on with no gap.
+        // A set length stopped early: the take is the most bars (to the
+        // nearest) that fill it evenly, and plays over and over to fill it.
         if (lines.valid() && target > 0) {
             const auto recorded = static_cast<int>(std::lround(static_cast<double>(blockStart - slot.recordStart) / lines.unit));
             int bars = std::clamp(recorded, 1, target);
             while (target % bars != 0) --bars;
             const int64_t end = slot.recordStart + std::llround(bars * lines.unit);
             if (end > blockStart) {
+                slot.repeats = target / bars;
                 schedule(S::Closing, S::Playing, end); // just ahead: it closes there
                 return;
             }
-            slot.length = end - slot.recordStart; // (what was played after it is left out)
-            slot.written = slot.length;
-            slot.position = (blockStart - slot.recordStart) % slot.length;
-            slot.closed = true;
+            const int64_t take = end - slot.recordStart;
+            closeTake(slot, take, slot.written - take, target / bars, lines);
             schedule(S::Playing, S::Playing, -1);
             return;
         }
         if (lines.valid()) {
             const int64_t gone = lines.previous(blockStart);
             if (gone > slot.recordStart && blockStart - gone < line - blockStart) {
-                slot.length = gone - slot.recordStart;
-                slot.written = slot.length;
-                slot.position = (blockStart - gone) % slot.length;
-                slot.closed = true;
+                const int64_t take = gone - slot.recordStart;
+                closeTake(slot, take, slot.written - take, 1, lines);
                 schedule(S::Playing, S::Playing, -1);
                 return;
             }
         }
+        slot.repeats = 1;
         schedule(S::Closing, S::Playing, line);
     };
     switch (command) {
@@ -193,6 +252,10 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
             if (capacity(slot) == 0) return; // no buffer given: nothing to record into
             slot.written = 0;
             slot.layers = 0;
+            slot.take = 0;
+            slot.repeats = 1;
+            slot.tailTarget = slot.tailWritten = slot.tailFade = slot.played = 0;
+            slot.layersPending = false;
             schedule(S::Armed, S::Recording, line);
             return;
         case S::Armed: schedule(S::Empty, S::Empty, -1); return; // changed my mind
@@ -228,6 +291,7 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
         case S::StopArmed:
         case S::OverdubArmed:
             dropLayer();
+            endTail();
             slot.position = 0;
             schedule(S::Stopped, S::Stopped, -1);
             return;
@@ -236,6 +300,7 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
             ++slot.layers;
             slot.overdubDone = 0;
             slot.commitOnSwitch = false;
+            endTail();
             slot.position = 0;
             schedule(S::Stopped, S::Stopped, -1);
             return;
@@ -258,6 +323,7 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
             slot.written = 0;
             schedule(S::Empty, S::Empty, -1);
         } else {
+            endTail();
             slot.position = 0;
             schedule(S::Stopped, S::Stopped, -1);
         }
@@ -266,6 +332,10 @@ void LoopStation::apply(Slot& slot, LoopCommand command, int64_t blockStart, con
         dropLayer();
         slot.written = 0;
         slot.length = 0;
+        slot.take = 0;
+        slot.repeats = 1;
+        slot.tailTarget = slot.tailWritten = slot.tailFade = slot.played = 0;
+        slot.layersPending = false;
         slot.position = 0;
         slot.layers = 0;
         slot.dirty = 0; // (new buffers come with the next recording)
@@ -305,13 +375,15 @@ void LoopStation::plan(Slot& slot, int64_t blockStart, int frames, const LoopGri
                     .to = split,
                     .index = recordsBase(slot.state) ? slot.written : slot.position,
                     .done = slot.overdubDone,
-                    .layers = slot.layers};
+                    .layers = slot.layers,
+                    .played = slot.played};
     slot.segmentCount = 1;
     if (split >= frames) return;
 
     // The switch, `split` samples into the block: first the block so far...
     const int64_t written = slot.written + (recordsBase(slot.state) ? split : 0);
     const int64_t position = slot.length > 0 ? (slot.position + split) % slot.length : 0;
+    slot.played = sounds(slot.state) ? std::min(slot.take, slot.played + split) : slot.played;
     // ... then what the new state starts from.
     int64_t index = 0;
     switch (after) {
@@ -323,15 +395,13 @@ void LoopStation::plan(Slot& slot, int64_t blockStart, int frames, const LoopGri
     case S::Playing:
     case S::Stopped:
         if (recordsBase(slot.state)) { // the loop closes
-            slot.written = written;
-            slot.length = written;
-            slot.position = 0;
-            if (full) slot.full.store(true, std::memory_order_release);
-            if (slot.length == 0) {
+            if (written == 0) {
+                slot.written = 0;
                 after = S::Empty;
                 break;
             }
-            slot.closed = true; // told in endBlock, after its length is published
+            closeTake(slot, written, 0, full ? 1 : slot.repeats, lines); // (told in endBlock, after its length is published)
+            if (full) slot.full.store(true, std::memory_order_release);
             // Free: the first loop is the grid for the others (quarters of it).
             if (!m_sync.load(std::memory_order_relaxed) && !freeGrid().valid()) {
                 m_freeOrigin.store(slot.recordStart, std::memory_order_relaxed);
@@ -343,11 +413,15 @@ void LoopStation::plan(Slot& slot, int64_t blockStart, int frames, const LoopGri
             slot.overdubDone = 0;
             slot.position = position;
         } else if (slot.state == S::StartArmed) {
-            slot.position = 0; // from the top, on the line
+            slot.position = 0; // from the top, on the line (after silence: no spill over its start)
+            slot.played = 0;
         } else {
             slot.position = position;
         }
-        if (after == S::Stopped) slot.position = 0;
+        if (after == S::Stopped) {
+            slot.position = 0;
+            slot.played = 0;
+        }
         index = slot.position;
         break;
     case S::Overdubbing:
@@ -364,8 +438,13 @@ void LoopStation::plan(Slot& slot, int64_t blockStart, int frames, const LoopGri
         slot.switchAt = slot.recordStart + std::llround(targetLines() * lines.unit);
         slot.target = S::Playing;
     }
-    slot.segments.at(1) =
-        Segment{.state = after, .from = split, .to = frames, .index = index, .done = slot.overdubDone, .layers = slot.layers};
+    slot.segments.at(1) = Segment{.state = after,
+                                  .from = split,
+                                  .to = frames,
+                                  .index = index,
+                                  .done = slot.overdubDone,
+                                  .layers = slot.layers,
+                                  .played = slot.played};
     slot.segmentCount = 2;
 }
 
@@ -390,6 +469,7 @@ void LoopStation::beginBlock(int64_t blockStart, int frames, const LoopGrid& bar
             queue.tail.store(tail, std::memory_order_release);
         }
         plan(slot, blockStart, m_frames, gridFor(bars)); // (a free first loop may have just set the grid)
+        slot.usable = fits(slot);
         anyLoop = anyLoop || slot.state != LoopState::Empty;
     }
     // Every loop cleared: the next free loop sets a new grid.
@@ -400,7 +480,7 @@ void LoopStation::record(int slot, const float* left, const float* right, int fr
 {
     if (slot < 0 || slot >= kSlots || left == nullptr || right == nullptr || frames != m_frames) return;
     Slot& s = m_slots.at(static_cast<std::size_t>(slot));
-    if (s.current == nullptr) return;
+    if (s.current == nullptr || !s.usable) return;
     s.recordedThisBlock = true;
     const auto count = static_cast<std::size_t>(frames);
     const std::span<const float> inLeft(left, count);
@@ -435,6 +515,16 @@ void LoopStation::record(int slot, const float* left, const float* right, int fr
                 if (++p == s.length) p = 0;
             }
         }
+        // After the take: what rings on past its end, kept to play over its start.
+        if (sounds(seg.state) && s.take > 0 && s.tailWritten < s.tailTarget && s.current->base) {
+            LoopTake& base = *s.current->base;
+            const auto at = static_cast<std::size_t>(s.take + s.tailWritten);
+            const std::size_t room = base.left.size() - std::min(at, base.left.size());
+            const std::size_t taken = std::min({size, static_cast<std::size_t>(s.tailTarget - s.tailWritten), room});
+            std::ranges::copy(inLeft.subspan(from, taken), base.left.begin() + static_cast<std::ptrdiff_t>(at));
+            std::ranges::copy(inRight.subspan(from, taken), base.right.begin() + static_cast<std::ptrdiff_t>(at));
+            s.tailWritten += static_cast<int64_t>(taken);
+        }
     }
 }
 
@@ -445,13 +535,19 @@ void LoopStation::play(float* left, float* right, int frames) noexcept
     const std::span<float> outLeft(left, count);
     const std::span<float> outRight(right, count);
     for (Slot& s : m_slots) {
-        if (s.current == nullptr || !s.current->base || s.length <= 0) continue;
+        if (s.current == nullptr || !s.current->base || s.length <= 0 || s.take <= 0 || !s.usable) continue;
         const LoopTake& base = *s.current->base;
+        // The seam: faded in from silence; faded out too when nothing rang on past it.
+        const int64_t declick = std::min<int64_t>(kDeclickFrames, std::max<int64_t>(s.take / 4, 1));
+        const bool fadeEnd = s.tailTarget == 0;
+        const float tailFade = static_cast<float>(std::max<int64_t>(s.tailFade, 1));
         for (int n = 0; n < s.segmentCount; ++n) {
             const Segment& seg = s.segments.at(static_cast<std::size_t>(n));
             if (!sounds(seg.state)) continue;
             const int committed = std::min<int>(seg.layers, static_cast<int>(s.current->layers.size()));
             int64_t p = seg.index;
+            int64_t q = seg.index % s.take; // in the take
+            int64_t played = seg.played;
             int64_t done = seg.done;
             const auto from = static_cast<std::size_t>(seg.from);
             const auto size = static_cast<std::size_t>(seg.to - seg.from);
@@ -459,8 +555,20 @@ void LoopStation::play(float* left, float* right, int frames) noexcept
             auto out = segRight.begin();
             for (float& outL : outLeft.subspan(from, size)) {
                 const auto at = static_cast<std::size_t>(p);
-                float l = base.left.at(at);
-                float r = base.right.at(at);
+                const auto inTake = static_cast<std::size_t>(q);
+                float gain = 1.0F;
+                if (q < declick) gain = static_cast<float>(q) / static_cast<float>(declick);
+                if (fadeEnd && q >= s.take - declick) gain = std::min(gain, static_cast<float>(s.take - q) / static_cast<float>(declick));
+                float l = base.left.at(inTake) * gain;
+                float r = base.right.at(inTake) * gain;
+                // What rang on past the end, over the start, once it has come round.
+                if (played >= s.take && q < s.tailWritten) {
+                    const float ring = std::min(1.0F, static_cast<float>(s.tailTarget - q) / tailFade);
+                    l += base.left.at(static_cast<std::size_t>(s.take + q)) * ring;
+                    r += base.right.at(static_cast<std::size_t>(s.take + q)) * ring;
+                }
+                if (played < s.take) ++played;
+                if (++q == s.take) q = 0;
                 for (int k = 0; k < committed; ++k) {
                     const LoopTake& layer = *s.current->layers.at(static_cast<std::size_t>(k));
                     l += layer.left.at(at);
@@ -508,8 +616,19 @@ void LoopStation::endBlock() noexcept
                 }
             }
             if (recordsBase(last.state)) s.written = last.index + n;
-            if (s.length > 0 && (sounds(last.state))) s.position = (last.index + n) % s.length;
+            if (s.length > 0 && (sounds(last.state))) {
+                s.position = (last.index + n) % s.length;
+                s.played = std::min(s.take, last.played + n);
+            }
             if (last.state == LoopState::Overdubbing) s.overdubDone = last.done + n;
+            // What rings on past the take, with no sound from its channel
+            // (it is not in this patch): silence, and it is in.
+            if (!s.recordedThisBlock && s.tailWritten < s.tailTarget) {
+                for (int k = 0; k < s.segmentCount; ++k) {
+                    const Segment& seg = s.segments.at(static_cast<std::size_t>(k));
+                    if (sounds(seg.state)) s.tailWritten = std::min(s.tailTarget, s.tailWritten + (seg.to - seg.from));
+                }
+            }
         }
         s.outState.store(s.state, std::memory_order_release);
         s.outLength.store(s.length, std::memory_order_relaxed);
@@ -518,8 +637,14 @@ void LoopStation::endBlock() noexcept
         s.outWait.store(s.switchAt >= 0 ? std::max<int64_t>(s.switchAt - (m_blockStart + m_frames), 0) : 0,
                         std::memory_order_relaxed);
         s.outDirty.store(s.dirty, std::memory_order_release);
-        if (s.closed) s.needsLayers.store(true, std::memory_order_release); // (the length above goes with it)
-        s.closed = false;
+        s.outTake.store(s.take, std::memory_order_relaxed);
+        s.outTail.store(s.tailWritten, std::memory_order_relaxed);
+        // Closed, and what rang on past it is in: its layers (and the base
+        // cut to the take and that) are asked for (what is above goes with it).
+        if (s.layersPending && s.tailWritten >= s.tailTarget) {
+            s.layersPending = false;
+            s.needsLayers.store(true, std::memory_order_release);
+        }
         if (s.current != nullptr) s.data.release();
         s.current = nullptr;
         s.segmentCount = 0;

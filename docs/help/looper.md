@@ -26,6 +26,16 @@ bars, in time with the song's tempo. Choose the length under **Loop length**:
 *1, 2, 4, 8 or 16 bars* (the loop closes by itself at the end), or **Open**
 (it closes where you stop it). Recording starts on the next bar.
 
+**Stopped early?** With the length set to 4 bars, stop after 1 bar and your
+bar plays four times to fill the 4 bars. The loop is still 4 bars long, so a
+layer you record on top can be a 4-bar line over your 1-bar riff. (Stopped
+in bar 3 of 4, it keeps 2 bars, played twice.)
+
+**Notes that ring past the end** are not cut off. Held chords, a press a
+little after the bar line and reverb tails carry on smoothly over the start of
+the loop each time it comes round. The loop's start is faded in very slightly,
+so it never clicks.
+
 Without tempo sync, **Free loops: the first sets the tempo** makes the first
 loop you record set the tempo for the others.
 

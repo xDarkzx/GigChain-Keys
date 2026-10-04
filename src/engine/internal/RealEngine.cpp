@@ -1375,23 +1375,32 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
         if (m_loops.takeNoLayerLeft(slot)) {
             tell(Notice::warning(u"That loop has all the layers it can take: undo one to record another"_s));
         }
-        if (m_loops.takeNeedsLayers(slot) && loop.length > 0) {
-            // The base cut to the loop, and room for layers.
+        if (m_loops.takeFault(slot)) {
+            tell(Notice::warning(u"A loop's recording did not fit its memory, so it was silenced: clear it and record it again"_s));
+        }
+        // (Read after the ask: what it publishes with it, not what was there before.)
+        if (const LoopReading closed = m_loops.takeNeedsLayers(slot) ? m_loops.read(slot) : LoopReading{}; closed.length > 0) {
+            // The base cut to the take and what rang on past it, and room for layers.
             const LoopData* now = m_loops.data(slot);
-            const auto length = static_cast<std::size_t>(loop.length);
-            try {
-                auto data = std::make_shared<LoopData>();
-                data->base = std::make_shared<LoopTake>(loop.length);
-                if (now != nullptr && now->base && now->base->left.size() >= length) {
-                    std::copy_n(now->base->left.begin(), length, data->base->left.begin());
-                    std::copy_n(now->base->right.begin(), length, data->base->right.begin());
+            const int64_t kept = closed.take + closed.tail;
+            if (now == nullptr || !now->base || closed.take <= 0 || now->base->frames() < kept) {
+                tell(Notice::warning(u"A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers"_s
+                                         .arg(now != nullptr && now->base ? now->base->frames() : 0)
+                                         .arg(kept)));
+            } else {
+                try {
+                    auto data = std::make_shared<LoopData>();
+                    data->base = std::make_shared<LoopTake>(kept);
+                    std::copy_n(now->base->left.begin(), kept, data->base->left.begin());
+                    std::copy_n(now->base->right.begin(), kept, data->base->right.begin());
+                    const int64_t layerBytes = closed.length * 2 * static_cast<int64_t>(sizeof(float));
+                    const auto layers =
+                        std::clamp<int64_t>(kLayerBudgetBytes / std::max<int64_t>(layerBytes, 1), 1, LoopStation::kMaxLayers);
+                    for (int64_t i = 0; i < layers; ++i) data->layers.push_back(std::make_shared<LoopTake>(closed.length));
+                    m_loops.setData(slot, std::move(data));
+                } catch (const std::bad_alloc&) {
+                    tell(Notice::warning(u"Not enough memory for layers on that loop: it plays, without layers"_s));
                 }
-                const int64_t layerBytes = loop.length * 2 * static_cast<int64_t>(sizeof(float));
-                const auto layers = std::clamp<int64_t>(kLayerBudgetBytes / std::max<int64_t>(layerBytes, 1), 1, LoopStation::kMaxLayers);
-                for (int64_t i = 0; i < layers; ++i) data->layers.push_back(std::make_shared<LoopTake>(loop.length));
-                m_loops.setData(slot, std::move(data));
-            } catch (const std::bad_alloc&) {
-                tell(Notice::warning(u"Not enough memory for layers on that loop: it plays, without layers"_s));
             }
             // Free: the first loop sets the tempo, bar 1 on it.
             if (m_tempoFromLoop && !m_loops.sync() && !m_freeTempoTaken) {
@@ -1399,7 +1408,7 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
                                               m_timeDenominator.load(std::memory_order_relaxed);
                 double best = 0.0;
                 for (const double loopBars : {1.0, 2.0, 4.0}) {
-                    const double bpm = quartersPerBar * loopBars * 60.0 * m_audio.sampleRate() / static_cast<double>(loop.length);
+                    const double bpm = quartersPerBar * loopBars * 60.0 * m_audio.sampleRate() / static_cast<double>(closed.length);
                     if (bpm >= 60.0 && bpm <= 180.0 && (best == 0.0 || std::abs(bpm - 110.0) < std::abs(best - 110.0))) best = bpm;
                 }
                 m_freeTempoTaken = true;

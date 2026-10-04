@@ -1139,15 +1139,86 @@ private slots:
         engine.loopCommand(piano, LoopCommand::Record);
         for (int i = 0; i < 200 && loop().state != LoopState::Recording; ++i) pump(engine, 10);
         QCOMPARE(loop().state, LoopState::Recording);
-        pump(engine, 300);
+        // Part way through the first bar (waited for: under load the audio
+        // runs in bursts, so a set wait can land anywhere).
+        for (int i = 0; i < 150 && loop().bar == 1 && loop().progress < 0.1; ++i) pump(engine, 10);
         QCOMPARE(loop().bar, 1);
         QCOMPARE(loop().bars, 2); // "1/2"
-        QVERIFY(loop().progress > 0.1 && loop().progress < 0.9); // part way through the bar
-        for (int i = 0; i < 150 && loop().bar != 2; ++i) pump(engine, 10);
+        QVERIFY(loop().progress >= 0.1);
+        for (int i = 0; i < 150 && loop().bar != 2 && loop().state == LoopState::Recording; ++i) pump(engine, 10);
         QCOMPARE(loop().bar, 2); // "2/2"
         for (int i = 0; i < 150 && loop().state != LoopState::Playing; ++i) pump(engine, 10);
         QCOMPARE(loop().state, LoopState::Playing); // closed by itself, no second press
         QCOMPARE(loop().bars, 2);
+    }
+
+    // One bar played with the length set to four: a loop of four bars (the
+    // bar four times), which takes a layer, its recording kept whole (the
+    // take and what rang on past it): no warning that it did not fit.
+    void aShortLoopFillsItsSetLengthAndTakesALayer()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-90.0);
+        engine.setTempo(240.0); // a bar a second
+        engine.setLoopBars(4);
+        const core::Patch patch = pianoPatch();
+        const core::ChannelId piano = patch.channels.front().id;
+        engine.applyPatch(patch);
+        QVERIFY(engine.poll().empty());
+        const auto loop = [&engine] {
+            const std::vector<ChannelLoop> loops = engine.loops();
+            return loops.empty() ? ChannelLoop{} : loops.front();
+        };
+        // Every warning the engine gives while it runs (pump() drops them).
+        QStringList warnings;
+        const auto watch = [&engine, &warnings](int milliseconds) {
+            const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
+            while (std::chrono::steady_clock::now() < end) {
+                for (const Notice& notice : engine.poll()) {
+                    if (notice.level != Notice::Level::Info) warnings << notice.text;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        };
+        engine.loopCommand(piano, LoopCommand::Record);
+        for (int i = 0; i < 200 && loop().state != LoopState::Recording; ++i) pump(engine, 10);
+        QCOMPARE(loop().state, LoopState::Recording);
+        engine.injectNote(1, 60, 100); // a chord held over the bar line
+        for (int i = 0; i < 150 && loop().bar == 1 && loop().progress < 0.7; ++i) pump(engine, 10);
+        QCOMPARE(loop().bar, 1);
+        engine.loopCommand(piano, LoopCommand::Record); // stopped in bar 1: a take of one bar
+        for (int i = 0; i < 150 && loop().state != LoopState::Playing; ++i) watch(10);
+        engine.injectNote(1, 60, 0);
+        QCOMPARE(loop().state, LoopState::Playing);
+        QCOMPARE(loop().bars, 4);
+        watch(800); // what rang on past the bar is in; the layers are given
+        engine.loopCommand(piano, LoopCommand::Record); // a layer, from the next bar
+        for (int i = 0; i < 200 && loop().state != LoopState::Overdubbing; ++i) watch(10);
+        QCOMPARE(loop().state, LoopState::Overdubbing);
+        watch(300);
+        QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(u" | "_s)));
+
+        // An open length, stopped a little late: a loop of the bar, with
+        // what was played past it kept (and nothing said: it fits).
+        engine.loopCommand(piano, LoopCommand::Clear);
+        for (int i = 0; i < 200 && !engine.loops().empty(); ++i) pump(engine, 10);
+        engine.setLoopBars(0);
+        engine.loopCommand(piano, LoopCommand::Record);
+        for (int i = 0; i < 200 && loop().state != LoopState::Recording; ++i) pump(engine, 10);
+        QCOMPARE(loop().state, LoopState::Recording);
+        engine.injectNote(1, 64, 100);
+        for (int i = 0; i < 200 && !(loop().bar == 2 && loop().progress > 0.1); ++i) pump(engine, 10);
+        engine.loopCommand(piano, LoopCommand::Record); // a little into bar 2: closes on it
+        for (int i = 0; i < 150 && loop().state != LoopState::Playing; ++i) watch(10);
+        engine.injectNote(1, 64, 0);
+        QCOMPARE(loop().state, LoopState::Playing);
+        QCOMPARE(loop().bars, 1);
+        watch(800);
+        QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(u" | "_s)));
     }
 
     // The looper's buttons (here two pads): pressed, and both held = clear;
