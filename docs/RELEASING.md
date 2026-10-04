@@ -39,8 +39,9 @@ The tag is the version with a `v`: `v0.1.0`.
    ```
 
    The tag starts the Mac build (`.github/workflows/mac.yml`). When it
-   finishes, download its artifact, `GigChain Keys-<version>-arm64.dmg`, from
-   the run's page (Actions → Mac → the run).
+   finishes, download its artifact (`gh run download <run id>`), and rename
+   `GigChain Keys-<version>-arm64.dmg` to `GigChainKeys-<version>-arm64.dmg`
+   (GitHub turns spaces in release file names into dots).
 6. **Publish the release** with the notes from the changelog and the three
    files:
 
@@ -49,7 +50,7 @@ The tag is the version with a `v`: `v0.1.0`.
        --notes-file notes.md `
        "dist\GigChainKeys-0.1.0-x64-setup.exe" `
        "dist\GigChainKeys-0.1.0-x64-portable.zip" `
-       "GigChain Keys-0.1.0-arm64.dmg"
+       "GigChainKeys-0.1.0-arm64.dmg"
    ```
 
    `notes.md` is that version's section of the changelog, with the
