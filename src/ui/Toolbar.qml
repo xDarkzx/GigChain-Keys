@@ -12,6 +12,7 @@ ToolBar {
     required property DocumentController doc
     required property EngineStatus engineStatus
     required property bool performMode
+    required property bool practiceMode
     required property bool sidePanelOpen
     required property bool mixerOpen
     required property bool keyboardOpen
@@ -20,6 +21,8 @@ ToolBar {
     signal toggleKeyboard()
     signal loopControlsRequested()
     signal toggleMode()
+    signal editRequested()
+    signal practiceRequested()
     signal toggleSidePanel()
     signal toggleMixer()
     signal newRequested()
@@ -178,19 +181,27 @@ ToolBar {
 
         StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8 }
 
-        // Edit / Perform: one segmented switch.
+        // Edit / Perform / Practice: one segmented switch.
         Row {
             spacing: -1
             StageButton {
+                objectName: "editButton"
                 text: qsTr("Edit")
-                checked: !bar.performMode
-                onClicked: if (bar.performMode) bar.toggleMode()
+                checked: !bar.performMode && !bar.practiceMode
+                onClicked: bar.editRequested()
             }
             StageButton {
                 objectName: "performButton"
                 text: qsTr("Perform")
                 checked: bar.performMode
                 onClicked: if (!bar.performMode) bar.toggleMode()
+            }
+            StageButton {
+                objectName: "practiceButton"
+                text: qsTr("Practice")
+                checked: bar.practiceMode
+                tip: qsTr("Practise the song: its chords fall onto a keyboard")
+                onClicked: bar.practiceRequested()
             }
         }
 
@@ -449,6 +460,7 @@ ToolBar {
         StageButton {
             objectName: "keyboardButton"
             text: qsTr("Keys")
+            visible: !bar.practiceMode // (Practice has its own)
             iconSource: "icons/keyboard.svg"
             checkable: true
             checked: bar.keyboardOpen
@@ -458,7 +470,7 @@ ToolBar {
         StageButton {
             text: qsTr("Mixer")
             iconSource: "icons/adjustments-horizontal.svg"
-            visible: !bar.performMode
+            visible: !bar.performMode && !bar.practiceMode
             checkable: true
             checked: bar.mixerOpen
             onClicked: bar.toggleMixer()

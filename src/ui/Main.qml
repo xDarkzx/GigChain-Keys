@@ -21,6 +21,9 @@ ApplicationWindow {
     required property StartupProgress loading
 
     property bool performMode: false
+    // Practice: a mode of its own beside Edit and Perform (the song's chords
+    // falling onto a keyboard, PracticeView). Never with performMode.
+    property bool practiceMode: false
     property bool sidePanelOpen: true
     // The mixer and the keyboard, open in Edit; in Perform closed unless
     // asked for (the chart is what is read on stage, as MainStage's Perform
@@ -30,7 +33,8 @@ ApplicationWindow {
     property bool performMixerOpen: false
     property bool performKeyboardOpen: false
     readonly property bool mixerOpen: performMode ? performMixerOpen : editMixerOpen
-    readonly property bool keyboardOpen: performMode ? performKeyboardOpen : editKeyboardOpen
+    // (Practice shows its own keyboard.)
+    readonly property bool keyboardOpen: practiceMode ? false : performMode ? performKeyboardOpen : editKeyboardOpen
     property string pendingAction: ""
     property string pendingPath: "" // a recent setlist waiting to be opened
     property bool closeConfirmed: false
@@ -70,6 +74,20 @@ ApplicationWindow {
     }
 
     onPerformModeChanged: visibility = performMode ? Window.FullScreen : Window.Windowed
+
+    // Edit / Perform / Practice.
+    function editMode() {
+        practiceMode = false
+        performMode = false
+    }
+    function toggleMode() { // Edit and Perform (Tab); from Practice: Perform
+        practiceMode = false
+        performMode = !performMode
+    }
+    function enterPractice() {
+        performMode = false
+        practiceMode = true
+    }
 
     // ------------------------------------------------------------- file flow
     function runPending() {
@@ -199,8 +217,8 @@ ApplicationWindow {
     Shortcut { sequence: "Left"; enabled: !root.typing; onActivated: root.doc.previousPatch() }
     Shortcut { sequence: "PgDown"; enabled: !root.typing; onActivated: root.doc.nextSong() }
     Shortcut { sequence: "PgUp"; enabled: !root.typing; onActivated: root.doc.previousSong() }
-    Shortcut { sequence: "Tab"; enabled: !root.typing; onActivated: root.performMode = !root.performMode }
-    Shortcut { sequence: "Esc"; enabled: root.performMode; onActivated: root.performMode = false }
+    Shortcut { sequence: "Tab"; enabled: !root.typing; onActivated: root.toggleMode() }
+    Shortcut { sequence: "Esc"; enabled: root.performMode || root.practiceMode; onActivated: root.editMode() }
     Shortcut { sequences: [StandardKey.New]; enabled: !root.performMode; onActivated: root.guarded("new") }
     Shortcut { sequences: [StandardKey.Open]; enabled: !root.performMode; onActivated: root.guarded("open") }
     Shortcut { sequences: [StandardKey.Save]; enabled: !root.performMode; onActivated: root.save() }
@@ -213,6 +231,7 @@ ApplicationWindow {
         doc: root.doc
         engineStatus: root.engineStatus
         performMode: root.performMode
+        practiceMode: root.practiceMode
         sidePanelOpen: root.sidePanelOpen
         mixerOpen: root.mixerOpen
         keyboardOpen: root.keyboardOpen
@@ -222,7 +241,9 @@ ApplicationWindow {
             else root.editKeyboardOpen = !root.editKeyboardOpen
         }
         onLoopControlsRequested: loopControlsDialog.open()
-        onToggleMode: root.performMode = !root.performMode
+        onToggleMode: root.toggleMode()
+        onEditRequested: root.editMode()
+        onPracticeRequested: root.enterPractice()
         onToggleSidePanel: root.sidePanelOpen = !root.sidePanelOpen
         onToggleMixer: {
             if (root.performMode) root.performMixerOpen = !root.performMixerOpen
@@ -243,7 +264,7 @@ ApplicationWindow {
         StackLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            currentIndex: root.performMode ? 1 : 0
+            currentIndex: root.practiceMode ? 2 : root.performMode ? 1 : 0
 
             SplitView {
                 orientation: Qt.Horizontal
@@ -267,7 +288,6 @@ ApplicationWindow {
 
                     MainArea {
                         id: mainArea
-                        practice: root.practice
                         SplitView.fillHeight: true
                         SplitView.minimumHeight: 200
                         doc: root.doc
@@ -312,6 +332,11 @@ ApplicationWindow {
                 effectWindows: root.effectWindows
                 masterBus: root.masterBus
                 loops: root.loops
+            }
+
+            PracticeView {
+                practice: root.practice
+                engineStatus: root.engineStatus
             }
         }
 

@@ -1138,20 +1138,27 @@ private slots:
 
     // The Practice tab: the song's chords falling onto the keyboard, each
     // note over its key; Play moves them down; the modes are buttons.
-    void thePracticeTabShowsTheNotesFalling()
+    // Practice is a mode of its own beside Edit and Perform (the top bar's
+    // switch), not a tab of the Edit view.
+    void thePracticeModeShowsTheNotesFalling()
     {
         QObject* root = m_qml->rootObjects().value(0);
-        QVERIFY(root->setProperty("editMixerOpen", false));
-        QVERIFY(root->setProperty("editKeyboardOpen", false));
         ui::DocumentController& doc = m_session->document();
         QVERIFY(doc.setSongChart(0, u"{comment: Verse}\n[C]a [F]b [G]c [Am]d\n{comment: Chorus}\n[F]e [G]f [C]g\n"_s));
-        auto* tabs = window()->findChild<QObject*>(u"mainTabs"_s);
-        QVERIFY(tabs != nullptr);
-        QVERIFY(tabs->setProperty("currentIndex", 2));
-        settle();
         QQuickItem* scene = window()->contentItem();
+        QVERIFY(findItem(scene, u"practiceTab"_s) == nullptr);
+        auto* practiceButton = window()->findChild<QObject*>(u"practiceButton"_s);
+        QVERIFY(practiceButton != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(practiceButton, "clicked"));
+        settle();
+        QVERIFY(root->property("practiceMode").toBool());
+        QVERIFY(!root->property("performMode").toBool());
         auto* view = findItem(scene, u"practiceView"_s);
         QVERIFY(view != nullptr && view->isVisible());
+        auto* chartTabs = findItem(scene, u"mainTabs"_s);
+        QVERIFY(chartTabs == nullptr || !chartTabs->isVisible()); // the Edit view is gone
+        auto* bottomKeys = findItem(scene, u"keyboardView"_s);
+        QVERIFY(bottomKeys == nullptr || !bottomKeys->isVisible()); // its own keyboard instead
         QList<QQuickItem*> notes;
         findAll(scene, u"practiceNote"_s, notes);
         QCOMPARE(notes.size(), 28); // 7 chords, 4 notes each
@@ -1179,9 +1186,12 @@ private slots:
         QTRY_VERIFY(middleC->y() > before + 20);
         QTRY_COMPARE(findItem(scene, u"practiceNow"_s)->property("text").toString(), u"C"_s);
         shoot(u"practice-playing"_s);
-        // Another tab: it pauses.
-        QVERIFY(tabs->setProperty("currentIndex", 0));
+        // Back to Edit: it pauses.
+        auto* editButton = window()->findChild<QObject*>(u"editButton"_s);
+        QVERIFY(editButton != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(editButton, "clicked"));
         settle();
+        QVERIFY(!root->property("practiceMode").toBool());
         QVERIFY(!m_session->practice().playing());
     }
 
