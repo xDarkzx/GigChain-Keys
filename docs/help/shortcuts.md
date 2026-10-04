@@ -44,4 +44,4 @@ text box, so typing lyrics never changes song.
 
 Songs, sounds, panic, tap tempo, the backing track and the looper can all be
 learned onto buttons, pads and pedals: see
-[Sound and your keyboard](help:audio-and-midi) and [Loop station](help:looper).
+[Sound and your keyboard](audio-and-midi.md) and [Loop station](looper.md).

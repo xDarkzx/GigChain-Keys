@@ -1229,7 +1229,7 @@ private slots:
         }
 
         // A link to another page goes there.
-        QVERIFY(QMetaObject::invokeMethod(page, "linkActivated", Q_ARG(QString, u"help:charts"_s)));
+        QVERIFY(QMetaObject::invokeMethod(page, "linkActivated", Q_ARG(QString, u"charts.md"_s)));
         QTRY_VERIFY(page->property("markdown").toString().startsWith(u"# Chord charts"_s));
 
         // Search lists the pages holding the words; picking one opens it.

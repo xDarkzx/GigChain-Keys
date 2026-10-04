@@ -34,4 +34,7 @@ GigChain Keys could reasonably protect against them.
 
 ## Supported Versions
 
-Only the latest code on `main` is supported.
+Fixes go into the next release. Only the **latest release** (see
+[Releases](https://github.com/xDarkzx/GigChain-Keys/releases)) and the
+latest code on `main` are supported; please check a problem still happens on
+the latest version before reporting it.

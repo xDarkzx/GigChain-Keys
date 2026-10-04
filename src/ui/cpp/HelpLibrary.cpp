@@ -107,6 +107,17 @@ QString HelpLibrary::page(const QString& id)
     return text;
 }
 
+QString HelpLibrary::topicOfLink(const QString& link)
+{
+    // "charts.md" or "./charts.md" (the guide's own pages, as GitHub links
+    // them too), or the older "help:charts".
+    static const QRegularExpression guidePage(u"^(?:\\./)?([a-z0-9-]+)\\.md$"_s);
+    static const QRegularExpression app(u"^help:([a-z0-9-]+)$"_s);
+    QRegularExpressionMatch match = guidePage.match(link);
+    if (!match.hasMatch()) match = app.match(link);
+    return match.hasMatch() ? match.captured(1) : QString();
+}
+
 QString HelpLibrary::toHtml(const QString& markdown, const QString& linkColour)
 {
     QTextDocument document;

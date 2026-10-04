@@ -5,7 +5,7 @@ onto a piano keyboard, like the piano videos on YouTube. Play each note as it
 lands on its key.
 
 Click **Practice** in the top bar. The current song's chart is used, so the
-song needs chords first: see [Chord charts](help:charts).
+song needs chords first: see [Chord charts](charts.md).
 
 ## What you see
 
@@ -45,7 +45,7 @@ Each chord is played the way a pianist would, with two hands:
 
 The tempo comes from the song (right-click the song > **Tempo…**), and each
 section's length from its bars in the chart. See
-[Sections, tempo and backing tracks](help:sections-and-tempo). There is one
+[Sections, tempo and backing tracks](sections-and-tempo.md). There is one
 bar of count-in before the first chord.
 
 ## Tips

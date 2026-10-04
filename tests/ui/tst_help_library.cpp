@@ -47,11 +47,14 @@ private slots:
         QCOMPARE(list.first(), u"getting-started"_s); // what opens first
     }
 
-    // A link to another page ([text](help:practice)) always leads somewhere.
+    // A link to another page ([text](practice.md): it works on GitHub as
+    // well as in the app) always leads somewhere; no app-only links.
     void everyLinkLeadsToAPage()
     {
         const QStringList list = ids();
-        static const QRegularExpression link(u"\\]\\(help:([a-z0-9-]+)\\)"_s);
+        static const QRegularExpression appOnly(u"\\]\\(help:"_s);
+        for (const QString& id : list) QVERIFY2(!appOnly.match(HelpLibrary::page(id)).hasMatch(), qPrintable(id));
+        static const QRegularExpression link(u"\\]\\(([a-z0-9-]+)\\.md\\)"_s);
         int links = 0;
         for (const QString& id : list) {
             auto it = link.globalMatch(HelpLibrary::page(id));
@@ -62,6 +65,16 @@ private slots:
             }
         }
         QVERIFY(links >= 10); // the pages lead to each other
+    }
+
+    // A link in a page names the topic it leads to (or none: a web link).
+    void aLinkNamesItsTopic()
+    {
+        QCOMPARE(HelpLibrary::topicOfLink(u"charts.md"_s), u"charts"_s);
+        QCOMPARE(HelpLibrary::topicOfLink(u"./practice.md"_s), u"practice"_s);
+        QCOMPARE(HelpLibrary::topicOfLink(u"help:looper"_s), u"looper"_s);
+        QCOMPARE(HelpLibrary::topicOfLink(u"https://github.com/x/y/README.md"_s), QString());
+        QCOMPARE(HelpLibrary::topicOfLink(u"../BUILDING.md"_s), QString()); // outside the guide
     }
 
     // An unknown page says so (never a blank window).

@@ -23,6 +23,9 @@ public:
     Q_INVOKABLE [[nodiscard]] static QVariantList topics();
     // A page's Markdown; a page that cannot be read says why.
     Q_INVOKABLE [[nodiscard]] static QString page(const QString& id);
+    // The topic a link in a page leads to ("charts.md", "help:charts"), or
+    // "" for a link elsewhere (a web page, a file outside the guide).
+    Q_INVOKABLE [[nodiscard]] static QString topicOfLink(const QString& link);
     // A page's Markdown as HTML for a Text item, its links in `linkColour`.
     Q_INVOKABLE [[nodiscard]] static QString toHtml(const QString& markdown, const QString& linkColour);
     // The pages holding every word (any case), those with a word in their

@@ -31,7 +31,7 @@ song.
 
 Add a second channel and both play together: a piano with strings under it,
 say. To give each its own part of the keyboard (a split) or have them answer
-to how hard you play (a layer), see [Splits, layers and knobs](help:splits-layers-knobs).
+to how hard you play (a layer), see [Splits, layers and knobs](splits-layers-knobs.md).
 
 ## The channel strip
 
@@ -55,7 +55,7 @@ At the right end of the mixer, the **Master** strip is everything together.
 Its effect slots (**Add an effect on everything**: an EQ, a compressor…) are
 kept with your rig, not with the setlist, so they are the same in every song.
 The **LIM** light shows the safety limiter at work (see
-[Sound and your keyboard](help:audio-and-midi)).
+[Sound and your keyboard](audio-and-midi.md)).
 
 ## A microphone or a guitar
 

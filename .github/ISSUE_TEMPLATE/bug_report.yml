@@ -1,0 +1,84 @@
+name: Bug report
+description: Something does not work, crashes, or sounds wrong
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please check
+        [Troubleshooting](https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/troubleshooting.md)
+        and the [open issues](https://github.com/xDarkzx/GigChain-Keys/issues) first.
+        **Security problems:** do not report them here; see SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, step by step, and what went wrong.
+      placeholder: |
+        1. Opened my setlist
+        2. Switched to song 3 with the pedal
+        3. The piano stopped making sound
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: GigChain Keys version
+      description: Help → About shows it.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: audio
+    attributes:
+      label: Audio interface and driver
+      description: From Settings → Audio.
+      placeholder: "Focusrite Scarlett Solo, ASIO, 256 samples"
+  - type: input
+    id: midi
+    attributes:
+      label: MIDI keyboard and controllers
+      placeholder: "Nektar Impact GXP61, sustain pedal"
+  - type: textarea
+    id: plugins
+    attributes:
+      label: Plugins involved
+      description: The instruments and effects in the song, with their versions, when the problem is with one.
+  - type: dropdown
+    id: how-often
+    attributes:
+      label: How often does it happen?
+      options:
+        - Every time
+        - Often
+        - Once or rarely
+  - type: textarea
+    id: log
+    attributes:
+      label: Log file
+      description: |
+        Drag the log file here. Windows: `%LOCALAPPDATA%\GigChain\GigChain Keys\logs\GigChainKeys.log`.
+        After a crash, attach the report from the `crash-reports` folder next to it.
+        (Other systems: see SUPPORT.md.)
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else?
+      description: Screenshots, a setlist that shows the problem, a short video.

@@ -35,7 +35,7 @@ lit, turn something down.
 Under **Audio inputs**, choose the device your mic or guitar is plugged into.
 Then in the mixer click **Audio input** (after the last channel) to add a
 channel that plays it, with its own effects. See
-[Instruments and effects](help:instruments).
+[Instruments and effects](instruments.md).
 
 ## MIDI: where the notes come from
 
@@ -53,16 +53,16 @@ soon as it is plugged in. Set it to **Enabled**.
 
 Under **Pedals and pads** you can change songs with your feet: click
 **Learn** beside an action (next song, previous song, panic, tap tempo…),
-then press the pedal, pad or button. Done. See [Perform mode](help:perform).
+then press the pedal, pad or button. Done. See [Perform mode](perform.md).
 
 ### MIDI clock
 
 **Send clock to** sends the song's tempo to a drum machine or another app.
 **Follow the tempo of a MIDI clock coming in** lets a drum machine or DAW
-lead instead. See [Sections, tempo and backing tracks](help:sections-and-tempo).
+lead instead. See [Sections, tempo and backing tracks](sections-and-tempo.md).
 
 ## Check it works
 
-Load an instrument (see [Instruments and effects](help:instruments)) and
+Load an instrument (see [Instruments and effects](instruments.md)) and
 play. You should see the **MIDI** light flash, the channel's meter move and
-hear the sound. If not, see [Troubleshooting](help:troubleshooting).
+hear the sound. If not, see [Troubleshooting](troubleshooting.md).

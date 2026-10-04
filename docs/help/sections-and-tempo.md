@@ -45,7 +45,7 @@ chart.
 - The **BPM** display in the top bar shows the tempo. Plugins with tempo-synced
   delays or arpeggiators follow it.
 - **Tap** sets the tempo from your taps (a pedal can tap too: see
-  [Sound and your keyboard](help:audio-and-midi)).
+  [Sound and your keyboard](audio-and-midi.md)).
 - The **metronome** button switches the click on and off.
 - A song's tempo (right-click the song > **Tempo…**) is set whenever the song
   is chosen. *0* means "leave the tempo as it is".
@@ -59,4 +59,4 @@ own **Play**, so the sound changes stay in time with it.
 
 **Remove Backing Track** in the same menu takes it off.
 
-See also: [Chord charts](help:charts), [Perform mode](help:perform).
+See also: [Chord charts](charts.md), [Perform mode](perform.md).

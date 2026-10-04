@@ -24,28 +24,28 @@ Press **Tab** to swap between Edit and Perform, and **Esc** to come back to Edit
 
 1. **Check your sound and keyboard.** Open **Settings** (top right, or
    **Ctrl+,**). Under **Audio**, pick your audio interface. Under **MIDI**,
-   switch on your keyboard. See [Sound and your keyboard](help:audio-and-midi).
+   switch on your keyboard. See [Sound and your keyboard](audio-and-midi.md).
 2. **Start a setlist.** On the start screen click **New setlist** (or
    **File > New**). A setlist is your night's songs, saved as one file.
 3. **Add a song.** In the **Setlist** panel on the left, click **+ Song**.
-   Double-click it to give it a name. See [Setlists and songs](help:setlists-and-songs).
+   Double-click it to give it a name. See [Setlists and songs](setlists-and-songs.md).
 4. **Load an instrument.** Open the **Instruments** tab of the left panel and
    double-click a piano or synth (or drag it onto the mixer at the bottom).
-   Play a note: you should hear it. See [Instruments and effects](help:instruments).
+   Play a note: you should hear it. See [Instruments and effects](instruments.md).
 5. **Add the chords.** In the **Chart** tab, paste a song's chords and lyrics
    from any chord website (**Ctrl+V**), or type them in. See
-   [Chord charts](help:charts).
+   [Chord charts](charts.md).
 
 Then press **File > Save** (**Ctrl+S**). Next time, the setlist opens
 with every sound loaded and ready.
 
 ## Where to go next
 
-- Going on stage? Read [Perform mode](help:perform).
-- Learning a song? Read [Practice mode](help:practice).
+- Going on stage? Read [Perform mode](perform.md).
+- Learning a song? Read [Practice mode](practice.md).
 - Want a song's sound to change between verse and chorus? Read
-  [Sections, tempo and backing tracks](help:sections-and-tempo).
+  [Sections, tempo and backing tracks](sections-and-tempo.md).
 - No sound, crackles, or a plugin that will not load? See
-  [Troubleshooting](help:troubleshooting).
+  [Troubleshooting](troubleshooting.md).
 
 Press **F1** at any time to open this guide at the page for what you are doing.

@@ -1,0 +1,29 @@
+name: Feature request
+description: An idea that would make GigChain Keys better on stage or in practice
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome. Check the [roadmap](https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/ROADMAP.md)
+        first: it may already be planned.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The situation on stage or at practice, and what gets in the way today.
+      placeholder: "On a gig I need to switch from piano to organ in the middle of a chorus without looking..."
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: How you picture it working.
+    validations:
+      required: true
+  - type: textarea
+    id: elsewhere
+    attributes:
+      label: Seen it elsewhere?
+      description: How MainStage, Gig Performer, a hardware keyboard or another app does it, if you know.

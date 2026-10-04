@@ -1,157 +1,183 @@
-# GigChain Keys
+<p align="center">
+  <img src="branding/splash.png" alt="GigChain Keys" width="560">
+</p>
 
-An open-source live-performance host for keyboard players, in the spirit of
-MainStage, for Windows, Linux and macOS (Apple Silicon, in testing). Load the VST3 instruments and effects already
-installed on your machine, build a setlist of songs and patches, and switch
-sounds instantly on stage.
+<h3 align="center">Your whole keyboard rig on stage: sounds, setlist, chord charts and practice, in one free app.</h3>
 
-> **Status: early development.** It plays, but file formats and features
-> will still change.
+<p align="center">
+  <a href="https://github.com/xDarkzx/GigChain-Keys/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/xDarkzx/GigChain-Keys?include_prereleases&label=download&color=4a8fe7"></a>
+  <a href="https://github.com/xDarkzx/GigChain-Keys/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/xDarkzx/GigChain-Keys/total?color=3fb950"></a>
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4">
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20(beta)-555">
+  <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/license-GPL--3.0-blue"></a>
+</p>
 
-## What works today
+<p align="center">
+  <a href="#download"><b>Download</b></a> ·
+  <a href="docs/help/getting-started.md"><b>Getting started</b></a> ·
+  <a href="docs/help/README.md"><b>User guide</b></a> ·
+  <a href="SUPPORT.md"><b>Get help</b></a> ·
+  <a href="CHANGELOG.md"><b>What's new</b></a>
+</p>
 
-- **Setlists:** songs and patches, with rename, reorder, duplicate and
-  delete. Space / arrow keys switch patches; Tab enters full-screen
-  **Perform** mode.
-- **VST3 hosting:** each installed instrument's own window shows in the main
-  area, shrunk to fit when the area is smaller and never cut off, keeping
-  its own shape.
-- **Mixer:** Logic-style channel strips along the bottom, each with an
-  instrument slot, effect slots (bypass, replace, remove), pan, volume, meters,
-  mute and solo. Right-click a strip for everything else.
-- **Instruments browser:** your installed VST3 instruments, shown with the
-  artwork each plugin installs in its own folder.
-- **Settings** (Ctrl+,):
-  - **Audio:** Windows Audio (WASAPI) or ASIO, device, sample rate and buffer
-    size. Plugins are re-prepared, not reloaded, when these change.
-  - **MIDI:** each input with its own mode and channel. By default only the
-    first port of a keyboard plays; plugged-in keyboards are picked up
-    automatically.
+---
 
-## What's planned
+**GigChain Keys** is a live-performance host for keyboard players, in the
+spirit of MainStage and Gig Performer. It plays the VST3 instruments and
+effects already on your computer, keeps every song of the night in a
+**setlist** with its own sounds, shows each song's **chords and lyrics**
+big enough to read from the keys, and turns those chords into notes falling
+onto a keyboard so you can **practise** them.
 
-Instrument toggles and song sections, a loop station, EDM stack presets with
-built-in sidechain, a tablet remote for the music stand, and macOS and Linux
-versions: see
-[docs/ROADMAP.md](docs/ROADMAP.md).
+It is **free**, with no adverts, no licence keys and no nag screens. It is
+open source too, under the GPL.
 
-## Building
+> **Beta.** GigChain Keys is young. It is used and tested on real rigs, but
+> features and file formats can still change between versions. Keep a copy
+> of your setlists, and please [tell us what breaks](SUPPORT.md).
 
-Requirements (Windows 10/11, x64):
+<p align="center">
+  <img src="docs/images/edit.png" alt="Edit mode: a song's chart with its sections, the mixer and the loop station" width="900">
+</p>
 
-- Visual Studio 2022 or newer with the C++ workload
-- CMake 3.24+ and Ninja (both ship with Visual Studio)
-- Qt 6.10 for MSVC 2022 x64 (`msvc2022_64`)
-- [vcpkg](https://github.com/microsoft/vcpkg); RtAudio (with ASIO), RtMidi
-  and the other libraries are installed from `vcpkg.json`. The Steinberg
-  VST3 SDK is fetched by CMake.
+## Download
 
-```powershell
-$env:VCPKG_ROOT  = 'C:\path\to\vcpkg'
-$env:QT_ROOT_DIR = 'C:\Qt\6.10.2\msvc2022_64'
-.\tools\build.ps1 -Preset debug     # configure, build and run every test
-.\tools\run.ps1                     # start GigChain Keys
-```
+| System | Download | Notes |
+|---|---|---|
+| **Windows 10 / 11** (64-bit) | [**Installer** (`GigChainKeys-<version>-x64-setup.exe`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Recommended. Installs for you or for everyone, upgrades in place, uninstalls from *Apps & features*. |
+| | [Portable zip (`GigChainKeys-<version>-x64-portable.zip`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | No install: unzip anywhere (a USB stick, too) and run `GigChainKeys.exe`. |
+| **macOS 13+** (Apple Silicon) | [Disk image (`GigChain Keys-<version>-arm64.dmg`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Beta. See *First start on a Mac* below. |
+| **Linux** | [Build from source](docs/BUILDING.md#linux-and-wsl) | Ubuntu 22.04+ and similar. A ready-made package is planned. |
 
-Other presets: `release`, and `asan` (AddressSanitizer). To build and test
-one target, pass `-Target <name> -Filter <test>`.
+All versions, with their release notes, are on the
+[**Releases**](https://github.com/xDarkzx/GigChain-Keys/releases) page.
 
-### Linux (and WSL)
+### First start on Windows
 
-Ubuntu 22.04 or newer, x64; on Windows, WSL 2 with WSLg (it shows Linux
-windows and plays their sound). The first time:
+The installer is not code-signed yet, so Windows SmartScreen may say
+*"Windows protected your PC"*. Click **More info**, then **Run anyway**.
+This happens once.
 
-```bash
-sudo bash tools/setup-linux.sh --system   # packages, GCC 13, Clang 15 and 18, Surge XT (a free test instrument)
-bash tools/setup-linux.sh --user          # CMake, Qt 6.10.2, vcpkg
-bash tools/setup-linux.sh --check         # what is installed
-```
+### First start on a Mac
 
-Then:
+The app is not notarized by Apple yet. Open the disk image, drag
+**GigChain Keys** to *Applications*, and open it once. When macOS refuses,
+go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
-```bash
-bash tools/verify.sh        # configure, build and run every test (linux-debug)
-bash tools/run.sh           # start GigChain Keys (linux-release)
-bash tools/soak.sh 20       # the 20-minute soak, in a terminal of its own
-bash tools/fuzz.sh 300      # the fuzzers, 5 minutes each (Clang)
-```
+### What you need
 
-Presets: `linux-debug`, `linux-release`, `linux-clang` (Clang 18, `-Werror`),
-`linux-asan` (AddressSanitizer and UndefinedBehaviorSanitizer), `linux-fuzz`.
-Builds go to
-`~/.cache/gigchain/build/<preset>` (the machine's own disk, fast even when
-the sources are on a Windows drive). Audio: PulseAudio (also on PipeWire, and
-in WSLg), JACK or ALSA; MIDI: ALSA (WSL has no MIDI devices). Plugin windows
-are X11 windows, also on Wayland desktops.
+- **Instruments:** any VST3 instruments and effects (free ones such as
+  Surge XT, Dexed or Vital work well). GigChain Keys finds them in the
+  usual VST3 folders by itself.
+- **A MIDI keyboard** (USB or a MIDI interface). A sustain pedal, knobs and
+  pads are used when present.
+- **An audio interface** is recommended for low latency (ASIO on Windows).
+  Your computer's own sound works too.
 
-What differs by system lives in per-system files (`*_win.cpp`,
-`*_posix.cpp`, `*_linux.cpp`, `*_mac.cpp`), mostly in `src/platform`; a
-test fails if system code appears anywhere else.
+## What it does
 
-### macOS (Apple Silicon)
-
-Apple Silicon Macs on macOS 13 or newer. The Mac build runs on GitHub's Mac
-machines (`.github/workflows/mac.yml`): **Actions → Mac → Run workflow**, or
-push a release tag (`v*`). It builds with the `mac-release` preset, runs
-every test (with Surge XT from Homebrew as the test instrument), and makes
-`GigChain Keys-<version>-arm64.dmg` (the run's artifact): the app with Qt
-inside, ad-hoc signed, not notarized. Testers open it once through **System
-Settings → Privacy & Security → Open Anyway**
-([docs/testing/mac-checklist.md](docs/testing/mac-checklist.md)).
-
-On a Mac of your own: Xcode (or its command-line tools), Qt 6.10.2 for macOS,
-vcpkg, CMake and Ninja; then `cmake --preset mac-release`,
-`cmake --build --preset mac-release`, `ctest --preset mac-release`, and
-`bash tools/package-mac.sh build/mac-release <version>` for the `.dmg`.
-Audio: Core Audio; MIDI: Core MIDI; plugins from `~/Library/Audio/Plug-Ins/VST3`
-and `/Library/Audio/Plug-Ins/VST3`.
-
-Before any Mac build, `linux-clang` (Clang 18, Apple's compiler family)
-checks the code at home: `bash tools/setup-linux.sh --system` installs it.
-
-### The installer
-
-```powershell
-winget install JRSoftware.InnoSetup   # once
-.\tools\package.ps1                   # Release build, every test, then dist\
-```
-
-`dist\` then holds `GigChainKeys-<version>-x64-setup.exe` (the Windows
-installer: for everyone or just you, upgrades in place, opens `.gigchain`
-setlists, uninstalls from Apps & Features) and a portable zip of the same
-files. The installer is described in [`installer/setup.iss`](installer/setup.iss);
-its pictures come from `tools\make-installer-art.ps1`.
-
-## Name and branding
-
-The product's name, version, executable, settings folder, setlist file
-extension and splash picture all come from **[`branding.cmake`](branding.cmake)**.
-To rename, edit that file (and swap `branding/splash.png`, which has the name
-in it) and rebuild. A test fails if a product name is typed anywhere else in
-the source. Settings saved under earlier names carry over on first start.
-
-## Layout
-
-| Folder | What lives there |
+| | |
 |---|---|
-| `src/core` | Setlist model, JSON files, navigation and editing, logging |
-| `src/platform` | What differs by system (crash reports, one app at a time, plugin folders, windows...): one file per system |
-| `src/engine` | Audio and MIDI devices, the render graph, VST3 hosting; the only code that touches the SDKs |
-| `src/ui` | The QML interface and the C++ models behind it |
-| `src/app` | Startup: wires the engine, settings and UI together |
-| `tests` | Qt Test suites for every module |
-| `docs/superpowers` | Design specs and implementation plans |
+| 🎹 **Plays your plugins** | Hosts VST3 instruments and effects with their own windows. Every sound in the setlist is loaded up front, so switching songs is instant, and held notes and reverb tails ring on across the change. |
+| 🎚️ **A real mixer** | Logic-style channel strips: instrument, effects, pan, fader, meters, mute and solo. A master strip with its own effects, and a safety limiter before your speakers. |
+| 🎼 **Splits, layers and knobs** | Key zones, transpose and velocity layers per instrument. Learn any knob, fader or pedal on your keyboard to any plugin setting. |
+| 📜 **Setlists** | All the night's songs in one file, in order. Change songs with the keyboard, a pedal or a pad. Undo for every edit. |
+| 📝 **Chord charts** | Paste a song from any chord website and it is cleaned up and placed over the words. Edit it where you read it: click above a word to add a chord, drag chords onto words. |
+| 🔀 **Sections that change the sound** | Each part of the chart (verse, chorus, solo…) picks which instruments play. They change by themselves, counted in bars or **following the chords you play**. |
+| 🎤 **Perform mode** | Full screen, built for the stage: the chart big and clear, the song's parts as tiles, nothing you can knock by accident. |
+| 🔁 **Loop station** | Record a loop of any instrument, in time with the song, and layer on top: street-performer style, from buttons on your keyboard. |
+| 🎓 **Practice mode** | The song's chords fall onto a keyboard as glowing notes, YouTube-piano style. *Listen*, *Play along*, or *Wait for me*, slowed down and looped. |
+| 🥁 **Tempo, click and backing tracks** | A tempo per song, tap tempo, a click, MIDI clock in and out, and a backing track (WAV, MP3, FLAC…) per song. |
+| 🛟 **Built not to fail** | Plugins are scanned in a separate process; a plugin that crashes while loading is switched off next time; an unplugged keyboard or audio interface comes back by itself. |
 
-## Contributing
+<p align="center">
+  <img src="docs/images/practice.png" alt="Practice mode: the chords falling onto a keyboard" width="900">
+</p>
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: see
-[SECURITY.md](SECURITY.md).
+## Getting started
 
-## License
+1. [Download](#download) and install GigChain Keys, then start it.
+2. Open **Settings** (top right) and choose your audio device and MIDI keyboard.
+3. Click **New setlist**, then **+ Song**.
+4. Open the **Instruments** tab on the left and double-click an instrument. Play!
+5. Paste the song's chords into the **Chart** tab, then try **Perform** and **Practice**.
 
-GigChain Keys is licensed under the **GNU General Public License v3.0** — see
-[LICENSE](LICENSE). It builds on Qt (LGPL-3.0), the Steinberg VST3 SDK (MIT),
-the Steinberg ASIO SDK (GPL-3.0), RtAudio and RtMidi (MIT).
+The [**Getting started**](docs/help/getting-started.md) page walks through
+it step by step. Inside the app, press **F1** (or click **Help**) at any time.
+
+## Documentation
+
+The user guide is built into the app (**Help → User guide**, or **F1**) and
+is also here on GitHub:
+
+| | |
+|---|---|
+| **Start here** | [Getting started](docs/help/getting-started.md) · [Sound and your keyboard](docs/help/audio-and-midi.md) |
+| **Your setlist** | [Setlists and songs](docs/help/setlists-and-songs.md) · [Instruments and effects](docs/help/instruments.md) · [Splits, layers and knobs](docs/help/splits-layers-knobs.md) |
+| **Songs and charts** | [Chord charts](docs/help/charts.md) · [Sections, tempo and backing tracks](docs/help/sections-and-tempo.md) |
+| **On stage** | [Perform mode](docs/help/perform.md) · [Loop station](docs/help/looper.md) |
+| **Practice** | [Practice mode](docs/help/practice.md) |
+| **Reference** | [Keyboard shortcuts](docs/help/shortcuts.md) · [Troubleshooting](docs/help/troubleshooting.md) |
+
+<p align="center">
+  <img src="docs/images/user-guide.png" alt="The user guide inside the app" width="700">
+</p>
+
+## Help and support
+
+- **Something not working?** Start with [Troubleshooting](docs/help/troubleshooting.md).
+- **Found a bug?** [Report it](https://github.com/xDarkzx/GigChain-Keys/issues/new/choose). The [support page](SUPPORT.md) says what to include (and where the log file is).
+- **Have an idea?** [Suggest a feature](https://github.com/xDarkzx/GigChain-Keys/issues/new/choose).
+- **A security problem?** Please report it privately: see [SECURITY.md](SECURITY.md).
+
+### Support the project
+
+GigChain Keys is free and stays free. If it helps your gigs, a donation keeps
+it going and pays for code signing, so Windows and macOS stop warning about
+it. Use the **Sponsor** button at the top of this page.
+
+## Versions
+
+GigChain Keys uses numbered versions: **0.x** releases are betas. Each
+release lists what is new and what was fixed in the
+[**changelog**](CHANGELOG.md) and on the
+[Releases](https://github.com/xDarkzx/GigChain-Keys/releases) page.
+
+| Version | Status |
+|---|---|
+| 0.1 | First public beta: Windows; macOS (Apple Silicon) in testing |
+
+What is coming next is in the [**roadmap**](docs/ROADMAP.md): an
+installer for Linux, bundled free instruments, a tablet remote for the music
+stand, melody and intro practice, and more.
+
+## For developers
+
+GigChain Keys is written in C++20 with Qt 6 (QML) and hosts plugins with the
+Steinberg VST3 SDK; audio and MIDI go through RtAudio and RtMidi.
+
+- [**Building from source**](docs/BUILDING.md): Windows, Linux and macOS
+- [**Contributing**](CONTRIBUTING.md): how to send a fix, and the code rules
+- [**Releasing**](docs/RELEASING.md): how a version is built and published
+- [**Roadmap**](docs/ROADMAP.md) and the design notes in [`docs/superpowers`](docs/superpowers)
+
+Everyone taking part is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).
+
+## License and credits
+
+GigChain Keys is free software: you can share and change it under the terms
+of the **GNU General Public License, version 3 or later** ([LICENSE](LICENSE)).
+
+It is built with:
+
+- [Qt](https://www.qt.io/) (LGPL-3.0)
+- the [Steinberg VST3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT)
+- the Steinberg ASIO SDK (GPL-3.0)
+- [RtAudio](https://github.com/thestk/rtaudio) and [RtMidi](https://github.com/thestk/rtmidi) (MIT-style)
+
+The full notices ship with the app (`THIRD-PARTY-NOTICES.txt`).
 
 VST is a registered trademark of Steinberg Media Technologies GmbH. ASIO is a
-trademark of Steinberg Media Technologies GmbH.
+trademark of Steinberg Media Technologies GmbH. MainStage, Logic and Gig
+Performer are trademarks of their owners; GigChain Keys is not affiliated with
+them.

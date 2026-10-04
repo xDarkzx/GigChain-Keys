@@ -53,4 +53,4 @@ loop you record set the tempo for the others.
 instrument lit in the mixer; holding Record and Loop together clears its loop.
 A knob can **choose the instrument**. These are kept with the setlist.
 
-See also: [Sections, tempo and backing tracks](help:sections-and-tempo).
+See also: [Sections, tempo and backing tracks](sections-and-tempo.md).
