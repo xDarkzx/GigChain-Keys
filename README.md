@@ -8,7 +8,8 @@
   <a href="https://github.com/xDarkzx/GigChain-Keys/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/xDarkzx/GigChain-Keys?include_prereleases&label=download&color=4a8fe7"></a>
   <a href="https://github.com/xDarkzx/GigChain-Keys/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/xDarkzx/GigChain-Keys/total?color=3fb950"></a>
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4">
-  <img alt="macOS" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20(beta)-555">
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-Apple%20Silicon-555">
+  <img alt="Stage: alpha" src="https://img.shields.io/badge/stage-public%20alpha-e0a526">
   <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/license-GPL--3.0-blue"></a>
 </p>
 
@@ -33,9 +34,15 @@ onto a keyboard so you can **practise** them.
 It is **free**, with no adverts, no licence keys and no nag screens. It is
 open source too, under the GPL.
 
-> **Beta.** GigChain Keys is young. It is used and tested on real rigs, but
-> features and file formats can still change between versions. Keep a copy
-> of your setlists, and please [tell us what breaks](SUPPORT.md).
+> [!IMPORTANT]
+> **Public alpha: testers wanted.** GigChain Keys is in early testing. It
+> works and is played on real rigs, but it has not yet met the wide range of
+> computers, audio interfaces, keyboards and plugins out there. Features and
+> setlist files may still change between versions, and you may meet bugs.
+> Please try it at home and in rehearsal before trusting it on a gig, keep
+> copies of your setlists, and
+> [**tell us what works and what breaks**](https://github.com/xDarkzx/GigChain-Keys/issues/new/choose).
+> Your feedback decides what gets fixed and built next.
 
 <p align="center">
   <img src="docs/images/edit.png" alt="Edit mode: a song's chart with its sections, the mixer and the loop station" width="900">
@@ -47,17 +54,35 @@ open source too, under the GPL.
 |---|---|---|
 | **Windows 10 / 11** (64-bit) | [**Installer** (`GigChainKeys-<version>-x64-setup.exe`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Recommended. Installs for you or for everyone, upgrades in place, uninstalls from *Apps & features*. |
 | | [Portable zip (`GigChainKeys-<version>-x64-portable.zip`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | No install: unzip anywhere (a USB stick, too) and run `GigChainKeys.exe`. |
-| **macOS 13+** (Apple Silicon) | [Disk image (`GigChainKeys-<version>-arm64.dmg`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Beta. See *First start on a Mac* below. |
+| **macOS 13+** (Apple Silicon) | [Disk image (`GigChainKeys-<version>-arm64.dmg`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Less tested than Windows: Mac reports are especially welcome. See *First start on a Mac* below. |
 | **Linux** | [Build from source](docs/BUILDING.md#linux-and-wsl) | Ubuntu 22.04+ and similar. A ready-made package is planned. |
 
 All versions, with their release notes, are on the
 [**Releases**](https://github.com/xDarkzx/GigChain-Keys/releases) page.
 
+### About code signing
+
+During the alpha, the Windows installer and the macOS app are **not
+code-signed**. Code-signing certificates carry a yearly cost, and they will
+be added as the project grows and community interest and
+[sponsorship](#support-the-project) make that possible. Until then, Windows
+and macOS show a one-time warning on first start; the steps below get past
+it. The builds are made from the source in this repository by its public
+build scripts, and every release lists the **SHA-256 checksum** of each file
+(`SHA256SUMS.txt`), so you can check your download is the genuine one:
+
+```powershell
+Get-FileHash .\GigChainKeys-0.1.0-x64-setup.exe -Algorithm SHA256   # Windows (PowerShell)
+```
+
+```bash
+shasum -a 256 GigChainKeys-0.1.0-arm64.dmg                          # macOS (Terminal)
+```
+
 ### First start on Windows
 
-The installer is not code-signed yet, so Windows SmartScreen may say
-*"Windows protected your PC"*. Click **More info**, then **Run anyway**.
-This happens once.
+Windows SmartScreen may say *"Windows protected your PC"*. Click
+**More info**, then **Run anyway**. This happens once.
 
 ### First start on a Mac
 
@@ -135,8 +160,8 @@ is also here on GitHub:
 
 GigChain Keys is free and stays free: no adverts, no paid version, no keys.
 If it helps your gigs, a donation keeps it going. It pays for the time to
-fix and build things, and for code signing so Windows and macOS stop warning
-about the download.
+fix and build things, and the first goal is **code-signing certificates**,
+so Windows and macOS install GigChain Keys without a warning.
 
 <p>
   <a href="https://github.com/sponsors/xDarkzx"><img alt="Sponsor GigChain Keys on GitHub" src="https://img.shields.io/badge/♥%20Sponsor-GigChain%20Keys-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
@@ -147,14 +172,19 @@ One-off or monthly, any amount, through
 
 ## Versions
 
-GigChain Keys uses numbered versions: **0.x** releases are betas. Each
-release lists what is new and what was fixed in the
-[**changelog**](CHANGELOG.md) and on the
+GigChain Keys uses numbered versions. Each release lists what is new and
+what was fixed in the [**changelog**](CHANGELOG.md) and on the
 [Releases](https://github.com/xDarkzx/GigChain-Keys/releases) page.
+
+| Stage | Versions | What it means |
+|---|---|---|
+| **Alpha** (now) | 0.1, 0.2… | Open testing. Features still arriving and changing; feedback shapes them. |
+| **Beta** | later 0.x | Feature-complete for 1.0; polishing and fixing. |
+| **Stable** | 1.0 and up | Ready to rely on for gigs; setlist files stay compatible. |
 
 | Version | Status |
 |---|---|
-| 0.1 | First public beta: Windows; macOS (Apple Silicon) in testing |
+| 0.1 | First public alpha: Windows 10/11; macOS (Apple Silicon) |
 
 What is coming next is in the [**roadmap**](docs/ROADMAP.md): an
 installer for Linux, bundled free instruments, a tablet remote for the music

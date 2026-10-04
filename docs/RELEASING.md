@@ -6,9 +6,13 @@ Releases, where the README's **Download** links point.
 ## Version numbers
 
 `MAJOR.MINOR.PATCH`, set in one place: `PRODUCT_VERSION` in
-[`branding.cmake`](../branding.cmake). While the version is **0.x**, every
-release is a **beta** (marked *pre-release* on GitHub). A fix-only release
-raises PATCH (0.1.0 → 0.1.1); new features raise MINOR (0.1 → 0.2).
+[`branding.cmake`](../branding.cmake). A fix-only release raises PATCH
+(0.1.0 → 0.1.1); new features raise MINOR (0.1 → 0.2).
+
+The stage goes in the release's title, not the number (the installer and the
+Mac app need plain numbers): **alpha** now (open testing, features still
+changing), then **beta** (feature-complete for 1.0), then **1.0**. Until 1.0
+every release is marked *pre-release* on GitHub.
 
 The tag is the version with a `v`: `v0.1.0`.
 
@@ -42,27 +46,39 @@ The tag is the version with a `v`: `v0.1.0`.
    finishes, download its artifact (`gh run download <run id>`), and rename
    `GigChain Keys-<version>-arm64.dmg` to `GigChainKeys-<version>-arm64.dmg`
    (GitHub turns spaces in release file names into dots).
-6. **Publish the release** with the notes from the changelog and the three
-   files:
+6. **Checksums:** put the three files in one folder and write
+   `SHA256SUMS.txt` (one `<sha256>  <file name>` line each, as `shasum -a 256`
+   writes it):
 
    ```powershell
-   gh release create v0.1.0 --prerelease --title "GigChain Keys 0.1.0 (beta)" `
+   Get-ChildItem release\* -Exclude SHA256SUMS.txt | ForEach-Object {
+       "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } |
+       Set-Content -Encoding ascii release\SHA256SUMS.txt
+   ```
+
+7. **Publish the release** with the notes from the changelog, the three
+   files and the checksums:
+
+   ```powershell
+   gh release create v0.1.0 --prerelease --title "GigChain Keys 0.1.0 (alpha)" `
        --notes-file notes.md `
-       "dist\GigChainKeys-0.1.0-x64-setup.exe" `
-       "dist\GigChainKeys-0.1.0-x64-portable.zip" `
-       "GigChainKeys-0.1.0-arm64.dmg"
+       release\GigChainKeys-0.1.0-x64-setup.exe `
+       release\GigChainKeys-0.1.0-x64-portable.zip `
+       release\GigChainKeys-0.1.0-arm64.dmg `
+       release\SHA256SUMS.txt
    ```
 
    `notes.md` is that version's section of the changelog, with the
-   *First start* notes from the README (SmartScreen, Open Anyway) under it.
+   *About code signing* and *First start* notes from the README under it.
    Drop `--prerelease` from 1.0 on.
-7. **Check the README links:** the **Download** links open the release page,
+8. **Check the README links:** the **Download** links open the release page,
    and the badge shows the new version.
 
 ## Signing
 
 The installer and the Mac app are not signed yet, so Windows SmartScreen and
-macOS Gatekeeper warn on first start (the README says how to get past them).
-Signing needs a code-signing certificate (Windows) and an Apple Developer ID
-(macOS); donations are meant to pay for them. When they exist, signing goes
+macOS Gatekeeper warn on first start (the README says how to get past them,
+and the checksums let people check their download). Signing needs a
+code-signing certificate (Windows) and an Apple Developer ID (macOS), both
+yearly costs; they come when interest and sponsorship allow. When they exist, signing goes
 into `tools\package.ps1` and the Mac workflow, before the files are uploaded.
