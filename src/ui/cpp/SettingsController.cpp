@@ -39,6 +39,10 @@ const QString kFollowClockKey = u"midi/followClock"_s;
 const QString kMidiNamesKey = u"midi/names"_s;
 constexpr int kMidiNames = 2;
 const QString kLimiterKey = u"master/limiter"_s;
+const QString kChartSizeKey = u"perform/chartTextSize"_s;
+constexpr double kDefaultChartSize = 1.7;
+constexpr double kSmallestChartSize = 1.0;
+constexpr double kLargestChartSize = 3.0;
 const QString kLimiterCeilingKey = u"master/limiterCeilingDb"_s;
 constexpr double kDefaultCeilingDb = -1.0;
 
@@ -487,6 +491,19 @@ void SettingsController::resetToDefaults()
     m_learning = -1;
     m_controlsTouched = true;
     emit changed();
+}
+
+double SettingsController::chartTextSize() const
+{
+    return std::clamp(m_settings.value(kChartSizeKey, kDefaultChartSize).toDouble(), kSmallestChartSize, kLargestChartSize);
+}
+
+void SettingsController::setChartTextSize(double size)
+{
+    const double kept = std::clamp(size, kSmallestChartSize, kLargestChartSize);
+    if (qFuzzyCompare(kept, chartTextSize()) && m_settings.contains(kChartSizeKey)) return;
+    m_settings.setValue(kChartSizeKey, kept);
+    emit chartTextSizeChanged();
 }
 
 void SettingsController::checkInputPermission()

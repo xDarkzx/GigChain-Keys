@@ -16,7 +16,8 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_editorService(engine, m_document),
       m_effectWindows(engine, m_document),
       m_masterBus(engine, m_document, settings, m_effectWindows),
-      m_settingsController(engine, m_document, settings)
+      m_settingsController(engine, m_document, settings),
+      m_practice(engine, m_document)
 {
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_channelModel, &ChannelModel::refreshLevels);
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_settingsController, &SettingsController::pollLearning);
@@ -45,6 +46,7 @@ QVariantMap Session::initialProperties()
         {u"masterBus"_s, QVariant::fromValue(&m_masterBus)},
         {u"settings"_s, QVariant::fromValue(&m_settingsController)},
         {u"loading"_s, QVariant::fromValue(&m_loading)},
+        {u"practice"_s, QVariant::fromValue(&m_practice)},
     };
 }
 

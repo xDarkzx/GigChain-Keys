@@ -21,6 +21,8 @@ add_library(gigchain_core STATIC
     internal/Chart.cpp
     include/gigchain/core/ChartEdit.h
     internal/ChartEdit.cpp
+    include/gigchain/core/Practice.h
+    internal/Practice.cpp
     include/gigchain/core/Chords.h
     internal/Chords.cpp
     include/gigchain/core/SongMap.h

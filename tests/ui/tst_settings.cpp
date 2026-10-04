@@ -376,6 +376,27 @@ private slots:
         QCOMPARE(m_settings->value(u"audio/bufferFrames"_s).toInt(), 128);
     }
 
+    // The Perform view's chart size (A−/A+): kept at once, remembered at the
+    // next start, and never too small to read or too big to fit.
+    void theChartSizeIsRemembered()
+    {
+        {
+            SettingsController settings(*m_engine, *m_doc, *m_settings);
+            QCOMPARE(settings.chartTextSize(), 1.7); // the stage size, from the first start
+            QSignalSpy changed(&settings, &SettingsController::chartTextSizeChanged);
+            settings.setChartTextSize(2.2);
+            QCOMPARE(changed.size(), 1);
+            QCOMPARE(settings.chartTextSize(), 2.2);
+            settings.setChartTextSize(0.2);
+            QCOMPARE(settings.chartTextSize(), 1.0);
+            settings.setChartTextSize(9.0);
+            QCOMPARE(settings.chartTextSize(), 3.0);
+            settings.setChartTextSize(2.4);
+        }
+        SettingsController nextStart(*m_engine, *m_doc, *m_settings);
+        QCOMPARE(nextStart.chartTextSize(), 2.4);
+    }
+
     // ---- Hearing the audio inputs (the Mac asks the player; refused, its
     // inputs are silent without any error, so the app says so)
 

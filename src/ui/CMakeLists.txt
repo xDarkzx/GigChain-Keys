@@ -15,6 +15,7 @@ qt_add_qml_module(gigchain_ui
         cpp/Notifications.h cpp/Notifications.cpp
         cpp/SettingsController.h cpp/SettingsController.cpp
         cpp/InputPermission.h cpp/InputPermission.cpp
+        cpp/PracticeController.h cpp/PracticeController.cpp
         cpp/StartupProgress.h cpp/StartupProgress.cpp
         cpp/StageQuips.h cpp/StageQuips.cpp
         cpp/FreezeWatchdog.h cpp/FreezeWatchdog.cpp
@@ -83,6 +84,7 @@ qt_add_qml_module(gigchain_ui
         ChartSegment.qml
         LiveChartLine.qml
         ChordDragSource.qml
+        PracticeView.qml
         LooperCell.qml
         LoopsPill.qml
         LoopControlsDialog.qml

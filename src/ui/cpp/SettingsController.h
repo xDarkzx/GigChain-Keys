@@ -52,6 +52,9 @@ class SettingsController : public QObject
     Q_PROPERTY(QString error READ error NOTIFY changed)
     // General: open the last setlist on start instead of the start screen.
     Q_PROPERTY(bool reopenLastSetlist READ reopenLastSetlist WRITE setReopenLastSetlist NOTIFY changed)
+    // The Perform view's chart size (A−/A+): kept at once (not with Apply),
+    // 1.0 to 3.0 times the edit view's.
+    Q_PROPERTY(double chartTextSize READ chartTextSize WRITE setChartTextSize NOTIFY chartTextSizeChanged)
     // Audio: the safety limiter, last before the output.
     Q_PROPERTY(bool limiterEnabled READ limiterEnabled WRITE setLimiterEnabled NOTIFY changed)
     Q_PROPERTY(double limiterCeilingDb READ limiterCeilingDb WRITE setLimiterCeilingDb NOTIFY changed)
@@ -97,6 +100,8 @@ public:
     [[nodiscard]] QString running() const { return m_running; }
     [[nodiscard]] QString error() const { return m_error; }
     [[nodiscard]] bool reopenLastSetlist() const { return m_reopenLast; }
+    [[nodiscard]] double chartTextSize() const;
+    void setChartTextSize(double size);
     void setReopenLastSetlist(bool reopen);
     [[nodiscard]] bool limiterEnabled() const { return m_limiterOn; }
     void setLimiterEnabled(bool on);
@@ -144,6 +149,7 @@ public:
 
 signals:
     void changed();
+    void chartTextSizeChanged();
 
 private:
     [[nodiscard]] const engine::AudioOutput* chosenOutput() const;
