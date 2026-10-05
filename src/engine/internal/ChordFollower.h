@@ -39,7 +39,14 @@ public:
     [[nodiscard]] static core::Result<void> check(const ChordFollowMap& map);
 
     // Any thread.
-    void jumpToSection(int section) noexcept { m_jumpAsked.store(section, std::memory_order_release); }
+    void jumpToSection(int section) noexcept { jumpToPart(section, -1); }
+    // That part of the flow (ChordFollowMap::partStarts), when it is a time
+    // `section` comes round; else as jumpToSection(section).
+    void jumpToPart(int section, int part) noexcept
+    {
+        m_partAsked.store(part, std::memory_order_relaxed);
+        m_jumpAsked.store(section, std::memory_order_release); // (publishes the part with it)
+    }
     void reset() noexcept { m_resetAsked.store(true, std::memory_order_release); }
     [[nodiscard]] ChordFollowPosition position() const noexcept;
 
@@ -59,6 +66,9 @@ private:
     // Where to go for `section` (the pedal, a title clicked): the next time
     // the flow comes to it, else its first time; -1: the song has no chords there.
     [[nodiscard]] int startForSection(const ChordFollowMap& map, int section) const noexcept;
+    // Where to go for part `part` of the flow, when it is a time `section`
+    // comes round; else startForSection(section).
+    [[nodiscard]] int startForPart(const ChordFollowMap& map, int section, int part) const noexcept;
     // `key` went down at `now`: whether the chart moved (rules 1 to 3).
     // `memory` and `spread`: kMemorySeconds and kChordSpreadSeconds in samples.
     bool hear(const ChordFollowMap& map, int key, int64_t now, int64_t memory, int64_t spread) noexcept;
@@ -81,6 +91,7 @@ private:
     std::size_t m_handoverCount = 0;
 
     std::atomic<int> m_jumpAsked{-1};
+    std::atomic<int> m_partAsked{-1}; // with m_jumpAsked: which time that section comes round; -1 = the next
     std::atomic<bool> m_resetAsked{false};
     std::atomic<bool> m_outActive{false};
     std::atomic<bool> m_outStarted{false};

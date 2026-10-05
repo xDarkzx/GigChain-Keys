@@ -1229,6 +1229,11 @@ void RealEngine::playSong(int fromSection, bool countIn)
 
 void RealEngine::jumpToSection(int section)
 {
+    jumpToPart(section, -1);
+}
+
+void RealEngine::jumpToPart(int section, int part)
+{
     GC_ONLY_MAIN_THREAD();
     const int count = static_cast<int>(m_sections.sections.size());
     if (section < 0 || section >= count) {
@@ -1236,7 +1241,7 @@ void RealEngine::jumpToSection(int section)
         return;
     }
     m_transport.jump(section);
-    m_follower.jumpToSection(section); // (ignored when not following)
+    m_follower.jumpToPart(section, part); // (ignored when not following)
 }
 
 core::Result<void> RealEngine::setChordFollow(const ChordFollowMap& map)

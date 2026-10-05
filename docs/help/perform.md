@@ -11,7 +11,7 @@ by accident.
   comes **Next**, and ▶ the next song.
 - **The song's parts** as tiles, in the order the song is played (its
   [flow](charts.md): *Verse 1, Chorus, Verse 2, Chorus…*). The one playing is
-  lit; tap a tile to jump there.
+  lit; tap a tile to jump to that very part.
 - **The chart**, filling the screen. While the song plays it scrolls by itself
   so the line you are on stays in the upper third.
 

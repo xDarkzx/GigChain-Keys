@@ -698,8 +698,34 @@ private slots:
         QCOMPARE(m_doc->followPart(5), 2); // the first chorus
         QCOMPARE(m_doc->followPart(7), 3); // the second
         QCOMPARE(m_doc->followPart(99), -1);
+        // A tile tapped: that very part (the second chorus), not the next chorus along.
+        m_doc->selectFlowPart(3);
+        QCOMPARE(m_engine->jumps.back(), 1);
+        QCOMPARE(m_engine->jumpParts.back(), 3);
+        m_doc->selectFlowPart(9);
+        QVERIFY(m_doc->lastError().contains(u"part"_s));
+        // A section renamed in the chart: the flow keeps to it.
+        QVERIFY(m_doc->renameChartSection(2, u"Refrain"_s));
+        QCOMPARE(labels(), (QStringList{u"Verse 1"_s, u"Verse 2"_s, u"Refrain"_s, u"Refrain"_s}));
+        QCOMPARE(m_engine->follow.partStarts, (std::vector<int>{0, 2, 4, 6}));
+        QVERIFY(m_doc->undo());
+        QCOMPARE(labels(), (QStringList{u"Verse 1"_s, u"Verse 2"_s, u"Chorus"_s, u"Chorus"_s}));
         QVERIFY(m_doc->setSongFlow({})); // back to the chart's order
         QVERIFY(!m_doc->songFlowSet());
+
+        // A spoken intro (no chords) is a tile but nothing to follow: the
+        // tiles after it still light for their own chords.
+        QVERIFY(m_doc->setSongChart(0, u"[G]in\n{comment: Intro}\nwords\n{comment: Verse 1}\n[Am]a [F]b\n{comment: Chorus}\n[C]c [G]d\n"_s));
+        QCOMPARE(labels(), (QStringList{u"Intro"_s, u"Verse 1"_s, u"Chorus"_s}));
+        QCOMPARE(m_doc->followPart(0), -1); // before the first section
+        QCOMPARE(m_doc->followPart(1), 1);  // Verse 1
+        QCOMPARE(m_doc->followPart(3), 2);  // Chorus
+        m_doc->selectFlowPart(0); // the intro: its section, no part to follow
+        QCOMPARE(m_engine->jumps.back(), 0);
+        QCOMPARE(m_engine->jumpParts.back(), -1);
+        m_doc->selectFlowPart(2);
+        QCOMPARE(m_engine->jumps.back(), 2);
+        QCOMPARE(m_engine->jumpParts.back(), 2); // the map's parts: before the intro, Verse 1, Chorus
     }
 
     void pastingKeepsANameTheUserChose()

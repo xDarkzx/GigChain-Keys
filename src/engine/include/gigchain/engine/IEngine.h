@@ -198,6 +198,9 @@ public:
     virtual void stopSong() = 0;
     // Playing: on to that section now. Stopped: that section is in force.
     virtual void jumpToSection(int section) = 0;
+    // As jumpToSection; chord follow goes to part `part` of the song's flow
+    // (ChordFollowMap::partStarts) when that is a time `section` comes round.
+    virtual void jumpToPart(int section, int part) = 0;
     [[nodiscard]] virtual SongPosition songPosition() const = 0;
 
     // ---- Chord follow (the chart follows what is played)

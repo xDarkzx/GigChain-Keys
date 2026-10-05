@@ -53,8 +53,8 @@ moves **forward** along it:
 It never jumps back, and never to another part that happens to open with the
 same chords (common: verse, pre-chorus and chorus often start alike). If it
 ever loses you, a pedal (**Settings > MIDI > Pedals and pads**) or a tap on a
-section's title or tile puts it right: it goes to the next time the flow comes
-to that section.
+section's title puts it right: it goes to the next time the flow comes to that
+section. A tile in Perform goes to that very part (the second chorus, say).
 
 ## Tempo, tap and click
 

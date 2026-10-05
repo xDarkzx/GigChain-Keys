@@ -270,6 +270,9 @@ public:
     Q_INVOKABLE void playSong();
     Q_INVOKABLE void stopSong();
     Q_INVOKABLE void selectSection(int section);
+    // Part `place` of songFlow() (a tile in Perform): its section, and chord
+    // follow from that very time the section comes round.
+    Q_INVOKABLE void selectFlowPart(int place);
     Q_INVOKABLE void nextSection();
     [[nodiscard]] bool hasSections() const { return m_sectionCount > 0; }
 

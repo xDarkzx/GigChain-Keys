@@ -79,6 +79,10 @@ though the band plays it three times. Click a part for **Play it once more**,
 chart again, and **Chart order** goes back. Chord follow keeps to this flow:
 see [Sections, tempo and backing tracks](sections-and-tempo.md).
 
+Renaming a section (double-click its title) keeps it in the flow. A part
+whose section is no longer in the chart (changed in the ChordPro text) shows
+dimmed with a **?**: it is skipped, and goes at your next change to the flow.
+
 ## How to play a chord
 
 Forgot a chord? **Right-click it → How to play it** here, **tap it** in

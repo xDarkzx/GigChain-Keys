@@ -79,6 +79,22 @@ private slots:
         QCOMPARE(map.steps.at(6).part, 3);
     }
 
+    // Each part knows its place in the flow, though parts without chords (a
+    // spoken intro, a section the chart no longer has) are not parts to follow.
+    void eachPartKnowsItsPlaceInTheFlow()
+    {
+        const Chart chart = parseChordPro(
+            u"[G]count in\n{comment: Intro}\nspoken words\n{comment: Verse 1}\n[Am]a [F]b\n{comment: Chorus}\n[C]c [G]d\n"_s);
+        const SongMap byChart = buildSongMap(chart);
+        QCOMPARE(byChart.partStarts, (std::vector<int>{0, 1, 3}));
+        QCOMPARE(byChart.partFlow, (std::vector<int>{-1, 1, 2})); // the chords before Intro; Intro has none
+        const std::vector<SectionRef> flow{{.name = u"Intro"_s}, {.name = u"Bridge"_s}, {.name = u"Verse 1"_s},
+                                           {.name = u"Chorus"_s}, {.name = u"Chorus"_s}};
+        const SongMap byFlow = buildSongMap(chart, flow);
+        QCOMPARE(byFlow.partFlow, (std::vector<int>{-1, 2, 3, 4}));
+        QCOMPARE(byFlow.partFlow.size(), byFlow.partStarts.size());
+    }
+
     void repeatsArePlayedAgain()
     {
         // A line of chords "(x2)", and a section "Chorus (x2)".

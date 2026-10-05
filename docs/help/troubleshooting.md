@@ -52,7 +52,8 @@ Check the song's **Flow** bar above the chart (Edit): chord follow only moves
 forward along it. If the band plays the chorus twice, or the pre-chorus only
 the second time, set that there (**Play it once more**, **Take it out**). If
 it loses you mid-song, a section's title, a tile in Perform or a pedal puts it
-right. See [Sections, tempo and backing tracks](sections-and-tempo.md).
+right. A part shown dimmed with a **?** names a section the chart no longer
+has: it is skipped; take it out. See [Sections, tempo and backing tracks](sections-and-tempo.md).
 
 ## Practice shows nothing
 
