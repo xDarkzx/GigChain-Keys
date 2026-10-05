@@ -16,7 +16,7 @@ jobs:
       VCPKG_ROOT: ${{ github.workspace }}/../vcpkg
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/../vcpkg-cache,readwrite
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Xcode
         id: xcode
