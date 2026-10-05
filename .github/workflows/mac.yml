@@ -85,7 +85,7 @@ jobs:
           bash tools/package-mac.sh build/mac-release "$version"
 
       - name: Upload the .dmg
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: GigChain-Keys-mac-arm64
           path: build/mac-release/*.dmg
@@ -94,7 +94,7 @@ jobs:
       # Always: which tests ran and which skipped (ctest prints only failures).
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mac-test-logs
           path: |
