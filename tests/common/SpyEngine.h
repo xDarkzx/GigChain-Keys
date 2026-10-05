@@ -275,7 +275,14 @@ public:
     void jumpToSection(int section) override
     {
         jumps.push_back(section);
+        jumpParts.push_back(-1);
         position.section = section;
+    }
+    std::vector<int> jumpParts; // per jump: the flow part asked (-1: a plain section jump)
+    void jumpToPart(int section, int part) override
+    {
+        jumpToSection(section);
+        jumpParts.back() = part;
     }
     engine::SongPosition position;
     [[nodiscard]] engine::SongPosition songPosition() const override { return position; }

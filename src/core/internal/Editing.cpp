@@ -2,6 +2,7 @@
 
 #include "gigchain/core/Chart.h"
 #include "gigchain/core/Limits.h"
+#include "gigchain/core/SongMap.h"
 
 #include <cmath>
 #include "gigchain/core/Validation.h"
@@ -149,6 +150,26 @@ Result<void> setSongFollowChords(Setlist& setlist, int songIndex, bool follow)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
     setlist.songs.at(toIndex(songIndex)).followChords = follow;
+    return {};
+}
+
+Result<void> renameSongSection(Setlist& setlist, int songIndex, const QString& chart)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    Song& song = setlist.songs.at(toIndex(songIndex));
+    const std::vector<ChartSection> before = chartSections(parseChordPro(song.chart));
+    if (auto r = setSongChart(setlist, songIndex, chart); !r) return r;
+    const std::vector<ChartSection> after = chartSections(parseChordPro(song.chart));
+    if (after.size() != before.size()) return {}; // not a rename: nothing to carry over
+    // What named the section at a place names it there still.
+    const auto follow = [&](QString& name, int& occurrence) {
+        const int at = sectionIndexOf(before, SectionRef{.name = name, .occurrence = occurrence});
+        if (at < 0) return;
+        name = after.at(toIndex(at)).name;
+        occurrence = after.at(toIndex(at)).occurrence;
+    };
+    for (SectionRef& part : song.flow) follow(part.name, part.occurrence);
+    for (SectionSetup& section : song.sections) follow(section.name, section.occurrence);
     return {};
 }
 

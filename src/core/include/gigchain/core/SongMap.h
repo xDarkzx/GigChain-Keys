@@ -33,6 +33,10 @@ struct SongMap
     // The flow: where each part (a section each time it is played, and the
     // chords before the first section) starts, in playing order.
     std::vector<int> partStarts;
+    // Per part: its place in the flow (in the chart's sections when no flow
+    // is set); -1: the chords before the first section. Parts without
+    // chords are not parts, so this is not simply 0, 1, 2...
+    std::vector<int> partFlow;
     // More than limits::kMaxFollowSteps chords as played (repeats played
     // out), or more than limits::kMaxSectionsPerSong sections: not read
     // further, nothing to follow.

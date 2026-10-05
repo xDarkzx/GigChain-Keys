@@ -45,6 +45,13 @@ Downloads for every version are on the
 
 - A MIDI clock test failed on machines that list a MIDI output they cannot
   open (no sound hardware); it now says so and skips.
+- Perform's part tiles lit one too early after a part with no chords (a
+  spoken intro).
+- Tapping a part tile goes to that very part (the second chorus, or the
+  chorus being played again), not the next time that section comes round.
+- Renaming a section keeps its place in the flow and its instruments; a flow
+  part whose section is gone from the chart is shown dimmed with a "?" and
+  dropped at the next change to the flow.
 
 ## [0.1.0] - 2026-10-05 (first public alpha)
 

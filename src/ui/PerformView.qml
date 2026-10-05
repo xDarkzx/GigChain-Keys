@@ -144,7 +144,7 @@ Rectangle {
 
                 // The song's parts in the order it is played (its flow), as
                 // Gig Performer's tiles: the one playing lit, a tap goes
-                // there (the next time the flow comes to it).
+                // to that very part.
                 Flow {
                     id: parts
                     objectName: "performParts"
@@ -155,7 +155,8 @@ Rectangle {
                     // Following chords: the exact part; else every part of the section in force.
                     readonly property int playingPart: perform.engineStatus.chordStarted
                                                        ? perform.doc.followPart(perform.engineStatus.chordStep) : -1
-                    function choose(section) { if (section >= 0) perform.doc.selectSection(section) }
+                    // A tile tapped: that very part of the flow.
+                    function choose(place) { perform.doc.selectFlowPart(place) }
                     Repeater {
                         model: perform.doc.songFlow
                         StageButton {
@@ -169,7 +170,7 @@ Rectangle {
                             font.pixelSize: Theme.fontSize + 2
                             checked: parts.playingPart >= 0 ? part.index === parts.playingPart
                                                             : part.modelData.section === perform.engineStatus.songSection
-                            onClicked: parts.choose(part.modelData.section)
+                            onClicked: parts.choose(part.index)
                         }
                     }
                 }

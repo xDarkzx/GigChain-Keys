@@ -103,6 +103,7 @@ public:
     void playSong(int fromSection, bool countIn) override;
     void stopSong() override { m_transport.stop(); }
     void jumpToSection(int section) override;
+    void jumpToPart(int section, int part) override;
     [[nodiscard]] SongPosition songPosition() const override;
     core::Result<void> setChordFollow(const ChordFollowMap& map) override;
     [[nodiscard]] ChordFollowPosition chordFollow() const override { return m_follower.position(); }

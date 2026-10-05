@@ -25,6 +25,9 @@ Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator
 Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early);
 // Whether the song's sections follow the chords played or its tempo.
 Result<void> setSongFollowChords(Setlist& setlist, int songIndex, bool follow);
+// The song's chart with a section renamed (renameSection()'s result): its
+// flow and its sections' instruments keep to each section, by its place.
+Result<void> renameSongSection(Setlist& setlist, int songIndex, const QString& chart);
 // The order a song is played in (its sections, by name); empty: the chart's order.
 Result<void> setSongFlow(Setlist& setlist, int songIndex, const std::vector<SectionRef>& flow);
 // The inversion chosen for chord `chord` of a song (0 to 3); -1 forgets it.

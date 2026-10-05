@@ -143,6 +143,15 @@ int ChordFollower::startForSection(const ChordFollowMap& map, int section) const
     return std::cmp_less(section, map.sectionStarts.size()) ? map.sectionStarts.at(static_cast<std::size_t>(section)) : -1;
 }
 
+int ChordFollower::startForPart(const ChordFollowMap& map, int section, int part) const noexcept
+{
+    if (part >= 0 && std::cmp_less(part, map.partStarts.size())) {
+        const int start = map.partStarts.at(static_cast<std::size_t>(part));
+        if (map.steps.at(static_cast<std::size_t>(start)).section == section) return start;
+    }
+    return startForSection(map, section);
+}
+
 void ChordFollower::clear() noexcept
 {
     m_velocity.fill(0);
@@ -193,9 +202,11 @@ SectionGate ChordFollower::process(const ChordFollowMap* map, uint64_t generatio
     gate.before = sectionInForce(*map);
     gate.after = gate.before;
     // A section chosen by hand (the pedal, a click): from the block's start.
-    if (const int asked = m_jumpAsked.exchange(-1, std::memory_order_acq_rel);
-        asked >= 0 && std::cmp_less(asked, map->sectionStarts.size()) && startForSection(*map, asked) >= 0) {
-        m_step = startForSection(*map, asked);
+    const int asked = m_jumpAsked.exchange(-1, std::memory_order_acq_rel);
+    const int askedPart = asked >= 0 ? m_partAsked.exchange(-1, std::memory_order_relaxed) : -1;
+    if (const int start = asked >= 0 && std::cmp_less(asked, map->sectionStarts.size()) ? startForPart(*map, asked, askedPart) : -1;
+        start >= 0) {
+        m_step = start;
         m_candidates = 0;
         m_sinceChord.reset();
         m_heardAt = m_now;

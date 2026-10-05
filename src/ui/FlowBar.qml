@@ -22,18 +22,24 @@ Rectangle {
             const p = bar.parts[i]
             const last = list.length > 0 ? list[list.length - 1] : null
             if (last !== null && last.name === p.name && last.occurrence === p.occurrence) ++last.count
-            else list.push({ name: p.name, occurrence: p.occurrence, label: p.label, count: 1, first: i })
+            else list.push({ name: p.name, occurrence: p.occurrence, label: p.label, section: p.section, count: 1, first: i })
         }
         return list
     }
 
     // The flow as a list of parts again, with `change` made to the groups.
+    // (Parts naming a section the chart no longer has are left out.)
     function save(groups) {
         const flow = []
-        for (const g of groups) for (let n = 0; n < g.count; ++n) flow.push({ name: g.name, occurrence: g.occurrence })
+        for (const g of groups) {
+            if (g.section < 0) continue
+            for (let n = 0; n < g.count; ++n) flow.push({ name: g.name, occurrence: g.occurrence })
+        }
         bar.doc.setSongFlow(flow)
     }
-    function copyGroups() { return bar.groups.map(g => ({ name: g.name, occurrence: g.occurrence, label: g.label, count: g.count })) }
+    function copyGroups() {
+        return bar.groups.map(g => ({ name: g.name, occurrence: g.occurrence, label: g.label, section: g.section, count: g.count }))
+    }
 
     implicitHeight: 34
     radius: Theme.radiusCard
@@ -80,6 +86,12 @@ Rectangle {
                         StageButton {
                             objectName: "flowPart"
                             text: group.modelData.label + (group.modelData.count > 1 ? "  ×" + group.modelData.count : "")
+                                  + (group.modelData.section < 0 ? "  ?" : "")
+                            opacity: group.modelData.section < 0 ? 0.5 : 1
+                            tip: group.modelData.section < 0
+                                 ? qsTr("The chart has no section \"%1\" any more: it is skipped. Take it out, or change the flow and it goes.")
+                                       .arg(group.modelData.name)
+                                 : ""
                             onClicked: partMenu.popup(0, height)
                             StageMenu {
                                 id: partMenu
@@ -140,7 +152,8 @@ Rectangle {
                         text: modelData.label
                         onTriggered: {
                             const g = bar.copyGroups()
-                            g.push({ name: modelData.name, occurrence: modelData.occurrence, label: modelData.label, count: 1 })
+                            g.push({ name: modelData.name, occurrence: modelData.occurrence, label: modelData.label,
+                                     section: modelData.section, count: 1 })
                             bar.save(g)
                         }
                     }

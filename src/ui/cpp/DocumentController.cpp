@@ -387,7 +387,15 @@ bool DocumentController::joinChartLine(int line)
 
 bool DocumentController::renameChartSection(int line, const QString& label)
 {
-    return applyChartEdit(core::renameSection(currentChart(), line, label), {});
+    const auto edited = core::renameSection(currentChart(), line, label);
+    if (!edited) return report(edited.error());
+    // (Its place in the flow and its instruments go with it.)
+    if (auto r = core::renameSongSection(m_setlist, m_cursor.song, *edited); !r) return report(r.error());
+    m_coalesceKey.clear(); // a step of its own
+    setDirty(true);
+    applySectionsToEngine();
+    emit chartChanged();
+    return true;
 }
 
 bool DocumentController::addChartSection(const QString& label)
@@ -1139,11 +1147,9 @@ int DocumentController::followLine(int step) const
 int DocumentController::followPart(int step) const
 {
     if (step < 0 || std::cmp_greater_equal(step, m_songMap.steps.size())) return -1;
-    // (Chords before the first section are a part of their own in the map,
-    // not one of the flow's sections: the flow's parts count from after them.)
-    const bool prelude = !m_songMap.steps.empty() && m_songMap.steps.front().section < 0;
-    const int part = m_songMap.steps.at(static_cast<std::size_t>(step)).part - (prelude ? 1 : 0);
-    return part >= 0 ? part : -1;
+    // (The map's parts are only those with chords: each knows its place in the flow.)
+    const int part = m_songMap.steps.at(static_cast<std::size_t>(step)).part;
+    return part >= 0 && std::cmp_less(part, m_songMap.partFlow.size()) ? m_songMap.partFlow.at(static_cast<std::size_t>(part)) : -1;
 }
 
 bool DocumentController::songLoopSync() const
@@ -1339,6 +1345,24 @@ void DocumentController::selectSection(int section)
         return;
     }
     m_engine.jumpToSection(section);
+}
+
+void DocumentController::selectFlowPart(int place)
+{
+    const QVariantList flow = songFlow();
+    if (place < 0 || place >= flow.size()) {
+        report(core::Error{core::ErrorCode::OutOfRange, tr("The song's flow has no part %1 (it has %2)").arg(place + 1).arg(flow.size())});
+        return;
+    }
+    const int section = flow.at(place).toMap().value(u"section"_s).toInt();
+    if (section < 0 || section >= m_sectionCount) {
+        report(core::Error{core::ErrorCode::OutOfRange,
+                           tr("\"%1\" is not a section of this song's chart any more").arg(flow.at(place).toMap().value(u"name"_s).toString())});
+        return;
+    }
+    // The map's part for that place (a part without chords has none).
+    const auto part = std::ranges::find(m_songMap.partFlow, place);
+    m_engine.jumpToPart(section, part != m_songMap.partFlow.end() ? static_cast<int>(part - m_songMap.partFlow.begin()) : -1);
 }
 
 void DocumentController::nextSection()

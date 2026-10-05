@@ -126,6 +126,7 @@ public:
         m_position.bars = m_sections.sections.at(static_cast<std::size_t>(section)).bars;
         m_position.bar = m_position.playing ? 1 : 0;
     }
+    void jumpToPart(int section, int) override { jumpToSection(section); }
     [[nodiscard]] SongPosition songPosition() const override { return m_position; }
     core::Result<void> setChordFollow(const ChordFollowMap& map) override
     {

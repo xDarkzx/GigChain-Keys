@@ -330,6 +330,30 @@ private slots:
         QCOMPARE(p.step(), 6);
     }
 
+    // A part of the flow chosen (Perform's tiles): that very part, back or
+    // ahead, the one playing again; a part not of that section: the section.
+    void aPartChosenIsThatPart()
+    {
+        // Parts: Verse (0), Chorus (1), Verse (2), Chorus (3).
+        Player p(mapOf({{"Am", 0}, {"F", 0}, {"C", 1}, {"G", 1}, {"Am", 0}, {"F", 0}, {"C", 1}, {"G", 1}}));
+        p.block();
+        p.follower.jumpToPart(1, 3);
+        p.block();
+        QCOMPARE(p.step(), 6); // the second chorus, straight from the top
+        p.follower.jumpToPart(1, 3);
+        p.block();
+        QCOMPARE(p.step(), 6); // the same chorus again, not past it
+        p.follower.jumpToPart(0, 0);
+        p.block();
+        QCOMPARE(p.step(), 0); // back to the first verse
+        p.follower.jumpToPart(1, 2); // part 2 is a verse: the next chorus instead
+        p.block();
+        QCOMPARE(p.step(), 2);
+        p.follower.jumpToSection(1); // a plain section jump forgets the part asked before
+        p.block();
+        QCOMPARE(p.step(), 6);
+    }
+
     // G-B-D holds Bm's root and third (B, D) but is G: it never completes a
     // jump to a section starting D, Bm.
     void aChordSharingTwoNotesIsNotClear()

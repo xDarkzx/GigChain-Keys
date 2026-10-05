@@ -31,6 +31,7 @@ SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow)
         map.tooLong = true;
         map.steps.clear();
         map.partStarts.clear();
+        map.partFlow.clear();
         std::ranges::fill(map.sectionStarts, -1);
         return map;
     };
@@ -86,19 +87,18 @@ SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow)
     if (!map.tooLong) finishPart();
     if (map.tooLong) return failLong();
 
-    // The flow: the sections in the order they are played (by default the chart's).
+    // The flow: the sections in the order they are played (by default the
+    // chart's); -1: a part naming no section of the chart.
     std::vector<int> order;
     if (flow.empty()) {
         order.resize(sections.size());
         std::iota(order.begin(), order.end(), 0);
     } else {
-        for (const SectionRef& ref : flow) {
-            if (const int s = sectionIndexOf(sections, ref); s >= 0) order.push_back(s);
-        }
+        std::ranges::transform(flow, std::back_inserter(order), [&sections](const SectionRef& ref) { return sectionIndexOf(sections, ref); });
     }
     std::vector<SongStep> played; // every chord as played, before twins are merged
     int parts = 0;
-    const auto add = [&](const std::vector<SongStep>& block) {
+    const auto add = [&](const std::vector<SongStep>& block, int place) {
         if (block.empty() || map.tooLong) return;
         if (played.size() + block.size() > limit) {
             map.tooLong = true;
@@ -108,10 +108,13 @@ SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow)
             step.part = parts;
             played.push_back(std::move(step));
         }
+        map.partFlow.push_back(place);
         ++parts;
     };
-    add(prelude);
-    for (const int s : order) add(blocks.at(static_cast<std::size_t>(s)));
+    add(prelude, -1);
+    for (std::size_t place = 0; place < order.size(); ++place) {
+        if (const int s = order.at(place); s >= 0) add(blocks.at(static_cast<std::size_t>(s)), static_cast<int>(place));
+    }
     if (map.tooLong) return failLong();
 
     // The same chord twice in a row (in one part) is one step, lit in every place.

@@ -225,6 +225,27 @@ private slots:
         QVERIFY(setChordInversion(s, 0, u""_s, 1).error().code == ErrorCode::InvalidData);
         QVERIFY(setChordInversion(s, 7, u"C"_s, 1).error().code == ErrorCode::OutOfRange);
     }
+
+    // A section renamed: the song's flow and the section's instruments go
+    // with it (and the chorus that was the second is now the first).
+    void aRenamedSectionKeepsItsFlowAndInstruments()
+    {
+        Setlist s = abc();
+        Song& song = s.songs.at(0);
+        song.chart = u"{comment: Chorus}\n[C]a\n{comment: Verse}\n[Am]b\n{comment: Chorus}\n[F]c\n"_s;
+        song.flow = {{.name = u"Chorus"_s}, {.name = u"Verse"_s}, {.name = u"Chorus"_s, .occurrence = 2}};
+        song.sections = {SectionSetup{.name = u"chorus"_s, .occurrence = 2, .bars = 8, .assigned = true, .channels = {}}};
+        const QString renamed = u"{comment: Intro}\n[C]a\n{comment: Verse}\n[Am]b\n{comment: Chorus}\n[F]c\n"_s;
+        QVERIFY(renameSongSection(s, 0, renamed).has_value());
+        QCOMPARE(song.chart, renamed);
+        QStringList flow;
+        for (const SectionRef& part : song.flow) flow << u"%1 %2"_s.arg(part.name).arg(part.occurrence);
+        QCOMPARE(flow, (QStringList{u"Intro 1"_s, u"Verse 1"_s, u"Chorus 1"_s}));
+        QCOMPARE(song.sections.at(0).name, u"Chorus"_s);
+        QCOMPARE(song.sections.at(0).occurrence, 1);
+        QCOMPARE(song.sections.at(0).bars, 8);
+        QVERIFY(renameSongSection(s, 9, renamed).error().code == ErrorCode::OutOfRange);
+    }
 };
 
 QTEST_GUILESS_MAIN(TestEditing)
