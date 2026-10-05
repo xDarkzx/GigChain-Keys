@@ -87,6 +87,7 @@ qt_add_qml_module(gigchain_ui
         ChordDragSource.qml
         PracticeView.qml
         ChordDiagram.qml
+        FlowBar.qml
         HelpWindow.qml
         AboutDialog.qml
         LooperCell.qml

@@ -97,6 +97,16 @@ struct SectionSetup
     friend bool operator==(const SectionSetup&, const SectionSetup&) = default;
 };
 
+// A section of a song's chart, by name: the `occurrence`-th section with that
+// name (matched ignoring case). One part of the song's flow.
+struct SectionRef
+{
+    QString name;
+    int occurrence = 1;
+
+    friend bool operator==(const SectionRef&, const SectionRef&) = default;
+};
+
 // A web page for a song (a chord sheet, a video...). Opened in the browser.
 struct SongLink
 {
@@ -140,6 +150,10 @@ struct Song
     int loopBars = 4;
     // What the chart's sections play; a section not listed plays the default.
     std::vector<SectionSetup> sections;
+    // The order the song is played in (Verse 1, Chorus, Verse 2, Chorus,
+    // Chorus...), sections of its chart; empty: the chart's own order.
+    // Chord follow only moves forward along it.
+    std::vector<SectionRef> flow;
     // The inversion the player chose for a chord of the chart (its diagram),
     // by chord name: 0 root position ... 3 third inversion. Not listed: none chosen.
     std::map<QString, int> chordInversions;

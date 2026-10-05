@@ -54,6 +54,11 @@ private:
 
     void clear() noexcept;
     [[nodiscard]] int sectionInForce(const ChordFollowMap& map) const noexcept;
+    // Which part of the flow `step` is in (-1: none, or no such step).
+    [[nodiscard]] static int partOf(const ChordFollowMap& map, int step) noexcept;
+    // Where to go for `section` (the pedal, a title clicked): the next time
+    // the flow comes to it, else its first time; -1: the song has no chords there.
+    [[nodiscard]] int startForSection(const ChordFollowMap& map, int section) const noexcept;
     // `key` went down at `now`: whether the chart moved (rules 1 to 3).
     // `memory` and `spread`: kMemorySeconds and kChordSpreadSeconds in samples.
     bool hear(const ChordFollowMap& map, int key, int64_t now, int64_t memory, int64_t spread) noexcept;
@@ -69,7 +74,7 @@ private:
     bool m_pedal = false;
     int64_t m_now = 0;
     int m_step = -1;      // the chord being played; -1 = not started
-    uint64_t m_candidates = 0; // sections whose first chord was just heard clearly (rule 3)
+    uint64_t m_candidates = 0; // 1: the next part's first chord was just heard clearly (rule 3)
     int64_t m_heardAt = kLongAgo; // when the last chord was heard (samples)
     uint64_t m_generation = 0;
     std::array<MidiEvent, kMaxEventsPerBlock> m_handover{};

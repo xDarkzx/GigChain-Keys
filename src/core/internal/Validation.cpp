@@ -198,6 +198,15 @@ Result<void> validateSections(const Song& song, const QString& path)
     if (song.loopBars < 0 || song.loopBars > limits::kMaxLoopBars) {
         return fail(ErrorCode::OutOfRange, u"%1.loopBars must be between 0 (open) and %2"_s.arg(path).arg(limits::kMaxLoopBars));
     }
+    if (song.flow.size() > static_cast<std::size_t>(limits::kMaxFlowParts)) {
+        return fail(ErrorCode::LimitExceeded, u"%1.flow has more than %2 parts"_s.arg(path).arg(limits::kMaxFlowParts));
+    }
+    for (std::size_t i = 0; i < song.flow.size(); ++i) {
+        const SectionRef& part = song.flow.at(i);
+        if (part.name.trimmed().isEmpty() || part.occurrence < 1 || part.occurrence > limits::kMaxSectionOccurrence) {
+            return fail(ErrorCode::InvalidData, u"%1.flow[%2] must name a section of the chart"_s.arg(path).arg(i));
+        }
+    }
     if (song.chordInversions.size() > static_cast<std::size_t>(limits::kMaxChosenInversions)) {
         return fail(ErrorCode::LimitExceeded, u"%1.chordInversions has more than %2 chords"_s.arg(path).arg(limits::kMaxChosenInversions));
     }

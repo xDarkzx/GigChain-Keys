@@ -320,6 +320,20 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
     song.followChords = !obj.contains("followChords"_L1) || r.boolean(obj, "followChords"_L1, path);
     song.loopSync = !obj.contains("loopSync"_L1) || r.boolean(obj, "loopSync"_L1, path);
     song.loopBars = r.optionalInteger(obj, "loopBars"_L1, path, 0, limits::kMaxLoopBars, 4);
+    // Its flow: [{"name": "Verse 1", "occurrence": 1}, ...] (absent in older files: the chart's order).
+    const QJsonArray flow = r.optionalArray(obj, "flow"_L1, path, limits::kMaxFlowParts);
+    for (qsizetype i = 0; i < flow.size() && !r.failed(); ++i) {
+        const QString where = u"%1.flow[%2]"_s.arg(path).arg(i);
+        const QJsonObject item = r.object(flow.at(i), where);
+        SectionRef part;
+        part.name = r.string(item, "name"_L1, where, limits::kMaxNameLength);
+        part.occurrence = r.integer(item, "occurrence"_L1, where, 1, limits::kMaxSectionOccurrence);
+        if (!r.failed() && part.name.trimmed().isEmpty()) {
+            r.invalid(u"%1.name must name a section of the chart"_s.arg(where));
+            return song;
+        }
+        song.flow.push_back(part);
+    }
     // The inversions chosen for its chords: {"E/D#": 1, ...} (absent in older files).
     if (!r.failed() && obj.contains("chordInversions"_L1)) {
         const QString where = path + u".chordInversions"_s;
@@ -446,9 +460,12 @@ QJsonObject writeSong(const Song& song)
     }
     QJsonObject inversions;
     for (const auto& [chord, inversion] : song.chordInversions) inversions.insert(chord, inversion);
+    QJsonArray flow;
+    for (const SectionRef& part : song.flow) flow.append(QJsonObject{{u"name"_s, part.name}, {u"occurrence"_s, part.occurrence}});
     return QJsonObject{{u"id"_s, song.id.value()},
                        {u"name"_s, song.name},
                        {u"chordInversions"_s, inversions},
+                       {u"flow"_s, flow},
                        {u"patches"_s, patches},
                        {u"chart"_s, song.chart},
                        {u"key"_s, song.key},

@@ -251,6 +251,76 @@ QVariantMap DocumentController::currentChordInversions() const
     return map;
 }
 
+std::vector<core::SectionRef> DocumentController::currentSongFlow() const
+{
+    const int song = songIndex();
+    if (song < 0 || static_cast<std::size_t>(song) >= m_setlist.songs.size()) return {};
+    return m_setlist.songs.at(static_cast<std::size_t>(song)).flow;
+}
+
+bool DocumentController::songFlowSet() const
+{
+    return !currentSongFlow().empty();
+}
+
+QVariantList DocumentController::chartParts() const
+{
+    const std::vector<core::ChartSection> sections = core::chartSections(core::parseChordPro(currentChart()));
+    std::vector<core::SectionRef> parts;
+    parts.reserve(sections.size());
+    std::ranges::transform(sections, std::back_inserter(parts),
+                           [](const core::ChartSection& s) { return core::SectionRef{.name = s.name, .occurrence = s.occurrence}; });
+    return partsList(parts, sections);
+}
+
+QVariantList DocumentController::songFlow() const
+{
+    const std::vector<core::ChartSection> sections = core::chartSections(core::parseChordPro(currentChart()));
+    const std::vector<core::SectionRef> flow = currentSongFlow();
+    return flow.empty() ? chartParts() : partsList(flow, sections);
+}
+
+QVariantList DocumentController::partsList(const std::vector<core::SectionRef>& flow, const std::vector<core::ChartSection>& sections)
+{
+    QVariantList list;
+    for (const core::SectionRef& part : flow) {
+        const int s = core::sectionIndexOf(sections, part);
+        // How the chart names it ("Chorus"; the second of two alike: "Chorus (2)").
+        const bool alike = std::ranges::count_if(sections, [&part](const core::ChartSection& c) {
+                               return c.name.compare(part.name, Qt::CaseInsensitive) == 0;
+                           }) > 1;
+        const QString label = s >= 0 ? sections.at(static_cast<std::size_t>(s)).name : part.name;
+        list << QVariantMap{{u"name"_s, part.name},
+                            {u"occurrence"_s, part.occurrence},
+                            {u"section"_s, s},
+                            {u"label"_s, alike ? u"%1 (%2)"_s.arg(label).arg(part.occurrence) : label}};
+    }
+    return list;
+}
+
+bool DocumentController::setSongFlow(const QVariantList& flow)
+{
+    const int song = songIndex();
+    const std::vector<core::ChartSection> sections = core::chartSections(core::parseChordPro(currentChart()));
+    std::vector<core::SectionRef> parts;
+    for (const QVariant& item : flow) {
+        const QVariantMap map = item.toMap();
+        const core::SectionRef part{.name = map.value(u"name"_s).toString().trimmed(),
+                                    .occurrence = std::max(1, map.value(u"occurrence"_s, 1).toInt())};
+        if (core::sectionIndexOf(sections, part) < 0) {
+            return report(core::Error{core::ErrorCode::InvalidData,
+                                      tr("The chart has no section \"%1\" to put in the song's flow").arg(part.name)});
+        }
+        parts.push_back(part);
+    }
+    if (auto r = core::setSongFlow(m_setlist, song, parts); !r) return report(r.error());
+    setDirty(true);
+    applySectionsToEngine(); // chord follow keeps to the new flow
+    emit sectionsChanged();
+    emit chartChanged(); // (the chords light along it)
+    return true;
+}
+
 QVariantMap DocumentController::chordDiagram(const QString& name, int inversion) const
 {
     const auto shape = core::parseChordName(name);
@@ -581,8 +651,8 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
     std::map<int, int> sectionAt;
     const auto sections = core::chartSections(chart);
     for (std::size_t s = 0; s < sections.size(); ++s) sectionAt[sections.at(s).line] = static_cast<int>(s);
-    // Chord follow: which steps each chord is (lit when played).
-    const core::SongMap map = core::buildSongMap(chart);
+    // Chord follow: which steps each chord is (lit when played), along the song's flow.
+    const core::SongMap map = core::buildSongMap(chart, currentSongFlow());
     std::map<std::pair<int, int>, QVariantList> stepsAt;
     for (std::size_t s = 0; s < map.steps.size(); ++s) {
         for (const auto& place : map.steps.at(s).places) stepsAt[place] << static_cast<int>(s);
@@ -1304,7 +1374,7 @@ void DocumentController::applySectionsToEngine()
         place = m_songMap.steps.at(static_cast<std::size_t>(playing)).places.front();
     }
     const core::Chart chart = song != nullptr && song->followChords ? core::parseChordPro(song->chart) : core::Chart{};
-    m_songMap = song != nullptr && song->followChords ? core::buildSongMap(chart) : core::SongMap{};
+    m_songMap = song != nullptr && song->followChords ? core::buildSongMap(chart, song->flow) : core::SongMap{};
     // Too many chords (or sections) to follow: said once (not on every edit),
     // the tempo leads.
     if (m_songMap.tooLong && (newSong || !m_followTooLong)) {

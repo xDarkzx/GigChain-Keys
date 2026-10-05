@@ -35,6 +35,7 @@ inline constexpr int kMaxFollowSteps = 4096; // the chords of a song, repeats pl
 inline constexpr int kMaxLoopBars = 64;
 inline constexpr int kMaxChordInversion = 3;   // root position, then 1st to 3rd (a four-note chord)
 inline constexpr int kMaxChosenInversions = 512; // per song (a chord name each)
+inline constexpr int kMaxFlowParts = 256;        // a song's flow: sections as played (a chorus x3 is three)
 
 inline constexpr int kMinMidiNote = 0;
 inline constexpr int kMaxMidiNote = 127;

@@ -601,6 +601,8 @@ private slots:
         QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
         QVERIFY(doc.addChannel(u"demo.strings"_s, u"Strings"_s));
         QVERIFY(doc.setSongChart(0, u"{comment: Verse}\n[C]words [G]more\n{comment: Chorus}\n[F]la la\n"_s));
+        // (Room for the chart under its flow bar: the mixer stays, the keys go.)
+        QVERIFY(m_qml->rootObjects().value(0)->setProperty("editKeyboardOpen", false));
         // Adding an instrument showed its tab: back to the chart.
         auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
         QVERIFY(tabs != nullptr);
@@ -1064,6 +1066,40 @@ private slots:
         QVERIFY(QMetaObject::invokeMethod(diagram, "close"));
         QVERIFY(root->setProperty("performMode", false));
         settle();
+    }
+
+    // The flow bar over the chart: the chart's sections in order; a part
+    // played once more shows ×2 and is the song's flow (chord follow keeps to it).
+    void theFlowBarShowsAndChangesTheSongsOrder()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.setSongChart(0, u"{comment: Verse 1}\n[Am]a [F]b\n{comment: Chorus}\n[C]c [G]d\n{comment: Verse 2}\n[Dm]e [E]f\n"_s));
+        settle();
+        QQuickWindow* w = window();
+        QQuickItem* scene = w->contentItem();
+        auto* bar = findItem(scene, u"flowBar"_s);
+        QVERIFY(bar != nullptr && bar->isVisible());
+        const auto partTexts = [bar] {
+            QStringList texts;
+            for (QQuickItem* part : findAll(bar, u"flowPart"_s)) texts << part->property("text").toString();
+            return texts;
+        };
+        QCOMPARE(partTexts(), (QStringList{u"Verse 1"_s, u"Chorus"_s, u"Verse 2"_s}));
+        // The chorus's menu: play it once more.
+        QQuickItem* chorus = findAll(bar, u"flowPart"_s).value(1);
+        QVERIFY(QMetaObject::invokeMethod(chorus, "clicked"));
+        settle();
+        auto* onceMore = chorus->findChild<QObject*>(u"flowOnceMore"_s); // (its own menu)
+        QVERIFY(onceMore != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(onceMore, "triggered"));
+        settle();
+        QTRY_COMPARE(partTexts(), (QStringList{u"Verse 1"_s, u"Chorus  ×2"_s, u"Verse 2"_s}));
+        QVERIFY(doc.songFlowSet());
+        QCOMPARE(doc.songFlow().size(), 4);
+        shoot(u"flow-bar"_s);
+        QVERIFY(doc.setSongFlow({}));
     }
 
     // A long chart scrolls with the mouse wheel (the page itself is not

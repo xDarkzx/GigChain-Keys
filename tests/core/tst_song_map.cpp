@@ -48,6 +48,37 @@ private slots:
         QVERIFY(map.followable());
     }
 
+    // The song's parts in playing order: by default each section as the
+    // chart writes them; each step knows its part.
+    void theChartsOrderIsTheFlowByDefault()
+    {
+        const SongMap map = buildSongMap(parseChordPro(
+            u"{comment: Verse 1}\n[Am]a [F]b\n{comment: Chorus}\n[C]c [G]d\n{comment: Verse 2}\n[Am]e [F]f\n"_s));
+        QCOMPARE(map.partStarts, (std::vector<int>{0, 2, 4}));
+        QCOMPARE(map.steps.at(3).part, 1);
+        QCOMPARE(map.steps.at(4).part, 2);
+    }
+
+    // A flow of the song's own: the sections in the order it is played,
+    // one played again (the chorus twice at the end); unknown names left out.
+    void aFlowPlaysTheSectionsInItsOrder()
+    {
+        const Chart chart = parseChordPro(
+            u"{comment: Verse 1}\n[Am]a [F]b\n{comment: Chorus}\n[C]c [G]d\n{comment: Verse 2}\n[Dm]e [E]f\n"_s);
+        const std::vector<SectionRef> flow{{.name = u"Verse 1"_s}, {.name = u"Verse 2"_s}, {.name = u"chorus"_s},
+                                           {.name = u"Chorus"_s}, {.name = u"Bridge"_s}};
+        const SongMap map = buildSongMap(chart, flow);
+        QCOMPARE(names(map), (QStringList{u"Am"_s, u"F"_s, u"Dm"_s, u"E"_s, u"C"_s, u"G"_s, u"C"_s, u"G"_s}));
+        QCOMPARE(sectionsOf(map), (std::vector<int>{0, 0, 2, 2, 1, 1, 1, 1}));
+        QCOMPARE(map.partStarts, (std::vector<int>{0, 2, 4, 6})); // the chorus twice: two parts
+        QCOMPARE(map.sectionStarts, (std::vector<int>{0, 4, 2})); // each section's first time
+        // The chorus's chords lit in the same places, both times.
+        QCOMPARE(map.steps.at(4).places, map.steps.at(6).places);
+        // The chorus's last G and the next chorus's C stay apart (two parts).
+        QCOMPARE(map.steps.at(5).part, 2);
+        QCOMPARE(map.steps.at(6).part, 3);
+    }
+
     void repeatsArePlayedAgain()
     {
         // A line of chords "(x2)", and a section "Chorus (x2)".
