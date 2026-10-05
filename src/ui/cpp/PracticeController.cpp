@@ -49,7 +49,7 @@ void PracticeController::rebuild()
     releaseAll();
     setPlaying(false);
     const core::Chart chart = core::parseChordPro(m_document.currentChart());
-    const core::SongMap map = core::buildSongMap(chart);
+    const core::SongMap map = core::buildSongMap(chart, m_document.currentSongFlow()); // (the song's flow)
     std::vector<int> bars;
     QStringList names;
     for (const QVariant& section : m_document.currentSections()) {

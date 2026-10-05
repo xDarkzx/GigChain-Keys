@@ -152,6 +152,20 @@ Result<void> setSongFollowChords(Setlist& setlist, int songIndex, bool follow)
     return {};
 }
 
+Result<void> setSongFlow(Setlist& setlist, int songIndex, const std::vector<SectionRef>& flow)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (flow.size() > static_cast<std::size_t>(limits::kMaxFlowParts)) {
+        return fail(ErrorCode::LimitExceeded, u"A song's flow has at most %1 parts"_s.arg(limits::kMaxFlowParts));
+    }
+    const bool unnamed = std::ranges::any_of(flow, [](const SectionRef& part) {
+        return part.name.trimmed().isEmpty() || part.occurrence < 1 || part.occurrence > limits::kMaxSectionOccurrence;
+    });
+    if (unnamed) return fail(ErrorCode::InvalidData, u"Each part of a song's flow names a section of its chart"_s);
+    setlist.songs.at(toIndex(songIndex)).flow = flow;
+    return {};
+}
+
 Result<void> setChordInversion(Setlist& setlist, int songIndex, const QString& chord, int inversion)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));

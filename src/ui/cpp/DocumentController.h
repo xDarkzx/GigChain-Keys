@@ -157,6 +157,21 @@ public:
     Q_INVOKABLE bool setChordInversion(const QString& name, int inversion);
     // The current song's chosen inversions: {chord name: inversion}.
     [[nodiscard]] QVariantMap currentChordInversions() const;
+
+    // The song's flow (the order it is played in, which chord follow keeps
+    // to): [{name, occurrence, label}], the chart's own order when none is set.
+    Q_PROPERTY(QVariantList songFlow READ songFlow NOTIFY sectionsChanged)
+    // Whether the flow is the song's own (false: the chart's order).
+    Q_PROPERTY(bool songFlowSet READ songFlowSet NOTIFY sectionsChanged)
+    [[nodiscard]] QVariantList songFlow() const;
+    // The chart's sections, in its order, as parts a flow can have: [{name, occurrence, label}].
+    Q_PROPERTY(QVariantList chartParts READ chartParts NOTIFY sectionsChanged)
+    [[nodiscard]] QVariantList chartParts() const;
+    [[nodiscard]] bool songFlowSet() const;
+    [[nodiscard]] std::vector<core::SectionRef> currentSongFlow() const;
+    // A new flow ([{name, occurrence}]; empty: back to the chart's order): an
+    // undo step. A part naming no section of the chart is refused, said.
+    Q_INVOKABLE bool setSongFlow(const QVariantList& flow);
     // Enter while typing a line: its words become `lyrics` and it splits at
     // `at` (of the new words), as one undo step.
     Q_INVOKABLE bool editLineAndSplit(int line, const QString& lyrics, int at);
@@ -367,6 +382,9 @@ private:
     // it ends (OneUndoStep).
     int m_holdUndo = 0;
     class OneUndoStep;
+    // A flow as QML reads it: [{name, occurrence, section, label}].
+    [[nodiscard]] static QVariantList partsList(const std::vector<core::SectionRef>& flow,
+                                                const std::vector<core::ChartSection>& sections);
     core::Cursor m_cursor;
     int m_selectedChannel = -1;
     bool m_dirty = false;

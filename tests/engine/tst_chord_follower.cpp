@@ -37,6 +37,11 @@ ChordFollowMap mapOf(std::initializer_list<std::pair<const char*, int>> chords)
         const int s = map.steps.at(i).section;
         if (s >= 0) map.sectionStarts.at(static_cast<std::size_t>(s)) = static_cast<int>(i);
     }
+    // The song's parts in playing order: a part each time the section changes.
+    for (std::size_t i = 0; i < map.steps.size(); ++i) {
+        if (i == 0 || map.steps.at(i).section != map.steps.at(i - 1).section) map.partStarts.push_back(static_cast<int>(i));
+        map.steps.at(i).part = static_cast<int>(map.partStarts.size()) - 1;
+    }
     return map;
 }
 
@@ -256,13 +261,73 @@ private slots:
         p.chord({G3, B3, D4});
         QCOMPARE(p.section(), 2);
         QCOMPARE(p.step(), 5);
-        // ... and from the bridge, the song's top comes round again: Verse 1.
+        // ... and from the bridge (the last part), it never goes back round:
+        // the song's flow only goes forward.
         p.follower.jumpToSection(3);
         p.block();
         p.chord({C4, E4, G4});
         p.chord({G3, B3, D4});
-        QCOMPARE(p.section(), 0);
+        QCOMPARE(p.section(), 3);
+        QCOMPARE(p.step(), 6);
+    }
+
+    // "Slow": the verse, pre-chorus and chorus open alike (C#m E/D# E).
+    // Played in the verse, a chord missed and the verse's chords going on:
+    // it stays in the verse (it once jumped to the chorus here).
+    void sectionsThatOpenAlikeNeverPullItAway()
+    {
+        constexpr int Gs4 = 68;
+        constexpr int Ds3 = 51;
+        // Verse 1 (C#m E/D# E C#m E/D# E), Chorus (C#m E/D# E), Verse 2 (C#m E/D# E).
+        Player p(mapOf({{"C#m", 0}, {"E/D#", 0}, {"E", 0}, {"C#m", 0}, {"E/D#", 0}, {"E", 0},
+                        {"C#m", 1}, {"E/D#", 1}, {"E", 1},
+                        {"C#m", 2}, {"E/D#", 2}, {"E", 2}}));
+        p.chord({Cs4 - 12, E4, Gs4});        // C#m
+        p.chord({Ds3, E4, Gs4, B4});         // E/D#
         QCOMPARE(p.step(), 1);
+        p.chord({Cs4 - 12, E4, Gs4});        // C#m (the E missed): the verse's next C#m
+        QCOMPARE(p.step(), 3);
+        QCOMPARE(p.section(), 0);
+        p.chord({Ds3, E4, Gs4, B4});         // E/D#: still the verse
+        QCOMPARE(p.step(), 4);
+        QCOMPARE(p.section(), 0);
+        p.chord({E3, Gs4, B4});              // E
+        p.chord({Cs4 - 12, E4, Gs4});        // the chorus, in its turn
+        QCOMPARE(p.step(), 6);
+        QCOMPARE(p.section(), 1);
+    }
+
+    // A chord missed (the next skipped, the one after played): it catches up.
+    void aMissedChordIsCaughtUp()
+    {
+        Player p(mapOf({{"C", 0}, {"G", 0}, {"Am", 0}, {"F", 0}}));
+        p.chord({C4, E4, G4});
+        p.chord({A3, C4, E4}); // G missed
+        QCOMPARE(p.step(), 2);
+        p.chord({C4, E4, G4}); // back to C: never backwards
+        QCOMPARE(p.step(), 2);
+    }
+
+    // The flow can play a section twice (Verse, Chorus, Verse, Chorus): the
+    // pedal's "go to the chorus" goes to the next chorus along, not the first.
+    void aSectionChosenByHandIsTheNextOneAlongTheFlow()
+    {
+        // Parts: Verse (0), Chorus (1), Verse (0), Chorus (1).
+        Player p(mapOf({{"Am", 0}, {"F", 0}, {"C", 1}, {"G", 1}, {"Am", 0}, {"F", 0}, {"C", 1}, {"G", 1}}));
+        p.block();
+        p.follower.jumpToSection(0);
+        p.block();
+        QCOMPARE(p.step(), 0);
+        p.chord({A3, C4, E4});
+        p.chord({F3, A3, C4});
+        p.chord({C4, E4, G4});
+        QCOMPARE(p.step(), 2); // in the first chorus
+        p.follower.jumpToSection(0);
+        p.block();
+        QCOMPARE(p.step(), 4); // the second verse, not back to the first
+        p.follower.jumpToSection(1);
+        p.block();
+        QCOMPARE(p.step(), 6);
     }
 
     // G-B-D holds Bm's root and third (B, D) but is G: it never completes a
@@ -392,15 +457,16 @@ private slots:
         QCOMPARE(p.section(), 1);
     }
 
-    // The chorus and the bridge both open on C: C then Em is the bridge.
-    void sectionsOpeningAlikeAreAllRemembered()
+    // The chorus and the bridge both open on C: from the verse, C then Em is
+    // not the chorus (next) and the bridge is not next: it stays in the verse.
+    void onlyTheNextPartCanBeJumpedTo()
     {
         Player p(mapOf({{"Am", 0}, {"F", 0}, {"C", 1}, {"G", 1}, {"C", 2}, {"Em", 2}}));
         p.chord({A3, C4, E4});
         p.chord({C4, E4, G4});
         p.press({E3, G3, B3});
-        QCOMPARE(p.section(), 2);
-        QCOMPARE(p.step(), 5);
+        QCOMPARE(p.section(), 0);
+        QCOMPARE(p.step(), 0);
     }
 
     // A section asked for before a new song's map is not applied to it: the
@@ -448,6 +514,9 @@ private slots:
         QTest::newRow("too many sections") << 5 << u"sections"_s;
         QTest::newRow("too many chords") << 6 << u"chords"_s;
         QTest::newRow("no notes") << 7 << u"chord 1"_s;
+        QTest::newRow("part start past the chords") << 8 << u"part 2"_s;
+        QTest::newRow("part starts out of order") << 9 << u"part 2"_s;
+        QTest::newRow("chord in a part not listed") << 10 << u"chord 1"_s;
     }
     void aBrokenMapIsRefused()
     {
@@ -464,6 +533,9 @@ private slots:
         case 5: map.sectionStarts.assign(65, -1); break;
         case 6: map.steps.resize(4097, map.steps.front()); break;
         case 7: map.steps.at(0).family = 0; break;
+        case 8: map.partStarts.at(1) = 9; break;
+        case 9: map.partStarts.at(1) = 0; break;
+        case 10: map.steps.at(0).part = 5; break;
         default: QFAIL("no such breakage");
         }
         const auto checked = ChordFollower::check(map);

@@ -663,6 +663,40 @@ private slots:
         QVERIFY(m_doc->lastError().contains(u"inversion"_s));
     }
 
+    // The song's flow: the chart's order until one is set; a flow of its own
+    // (a verse after a verse, the chorus twice) goes to chord follow, which
+    // keeps to it; an undo step; a section the chart does not have is refused.
+    void aSongsFlowIsSetAndFollowed()
+    {
+        QVERIFY(m_doc->setSongChart(0, u"{comment: Verse 1}\n[Am]a [F]b\n{comment: Chorus}\n[C]c [G]d\n{comment: Verse 2}\n[Dm]e [E]f\n"_s));
+        const auto labels = [this] {
+            QStringList list;
+            for (const QVariant& part : m_doc->songFlow()) list << part.toMap().value(u"label"_s).toString();
+            return list;
+        };
+        QCOMPARE(labels(), (QStringList{u"Verse 1"_s, u"Chorus"_s, u"Verse 2"_s}));
+        QVERIFY(!m_doc->songFlowSet());
+        QCOMPARE(m_engine->follow.partStarts, (std::vector<int>{0, 2, 4}));
+
+        const auto part = [](const QString& name) { return QVariantMap{{u"name"_s, name}, {u"occurrence"_s, 1}}; };
+        QVERIFY(m_doc->setSongFlow({part(u"Verse 1"_s), part(u"Verse 2"_s), part(u"Chorus"_s), part(u"Chorus"_s)}));
+        QVERIFY(m_doc->songFlowSet());
+        QCOMPARE(labels(), (QStringList{u"Verse 1"_s, u"Verse 2"_s, u"Chorus"_s, u"Chorus"_s}));
+        QCOMPARE(m_engine->follow.partStarts, (std::vector<int>{0, 2, 4, 6})); // the chorus twice
+        QCOMPARE(m_engine->follow.steps.at(2).section, 2);                      // Verse 2 straight after Verse 1
+
+        QVERIFY(!m_doc->setSongFlow({part(u"Bridge"_s)}));
+        QVERIFY2(m_doc->lastError().contains(u"Bridge"_s), qPrintable(m_doc->lastError()));
+        QCOMPARE(labels().size(), 4); // unchanged
+
+        QVERIFY(m_doc->undo());
+        QVERIFY(!m_doc->songFlowSet());
+        QCOMPARE(m_engine->follow.partStarts, (std::vector<int>{0, 2, 4}));
+        QVERIFY(m_doc->redo());
+        QVERIFY(m_doc->setSongFlow({})); // back to the chart's order
+        QVERIFY(!m_doc->songFlowSet());
+    }
+
     void pastingKeepsANameTheUserChose()
     {
         QVERIFY(m_doc->renameSong(0, u"Opener"_s));

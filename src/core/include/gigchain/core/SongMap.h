@@ -2,6 +2,7 @@
 
 #include "gigchain/core/Chart.h"
 #include "gigchain/core/Chords.h"
+#include "gigchain/core/Model.h"
 
 #include <QString>
 
@@ -19,6 +20,7 @@ struct SongStep
     // Where it is written: (chart line, chord on that line counting from 0).
     // A chord written twice in a row, or a repeated line, has several.
     std::vector<std::pair<int, int>> places;
+    int part = -1; // which part of the flow (SongMap::partStarts)
 };
 
 // A chart's chords in playing order: repeat marks played out, the same
@@ -28,6 +30,9 @@ struct SongMap
 {
     std::vector<SongStep> steps;
     std::vector<int> sectionStarts; // per chartSections() section: its first step; -1 = it has none
+    // The flow: where each part (a section each time it is played, and the
+    // chords before the first section) starts, in playing order.
+    std::vector<int> partStarts;
     // More than limits::kMaxFollowSteps chords as played (repeats played
     // out), or more than limits::kMaxSectionsPerSong sections: not read
     // further, nothing to follow.
@@ -37,6 +42,10 @@ struct SongMap
     [[nodiscard]] bool followable() const { return !tooLong && steps.size() >= 2; }
 };
 
-[[nodiscard]] SongMap buildSongMap(const Chart& chart);
+// `flow`: the order the sections are played in (Song::flow); empty: the
+// chart's order. A part naming no section of the chart is left out.
+[[nodiscard]] SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow = {});
+// The section of `sections` that `ref` names; -1: none.
+[[nodiscard]] int sectionIndexOf(const std::vector<ChartSection>& sections, const SectionRef& ref);
 
 } // namespace gigchain::core

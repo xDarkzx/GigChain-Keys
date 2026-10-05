@@ -101,7 +101,46 @@ core::Result<void> ChordFollower::check(const ChordFollowMap& map)
     if (map.resumeAt < -1 || map.resumeAt >= chords) {
         return broken(QStringLiteral("resume at chord %1, but the song has %2").arg(map.resumeAt + 1).arg(chords));
     }
+    // The flow's parts: in order, each where its chords start.
+    const auto parts = static_cast<int>(std::min<std::size_t>(map.partStarts.size(), INT_MAX));
+    for (int p = 0; p < parts; ++p) {
+        const int start = map.partStarts.at(static_cast<std::size_t>(p));
+        if (start < 0 || start >= chords || (p > 0 && start <= map.partStarts.at(static_cast<std::size_t>(p - 1)))) {
+            return broken(QStringLiteral("part %1 starts at chord %2: past the song's %3 chords or before the part ahead of it")
+                              .arg(p + 1)
+                              .arg(start + 1)
+                              .arg(chords));
+        }
+    }
+    for (int i = 0; i < chords; ++i) {
+        const int part = map.steps.at(static_cast<std::size_t>(i)).part;
+        if (part < -1 || part >= parts) {
+            return broken(QStringLiteral("chord %1 is in part %2, but the flow has %3").arg(i + 1).arg(part + 1).arg(parts));
+        }
+    }
     return {};
+}
+
+int ChordFollower::partOf(const ChordFollowMap& map, int step) noexcept
+{
+    if (step < 0 || std::cmp_greater_equal(step, map.steps.size())) return -1;
+    return map.steps.at(static_cast<std::size_t>(step)).part;
+}
+
+int ChordFollower::startForSection(const ChordFollowMap& map, int section) const noexcept
+{
+    // The next time the flow comes to that section (after the part being
+    // played); else its first time.
+    const int current = partOf(map, m_step);
+    int first = -1;
+    for (std::size_t p = 0; p < map.partStarts.size(); ++p) {
+        const int start = map.partStarts.at(p);
+        if (map.steps.at(static_cast<std::size_t>(start)).section != section) continue;
+        if (first < 0) first = start;
+        if (std::cmp_greater(p, current)) return start;
+    }
+    if (first >= 0) return first;
+    return std::cmp_less(section, map.sectionStarts.size()) ? map.sectionStarts.at(static_cast<std::size_t>(section)) : -1;
 }
 
 void ChordFollower::clear() noexcept
@@ -155,9 +194,8 @@ SectionGate ChordFollower::process(const ChordFollowMap* map, uint64_t generatio
     gate.after = gate.before;
     // A section chosen by hand (the pedal, a click): from the block's start.
     if (const int asked = m_jumpAsked.exchange(-1, std::memory_order_acq_rel);
-        asked >= 0 && std::cmp_less(asked, map->sectionStarts.size()) &&
-        map->sectionStarts.at(static_cast<std::size_t>(asked)) >= 0) {
-        m_step = map->sectionStarts.at(static_cast<std::size_t>(asked));
+        asked >= 0 && std::cmp_less(asked, map->sectionStarts.size()) && startForSection(*map, asked) >= 0) {
+        m_step = startForSection(*map, asked);
         m_candidates = 0;
         m_sinceChord.reset();
         m_heardAt = m_now;
@@ -210,18 +248,17 @@ SectionGate ChordFollower::process(const ChordFollowMap* map, uint64_t generatio
 bool ChordFollower::hear(const ChordFollowMap& map, int key, int64_t now, int64_t memory, int64_t spread) noexcept
 {
     const auto count = static_cast<int>(map.steps.size());
-    // Sections past 64 cannot be remembered (a song has at most 64).
-    const int sections = std::min(static_cast<int>(map.sectionStarts.size()), 64);
-    const auto startOf = [&map](int s) { return map.sectionStarts.at(static_cast<std::size_t>(s)); };
     const auto stepAt = [&map](int i) -> const ChordFollowStep& { return map.steps.at(static_cast<std::size_t>(i)); };
-    // A remembered section opening is forgotten when a key is played that
-    // belongs to neither of its first two chords: the player went elsewhere.
-    for (int s = 0; s < sections; ++s) {
-        if ((m_candidates >> s & 1U) == 0) continue;
-        const int first = startOf(s);
-        uint16_t both = stepAt(first).family;
-        if (first + 1 < count) both |= stepAt(first + 1).family;
-        if (!has(both, key % 12)) m_candidates &= ~(uint64_t{1} << s);
+    // The flow's next part (after the one being played), where it opens; -1: none.
+    const int nextPart = m_step >= 0 ? partOf(map, m_step) + 1 : -1;
+    const int nextOpening = nextPart > 0 && std::cmp_less(nextPart, map.partStarts.size())
+                                ? map.partStarts.at(static_cast<std::size_t>(nextPart)) : -1;
+    // Its opening heard and remembered is forgotten when a key is played
+    // that belongs to neither of its first two chords: the player went on.
+    if (m_candidates != 0 && nextOpening >= 0) {
+        uint16_t both = stepAt(nextOpening).family;
+        if (nextOpening + 1 < count) both |= stepAt(nextOpening + 1).family;
+        if (!has(both, key % 12)) m_candidates = 0;
     }
     // What is played: keys down, kept by the pedal, or let go a moment ago;
     // and of those, the ones struck since the last chord was heard.
@@ -255,27 +292,35 @@ bool ChordFollower::hear(const ChordFollowMap& map, int key, int64_t now, int64_
             return true;
         }
     }
-    // Rule 3: a section's first two chords, clearly (the sections after the
-    // current one first, then from the top).
-    const int current = m_step >= 0 ? stepAt(m_step).section : -1;
-    const auto order = [current, sections](int i) { return (current + 1 + i + sections) % sections; };
-    for (int i = 0; i < sections; ++i) {
-        const int s = order(i);
-        if ((m_candidates >> s & 1U) == 0) continue;
-        const int second = startOf(s) + 1;
-        if (second < count && second != next && stepAt(second).section == s && heardClearly(stepAt(second), notes)) {
-            m_step = second;
+    // A chord missed: the one after the next, the same way (only forward,
+    // only one, within the part being played: a part is entered by its
+    // own chords, not one stray one; not the chord being played again).
+    if (const int skip = m_step + 2; m_step >= 0 && skip < count && stepAt(skip).part == stepAt(m_step).part) {
+        const ChordFollowStep& step = stepAt(skip);
+        const ChordFollowStep& now_ = stepAt(m_step);
+        const bool same = now_.root == step.root && now_.family == step.family && now_.bass == step.bass;
+        if (!same && heardLoosely(step, notes, lowest) && has(struck, step.root)) {
+            m_step = skip;
             m_candidates = 0;
             m_heardAt = now;
             return true;
         }
     }
-    // A section's first chord, clearly: remembered, every section it opens.
-    // Nothing clear: it stays as it was.
-    for (int s = 0; s < sections; ++s) {
-        const int first = startOf(s);
-        if (first >= 0 && first != next && heardClearly(stepAt(first), notes)) m_candidates |= uint64_t{1} << s;
+    // Rule 3, along the flow: the next part's first two chords, clearly (the
+    // rest of this part skipped). Never another part: sections that open
+    // alike elsewhere in the song never pull it away.
+    if (nextOpening >= 0 && nextOpening != next) {
+        const int second = nextOpening + 1;
+        if (m_candidates != 0 && second < count && second != next && stepAt(second).part == nextPart &&
+            heardClearly(stepAt(second), notes)) {
+            m_step = second;
+            m_candidates = 0;
+            m_heardAt = now;
+            return true;
+        }
+        if (heardClearly(stepAt(nextOpening), notes)) m_candidates = 1; // its first chord: remembered
     }
+    // Nothing clear: it stays as it was.
     return false;
 }
 

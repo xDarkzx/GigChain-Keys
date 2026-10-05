@@ -4,11 +4,20 @@
 
 #include <algorithm>
 #include <iterator>
+#include <numeric>
 #include <utility>
 
 namespace gigchain::core {
 
-SongMap buildSongMap(const Chart& chart)
+int sectionIndexOf(const std::vector<ChartSection>& sections, const SectionRef& ref)
+{
+    const auto it = std::ranges::find_if(sections, [&ref](const ChartSection& s) {
+        return s.occurrence == ref.occurrence && s.name.compare(ref.name.trimmed(), Qt::CaseInsensitive) == 0;
+    });
+    return it == sections.end() ? -1 : static_cast<int>(it - sections.begin());
+}
+
+SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow)
 {
     const std::vector<ChartSection> sections = chartSections(chart);
     SongMap map;
@@ -18,9 +27,20 @@ SongMap buildSongMap(const Chart& chart)
         map.tooLong = true;
         return map;
     }
+    const auto failLong = [&map] {
+        map.tooLong = true;
+        map.steps.clear();
+        map.partStarts.clear();
+        std::ranges::fill(map.sectionStarts, -1);
+        return map;
+    };
 
-    std::vector<SongStep> played; // every chord as played, before twins are merged
-    std::vector<SongStep> part;   // the current section's chords, played once
+    // Each section's chords as played once through it (its repeat marks
+    // played out), and the chords before the first section.
+    std::vector<std::vector<SongStep>> blocks(sections.size());
+    std::vector<SongStep> prelude;
+    std::vector<SongStep> part; // the current section's chords, its lines' repeats played out
+    std::size_t read = 0;       // every chord read so far, repeats included
     int section = -1;
     std::size_t nextSection = 0;
     // Repeat marks multiply (a line and its section up to 16 times each):
@@ -37,8 +57,9 @@ SongMap buildSongMap(const Chart& chart)
     };
     const auto finishPart = [&] {
         const int times = section >= 0 ? sectionRepeats(sections.at(static_cast<std::size_t>(section))) : 1;
-        if (played.size() + part.size() > limit) map.tooLong = true;
-        else repeat(played, part, times);
+        if (read + part.size() * static_cast<std::size_t>(times) > limit) map.tooLong = true;
+        else repeat(section >= 0 ? blocks.at(static_cast<std::size_t>(section)) : prelude, part, times);
+        read += part.size() * static_cast<std::size_t>(times);
         part.clear();
     };
     for (std::size_t i = 0; i < chart.lines.size() && !map.tooLong; ++i) {
@@ -59,19 +80,43 @@ SongMap buildSongMap(const Chart& chart)
                                         .places = {{static_cast<int>(i), at}}});
             }
         }
-        if (played.size() + part.size() + once.size() > limit) map.tooLong = true;
+        if (read + part.size() + once.size() > limit) map.tooLong = true;
         else repeat(part, once, lineRepeats(line));
     }
     if (!map.tooLong) finishPart();
-    if (map.tooLong) {
-        map.steps.clear();
-        std::ranges::fill(map.sectionStarts, -1);
-        return map;
-    }
+    if (map.tooLong) return failLong();
 
-    // The same chord twice in a row (in one section) is one step, lit in every place.
+    // The flow: the sections in the order they are played (by default the chart's).
+    std::vector<int> order;
+    if (flow.empty()) {
+        order.resize(sections.size());
+        std::iota(order.begin(), order.end(), 0);
+    } else {
+        for (const SectionRef& ref : flow) {
+            if (const int s = sectionIndexOf(sections, ref); s >= 0) order.push_back(s);
+        }
+    }
+    std::vector<SongStep> played; // every chord as played, before twins are merged
+    int parts = 0;
+    const auto add = [&](const std::vector<SongStep>& block) {
+        if (block.empty() || map.tooLong) return;
+        if (played.size() + block.size() > limit) {
+            map.tooLong = true;
+            return;
+        }
+        for (SongStep step : block) {
+            step.part = parts;
+            played.push_back(std::move(step));
+        }
+        ++parts;
+    };
+    add(prelude);
+    for (const int s : order) add(blocks.at(static_cast<std::size_t>(s)));
+    if (map.tooLong) return failLong();
+
+    // The same chord twice in a row (in one part) is one step, lit in every place.
     for (SongStep& step : played) {
-        if (!map.steps.empty() && map.steps.back().section == step.section && map.steps.back().shape == step.shape) {
+        if (!map.steps.empty() && map.steps.back().part == step.part && map.steps.back().shape == step.shape) {
             auto& places = map.steps.back().places;
             const std::vector<std::pair<int, int>> earlier = places;
             std::ranges::copy_if(step.places, std::back_inserter(places),
@@ -80,9 +125,12 @@ SongMap buildSongMap(const Chart& chart)
         }
         map.steps.push_back(std::move(step));
     }
-    for (std::size_t i = map.steps.size(); i-- > 0;) {
-        const int s = map.steps.at(i).section;
-        if (s >= 0) map.sectionStarts.at(static_cast<std::size_t>(s)) = static_cast<int>(i);
+    for (std::size_t i = 0; i < map.steps.size(); ++i) {
+        const SongStep& step = map.steps.at(i);
+        if (i == 0 || step.part != map.steps.at(i - 1).part) map.partStarts.push_back(static_cast<int>(i));
+        if (step.section >= 0 && map.sectionStarts.at(static_cast<std::size_t>(step.section)) < 0) {
+            map.sectionStarts.at(static_cast<std::size_t>(step.section)) = static_cast<int>(i);
+        }
     }
     return map;
 }

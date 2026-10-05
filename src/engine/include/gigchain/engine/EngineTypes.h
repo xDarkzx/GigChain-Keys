@@ -159,6 +159,7 @@ struct ChordFollowStep
     int third = -1;      // its third; -1 = none (sus, 5)
     int otherThird = -1; // the third it is not (the major third of a minor chord); -1 = none
     int colour = -1;     // what stands in for a missing third (a sus note, a 5 chord's fifth); -1 = none
+    int part = -1;       // which part of the song's flow (ChordFollowMap::partStarts); -1 = none listed
 
     bool operator==(const ChordFollowStep&) const = default;
 };
@@ -168,6 +169,10 @@ struct ChordFollowMap
 {
     std::vector<ChordFollowStep> steps;
     std::vector<int> sectionStarts; // per section: its first step; -1 = it has none
+    // The song's flow: where each part (a section as it comes round: Verse 1,
+    // Chorus, Verse 2, Chorus...) starts, in playing order. Following only
+    // moves forward along it.
+    std::vector<int> partStarts;
     int resumeAt = -1;              // a chart edited while following carries on from this step
 
     bool operator==(const ChordFollowMap&) const = default;
@@ -203,8 +208,12 @@ struct ChordFollowPosition
 {
     ChordFollowMap map;
     map.sectionStarts = song.sectionStarts;
+    map.partStarts = song.partStarts;
     map.steps.reserve(song.steps.size());
-    for (const core::SongStep& step : song.steps) map.steps.push_back(followStepOf(step.shape, step.section));
+    for (const core::SongStep& step : song.steps) {
+        map.steps.push_back(followStepOf(step.shape, step.section));
+        map.steps.back().part = step.part;
+    }
     return map;
 }
 

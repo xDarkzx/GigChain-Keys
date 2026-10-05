@@ -269,6 +269,15 @@ Rectangle {
             }
         }
 
+        // The order the song is played in (chord follow keeps to it).
+        FlowBar {
+            objectName: "flowBar"
+            Layout.fillWidth: true
+            Layout.preferredHeight: implicitHeight
+            visible: !panel.editing && panel.doc.songIndex >= 0 && panel.doc.songFlow.length > 0
+            doc: panel.doc
+        }
+
         // The chart, edited where it is read.
         ScrollView {
             id: chartScroll
