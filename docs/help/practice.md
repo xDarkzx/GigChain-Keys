@@ -9,11 +9,11 @@ song needs chords first: see [Chord charts](charts.md).
 
 ## What you see
 
-- **Falling notes:** **blue** notes are for your **left hand** (the bass note),
-  **gold** notes for your **right hand** (the chord). A note's length shows
-  how long to hold it.
-- **The chord name** beside its notes, and the **section names** (*VERSE*,
-  *CHORUS*) as they come.
+- **Falling notes:** **blue** notes are for your **left hand**, **gold**
+  notes for your **right hand**. A note's length shows how long to hold it.
+- **The chord name** beside its notes (tap it to see [how to play it](charts.md)),
+  and the **section names** (*VERSE*, *CHORUS*) as they come, in the order of
+  the song's flow.
 - **The keyboard:** the keys to play now light up blue and gold. When you
   press a key it turns **green** if it is right and **red** if it is not.
 - **Now** and **Next** (top right): the chord to play now, and the one after.
@@ -21,11 +21,23 @@ song needs chords first: see [Chord charts](charts.md).
 
 ## How the chords are played
 
-Each chord is played the way a pianist would, with two hands:
+Each chord is played the way a pianist would, with two hands. Choose how in
+the toolbar:
 
-- **Left hand:** the chord's bass note, low down (for *D/F#* that is the F#).
-- **Right hand:** the chord around middle C, at most four notes, moved as
-  little as possible from the chord before, so your hand stays in one place.
+| **Left** | What falls |
+|---|---|
+| **Bass note** | the chord's bass note, low down (for *D/F#* that is the F#) |
+| **Octave** | the bass note and the one an octave above |
+| **Root and fifth** | the bass note and its fifth (a power-chord shape) |
+| **Full chord** | the whole chord in the left hand, low |
+
+| **Right** | What falls |
+|---|---|
+| **Smooth** | the chord around middle C, at most four notes, moved as little as possible from the chord before, so your hand stays in one place |
+| **Root position** | always root, third, fifth (and seventh) |
+| **My inversions** | the inversion you chose for each chord in its diagram (tap a chord's name, or **Now**), Smooth for the rest |
+
+A change in a chord's diagram is heard at once.
 
 ## Three ways to practise
 

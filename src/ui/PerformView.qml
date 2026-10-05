@@ -142,28 +142,34 @@ Rectangle {
                     }
                 }
 
-                // The song's parts (its chart's sections), as Gig Performer's
-                // tiles: the one playing lit, a tap goes there.
+                // The song's parts in the order it is played (its flow), as
+                // Gig Performer's tiles: the one playing lit, a tap goes
+                // there (the next time the flow comes to it).
                 Flow {
                     id: parts
                     objectName: "performParts"
                     Layout.fillWidth: true
                     visible: count > 0
                     spacing: Theme.spacing
-                    readonly property int count: perform.doc.currentSections.length
-                    function choose(index) { perform.doc.selectSection(index) }
+                    readonly property int count: perform.doc.songFlow.length
+                    // Following chords: the exact part; else every part of the section in force.
+                    readonly property int playingPart: perform.engineStatus.chordStarted
+                                                       ? perform.doc.followPart(perform.engineStatus.chordStep) : -1
+                    function choose(section) { if (section >= 0) perform.doc.selectSection(section) }
                     Repeater {
-                        model: perform.doc.currentSections
+                        model: perform.doc.songFlow
                         StageButton {
                             id: part
                             required property var modelData
                             required property int index
+                            objectName: "performPart"
                             height: 40
                             width: Math.max(110, implicitWidth + 24)
-                            text: part.modelData.label !== "" ? part.modelData.label : part.modelData.name
+                            text: part.modelData.label
                             font.pixelSize: Theme.fontSize + 2
-                            checked: part.index === perform.engineStatus.songSection
-                            onClicked: parts.choose(part.index)
+                            checked: parts.playingPart >= 0 ? part.index === parts.playingPart
+                                                            : part.modelData.section === perform.engineStatus.songSection
+                            onClicked: parts.choose(part.modelData.section)
                         }
                     }
                 }

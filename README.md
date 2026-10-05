@@ -45,7 +45,7 @@ open source too, under the GPL.
 > Your feedback decides what gets fixed and built next.
 
 <p align="center">
-  <img src="docs/images/edit.png" alt="Edit mode: a song's chart with its sections, the mixer and the loop station" width="900">
+  <img src="docs/images/edit.png" alt="Edit mode: a song's chart with its flow and sections, and the keyboard" width="900">
 </p>
 
 ## Download
@@ -108,16 +108,21 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 | 🎚️ **A real mixer** | Logic-style channel strips: instrument, effects, pan, fader, meters, mute and solo. A master strip with its own effects, and a safety limiter before your speakers. |
 | 🎼 **Splits, layers and knobs** | Key zones, transpose and velocity layers per instrument. Learn any knob, fader or pedal on your keyboard to any plugin setting. |
 | 📜 **Setlists** | All the night's songs in one file, in order. Change songs with the keyboard, a pedal or a pad. Undo for every edit. |
-| 📝 **Chord charts** | Paste a song from any chord website and it is cleaned up and placed over the words. Edit it where you read it: click above a word to add a chord, drag chords onto words. |
-| 🔀 **Sections that change the sound** | Each part of the chart (verse, chorus, solo…) picks which instruments play. They change by themselves, counted in bars or **following the chords you play**. |
+| 📝 **Chord charts** | Paste a song from any chord website and each chord lands on its word. Edit it where you read it, like cells: a chord box over every word to type into, words changed in place, chords dragged from word to word. |
+| 🎹 **How to play a chord** | Forgot one on stage? Tap it: a keyboard with a dot on each key to press (left and right hand), its notes by name, and its inversions. Keep the one you like for the song. |
+| 🔀 **Sections that change the sound** | Each part of the chart (verse, chorus, solo…) picks which instruments play. They change by themselves, counted in bars or **following the chords you play**, always forward through the song's **flow** (Verse 1 → Chorus → Verse 2 → Chorus ×3…), never jumping to the wrong part. |
 | 🎤 **Perform mode** | Full screen, built for the stage: the chart big and clear, the song's parts as tiles, nothing you can knock by accident. |
 | 🔁 **Loop station** | Record a loop of any instrument, in time with the song, and layer on top: street-performer style, from buttons on your keyboard. |
-| 🎓 **Practice mode** | The song's chords fall onto a keyboard as glowing notes, YouTube-piano style. *Listen*, *Play along*, or *Wait for me*, slowed down and looped. |
+| 🎓 **Practice mode** | The song's chords fall onto a keyboard as glowing notes, YouTube-piano style. *Listen*, *Play along*, or *Wait for me*, slowed down and looped. The left hand plays the bass, an octave, root and fifth or the full chord; the right hand smooth, in root position or in your chosen inversions. |
 | 🥁 **Tempo, click and backing tracks** | A tempo per song, tap tempo, a click, MIDI clock in and out, and a backing track (WAV, MP3, FLAC…) per song. |
 | 🛟 **Built not to fail** | Plugins are scanned in a separate process; a plugin that crashes while loading is switched off next time; an unplugged keyboard or audio interface comes back by itself. |
 
 <p align="center">
   <img src="docs/images/practice.png" alt="Practice mode: the chords falling onto a keyboard" width="900">
+</p>
+
+<p align="center">
+  <img src="docs/images/chord-diagram.png" alt="How to play a chord: E/D# with a dot on each key to press" width="520">
 </p>
 
 ## Getting started
@@ -184,6 +189,7 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
+| 0.2 | Alpha: the chart edited as cells, chord diagrams, the song's flow and steadier chord follow, Practice hand styles |
 | 0.1 | First public alpha: Windows 10/11; macOS (Apple Silicon) |
 
 What is coming next is in the [**roadmap**](docs/ROADMAP.md): an

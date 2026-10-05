@@ -11,11 +11,24 @@ using namespace gigchain;
 using namespace gigchain::engine;
 using namespace Qt::StringLiterals;
 
-// MIDI clock sent to a real MIDI output. Windows always has its "Microsoft
-// GS Wavetable Synth" output, so this runs on any machine with one.
+// MIDI clock sent to a real MIDI output. Windows always lists its "Microsoft
+// GS Wavetable Synth" output, so this runs on any machine with one that opens
+// (a machine without sound, like a CI runner, lists it but cannot open it).
 class TestMidiClock : public QObject
 {
     Q_OBJECT
+
+    // The first listed output that opens, in `clock`; empty (and why each
+    // refused in `refused`) when none does.
+    static QString openFirst(MidiClockOut& clock, QString& refused)
+    {
+        for (const QString& output : MidiClockOut::listPorts()) {
+            const auto opened = clock.open(output);
+            if (opened) return output;
+            refused += u"%1: %2. "_s.arg(output, opened.error().message);
+        }
+        return {};
+    }
 
 private slots:
     // A check that runs every few seconds (listing MIDI ports) and fails the
@@ -45,12 +58,12 @@ private slots:
 
     void ticksGoOutAtTheTempo()
     {
-        const QStringList outputs = MidiClockOut::listPorts();
-        if (outputs.isEmpty()) QSKIP("No MIDI outputs on this machine");
         MidiClockOut clock;
         clock.setTempo(150.0); // 150 BPM: 60 ticks a second
-        QVERIFY2(clock.open(outputs.first()).has_value(), qPrintable(outputs.first()));
-        QCOMPARE(clock.portName(), outputs.first());
+        QString refused;
+        const QString output = openFirst(clock, refused);
+        if (output.isEmpty()) QSKIP(qPrintable(u"No MIDI output opens on this machine. "_s + refused));
+        QCOMPARE(clock.portName(), output);
         QElapsedTimer timer;
         timer.start();
         std::this_thread::sleep_for(std::chrono::seconds(1)); // the clock runs in real time: measure a second of it
@@ -65,11 +78,10 @@ private slots:
 
     void aTempoChangeChangesThePace()
     {
-        const QStringList outputs = MidiClockOut::listPorts();
-        if (outputs.isEmpty()) QSKIP("No MIDI outputs on this machine");
         MidiClockOut clock;
         clock.setTempo(60.0);
-        QVERIFY(clock.open(outputs.first()).has_value());
+        QString refused;
+        if (openFirst(clock, refused).isEmpty()) QSKIP(qPrintable(u"No MIDI output opens on this machine. "_s + refused));
         // Each half second as it really was (a busy machine sleeps longer).
         QElapsedTimer timer;
         timer.start();

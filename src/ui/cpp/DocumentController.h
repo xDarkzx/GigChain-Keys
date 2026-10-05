@@ -246,6 +246,8 @@ public:
     [[nodiscard]] QString followFirstChord() const;
     Q_INVOKABLE QString followLabel(int step) const;
     Q_INVOKABLE int followLine(int step) const;
+    // The part of the song's flow (songFlow) a followed chord is in; -1: none.
+    Q_INVOKABLE int followPart(int step) const;
     [[nodiscard]] bool songLoopSync() const;
     Q_INVOKABLE bool setSongLoopSync(int song, bool sync);
     [[nodiscard]] int songLoopBars() const;

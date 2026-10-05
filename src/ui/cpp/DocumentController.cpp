@@ -1136,6 +1136,16 @@ int DocumentController::followLine(int step) const
     return m_followLines.at(static_cast<std::size_t>(step));
 }
 
+int DocumentController::followPart(int step) const
+{
+    if (step < 0 || std::cmp_greater_equal(step, m_songMap.steps.size())) return -1;
+    // (Chords before the first section are a part of their own in the map,
+    // not one of the flow's sections: the flow's parts count from after them.)
+    const bool prelude = !m_songMap.steps.empty() && m_songMap.steps.front().section < 0;
+    const int part = m_songMap.steps.at(static_cast<std::size_t>(step)).part - (prelude ? 1 : 0);
+    return part >= 0 ? part : -1;
+}
+
 bool DocumentController::songLoopSync() const
 {
     const core::Song* song = currentSong();

@@ -693,6 +693,11 @@ private slots:
         QVERIFY(!m_doc->songFlowSet());
         QCOMPARE(m_engine->follow.partStarts, (std::vector<int>{0, 2, 4}));
         QVERIFY(m_doc->redo());
+        // Which part of the flow a followed chord is in (Perform lights its tile).
+        QCOMPARE(m_doc->followPart(0), 0);
+        QCOMPARE(m_doc->followPart(5), 2); // the first chorus
+        QCOMPARE(m_doc->followPart(7), 3); // the second
+        QCOMPARE(m_doc->followPart(99), -1);
         QVERIFY(m_doc->setSongFlow({})); // back to the chart's order
         QVERIFY(!m_doc->songFlowSet());
     }

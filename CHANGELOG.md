@@ -8,6 +8,44 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-05 (alpha)
+
+### Charts
+
+- **The chart edited as cells.** Click a line: each word has a chord box
+  above it (a bar where there is none yet). Type a chord in a box (Tab: the
+  next word), click a chord to change it, drag chords between words and
+  lines, double-click a word to change it. Chords are always drawn over
+  their word.
+- **Pasted chords land on their words.** A chord a chord site placed a
+  letter or two into a word goes on the word's start.
+- **A paste is one undo step** (the chart, the song's name, key, tempo and
+  time together). The separate "Undo paste" bar is gone: Ctrl+Z does it.
+- The chart scrolls with the mouse wheel again.
+
+### Playing
+
+- **How to play a chord:** tap a chord on stage (or right-click it in the
+  editor, or tap its name in Practice): a keyboard with a dot on each key to
+  press, ringed blue for the left hand and gold for the right, its notes by
+  name, and its inversions. Keep the one you like for the song.
+- **The song's flow:** the Flow bar over the chart sets the order the song
+  is played in (a chorus three times, a verse after a verse…). Perform's
+  part tiles and Practice follow it.
+- **Chord follow keeps to the flow:** it only moves forward (the next chord,
+  one missed chord caught up, the next part's opening). It no longer jumps
+  to another part that opens with the same chords.
+
+### Practice
+
+- **Left hand:** the bass note, an octave, root and fifth, or the full chord.
+- **Right hand:** smooth, root position, or the inversions you chose.
+
+### Fixed
+
+- A MIDI clock test failed on machines that list a MIDI output they cannot
+  open (no sound hardware); it now says so and skips.
+
 ## [0.1.0] - 2026-10-05 (first public alpha)
 
 The first version for players to try and test: Windows 10 and 11 (64-bit),
