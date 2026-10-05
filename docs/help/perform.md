@@ -9,10 +9,17 @@ by accident.
 
 - **The header:** ◀ the previous song, the **song's name** and its sound, what
   comes **Next**, and ▶ the next song.
-- **The song's parts** as tiles (Intro, Verse, Chorus…). The one playing is
+- **The song's parts** as tiles, in the order the song is played (its
+  [flow](charts.md): *Verse 1, Chorus, Verse 2, Chorus…*). The one playing is
   lit; tap a tile to jump there.
 - **The chart**, filling the screen. While the song plays it scrolls by itself
   so the line you are on stays in the upper third.
+
+## Forgot a chord?
+
+**Tap any chord** in the chart: a keyboard shows the keys to press, a dot on
+each (blue ring: left hand, gold ring: right hand), with the notes by name and
+its inversions. See [How to play a chord](charts.md).
 - **The master level** and how the computer is doing (**CPU**), small at the
   bottom.
 

@@ -36,9 +36,25 @@ shows where you are (*Chorus · 3/8*). Press it again to stop.
 ### Follow the chords I play
 
 Switch on **Sections follow the chords I play**. Now there is no counting:
-the app listens to the chords you play and moves through the chart with you.
+the app listens to the chords you play and moves through the song with you.
 The display says **Play C to start**, then follows. It needs chords in the
 chart.
+
+It follows the song's **flow**: the order the song is played in, set in the
+**Flow** bar over the chart (see [Chord charts](charts.md)). It only ever
+moves **forward** along it:
+
+- **The next chord** you play moves it on.
+- **A missed chord** is caught up: play the chord after the next and it
+  follows (within the part you are in).
+- **The next part:** play the next part's first two chords clearly (you cut
+  the end of a section short) and it goes there.
+
+It never jumps back, and never to another part that happens to open with the
+same chords (common: verse, pre-chorus and chorus often start alike). If it
+ever loses you, a pedal (**Settings > MIDI > Pedals and pads**) or a tap on a
+section's title or tile puts it right: it goes to the next time the flow comes
+to that section.
 
 ## Tempo, tap and click
 

@@ -46,6 +46,14 @@ instrument.
 Each plugin's settings are saved with the song when you **Save**. If you
 changed a sound and did not save, the old sound comes back next time.
 
+## Chord follow goes to the wrong part
+
+Check the song's **Flow** bar above the chart (Edit): chord follow only moves
+forward along it. If the band plays the chorus twice, or the pre-chorus only
+the second time, set that there (**Play it once more**, **Take it out**). If
+it loses you mid-song, a section's title, a tile in Perform or a pedal puts it
+right. See [Sections, tempo and backing tracks](sections-and-tempo.md).
+
 ## Practice shows nothing
 
 The song has no chords yet. Add them in the **Chart** tab. See

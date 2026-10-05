@@ -36,7 +36,12 @@ text box, so typing lyrics never changes song.
 | Right-click a song | Tempo, backing track, duplicate, delete |
 | Double-click an instrument | Add it as a channel |
 | Right-click a channel strip | Keyboard zone, knobs, replace, remove |
-| Click above a word in a chart | Add a chord there |
+| Click a line of a chart | Open it: a bar over each word without a chord |
+| Click a word's chord box | Type a chord there (**Tab**: the next word's box) |
+| Double-click a word | Change it where it is (**Tab**: the next word) |
+| Right-click a chord | How to play it, remove it |
+| Right-click a line | Edit it as text, add a line below |
+| Tap a chord (Perform), a chord's name (Practice) | How to play it |
 | Double-click a section title | Rename it |
 | Double-click the top bar | Maximise or restore the window |
 
