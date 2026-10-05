@@ -1478,15 +1478,25 @@ private slots:
         QVERIFY(QMetaObject::invokeMethod(about, "close"));
     }
 
-    void spaceNavigatesButNotWhileTyping()
+    // The computer keyboard plays: Space plays and stops the song, the
+    // arrows change sounds and songs, single letters for the rest. Never
+    // while typing.
+    void theComputerKeyboardPlaysTheSong()
     {
-        QVERIFY(m_session->document().addPatch(0));
-        QVERIFY(m_session->document().selectPatch(0, 0));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addPatch(0));
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.setSongChart(0, u"{c: Verse}\n[C]a [G]b\n{c: Chorus}\n[F]c\n"_s));
+        QVERIFY(doc.setSongFollowChords(0, false)); // (the count leads)
+        QVERIFY(doc.selectPatch(0, 0));
         QQuickWindow* w = window();
         QVERIFY(w != nullptr);
         w->requestActivate();
         QVERIFY(QTest::qWaitForWindowActive(w));
+        auto* status = m_qml->rootObjects().value(0)->property("engineStatus").value<QObject*>();
+        QVERIFY(status != nullptr);
 
+        // Typing: a space is a space.
         auto* tabs = m_qml->rootObjects().value(0)->findChild<QObject*>(u"sidePanelTabs"_s);
         QVERIFY(tabs != nullptr);
         tabs->setProperty("currentIndex", 1); // Plugins tab
@@ -1495,13 +1505,99 @@ private slots:
         QVERIFY(field != nullptr);
         field->forceActiveFocus();
         QTest::keyClick(w, Qt::Key_Space);
-        QCOMPARE(m_session->document().patchIndex(), 0); // typed a space, did not navigate
-
+        QTest::keyClick(w, Qt::Key_C);
+        QVERIFY(!m_engine->songPosition().playing);
+        QVERIFY(!status->property("clickOn").toBool());
         QTest::keyClick(w, Qt::Key_Return); // finish editing: focus leaves the field
         QVERIFY(!field->hasActiveFocus());
+
         QTest::keyClick(w, Qt::Key_Space);
-        QCOMPARE(m_session->document().patchIndex(), 1);
+        QVERIFY(m_engine->songPosition().playing);
+        QTest::keyClick(w, Qt::Key_Space);
+        QVERIFY(!m_engine->songPosition().playing);
+        QTest::keyClick(w, Qt::Key_Right);
+        QCOMPARE(doc.patchIndex(), 1);
+        QTest::keyClick(w, Qt::Key_Left);
+        QCOMPARE(doc.patchIndex(), 0);
+        QTest::keyClick(w, Qt::Key_Down);
+        QCOMPARE(doc.songIndex(), 1);
+        QTest::keyClick(w, Qt::Key_Up);
+        QCOMPARE(doc.songIndex(), 0);
+        QTest::keyClick(w, Qt::Key_N); // the next section
+        QCOMPARE(m_engine->songPosition().section, 1);
+        QTest::keyClick(w, Qt::Key_C);
+        QVERIFY(status->property("clickOn").toBool());
+        QTest::keyClick(w, Qt::Key_C);
+        QVERIFY(!status->property("clickOn").toBool());
+        QTest::keyClick(w, Qt::Key_M);
+        QVERIFY(status->property("masterMuted").toBool());
+        QTest::keyClick(w, Qt::Key_M);
+        QVERIFY(!status->property("masterMuted").toBool());
+        QTest::keyClick(w, Qt::Key_N, Qt::ControlModifier | Qt::ShiftModifier);
+        QCOMPARE(doc.setlist().songs.size(), 3u);
         settle();
+    }
+
+    // What was clicked last is what Delete, F2 and Ctrl+D act on: a song in
+    // the list, a channel strip. Ctrl+Z brings it back.
+    void aClickedSongOrChannelIsEditedFromTheKeyboard()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.renameSong(0, u"One"_s));
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.selectPatch(0, 0));
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        settle();
+        // The second song's row (delegates are visual children only).
+        const auto rowOf = [w](int song) -> QQuickItem* {
+            QList<QQuickItem*> todo{w->contentItem()};
+            while (!todo.isEmpty()) {
+                QQuickItem* item = todo.takeLast();
+                if (item->objectName() == u"setlistRow"_s && item->isVisible() && item->property("songIndex").toInt() == song) return item;
+                todo << item->childItems();
+            }
+            return nullptr;
+        };
+        const auto centre = [](QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); };
+        QQuickItem* second = rowOf(1);
+        QVERIFY(second != nullptr);
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(second));
+        settle();
+        QCOMPARE(doc.songIndex(), 1);
+        QTest::keyClick(w, Qt::Key_Delete);
+        QCOMPARE(doc.setlist().songs.size(), 2u);
+        QTest::keyClick(w, Qt::Key_Z, Qt::ControlModifier);
+        QCOMPARE(doc.setlist().songs.size(), 3u);
+        QTest::keyClick(w, Qt::Key_D, Qt::ControlModifier);
+        QCOMPARE(doc.setlist().songs.size(), 4u);
+
+        // F2: the selected song's name, typed in place.
+        QVERIFY(doc.selectPatch(0, 0));
+        settle();
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(rowOf(0)));
+        QTest::keyClick(w, Qt::Key_F2);
+        QTest::keyClick(w, Qt::Key_A, Qt::ControlModifier);
+        for (const QChar c : u"Opener"_s) QTest::keyClick(w, c.toLatin1());
+        QTest::keyClick(w, Qt::Key_Return);
+        QCOMPARE(doc.currentSongName(), u"Opener"_s);
+
+        // A channel strip clicked: Delete removes the channel.
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
+        settle();
+        QQuickItem* slot = stripChild(u"instrumentSlot"_s);
+        QVERIFY(slot != nullptr);
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(slot));
+        settle();
+        QCOMPARE(doc.selectedChannel(), 0);
+        QTest::keyClick(w, Qt::Key_Delete);
+        settle();
+        QVERIFY(doc.currentPatch()->channels.empty());
+        QTest::keyClick(w, Qt::Key_Z, Qt::ControlModifier);
+        settle();
+        QCOMPARE(doc.currentPatch()->channels.size(), 1u);
     }
 
     // The fake engine is not played: the first chord is shown and outlined.

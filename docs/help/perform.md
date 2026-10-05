@@ -33,15 +33,18 @@ next time.
 | How | Does |
 |---|---|
 | ◀ ▶ in the header | Previous / next song |
-| **Page Up** / **Page Down** | Previous / next song |
-| **Space** or **→** / **←** | Next / previous sound |
+| **↑** / **↓**, or **Page Up** / **Page Down** | Previous / next song |
+| **→** / **←** | Next / previous sound |
+| **Space** | Play or stop the song (its count and backing track) |
+| **N** | The next section now |
 | A tile | That part of the song |
 | A pedal or pad | Whatever you learned it to do (Settings > MIDI > **Pedals and pads**) |
 
 ## Panic
 
-The red **Panic** button (top bar) stops every stuck note at once. Use it if a
-note keeps sounding after you let go.
+The red **Panic** button (top bar), or the **P** key, stops every stuck note at
+once. Use it if a note keeps sounding after you let go. Every key is listed in
+[Keyboard shortcuts](shortcuts.md).
 
 ## The mixer and keyboard on stage
 

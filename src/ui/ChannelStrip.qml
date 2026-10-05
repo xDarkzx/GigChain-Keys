@@ -51,6 +51,10 @@ Rectangle {
         return parts.join(" · ")
     }
 
+    // The strip clicked: the mixer takes the computer keyboard (Delete removes it).
+    signal keysWanted()
+    function takeKeys() { strip.keysWanted() }
+
     readonly property real peakDb: peak > 0 ? 20 * Math.log10(peak) : -200
     property int menuEffect: -1 // effect the effect menu acts on
 
@@ -74,6 +78,7 @@ Rectangle {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {
             strip.doc.selectedChannel = strip.index
+            strip.takeKeys()
             if (mouse.button === Qt.RightButton) strip.menu(channelMenuComponent).popup(mouse.x, mouse.y)
         }
     }
@@ -241,6 +246,7 @@ Rectangle {
         // instrument slot
         EffectSlot {
             id: instrumentSlot
+            objectName: "instrumentSlot"
             Layout.fillWidth: true
             implicitHeight: 22
             text: strip.instrumentName
@@ -248,6 +254,7 @@ Rectangle {
             loadedColor: Theme.slotInstrument
             onClicked: {
                 strip.doc.selectedChannel = strip.index
+                strip.takeKeys()
                 if (!loaded) strip.menu(instrumentPickerComponent).popup(instrumentSlot, 0, instrumentSlot.height)
             }
             onMenuRequested: strip.menu(channelMenuComponent).popup(instrumentSlot, 0, instrumentSlot.height)

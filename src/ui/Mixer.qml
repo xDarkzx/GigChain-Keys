@@ -16,6 +16,8 @@ Rectangle {
     property EffectWindows effectWindows: null
     property MasterBus masterBus: null
     property LoopController loops: null
+    // Channels may be removed from the computer keyboard (false on stage).
+    property bool editable: true
 
     // The console's floor: darker at the bottom, strips standing on it.
     gradient: Gradient {
@@ -123,7 +125,18 @@ Rectangle {
             model: mixer.channelModel
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.horizontal: ScrollBar {}
+            keyNavigationEnabled: false // (the arrows change sounds and songs: Main's shortcuts)
+            // A strip clicked: Delete (or Backspace) removes its channel. Not on stage.
+            Keys.onPressed: (event) => {
+                const channel = mixer.doc.selectedChannel
+                if (!mixer.editable || channel < 0) return
+                if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
+                    event.accepted = true
+                    mixer.doc.removeChannel(channel)
+                }
+            }
             delegate: ChannelStrip {
+                onKeysWanted: strips.forceActiveFocus()
                 height: Math.min(ListView.view.height, Theme.stripHeight)
                 doc: mixer.doc
                 pluginModel: mixer.pluginModel

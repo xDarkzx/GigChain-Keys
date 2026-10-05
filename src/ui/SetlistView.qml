@@ -30,9 +30,31 @@ Item {
             spacing: Theme.spacingSmall
             topMargin: Theme.spacing
             ScrollBar.vertical: ScrollBar {}
+            // (Up and Down choose songs everywhere: Main's shortcuts.)
+            keyNavigationEnabled: false
+
+            // A song clicked: Delete removes it, F2 renames it, Ctrl+D duplicates
+            // it. (Never on stage: the list is not editable there.)
+            // F2: the song's own row starts renaming it.
+            signal renameRequested(int song)
+            Keys.onPressed: (event) => {
+                const song = view.doc.songIndex
+                if (!view.editable || song < 0) return
+                if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
+                    event.accepted = true
+                    view.doc.removeSong(song)
+                } else if (event.key === Qt.Key_F2) {
+                    event.accepted = true
+                    list.renameRequested(song)
+                } else if (event.key === Qt.Key_D && event.modifiers === Qt.ControlModifier) {
+                    event.accepted = true
+                    view.doc.duplicateSong(song)
+                }
+            }
 
             delegate: Rectangle {
                 id: row
+                objectName: "setlistRow"
 
                 required property string kind
                 required property string name
@@ -64,8 +86,13 @@ Item {
                     renameField.forceActiveFocus()
                     renameField.selectAll()
                 }
+                Connections {
+                    target: list
+                    function onRenameRequested(song) { if (row.isSong && row.songIndex === song) row.startRename() }
+                }
                 function select() {
                     view.doc.selectPatch(row.songIndex, row.isSong ? 0 : row.patchIndex)
+                    list.forceActiveFocus() // (the keys below act on it)
                 }
 
                 RowLayout {

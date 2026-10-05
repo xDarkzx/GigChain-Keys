@@ -1,24 +1,47 @@
 # Keyboard shortcuts
 
 The computer keyboard shortcuts. They do nothing while you are typing in a
-text box, so typing lyrics never changes song.
+text box (a song's name, lyrics, a chord), or while a menu or dialog is open,
+so typing never changes song or starts the band.
 
-## Anywhere
+## Playing (Edit and Perform)
 
 | Keys | Does |
 |---|---|
-| **F1** | This guide, at the page for what you are doing |
+| **Space** | Play or stop the song: its sections' count and its backing track (in Practice: play or pause) |
+| **→** / **←** | Next / previous sound (then the next song) |
+| **↓** / **↑**, or **Page Down** / **Page Up** | Next / previous song |
+| **N** | On to the next section now |
+| **T** | Tap tempo: tap a few times in time |
+| **C** | Click on or off |
+| **M** | Mute everything, or unmute |
+| **P** | Panic: stops every note on every instrument |
 | **Tab** | Swap between Edit and Perform |
 | **Esc** | Back to Edit (from Perform or Practice) |
-| **Space** or **→** | Next sound (then the next song) |
-| **←** | Previous sound |
-| **Page Down** | Next song |
-| **Page Up** | Previous song |
+| **F1** | This guide, at the page for what you are doing |
 
-## In Edit
+## Loop station
+
+These act on the selected channel (the one with the lit strip).
 
 | Keys | Does |
 |---|---|
+| **R** | Record a loop, or a new layer over it |
+| **L** | Play or stop the channel's loop |
+| **Shift+L** | Stop every loop |
+
+## Editing (Edit only)
+
+Delete, F2 and Ctrl+D act on what you clicked last: a song in the list, or a
+channel strip (click its background or its instrument). Ctrl+Z brings back
+anything deleted.
+
+| Keys | Does |
+|---|---|
+| **Delete** or **Backspace** | Delete the selected song, or remove the selected channel |
+| **F2** | Rename the selected song |
+| **Ctrl+D** | Duplicate the selected song |
+| **Ctrl+Shift+N** | New song |
 | **Ctrl+N** | New setlist |
 | **Ctrl+O** | Open a setlist |
 | **Ctrl+S** | Save |
@@ -27,6 +50,9 @@ text box, so typing lyrics never changes song.
 | **Ctrl+Z** | Undo |
 | **Ctrl+Shift+Z** or **Ctrl+Y** | Redo |
 | **Ctrl+V** (Chart tab) | Paste a song's chords and lyrics |
+
+Nothing is ever deleted by a key in Perform: the song list and the mixer are
+read-only on stage.
 
 ## Mouse
 

@@ -294,6 +294,7 @@ Rectangle {
         }
 
         Mixer {
+            editable: false
             visible: perform.mixerOpen
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.mixerHeight + (perform.loops !== null && perform.loops.stripVisible ? Theme.looperHeight : 0)

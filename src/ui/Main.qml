@@ -39,7 +39,15 @@ ApplicationWindow {
     property string pendingPath: "" // a recent setlist waiting to be opened
     property bool closeConfirmed: false
     // Shortcuts must not fire while the user types in a text field.
-    readonly property bool typing: activeFocusItem instanceof TextInput
+    readonly property bool typing: activeFocusItem instanceof TextInput || activeFocusItem instanceof TextEdit
+    // Nor while a menu or dialog has the keyboard (its arrows are its own).
+    readonly property bool inPopup: {
+        for (let item = activeFocusItem; item !== null; item = item.parent) {
+            if (item === Overlay.overlay) return true
+        }
+        return false
+    }
+    readonly property bool keysFree: !typing && !inPopup
 
     width: 1440
     height: 880
@@ -223,12 +231,41 @@ ApplicationWindow {
     }
 
     // ------------------------------------------------------------- shortcuts
-    Shortcut { sequences: ["Space", "Right"]; enabled: !root.typing; onActivated: root.doc.nextPatch() }
-    Shortcut { sequence: "Left"; enabled: !root.typing; onActivated: root.doc.previousPatch() }
-    Shortcut { sequence: "PgDown"; enabled: !root.typing; onActivated: root.doc.nextSong() }
-    Shortcut { sequence: "PgUp"; enabled: !root.typing; onActivated: root.doc.previousSong() }
+    // Playing (Edit and Perform; never while typing). The same as the pedals
+    // and pads learned in Settings. docs/help/shortcuts.md lists them all.
+    function playStop() {
+        if (root.practiceMode) {
+            if (root.practice.playing) root.practice.pause()
+            else root.practice.play()
+        } else {
+            root.engineStatus.playPauseTrack()
+        }
+    }
+    Shortcut { objectName: "keyPlay"; sequence: "Space"; enabled: root.keysFree; onActivated: root.playStop() }
+    Shortcut { sequence: "Right"; enabled: root.keysFree; onActivated: root.doc.nextPatch() }
+    Shortcut { sequence: "Left"; enabled: root.keysFree; onActivated: root.doc.previousPatch() }
+    Shortcut { sequences: ["Down", "PgDown"]; enabled: root.keysFree; onActivated: root.doc.nextSong() }
+    Shortcut { sequences: ["Up", "PgUp"]; enabled: root.keysFree; onActivated: root.doc.previousSong() }
+    Shortcut { sequence: "N"; enabled: root.keysFree && !root.practiceMode; onActivated: root.doc.nextSection() }
+    Shortcut { sequence: "T"; enabled: root.keysFree; onActivated: root.engineStatus.tapTempo() }
+    Shortcut { sequence: "C"; enabled: root.keysFree; onActivated: root.engineStatus.clickOn = !root.engineStatus.clickOn }
+    Shortcut { sequence: "M"; enabled: root.keysFree; onActivated: root.engineStatus.masterMuted = !root.engineStatus.masterMuted }
+    Shortcut { sequence: "P"; enabled: root.keysFree; onActivated: root.engineStatus.panic() }
+    // The loop station, on the selected channel.
+    Shortcut {
+        sequence: "R"
+        enabled: root.keysFree && !root.practiceMode && root.doc.selectedChannel >= 0
+        onActivated: root.loops.record(root.doc.selectedChannel)
+    }
+    Shortcut {
+        sequence: "L"
+        enabled: root.keysFree && !root.practiceMode && root.doc.selectedChannel >= 0
+        onActivated: root.loops.playStop(root.doc.selectedChannel)
+    }
+    Shortcut { sequence: "Shift+L"; enabled: root.keysFree && !root.practiceMode; onActivated: root.loops.stopAll() }
+    Shortcut { sequence: "Ctrl+Shift+N"; enabled: !root.performMode && !root.typing; onActivated: root.doc.addSong() }
     Shortcut { sequences: [StandardKey.HelpContents, "F1"]; onActivated: root.openHelp("") }
-    Shortcut { sequence: "Tab"; enabled: !root.typing; onActivated: root.toggleMode() }
+    Shortcut { sequence: "Tab"; enabled: root.keysFree; onActivated: root.toggleMode() }
     Shortcut { sequence: "Esc"; enabled: root.performMode || root.practiceMode; onActivated: root.editMode() }
     Shortcut { sequences: [StandardKey.New]; enabled: !root.performMode; onActivated: root.guarded("new") }
     Shortcut { sequences: [StandardKey.Open]; enabled: !root.performMode; onActivated: root.guarded("open") }

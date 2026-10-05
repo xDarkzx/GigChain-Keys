@@ -36,9 +36,12 @@ website and paste them into an empty setlist's chart (**Ctrl+V**). See
 
 | Key | Does |
 |---|---|
-| **Page Down** / **Page Up** | Next / previous song |
-| **Space** or **→** | Next sound (then the next song) |
+| **↓** / **↑**, or **Page Down** / **Page Up** | Next / previous song |
+| **→** | Next sound (then the next song) |
 | **←** | Previous sound |
+| **Delete** (a song clicked) | Delete it (**Ctrl+Z** brings it back) |
+| **F2** / **Ctrl+D** (a song clicked) | Rename it / duplicate it |
+| **Ctrl+Shift+N** | A new song |
 
 Pedals and pads can do the same: see [Sound and your keyboard](audio-and-midi.md).
 

@@ -36,6 +36,18 @@ Downloads for every version are on the
   one missed chord caught up, the next part's opening). It no longer jumps
   to another part that opens with the same chords.
 
+### Keyboard shortcuts
+
+- **Space plays and stops the song** (its count and backing track; in
+  Practice, play and pause). Next sound is **→**, as before.
+- **↑ / ↓** change songs; **N** next section, **T** tap tempo, **C** click,
+  **M** mute everything, **P** panic.
+- Loop station: **R** records on the selected channel, **L** plays or stops
+  its loop, **Shift+L** stops them all.
+- A clicked song: **Delete** removes it, **F2** renames it, **Ctrl+D**
+  duplicates it; **Ctrl+Shift+N** adds one. A clicked channel strip:
+  **Delete** removes the channel. Never in Perform; Ctrl+Z brings it back.
+
 ### Practice
 
 - **Left hand:** the bass note, an octave, root and fifth, or the full chord.
