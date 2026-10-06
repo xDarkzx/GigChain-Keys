@@ -10,6 +10,7 @@
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4">
   <img alt="macOS" src="https://img.shields.io/badge/macOS-Apple%20Silicon-555">
   <img alt="Stage: alpha" src="https://img.shields.io/badge/stage-public%20alpha-e0a526">
+  <a href="https://github.com/xDarkzx/GigChain-Keys/actions/workflows/ci.yml"><img alt="Build" src="https://github.com/xDarkzx/GigChain-Keys/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/license-GPL--3.0-blue"></a>
 </p>
 
