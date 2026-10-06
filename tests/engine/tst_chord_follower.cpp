@@ -464,6 +464,23 @@ private slots:
 
     // The verse ends on C and the chorus opens on C: only playing the chord
     // again enters the chorus, not a melody note over the held one.
+    // D written twice in a row in a part: comping on the D (struck again a
+    // moment later) stays on the first; struck again after a while (1.5 s
+    // or more since the first D came in), it is the second.
+    void theSameChordTwiceInAPartNeedsTimeToMoveOn()
+    {
+        Player p(mapOf({{"D", 0}, {"D", 0}, {"G", 0}, {"A", 0}}));
+        p.chord({D4, Fs4, A4});
+        QCOMPARE(p.step(), 0);
+        p.chord({D4, Fs4, A4}); // comped again, 0.6 s later: still the first D
+        QCOMPARE(p.step(), 0);
+        p.wait(1000);
+        p.chord({D4, Fs4, A4}); // 2.3 s after the first: the second D
+        QCOMPARE(p.step(), 1);
+        p.chord({G3, B3, D4});
+        QCOMPARE(p.step(), 2);
+    }
+
     void theSameChordAcrossSectionsIsPlayedAgain()
     {
         Player p(mapOf({{"G", 0}, {"C", 0}, {"C", 1}, {"F", 1}}));

@@ -55,6 +55,10 @@ public:
     // Keys landing this soon after a chord was heard are the rest of it (a
     // chord's keys are never struck all at once), not a new strike.
     static constexpr double kChordSpreadSeconds = 0.1;
+    // The same chord written twice in a row in a part: the second is entered
+    // when the chord is struck again at least this long after the first came
+    // in (sooner is comping on the first).
+    static constexpr double kRepeatDwellSeconds = 1.5;
 
 private:
     static constexpr int64_t kLongAgo = INT64_MIN / 2;
@@ -71,7 +75,8 @@ private:
     [[nodiscard]] int startForPart(const ChordFollowMap& map, int section, int part) const noexcept;
     // `key` went down at `now`: whether the chart moved (rules 1 to 3).
     // `memory` and `spread`: kMemorySeconds and kChordSpreadSeconds in samples.
-    bool hear(const ChordFollowMap& map, int key, int64_t now, int64_t memory, int64_t spread) noexcept;
+    // `repeatDwell`: kRepeatDwellSeconds in samples.
+    bool hear(const ChordFollowMap& map, int key, int64_t now, int64_t memory, int64_t spread, int64_t repeatDwell) noexcept;
     void fillHandover(int64_t switchTime, int offset) noexcept;
     void publish(const ChordFollowMap* map) noexcept;
 

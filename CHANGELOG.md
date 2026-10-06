@@ -23,8 +23,12 @@ Downloads for every version are on the
 - **Chord follow** is now the option for free-time songs (Tempo… > Follow
   the chords I play). Songs from older files with a tempo run on the
   timeline; songs without one still follow their chords.
-- On the timeline the same chord twice in a row is two chords, each lit in
-  its own place.
+- The same chord twice in a row is two chords, each lit (and outlined as
+  next) in its own place. Following chords by ear, the second is reached by
+  striking it again at least 1.5 s after the first (comping on the first
+  stays on it).
+- A chart without section titles plays on its timeline too: one part, a bar
+  per chord.
 - Pedal names: "Next part" / "Previous part" were the sounds: now "Next
   sound" / "Previous sound".
 

@@ -667,7 +667,8 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
     const auto sections = core::chartSections(chart);
     for (std::size_t s = 0; s < sections.size(); ++s) sectionAt[sections.at(s).line] = static_cast<int>(s);
     // Chord follow: which steps each chord is (lit when played), along the song's flow.
-    const core::SongMap map = core::buildSongMap(chart, currentSongFlow());
+    // (Numbered as m_songMap: the same chord twice is two steps.)
+    const core::SongMap map = core::buildSongMap(chart, currentSongFlow(), false);
     std::map<std::pair<int, int>, QVariantList> stepsAt;
     for (std::size_t s = 0; s < map.steps.size(); ++s) {
         for (const auto& place : map.steps.at(s).places) stepsAt[place] << static_cast<int>(s);
@@ -1331,7 +1332,8 @@ bool DocumentController::setSectionBars(int section, int bars)
 void DocumentController::playSong()
 {
     if (m_sectionCount == 0) {
-        const QString message = tr("This song has no sections to play: give its chart section titles like [Verse] or [Chorus]");
+        const QString message = tr("This song has nothing to play yet: add its chords to the chart (and section titles "
+                                   "like Verse or Chorus to change sounds at each part)");
         qCInfo(lcUi).noquote() << message;
         reportMessage(message, Notifications::Info);
         return;
@@ -1414,6 +1416,10 @@ engine::SongSections DocumentController::songSections() const
     std::ranges::transform(resolved, std::back_inserter(sections.sections), [](const core::ResolvedSection& section) {
         return engine::SongSections::Section{.bars = section.bars, .live = section.live};
     });
+    // No section titles, on the timeline: the whole song is one part.
+    if (const int bars = unsectionedBars(); resolved.empty() && bars > 0) {
+        sections.sections.push_back(engine::SongSections::Section{.bars = bars, .live = core::defaultLive(*patch, selected)});
+    }
     // The timeline: the flow's parts (each a section), else each section once.
     std::vector<core::ChartSection> charted;
     std::ranges::transform(resolved, std::back_inserter(charted), &core::ResolvedSection::chart);
@@ -1430,6 +1436,10 @@ std::vector<int> DocumentController::timelinePlaces() const
     std::vector<int> places;
     if (song == nullptr) return places;
     const std::vector<core::ChartSection> sections = core::chartSections(core::parseChordPro(song->chart));
+    if (sections.empty()) {
+        if (unsectionedBars() > 0) places.push_back(-1); // the one part: the chords before any title
+        return places;
+    }
     if (song->flow.empty()) {
         for (int s = 0; std::cmp_less(s, sections.size()); ++s) places.push_back(s);
         return places;
@@ -1438,6 +1448,16 @@ std::vector<int> DocumentController::timelinePlaces() const
         if (core::sectionIndexOf(sections, song->flow.at(static_cast<std::size_t>(place))) >= 0) places.push_back(place);
     }
     return places;
+}
+
+int DocumentController::unsectionedBars() const
+{
+    const core::Song* song = currentSong();
+    if (song == nullptr || song->followChords) return 0;
+    const core::Chart chart = core::parseChordPro(song->chart);
+    if (!core::chartSections(chart).empty()) return 0;
+    const auto chords = static_cast<int>(core::buildSongMap(chart, {}, false).steps.size());
+    return std::clamp(chords, 0, core::limits::kMaxSectionBars);
 }
 
 bool DocumentController::following() const
@@ -1585,11 +1605,11 @@ void DocumentController::applySectionsToEngine()
     if (playing >= 0 && std::cmp_less(playing, m_songMap.steps.size())) {
         place = m_songMap.steps.at(static_cast<std::size_t>(playing)).places.front();
     }
-    // The song's chords in playing order: followed by ear (a chord held or
-    // played again is one step), or lit along the timeline (a step each).
+    // The song's chords in playing order, a step each (the same chord twice:
+    // two steps), followed by ear or lit along the timeline.
     const bool byChords = song != nullptr && song->followChords;
     const core::Chart chart = song != nullptr ? core::parseChordPro(song->chart) : core::Chart{};
-    m_songMap = song != nullptr ? core::buildSongMap(chart, song->flow, byChords) : core::SongMap{};
+    m_songMap = song != nullptr ? core::buildSongMap(chart, song->flow, false) : core::SongMap{};
     // Too many chords (or sections) to follow: said once (not on every edit),
     // the tempo leads.
     if (m_songMap.tooLong && (newSong || !m_followTooLong)) {

@@ -75,6 +75,9 @@ class DocumentController : public QObject
     Q_PROPERTY(bool songSwitchEarly READ songSwitchEarly NOTIFY songChanged)
     Q_PROPERTY(bool songFollowChords READ songFollowChords NOTIFY songChanged)
     Q_PROPERTY(bool following READ following NOTIFY sectionsChanged)
+    // Play has something to count: sections, or a song on its timeline without
+    // section titles (one part, a bar per chord).
+    Q_PROPERTY(bool canPlaySong READ hasSections NOTIFY sectionsChanged)
     Q_PROPERTY(QString followFirstChord READ followFirstChord NOTIFY sectionsChanged)
     // The current song's loops start and stop on the bars (or press to press).
     Q_PROPERTY(bool songLoopSync READ songLoopSync NOTIFY songChanged)
@@ -300,6 +303,7 @@ public:
     // follow from that very time the section comes round.
     Q_INVOKABLE void selectFlowPart(int place);
     Q_INVOKABLE void nextSection();
+    // (A song on its timeline without section titles plays as one section.)
     [[nodiscard]] bool hasSections() const { return m_sectionCount > 0; }
 
     [[nodiscard]] bool canUndo() const { return !m_undo.empty(); }
@@ -381,6 +385,9 @@ private:
     // What each section (and a song without sections) plays, for the engine.
     [[nodiscard]] engine::SongSections songSections() const;
     [[nodiscard]] std::vector<int> timelinePlaces() const;
+    // A song on its timeline with chords but no section titles: its bars as
+    // one part (a bar per chord); 0 otherwise.
+    [[nodiscard]] int unsectionedBars() const;
     // The selected channel's id (one-at-a-time sounds play it).
     [[nodiscard]] std::optional<core::ChannelId> selectedChannelId() const;
     // The channels a section of the current song plays in the current

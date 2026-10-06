@@ -1100,16 +1100,17 @@ private slots:
         QCOMPARE(m_engine->stops, stops + 1);
     }
 
-    void aSongWithoutSectionsPlaysEverything()
+    // Nothing to play (no chords, no sections): Play says so and does nothing.
+    void aSongWithNothingToPlaySaysSo()
     {
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));
-        QVERIFY(m_doc->setSongChart(0, u"[C]just words\n"_s));
+        QVERIFY(m_doc->setSongChart(0, u"just words\n"_s));
         QVERIFY(m_doc->currentSections().isEmpty());
-        QVERIFY(m_engine->sections.sections.empty());
+        QVERIFY(m_engine->sections.sections.empty()); // everything plays
         QVERIFY(!m_doc->hasSections());
         m_doc->playSong();
         QVERIFY(!m_engine->played);
-        QVERIFY(m_doc->notifications()->text(m_doc->notifications()->count() - 1).contains(u"no sections"_s));
+        QVERIFY(m_doc->notifications()->text(m_doc->notifications()->count() - 1).contains(u"nothing to play"_s));
     }
 
     void theSongPlaysStopsAndMovesOn()
@@ -1177,6 +1178,10 @@ private slots:
         QCOMPARE(m_doc->timelineStep(0, 0.0), 0);
         QCOMPARE(m_doc->timelineStep(0, each), 1); // the second D
         QCOMPARE(m_doc->followLine(1), m_doc->followLine(0)); // (on the same line, in its own place)
+        // Each D lit (and, the one before it playing, outlined as next) in its own place.
+        const QVariantList segments = m_doc->chartLines(m_doc->currentChart()).at(1).toMap().value(u"segments"_s).toList();
+        QCOMPARE(segments.at(0).toMap().value(u"steps"_s).toList(), (QVariantList{0}));
+        QCOMPARE(segments.at(1).toMap().value(u"steps"_s).toList(), (QVariantList{1}));
         QCOMPARE(m_doc->timelineStep(0, 3 * each + 0.1), 3);
         QCOMPARE(m_doc->timelineStep(2, 0.0), 6); // the second chorus's G
         QCOMPARE(m_doc->timelineStep(5, 0.0), -1);
@@ -1209,6 +1214,28 @@ private slots:
         m_engine->transportRequests = engine::transport::kContinue;
         status.poll();
         QVERIFY(status.songPlaying());
+    }
+
+    // A chart without section titles still plays on its timeline: one part,
+    // a bar per chord, every instrument; the chords lit along it.
+    void aSongWithoutSectionTitlesPlaysOnItsTimeline()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));
+        QVERIFY(m_doc->addChannel(u"spy/Pad.vst3"_s, u"Pad"_s));
+        QVERIFY(m_doc->setSongChart(0, u"[C]Just [G]words [Am]and [F]chords\n"_s));
+        QVERIFY(m_doc->hasSections());
+        QVERIFY(m_doc->currentSections().isEmpty()); // (no titles to show)
+        QCOMPARE(m_engine->sections.sections.size(), std::size_t{1});
+        QCOMPARE(m_engine->sections.sections.at(0).bars, 4);
+        QCOMPARE(m_engine->sections.sections.at(0).live, (std::vector<core::ChannelId>{channelId(0), channelId(1)}));
+        QCOMPARE(m_doc->timelineStep(0, 0.0), 0);
+        QCOMPARE(m_doc->timelineStep(0, 12.5), 3); // the 4th bar: F
+        m_doc->playSong();
+        QCOMPARE(m_engine->played.value_or(std::pair{9, true}).first, 0);
+        // Following its chords instead: nothing to count.
+        QVERIFY(m_doc->setSongFollowChords(0, true));
+        QVERIFY(!m_doc->hasSections());
+        QVERIFY(m_engine->sections.sections.empty());
     }
 
     void pastingTakesTheTempoAndTimeAndSaysSo()

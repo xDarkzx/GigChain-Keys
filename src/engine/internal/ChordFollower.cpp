@@ -215,6 +215,7 @@ SectionGate ChordFollower::process(const ChordFollowMap* map, uint64_t generatio
     }
     const auto memory = static_cast<int64_t>(kMemorySeconds * sampleRate);
     const auto spread = static_cast<int64_t>(kChordSpreadSeconds * sampleRate);
+    const auto repeatDwell = static_cast<int64_t>(kRepeatDwellSeconds * sampleRate);
     for (const MidiEvent& e : events) {
         const auto key = static_cast<std::size_t>(e.data1 & 0x7F);
         const int64_t at = m_now + e.sampleOffset;
@@ -225,7 +226,7 @@ SectionGate ChordFollower::process(const ChordFollowMap* map, uint64_t generatio
             m_releasedAt.at(key) = -1;
             m_sustained.at(key) = false;
             m_sinceChord.set(key);
-            if (hear(*map, static_cast<int>(key), at, memory, spread)) {
+            if (hear(*map, static_cast<int>(key), at, memory, spread, repeatDwell)) {
                 const int section = sectionInForce(*map);
                 if (section != gate.after) {
                     gate.after = section;
@@ -256,7 +257,8 @@ SectionGate ChordFollower::process(const ChordFollowMap* map, uint64_t generatio
     return gate;
 }
 
-bool ChordFollower::hear(const ChordFollowMap& map, int key, int64_t now, int64_t memory, int64_t spread) noexcept
+bool ChordFollower::hear(const ChordFollowMap& map, int key, int64_t now, int64_t memory, int64_t spread,
+                         int64_t repeatDwell) noexcept
 {
     const auto count = static_cast<int>(map.steps.size());
     const auto stepAt = [&map](int i) -> const ChordFollowStep& { return map.steps.at(static_cast<std::size_t>(i)); };
@@ -296,7 +298,10 @@ bool ChordFollower::hear(const ChordFollowMap& map, int key, int64_t now, int64_
         const ChordFollowStep& step = stepAt(next);
         const bool again = m_step >= 0 && stepAt(m_step).root == step.root && stepAt(m_step).family == step.family &&
                            stepAt(m_step).bass == step.bass;
-        if (heardLoosely(step, notes, lowest) && has(struck, step.root) && (!again || heardClearly(step, struck))) {
+        // The same chord written twice in one part: comping on it is not the
+        // second one; struck again after a while (repeatDwell) it is.
+        const bool settled = !again || stepAt(m_step).part != step.part || now - m_heardAt >= repeatDwell;
+        if (heardLoosely(step, notes, lowest) && has(struck, step.root) && (!again || heardClearly(step, struck)) && settled) {
             m_step = next;
             m_candidates = 0;
             m_heardAt = now;

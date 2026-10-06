@@ -61,6 +61,10 @@ again to take it back. What is coming shows beside the display (*→ Bridge*,
 
 **Change sections a beat early** helps pads that swell in slowly.
 
+A chart **without section titles** plays too: the whole song is one part, a
+bar per chord (add titles like *Verse* and *Chorus* to change sounds at each
+part, and set their bars).
+
 ### Follow the chords I play (free time)
 
 For a song with no steady tempo, switch on **Follow the chords I play**. Now there is no counting:
@@ -72,7 +76,10 @@ It follows the song's **flow**: the order the song is played in, set in the
 **Flow** bar over the chart (see [Chord charts](charts.md)). It only ever
 moves **forward** along it:
 
-- **The next chord** you play moves it on.
+- **The next chord** you play moves it on. The same chord written twice in
+  a row (D over two words) is two chords: the second is reached when you
+  strike the chord again at least a second and a half after the first came
+  in (striking it again sooner is just playing the first).
 - **A missed chord** is caught up: play the chord after the next and it
   follows (within the part you are in).
 - **The next part:** play the next part's first two chords clearly (you cut

@@ -257,7 +257,7 @@ ToolBar {
         // with it), and where it is.
         Row {
             objectName: "songTransport"
-            visible: bar.doc.currentSections.length > 0 || bar.doc.following
+            visible: bar.doc.canPlaySong || bar.doc.following
             spacing: -1
             StageButton {
                 objectName: "songPlayButton"
@@ -289,7 +289,11 @@ ToolBar {
                     text: bar.engineStatus.chordFollowing
                           ? (bar.engineStatus.chordStarted ? qsTr("Following: %1").arg(bar.doc.followLabel(bar.engineStatus.chordStep))
                                                            : qsTr("Play %1 to start").arg(bar.doc.followFirstChord))
-                          : parent.section === null ? ""
+                          // (A song without section titles: one part, the whole song.)
+                          : parent.section === null && bar.engineStatus.songPlaying
+                            ? qsTr("Song · %1/%2").arg(bar.engineStatus.songBar).arg(bar.engineStatus.songBars)
+                              + (bar.engineStatus.songQueued !== "" ? "  " + bar.engineStatus.songQueued : "")
+                          : parent.section === null ? (bar.doc.canPlaySong ? qsTr("Song") : "")
                           : bar.engineStatus.songCountingIn ? qsTr("Count-in…")
                           : bar.engineStatus.songPlaying ? qsTr("%1 · %2/%3").arg(parent.section.name).arg(bar.engineStatus.songBar).arg(bar.engineStatus.songBars)
                                                            + (bar.engineStatus.songQueued !== "" ? "  " + bar.engineStatus.songQueued : "")
@@ -314,14 +318,14 @@ ToolBar {
             }
             StageButton {
                 iconSource: "icons/player-skip-back.svg"
-                visible: bar.doc.currentSections.length === 0
+                visible: !bar.doc.canPlaySong
                 enabled: bar.engineStatus.trackLoaded
                 tip: qsTr("Back to the start of the backing track")
                 onClicked: bar.engineStatus.rewindTrack()
             }
             StageButton {
                 objectName: "trackPlayButton"
-                visible: bar.doc.currentSections.length === 0
+                visible: !bar.doc.canPlaySong
                 iconSource: bar.engineStatus.trackPlaying ? "icons/player-pause.svg" : "icons/player-play.svg"
                 checked: bar.engineStatus.trackPlaying
                 enabled: bar.engineStatus.trackLoaded
