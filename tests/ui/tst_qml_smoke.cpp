@@ -9,6 +9,7 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlComponent>
 #include <QQuickItem>
 #include <QQuickStyle>
 #include <QQuickWindow>
@@ -1538,6 +1539,26 @@ private slots:
         settle();
     }
 
+    // Shortcuts shown the way each computer names them: Ctrl+Z here, ⌘Z on a Mac.
+    void shortcutsAreShownTheMacWayOnAMac()
+    {
+        QQmlComponent component(m_qml.get());
+        component.setData("import QtQuick\nimport GigChain.Ui\nQtObject {\n"
+                          "  property string redo: Theme.keys('Ctrl+Shift+Z', true)\n"
+                          "  property string settings: Theme.keys('Ctrl+,', true)\n"
+                          "  property string help: Theme.keys('F1', true)\n"
+                          "  property string space: Theme.keys('Space', true)\n"
+                          "  property string here: Theme.keys('Ctrl+Shift+Z', false)\n}",
+                          QUrl());
+        std::unique_ptr<QObject> keys(component.create());
+        QVERIFY2(keys != nullptr, qPrintable(component.errorString()));
+        QCOMPARE(keys->property("redo").toString(), u"⇧⌘Z"_s);
+        QCOMPARE(keys->property("settings").toString(), u"⌘,"_s);
+        QCOMPARE(keys->property("help").toString(), u"⌘?"_s);
+        QCOMPARE(keys->property("space").toString(), u"Space"_s);
+        QCOMPARE(keys->property("here").toString(), u"Ctrl+Shift+Z"_s);
+    }
+
     // What was clicked last is what Delete, F2 and Ctrl+D act on: a song in
     // the list, a channel strip. Ctrl+Z brings it back.
     void aClickedSongOrChannelIsEditedFromTheKeyboard()
@@ -1568,6 +1589,11 @@ private slots:
         settle();
         QCOMPARE(doc.songIndex(), 1);
         QTest::keyClick(w, Qt::Key_Delete);
+        QCOMPARE(doc.setlist().songs.size(), 2u);
+        QTest::keyClick(w, Qt::Key_Z, Qt::ControlModifier);
+        QCOMPARE(doc.setlist().songs.size(), 3u);
+        // A Mac's delete key is Backspace; ⌘delete arrives as Ctrl+Backspace.
+        QTest::keyClick(w, Qt::Key_Backspace, Qt::ControlModifier);
         QCOMPARE(doc.setlist().songs.size(), 2u);
         QTest::keyClick(w, Qt::Key_Z, Qt::ControlModifier);
         QCOMPARE(doc.setlist().songs.size(), 3u);

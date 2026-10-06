@@ -10,6 +10,22 @@ import QtQuick
 // Panic and errors only; amber is warnings only; green is meters and "on";
 // gold is the rating stars.
 QtObject {
+    // ---- keys, as the computer names them
+    readonly property bool mac: Qt.platform.os === "osx" || Qt.platform.os === "macos"
+    // A shortcut written the Windows way ("Ctrl+Shift+Z", "F1") as this
+    // computer shows it: on a Mac "⇧⌘Z" (Qt's Ctrl is the Command key there)
+    // and "⌘?" for help. Elsewhere as written.
+    // (`forMac`: as a Mac shows it, or not, whatever this computer is.)
+    function keys(sequence, forMac) {
+        if (!(forMac === undefined ? mac : forMac)) return sequence
+        if (sequence === "F1") return "⌘?"
+        const parts = sequence.split("+")
+        const key = parts.pop()
+        const symbols = { "Ctrl": "⌘", "Shift": "⇧", "Alt": "⌥", "Meta": "⌃" }
+        const order = ["Meta", "Alt", "Shift", "Ctrl"] // Apple's order: ⌃⌥⇧⌘
+        return order.filter(m => parts.indexOf(m) >= 0).map(m => symbols[m]).join("") + key
+    }
+
     // ---- surfaces
     readonly property color background: "#121418"
     readonly property color panel: "#1b1e23"

@@ -4,6 +4,22 @@ The computer keyboard shortcuts. They do nothing while you are typing in a
 text box (a song's name, lyrics, a chord), or while a menu or dialog is open,
 so typing never changes song or starts the band.
 
+## On a Mac
+
+Where this page says **Ctrl**, a Mac uses **⌘ Command**: ⌘S saves, ⌘Z undoes,
+⇧⌘Z redoes, ⌘D duplicates, ⌘, opens Settings. Also:
+
+| Mac keys | Does |
+|---|---|
+| **delete** or **⌘delete** | Delete the selected song or channel (the Windows Delete) |
+| **Return** or **F2** | Rename the selected song (as in the Finder) |
+| **⌘?** or **F1** | This guide |
+| **↑** / **↓** | Previous / next song (a Mac laptop has no Page Up / Page Down) |
+| **⌘Q** | Quit (asks about unsaved changes first) |
+| **⌘M** | Minimise the window |
+
+The single letters (Space, N, T, C, M, P, R, L) are the same on both.
+
 ## Playing (Edit and Perform)
 
 | Keys | Does |

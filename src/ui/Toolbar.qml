@@ -223,7 +223,7 @@ ToolBar {
             iconSource: "icons/undo.svg"
             visible: !bar.performMode
             enabled: bar.doc.canUndo
-            tip: qsTr("Undo (Ctrl+Z)")
+            tip: qsTr("Undo (%1)").arg(Theme.keys("Ctrl+Z"))
             onClicked: bar.doc.undo()
         }
         StageButton {
@@ -231,7 +231,7 @@ ToolBar {
             iconSource: "icons/redo.svg"
             visible: !bar.performMode
             enabled: bar.doc.canRedo
-            tip: qsTr("Redo (Ctrl+Shift+Z)")
+            tip: qsTr("Redo (%1)").arg(Theme.keys("Ctrl+Shift+Z"))
             onClicked: bar.doc.redo()
         }
 
@@ -480,7 +480,7 @@ ToolBar {
         StageButton {
             objectName: "settingsButton"
             text: qsTr("Settings")
-            tip: qsTr("Audio, MIDI, pedals and plugins (Ctrl+,)")
+            tip: qsTr("Audio, MIDI, pedals and plugins (%1)").arg(Theme.keys("Ctrl+,"))
             onClicked: bar.settingsRequested()
         }
         // Help: the user guide, the shortcuts, about the app.
@@ -488,7 +488,7 @@ ToolBar {
             objectName: "helpButton"
             text: qsTr("Help")
             iconSource: "icons/info-circle.svg"
-            tip: qsTr("The user guide (F1)")
+            tip: qsTr("The user guide (%1)").arg(Theme.keys("F1"))
             onClicked: helpMenu.popup(0, height)
             StageMenu {
                 id: helpMenu

@@ -263,6 +263,10 @@ ApplicationWindow {
         onActivated: root.loops.playStop(root.doc.selectedChannel)
     }
     Shortcut { sequence: "Shift+L"; enabled: root.keysFree && !root.practiceMode; onActivated: root.loops.stopAll() }
+    // A Mac's window keys (the window has no frame of its own): ⌘Q quits (asking
+    // about unsaved changes first), ⌘M minimises.
+    Shortcut { sequences: [StandardKey.Quit]; onActivated: root.close() }
+    Shortcut { sequence: "Ctrl+M"; enabled: Theme.mac; onActivated: root.showMinimized() }
     Shortcut { sequence: "Ctrl+Shift+N"; enabled: !root.performMode && !root.typing; onActivated: root.doc.addSong() }
     Shortcut { sequences: [StandardKey.HelpContents, "F1"]; onActivated: root.openHelp("") }
     Shortcut { sequence: "Tab"; enabled: root.keysFree; onActivated: root.toggleMode() }

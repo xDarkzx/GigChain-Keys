@@ -33,8 +33,9 @@ Item {
             // (Up and Down choose songs everywhere: Main's shortcuts.)
             keyNavigationEnabled: false
 
-            // A song clicked: Delete removes it, F2 renames it, Ctrl+D duplicates
-            // it. (Never on stage: the list is not editable there.)
+            // A song clicked: Delete (a Mac's delete key, ⌘delete) removes it,
+            // F2 (on a Mac also Return) renames it, Ctrl+D (⌘D) duplicates it.
+            // (Never on stage: the list is not editable there.)
             // F2: the song's own row starts renaming it.
             signal renameRequested(int song)
             Keys.onPressed: (event) => {
@@ -43,7 +44,8 @@ Item {
                 if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
                     event.accepted = true
                     view.doc.removeSong(song)
-                } else if (event.key === Qt.Key_F2) {
+                } else if (event.key === Qt.Key_F2
+                           || (Theme.mac && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter))) { // (the Finder's way)
                     event.accepted = true
                     list.renameRequested(song)
                 } else if (event.key === Qt.Key_D && event.modifiers === Qt.ControlModifier) {

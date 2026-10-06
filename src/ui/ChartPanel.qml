@@ -108,7 +108,7 @@ Rectangle {
                 text: qsTr("Paste chords")
                 visible: !panel.editing
                 onClicked: panel.doc.pasteChartFromClipboard(panel.doc.songIndex)
-                tip: qsTr("Copy a song's chords and lyrics from any site or file, then paste (Ctrl+V)")
+                tip: qsTr("Copy a song's chords and lyrics from any site or file, then paste (%1)").arg(Theme.keys("Ctrl+V"))
             }
             StageButton {
                 text: qsTr("Import file…")
