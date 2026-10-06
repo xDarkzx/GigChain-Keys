@@ -202,6 +202,7 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
+| 0.2.2 | Alpha: free instruments to get, from the app (pianos, synths, pads) |
 | 0.2.1 | Alpha: the song's timeline with live controls; instruments all together or one at a time; keyboard shortcuts for the stage |
 | 0.2 | Alpha: the chart edited as cells, chord diagrams, the song's flow and steadier chord follow, Practice hand styles |
 | 0.1 | First public alpha: Windows 10/11; macOS (Apple Silicon) |

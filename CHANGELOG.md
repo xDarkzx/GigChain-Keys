@@ -8,6 +8,8 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-06 (alpha)
+
 ### Getting started
 
 - **Free instruments to get:** no instruments installed? The Instruments tab

@@ -11,7 +11,7 @@
 set(PRODUCT_BRAND "GigChain")                  # the family name
 set(PRODUCT_EDITION "Keys")                    # this product in the family
 set(PRODUCT_NAME "${PRODUCT_BRAND} ${PRODUCT_EDITION}")
-set(PRODUCT_VERSION "0.2.1")
+set(PRODUCT_VERSION "0.2.2")
 
 # Windows settings live under HKCU\Software\<ORGANIZATION>\<PRODUCT_NAME>,
 # logs and caches under %LOCALAPPDATA%\<ORGANIZATION>\<PRODUCT_NAME>.
