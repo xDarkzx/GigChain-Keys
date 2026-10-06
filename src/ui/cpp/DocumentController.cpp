@@ -322,7 +322,7 @@ bool DocumentController::setSongFlow(const QVariantList& flow)
     }
     if (auto r = core::setSongFlow(m_setlist, song, parts); !r) return report(r.error());
     setDirty(true);
-    applySectionsToEngine(); // chord follow keeps to the new flow
+    applySectionsToEngine(); // the timeline keeps to the new flow
     emit sectionsChanged();
     emit chartChanged(); // (the chords light along it)
     return true;
@@ -666,7 +666,7 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
     std::map<int, int> sectionAt;
     const auto sections = core::chartSections(chart);
     for (std::size_t s = 0; s < sections.size(); ++s) sectionAt[sections.at(s).line] = static_cast<int>(s);
-    // Chord follow: which steps each chord is (lit when played), along the song's flow.
+    // Which steps each chord is (lit as the timeline reaches it), along the song's flow.
     // (Numbered as m_songMap: the same chord twice is two steps.)
     const core::SongMap map = core::buildSongMap(chart, currentSongFlow(), false);
     std::map<std::pair<int, int>, QVariantList> stepsAt;
@@ -853,8 +853,11 @@ bool DocumentController::replaceEffect(int channel, int effect, const QString& p
 bool DocumentController::setChannelInstrument(int channel, const QString& pluginId, const QString& name)
 {
     auto r = core::updateChannel(m_setlist, m_cursor, channel, [&](core::Channel& c) {
-        // A channel still named after its old instrument takes the new name.
-        if (!c.instrument || c.name == c.instrument->displayName) c.name = name;
+        // A channel still named after its old instrument ("Piano V2", "Piano V2 2") takes the new name.
+        const bool named = c.instrument && QRegularExpression(u"^%1( \\d+)?$"_s.arg(QRegularExpression::escape(c.instrument->displayName)))
+                                               .match(c.name)
+                                               .hasMatch();
+        if (!c.instrument || named) c.name = name;
         c.instrument = core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = false, .state = {}};
     });
     if (!r) return report(r.error());
@@ -864,7 +867,7 @@ bool DocumentController::setChannelInstrument(int channel, const QString& plugin
 
 bool DocumentController::setChannelName(int channel, const QString& name)
 {
-    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [&name](core::Channel& c) { c.name = name; }); !r) {
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [&name](core::Channel& c) { c.name = name.trimmed(); }); !r) {
         return report(r.error());
     }
     commitChannelField(channel, false);
@@ -1112,53 +1115,10 @@ bool DocumentController::setSongSwitchEarly(int song, bool early)
     return true;
 }
 
-bool DocumentController::songFollowChords() const
+int DocumentController::chordLine(int step) const
 {
-    const core::Song* song = currentSong();
-    return song == nullptr || song->followChords;
-}
-
-bool DocumentController::setSongFollowChords(int song, bool on)
-{
-    if (auto r = core::setSongFollowChords(m_setlist, song, on); !r) return report(r.error());
-    setDirty(true);
-    if (song == m_cursor.song) applySectionsToEngine();
-    emit songChanged();
-    return true;
-}
-
-QString DocumentController::followFirstChord() const
-{
-    // (Only when its chords are followed: on the timeline nothing waits for one.)
-    return !following() || m_songMap.steps.empty() ? QString() : m_songMap.steps.front().name;
-}
-
-QString DocumentController::followLabel(int step) const
-{
-    if (step < 0 || std::cmp_greater_equal(step, m_songMap.steps.size())) return {};
-    const auto at = [this](int i) { return m_songMap.steps.at(static_cast<std::size_t>(i)).section; };
-    const int section = at(step);
-    int first = step;
-    while (first > 0 && at(first - 1) == section) --first;
-    int last = step;
-    while (std::cmp_less(last + 1, m_songMap.steps.size()) && at(last + 1) == section) ++last;
-    QString where = tr("chord %1 of %2").arg(step - first + 1).arg(last - first + 1);
-    if (section < 0 || std::cmp_greater_equal(section, m_followSectionNames.size())) return where;
-    return tr("%1 · %2").arg(m_followSectionNames.at(static_cast<std::size_t>(section)), where);
-}
-
-int DocumentController::followLine(int step) const
-{
-    if (step < 0 || std::cmp_greater_equal(step, m_followLines.size())) return -1;
-    return m_followLines.at(static_cast<std::size_t>(step));
-}
-
-int DocumentController::followPart(int step) const
-{
-    if (step < 0 || std::cmp_greater_equal(step, m_songMap.steps.size())) return -1;
-    // (The map's parts are only those with chords: each knows its place in the flow.)
-    const int part = m_songMap.steps.at(static_cast<std::size_t>(step)).part;
-    return part >= 0 && std::cmp_less(part, m_songMap.partFlow.size()) ? m_songMap.partFlow.at(static_cast<std::size_t>(part)) : -1;
+    if (step < 0 || std::cmp_greater_equal(step, m_chordLines.size())) return -1;
+    return m_chordLines.at(static_cast<std::size_t>(step));
 }
 
 bool DocumentController::songLoopSync() const
@@ -1370,16 +1330,12 @@ void DocumentController::selectFlowPart(int place)
                            tr("\"%1\" is not a section of this song's chart any more").arg(flow.at(place).toMap().value(u"name"_s).toString())});
         return;
     }
-    // On the timeline: that part, from the next bar line (stopped: now).
-    if (onTimeline()) {
-        if (const auto at = std::ranges::find(m_timelinePlaces, place); at != m_timelinePlaces.end()) {
-            m_engine.queuePart(static_cast<int>(at - m_timelinePlaces.begin()));
-            return;
-        }
+    // That part, from the next bar line (stopped: now).
+    if (const auto at = std::ranges::find(m_timelinePlaces, place); at != m_timelinePlaces.end()) {
+        m_engine.queuePart(static_cast<int>(at - m_timelinePlaces.begin()));
+        return;
     }
-    // The map's part for that place (a part without chords has none).
-    const auto part = std::ranges::find(m_songMap.partFlow, place);
-    m_engine.jumpToPart(section, part != m_songMap.partFlow.end() ? static_cast<int>(part - m_songMap.partFlow.begin()) : -1);
+    m_engine.jumpToSection(section);
 }
 
 void DocumentController::nextSection()
@@ -1453,23 +1409,16 @@ std::vector<int> DocumentController::timelinePlaces() const
 int DocumentController::unsectionedBars() const
 {
     const core::Song* song = currentSong();
-    if (song == nullptr || song->followChords) return 0;
+    if (song == nullptr) return 0;
     const core::Chart chart = core::parseChordPro(song->chart);
     if (!core::chartSections(chart).empty()) return 0;
     const auto chords = static_cast<int>(core::buildSongMap(chart, {}, false).steps.size());
     return std::clamp(chords, 0, core::limits::kMaxSectionBars);
 }
 
-bool DocumentController::following() const
-{
-    const core::Song* song = currentSong();
-    return song != nullptr && song->followChords && m_songMap.followable();
-}
-
 bool DocumentController::onTimeline() const
 {
-    const core::Song* song = currentSong();
-    return song != nullptr && !song->followChords && m_sectionCount > 0;
+    return currentSong() != nullptr && m_sectionCount > 0;
 }
 
 int DocumentController::timelinePlace(int part) const
@@ -1490,11 +1439,22 @@ int DocumentController::timelineStep(int part, double quarter) const
 
 void DocumentController::nextPart()
 {
-    if (onTimeline() && m_engine.songPosition().playing) {
+    if (!onTimeline()) {
+        nextSection();
+        return;
+    }
+    // Playing: on at the next bar line. Stopped: the next part of the flow is where Play starts.
+    const engine::SongPosition at = m_engine.songPosition();
+    if (at.playing) {
         m_engine.queueNextPart();
         return;
     }
-    nextSection();
+    const int next = at.part + 1; // (none in force: the first)
+    if (std::cmp_greater_equal(next, m_timelinePlaces.size())) {
+        qCInfo(lcUi) << "Next part: already at the last one";
+        return;
+    }
+    m_engine.queuePart(next);
 }
 
 void DocumentController::repeatPart()
@@ -1595,41 +1555,24 @@ void DocumentController::applySectionsToEngine()
     }
     m_engine.setSongSections(sections);
     m_sectionCount = static_cast<int>(sections.sections.size());
-    // A new song starts at its beginning. (Before its chords: a section asked
-    // before the chords arrive does not start following them.)
+    // A new song starts at its beginning.
     if (newSong && m_sectionCount > 0) m_engine.jumpToSection(0);
-    // Chord follow: the song's chords, when its sections follow them. An
-    // edit while playing carries on from the chord at the same place.
-    std::optional<std::pair<int, int>> place;
-    const int playing = newSong ? -1 : m_engine.chordFollow().step;
-    if (playing >= 0 && std::cmp_less(playing, m_songMap.steps.size())) {
-        place = m_songMap.steps.at(static_cast<std::size_t>(playing)).places.front();
-    }
     // The song's chords in playing order, a step each (the same chord twice:
-    // two steps), followed by ear or lit along the timeline.
-    const bool byChords = song != nullptr && song->followChords;
+    // two steps), lit along the timeline.
     const core::Chart chart = song != nullptr ? core::parseChordPro(song->chart) : core::Chart{};
     m_songMap = song != nullptr ? core::buildSongMap(chart, song->flow, false) : core::SongMap{};
-    // Too many chords (or sections) to follow: said once (not on every edit),
-    // the tempo leads.
-    if (m_songMap.tooLong && (newSong || !m_followTooLong)) {
-        const QString message = tr("\"%1\" has too many chords to follow (more than %2 with its repeats played out, "
-                                   "or more than %3 sections): its sections follow the tempo")
+    // Too many chords (or sections) to light: said once (not on every edit).
+    if (m_songMap.tooLong && (newSong || !m_chordsTooMany)) {
+        const QString message = tr("\"%1\" has too many chords to light along its timeline (more than %2 with its "
+                                   "repeats played out, or more than %3 sections): its parts still play")
                                     .arg(song->name)
                                     .arg(core::limits::kMaxFollowSteps)
                                     .arg(core::limits::kMaxSectionsPerSong);
         qCWarning(lcUi).noquote() << message;
         reportMessage(message, Notifications::Warning);
     }
-    m_followTooLong = m_songMap.tooLong;
+    m_chordsTooMany = m_songMap.tooLong;
     if (!m_songMap.followable()) m_songMap = {};
-    engine::ChordFollowMap chords = byChords ? engine::followMapOf(m_songMap) : engine::ChordFollowMap{};
-    for (std::size_t i = 0; i < chords.steps.size(); ++i) {
-        const core::SongStep& step = m_songMap.steps.at(i);
-        const bool here = place && std::ranges::find(step.places, *place) != step.places.end();
-        // The same step if it is still there (a repeated line has the place several times).
-        if (here && (chords.resumeAt < 0 || std::cmp_equal(i, playing))) chords.resumeAt = static_cast<int>(i);
-    }
     // The timeline: each part's chords spread evenly over its bars.
     m_timelinePlaces = timelinePlaces();
     m_timelineSteps.assign(m_timelinePlaces.size(), {});
@@ -1645,15 +1588,9 @@ void DocumentController::applySectionsToEngine()
         const double each = std::max(bars, 1) * quartersPerBar / std::max(last - first, 1);
         for (int step = first; step < last; ++step) m_timelineSteps.at(part).emplace_back((step - first) * each, step);
     }
-    if (auto set = m_engine.setChordFollow(chords); !set) {
-        // (The engine logged it.) Not followed: the tempo leads.
-        m_songMap = {};
-        reportMessage(set.error().message, Notifications::Warning);
-    }
-    // Where each chord is shown and its section's name, worked out once here
-    // (not on every chord played: a long chart takes a while to read).
-    m_followLines.clear();
-    m_followSectionNames.clear();
+    // Where each chord is shown, worked out once here (not on every chord
+    // lit: a long chart takes a while to read).
+    m_chordLines.clear();
     if (!m_songMap.steps.empty()) {
         // chartLines() leaves out directives and section ends.
         std::vector<int> shownAt(chart.lines.size() + 1, 0);
@@ -1662,13 +1599,11 @@ void DocumentController::applySectionsToEngine()
             const bool shown = kind != core::ChartLine::Kind::Meta && kind != core::ChartLine::Kind::SectionEnd;
             shownAt.at(i + 1) = shownAt.at(i) + (shown ? 1 : 0);
         }
-        m_followLines.reserve(m_songMap.steps.size());
+        m_chordLines.reserve(m_songMap.steps.size());
         for (const core::SongStep& step : m_songMap.steps) {
             const int line = step.places.front().first;
-            m_followLines.push_back(line >= 0 && std::cmp_less(line, shownAt.size()) ? shownAt.at(static_cast<std::size_t>(line)) : -1);
+            m_chordLines.push_back(line >= 0 && std::cmp_less(line, shownAt.size()) ? shownAt.at(static_cast<std::size_t>(line)) : -1);
         }
-        std::ranges::transform(core::chartSections(chart), std::back_inserter(m_followSectionNames),
-                               [](const core::ChartSection& section) { return section.name; });
     }
     m_sectionsSong = songId;
     emit sectionsChanged();

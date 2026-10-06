@@ -43,8 +43,6 @@ add_library(gigchain_engine STATIC
     internal/PluginLoadGuard.cpp
     internal/ComponentHandler.h
     internal/SafetyLimiter.h
-    internal/ChordFollower.h
-    internal/ChordFollower.cpp
     internal/RealEngine.h
     internal/RealEngine.cpp
     include/gigchain/engine/RealEngineFactory.h

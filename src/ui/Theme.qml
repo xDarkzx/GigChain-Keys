@@ -117,6 +117,7 @@ QtObject {
     readonly property int radiusCard: 6   // cards and panels
     readonly property int radiusDialog: 10
     readonly property int controlHeight: 28 // a button you can hit quickly on stage
+    readonly property int touchTarget: 48   // Perform's buttons: a fingertip on a touch screen
     readonly property int iconSize: 16
     readonly property int sidePanelWidth: 270
     readonly property int stripWidth: 88

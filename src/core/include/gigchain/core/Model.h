@@ -148,9 +148,6 @@ struct Song
     int timeDenominator = 4;
     // Sections switch a beat before their first beat instead of just before it.
     bool switchEarly = false;
-    // What moves the song on: the chords played (true; for free-time songs),
-    // or its timeline (false: Play runs its flow at its tempo).
-    bool followChords = false;
     // Loops start and stop on the bars (true) or press to press (free).
     bool loopSync = true;
     // A synced loop's length in bars: it closes by itself at the end (and,

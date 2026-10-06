@@ -39,18 +39,18 @@ struct SongMap
     std::vector<int> partFlow;
     // More than limits::kMaxFollowSteps chords as played (repeats played
     // out), or more than limits::kMaxSectionsPerSong sections: not read
-    // further, nothing to follow.
+    // further, nothing to light.
     bool tooLong = false;
 
-    // Enough chords to follow.
+    // Enough chords to light along the song.
     [[nodiscard]] bool followable() const { return !tooLong && steps.size() >= 2; }
 };
 
 // `flow`: the order the sections are played in (Song::flow); empty: the
 // chart's order. A part naming no section of the chart is left out.
-// `mergeTwins`: the same chord twice in a row in a part is one step (chord
-// follow cannot tell a held chord from the same chord again); false: a step
-// each (the song's timeline places each in time).
+// `mergeTwins`: the same chord twice in a row in a part is one step (as
+// practice plays it: a held chord); false: a step each (the song's
+// timeline places each in time).
 [[nodiscard]] SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow = {}, bool mergeTwins = true);
 // The section of `sections` that `ref` names; -1: none.
 [[nodiscard]] int sectionIndexOf(const std::vector<ChartSection>& sections, const SectionRef& ref);

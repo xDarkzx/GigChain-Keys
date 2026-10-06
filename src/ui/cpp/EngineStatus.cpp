@@ -125,8 +125,7 @@ void EngineStatus::setClickVolumeDb(double volumeDb)
 void EngineStatus::playPauseTrack()
 {
     // A song with sections plays as a whole: its count, and the track with it.
-    // (Following chords, there is no count: the pedal plays the track alone.)
-    if (m_document.hasSections() && !m_engine.chordFollow().active) {
+    if (m_document.hasSections()) {
         if (m_engine.songPosition().playing) m_document.stopSong();
         else m_document.playSong();
         pollTransport();
@@ -165,11 +164,9 @@ void EngineStatus::pollTransport()
     }
     // On the timeline the chart lights the chord the time has come to.
     const int step = m_song.playing && m_document.onTimeline() ? m_document.timelineStep(m_song.part, m_song.quarter) : -1;
-    const engine::ChordFollowPosition follow = m_engine.chordFollow();
-    if (follow != m_follow || step != m_timelineStep) {
-        m_follow = follow;
+    if (step != m_timelineStep) {
         m_timelineStep = step;
-        emit chordFollowChanged();
+        emit chordStepChanged();
     }
 }
 

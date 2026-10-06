@@ -146,6 +146,23 @@ private slots:
         QVERIFY(addChannel(s, Cursor{0, 0}, PluginSlot{}).error().code == ErrorCode::InvalidData);
     }
 
+    // The same instrument twice in a sound (a piano for the verse, the same
+    // piano with another preset for the chorus): told apart by a number.
+    void theSameInstrumentTwiceIsNumbered()
+    {
+        Setlist s = abc();
+        QVERIFY(addChannel(s, Cursor{0, 0}, kPiano).has_value());
+        QVERIFY(addChannel(s, Cursor{0, 0}, kPiano).has_value());
+        QVERIFY(addChannel(s, Cursor{0, 0}, kPiano).has_value());
+        const auto& channels = s.songs.at(0).patches.at(0).channels;
+        QCOMPARE(channels.at(0).name, u"Grand Piano"_s);
+        QCOMPARE(channels.at(1).name, u"Grand Piano 2"_s);
+        QCOMPARE(channels.at(2).name, u"Grand Piano 3"_s);
+        QCOMPARE(channels.at(1).instrument.value_or(PluginSlot{}).displayName, u"Grand Piano"_s); // the plugin is still the plugin
+        QVERIFY(addChannel(s, Cursor{1, 0}, kPiano).has_value()); // another sound: its own first
+        QCOMPARE(s.songs.at(1).patches.at(0).channels.at(0).name, u"Grand Piano"_s);
+    }
+
     void effectsAddAndRemove()
     {
         Setlist s = abc();
@@ -200,16 +217,6 @@ private slots:
                      QVERIFY(removeSong(s, *index).has_value());
                  }),
                  0LL);
-    }
-
-    void followingChordsIsSetPerSong()
-    {
-        Setlist s = abc();
-        QVERIFY(!s.songs.at(0).followChords); // new songs run on their timeline
-        QVERIFY(setSongFollowChords(s, 0, true).has_value());
-        QVERIFY(s.songs.at(0).followChords);
-        QVERIFY(!s.songs.at(1).followChords);
-        QVERIFY(setSongFollowChords(s, 5, false).error().code == ErrorCode::OutOfRange);
     }
 
     // The inversion chosen for a chord of a song; -1 forgets it.

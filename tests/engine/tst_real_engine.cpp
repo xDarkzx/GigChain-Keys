@@ -955,100 +955,37 @@ private slots:
         QCOMPARE(std::ranges::count_if(notices, [&foreign](const Notice& n) { return n.text.contains(foreign); }), 1);
     }
 
-    // A chord map that does not hang together is refused, saying why, and
-    // the song before it is no longer followed (not left running).
-    void aBrokenChordMapIsRefused()
+    // What is played never moves the song: a chord that is also the
+    // chorus's leaves the verse in force (only the player moves it).
+    void playingNeverMovesTheSong()
     {
         auto created = createQuietEngine();
         if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY(created.has_value());
         IEngine& engine = **created;
-        ChordFollowMap map;
-        for (const char* name : {"Am", "F", "C"}) map.steps.push_back(followStepOf(*core::parseChordName(QString::fromLatin1(name)), -1));
-        QVERIFY(engine.setChordFollow(map).has_value());
-        // The audio thread takes it up (waited for: some sound systems run
-        // the audio in bursts).
-        for (int i = 0; i < 40 && !engine.chordFollow().active; ++i) pump(engine, 50);
-        QVERIFY(engine.chordFollow().active);
-        map.resumeAt = 7;
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Chord follow refused: resume at chord 8"_s));
-        const auto refused = engine.setChordFollow(map);
-        QVERIFY(!refused.has_value());
-        QVERIFY(refused.error().message.contains(u"resume at chord 8"_s));
-        for (int i = 0; i < 40 && engine.chordFollow().active; ++i) pump(engine, 50);
-        QVERIFY(!engine.chordFollow().active);
-    }
-
-    // Chord follow: playing the chorus's chord enters the chorus, and its
-    // piano sounds the chord; the verse's piano gets nothing new.
-    void playingTheChorusChordEntersTheChorus()
-    {
-        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
-        auto created = createQuietEngine();
-        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
-        QVERIFY(created.has_value());
-        IEngine& engine = **created;
-        engine.setMasterVolume(-90.0); // inaudible, measurable
-        const core::SongId song = core::SongId::generate();
-        core::Patch patch = pianoPatch();
-        patch.channels.push_back(pianoPatch().channels.front());
-        const core::ChannelId verse = patch.channels.at(0).id;
-        const core::ChannelId chorus = patch.channels.at(1).id;
-        engine.applyPatch(song, patch);
-        QVERIFY(engine.poll().empty());
+        engine.setMasterVolume(-90.0);
+        core::Patch patch = core::makePatch(u"Two"_s);
+        patch.channels.push_back(core::makeChannel(u"Verse"_s));
+        patch.channels.push_back(core::makeChannel(u"Chorus"_s));
+        engine.applyPatch(patch);
         engine.setSongSections(SongSections{.patch = patch.id,
-                                            .sections = {{.bars = 4, .live = {verse}}, {.bars = 4, .live = {chorus}}},
+                                            .sections = {{.bars = 4, .live = {patch.channels.at(0).id}},
+                                                         {.bars = 4, .live = {patch.channels.at(1).id}}},
                                             .switchEarly = false});
-        ChordFollowMap map;
-        for (const auto& [name, section] : {std::pair{"Am", 0}, {"G", 0}, {"F", 1}, {"C", 1}}) {
-            map.steps.push_back(followStepOf(*core::parseChordName(QString::fromLatin1(name)), section));
-        }
-        map.sectionStarts = {0, 2};
-        QVERIFY(engine.setChordFollow(map).has_value());
-        // What the audio thread does, waited for (up to 5 s: some sound
-        // systems, WSLg's PulseAudio among them, run the audio in bursts, and
-        // the Mac runner's virtual device once missed 2 s).
-        const auto until = [&engine](const auto& done) {
-            for (int i = 0; i < 100 && !done(); ++i) pump(engine, 50);
-            return done();
+        // What the audio thread does, waited for (some sound systems run the audio in bursts).
+        const auto until = [&engine](int section) {
+            for (int i = 0; i < 100 && engine.songPosition().section != section; ++i) pump(engine, 50);
+            return engine.songPosition().section == section;
         };
-        const auto atStep = [&engine](int step) { return [&engine, step] { return engine.chordFollow().step == step; }; };
-        QVERIFY(until([&engine] { return engine.chordFollow().active; }));
-        QVERIFY(!engine.chordFollow().started);
-        const auto chord = [&engine](std::initializer_list<int> keys, int velocity) {
-            for (const int key : keys) engine.injectNote(1, key, velocity);
-            pump(engine, 100);
-        };
-        chord({57, 60, 64}, 100); // Am
-        QVERIFY(until(atStep(0)));
-        chord({57, 60, 64}, 0);
-        pump(engine, 600);
-        chord({55, 59, 62}, 100); // G
-        QVERIFY2(until(atStep(1)), qPrintable(u"at step %1 (active %2, started %3)"_s.arg(engine.chordFollow().step)
-                                                   .arg(engine.chordFollow().active)
-                                                   .arg(engine.chordFollow().started)));
-        chord({55, 59, 62}, 0);
-        pump(engine, 3000); // the verse's piano fades away
-        (void)engine.channelLevel(verse);
-        (void)engine.channelLevel(chorus);
-        pump(engine, 300);
-        const float verseTail = engine.channelLevel(verse).peak; // the G's last whisper (-95 dB)
-
-        chord({53, 57, 60}, 100); // F: the chorus
-        pump(engine, 300);
-        QVERIFY(until(atStep(2)));
-        QCOMPARE(engine.songPosition().section, 1);
-        QVERIFY2(engine.channelLevel(chorus).peak > 0.0F, "the chorus's piano did not sound the chorus's chord");
-        QVERIFY2(engine.channelLevel(verse).peak <= verseTail, "the verse's piano sounded the chorus's chord");
-        chord({53, 57, 60}, 0);
-
-        // The pedal's "next section" and Panic.
         engine.jumpToSection(0);
-        QVERIFY(until(atStep(0)));
-        engine.panic();
-        QVERIFY(until([&engine] { return !engine.chordFollow().started; }));
-        QVERIFY(engine.setChordFollow({}).has_value()); // off: the tempo leads again
-        QVERIFY(until([&engine] { return !engine.chordFollow().active; }));
+        QVERIFY(until(0));
+        for (const int key : {53, 57, 60}) engine.injectNote(1, key, 100); // F: the chorus's chord
+        pump(engine, 600);
+        for (const int key : {53, 57, 60}) engine.injectNote(1, key, 0);
+        pump(engine, 200);
+        QCOMPARE(engine.songPosition().section, 0);
+        engine.jumpToSection(1); // the player moves it
+        QVERIFY(until(1));
     }
 
     void aCountInKeepsTheBackingTrackWaiting()

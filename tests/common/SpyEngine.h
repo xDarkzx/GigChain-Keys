@@ -248,10 +248,6 @@ public:
     std::vector<QString> calls; // "patch", "sections", in the order asked
     engine::SongSections sections;
     int sectionsCount = 0;
-    engine::ChordFollowMap follow;
-    int followSets = 0;
-    std::size_t jumpsAtFollow = 0; // how many section jumps were asked before the last map
-    engine::ChordFollowPosition followPosition;
     std::pair<int, int> timeSignature{4, 4};
     void setTimeSignature(int numerator, int denominator) override { timeSignature = {numerator, denominator}; }
     void setSongSections(const engine::SongSections& chosen) override
@@ -278,34 +274,21 @@ public:
     void jumpToSection(int section) override
     {
         jumps.push_back(section);
-        jumpParts.push_back(-1);
         position.section = section;
     }
     std::vector<QString> liveControls; // "next", "part 2", "repeat", "hold", "stop", "cancel", in order
     void queueNextPart() override { liveControls.push_back(QStringLiteral("next")); }
     void queuePart(int part) override { liveControls.push_back(QStringLiteral("part %1").arg(part)); }
     void repeatPart() override { liveControls.push_back(QStringLiteral("repeat")); }
-    void toggleHoldPart() override { liveControls.push_back(QStringLiteral("hold")); }
+    void toggleHoldPart() override
+    {
+        liveControls.push_back(QStringLiteral("hold"));
+        position.hold = !position.hold;
+    }
     void toggleStopAtEndOfPart() override { liveControls.push_back(QStringLiteral("stop")); }
     void cancelQueuedParts() override { liveControls.push_back(QStringLiteral("cancel")); }
-    std::vector<int> jumpParts; // per jump: the flow part asked (-1: a plain section jump)
-    void jumpToPart(int section, int part) override
-    {
-        jumpToSection(section);
-        jumpParts.back() = part;
-    }
     engine::SongPosition position;
     [[nodiscard]] engine::SongPosition songPosition() const override { return position; }
-    core::Result<void> setChordFollow(const engine::ChordFollowMap& chosen) override
-    {
-        follow = chosen;
-        ++followSets;
-        jumpsAtFollow = jumps.size();
-        if (followRefusal) return tl::unexpected<core::Error>(*followRefusal);
-        return {};
-    }
-    std::optional<core::Error> followRefusal; // set: the next maps are refused with it
-    [[nodiscard]] engine::ChordFollowPosition chordFollow() const override { return followPosition; }
 
     // Loops: what was asked, and what the test says there is.
     std::vector<std::pair<core::ChannelId, engine::LoopCommand>> loopCommands;

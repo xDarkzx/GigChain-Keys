@@ -1,8 +1,6 @@
 #pragma once
 
-#include "gigchain/core/Chords.h"
 #include "gigchain/core/Ids.h"
-#include "gigchain/core/SongMap.h"
 
 #include <QString>
 
@@ -171,76 +169,6 @@ struct SongPosition
 
     bool operator==(const SongPosition&) const = default;
 };
-
-// ---- Chord follow: the chart follows what is played
-
-// One chord of the song as it is heard. Pitch classes 0-11 (C = 0).
-struct ChordFollowStep
-{
-    int section = -1;    // in the song's sections (setSongSections); -1 = before the first
-    uint16_t family = 0; // its notes: bit n = pitch class n
-    int root = 0;
-    int bass = -1;       // a slash bass; -1 = none
-    int third = -1;      // its third; -1 = none (sus, 5)
-    int otherThird = -1; // the third it is not (the major third of a minor chord); -1 = none
-    int colour = -1;     // what stands in for a missing third (a sus note, a 5 chord's fifth); -1 = none
-    int part = -1;       // which part of the song's flow (ChordFollowMap::partStarts); -1 = none listed
-
-    bool operator==(const ChordFollowStep&) const = default;
-};
-
-// A song's chords in playing order (see IEngine::setChordFollow).
-struct ChordFollowMap
-{
-    std::vector<ChordFollowStep> steps;
-    std::vector<int> sectionStarts; // per section: its first step; -1 = it has none
-    // The song's flow: where each part (a section as it comes round: Verse 1,
-    // Chorus, Verse 2, Chorus...) starts, in playing order. Following only
-    // moves forward along it.
-    std::vector<int> partStarts;
-    int resumeAt = -1;              // a chart edited while following carries on from this step
-
-    bool operator==(const ChordFollowMap&) const = default;
-};
-
-// Where following is.
-struct ChordFollowPosition
-{
-    bool active = false;  // a map is being followed
-    bool started = false; // its first chord was heard (or a section chosen)
-    int step = -1;        // the chord being played; -1 = not started
-    int section = -1;     // in force: the first chord's section before the start
-
-    bool operator==(const ChordFollowPosition&) const = default;
-};
-
-// The step a chord name makes in `section`.
-[[nodiscard]] inline ChordFollowStep followStepOf(const core::ChordShape& shape, int section)
-{
-    const auto at = [&shape](int interval) { return interval < 0 ? -1 : (shape.root + interval) % 12; };
-    const int other = shape.third == 3 ? 4 : shape.third == 4 ? 3 : -1;
-    return ChordFollowStep{.section = section,
-                           .family = shape.family,
-                           .root = shape.root,
-                           .bass = shape.bass,
-                           .third = at(shape.third),
-                           .otherThird = at(other),
-                           .colour = at(shape.colour)};
-}
-
-// A song's chords as the engine follows them (not resuming: resumeAt -1).
-[[nodiscard]] inline ChordFollowMap followMapOf(const core::SongMap& song)
-{
-    ChordFollowMap map;
-    map.sectionStarts = song.sectionStarts;
-    map.partStarts = song.partStarts;
-    map.steps.reserve(song.steps.size());
-    for (const core::SongStep& step : song.steps) {
-        map.steps.push_back(followStepOf(step.shape, step.section));
-        map.steps.back().part = step.part;
-    }
-    return map;
-}
 
 // ---- The loop station (one audio loop per channel)
 

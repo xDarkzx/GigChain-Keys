@@ -426,44 +426,28 @@ private slots:
                  0LL);
     }
 
-    // What moves a song on (its timeline, or the chords played) is kept.
-    // Files from before the timeline: a song with a tempo runs on its
-    // timeline; one without follows its chords as it did.
-    void aSongMovesByItsTimelineOrItsChords()
+    // Songs no longer follow the chords played (the player moves them on):
+    // files that said a song did still open, the same as any other song,
+    // and nothing about it is written any more.
+    void songsSetToFollowTheirChordsStillOpen()
     {
         Setlist setlist;
         setlist.songs.push_back(makeSong(u"Free time"_s));
-        QVERIFY(!setlist.songs.front().followChords); // new songs: the timeline
-        setlist.songs.front().followChords = true;
-        const auto read = fromJson(toJson(setlist));
-        QVERIFY2(read.has_value(), read ? "" : qPrintable(read.error().message));
-        QVERIFY(read->songs.front().followChords);
-
         QJsonObject root = QJsonDocument::fromJson(toJson(setlist)).object();
         QJsonArray songs = root.value(u"songs"_s).toArray();
         QJsonObject song = songs.at(0).toObject();
+        QVERIFY(!song.contains(u"movesBy"_s));
+        QVERIFY(!song.contains(u"followChords"_s));
         const auto with = [&](const QJsonObject& edited) {
             songs.replace(0, edited);
             root.insert(u"songs"_s, songs);
             return fromJson(QJsonDocument(root).toJson());
         };
-        song.remove(u"movesBy"_s);
-        song.remove(u"followChords"_s);
-        song.insert(u"tempo"_s, 0);
-        const auto olderFree = with(song);
-        QVERIFY2(olderFree.has_value(), olderFree ? "" : qPrintable(olderFree.error().message));
-        QVERIFY(olderFree->songs.front().followChords); // no tempo: its chords, as before
-        song.insert(u"tempo"_s, 96);
         song.insert(u"followChords"_s, true);
-        const auto olderTimed = with(song);
-        QVERIFY(olderTimed.has_value());
-        QVERIFY(!olderTimed->songs.front().followChords); // a tempo: the timeline
         song.insert(u"movesBy"_s, u"chords"_s);
-        QVERIFY(with(song)->songs.front().followChords); // said: kept
-        song.insert(u"movesBy"_s, u"wind"_s);
-        const auto bad = with(song);
-        QVERIFY(!bad.has_value());
-        QVERIFY2(bad.error().message.contains(u"movesBy"_s), qPrintable(bad.error().message));
+        const auto older = with(song);
+        QVERIFY2(older.has_value(), older ? "" : qPrintable(older.error().message));
+        QCOMPARE(older->songs.front().name, u"Free time"_s);
     }
 
     // The song's flow is kept with it; an older file has none (the chart's

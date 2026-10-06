@@ -73,12 +73,9 @@ class DocumentController : public QObject
     Q_PROPERTY(int songTimeNumerator READ songTimeNumerator NOTIFY songChanged)
     Q_PROPERTY(int songTimeDenominator READ songTimeDenominator NOTIFY songChanged)
     Q_PROPERTY(bool songSwitchEarly READ songSwitchEarly NOTIFY songChanged)
-    Q_PROPERTY(bool songFollowChords READ songFollowChords NOTIFY songChanged)
-    Q_PROPERTY(bool following READ following NOTIFY sectionsChanged)
-    // Play has something to count: sections, or a song on its timeline without
-    // section titles (one part, a bar per chord).
+    // Play has something to count: sections, or a song without section
+    // titles (one part, a bar per chord).
     Q_PROPERTY(bool canPlaySong READ hasSections NOTIFY sectionsChanged)
-    Q_PROPERTY(QString followFirstChord READ followFirstChord NOTIFY sectionsChanged)
     // The current song's loops start and stop on the bars (or press to press).
     Q_PROPERTY(bool songLoopSync READ songLoopSync NOTIFY songChanged)
     // Its synced loops' length in bars (0 = open: closed where stopped).
@@ -172,7 +169,7 @@ public:
     // The current song's chosen inversions: {chord name: inversion}.
     [[nodiscard]] QVariantMap currentChordInversions() const;
 
-    // The song's flow (the order it is played in, which chord follow keeps
+    // The song's flow (the order it is played in, which its timeline keeps
     // to): [{name, occurrence, label}], the chart's own order when none is set.
     Q_PROPERTY(QVariantList songFlow READ songFlow NOTIFY sectionsChanged)
     // Whether the flow is the song's own (false: the chart's order).
@@ -252,18 +249,13 @@ public:
     [[nodiscard]] bool songSwitchEarly() const;
     Q_INVOKABLE bool setSongTimeSignature(int song, int numerator, int denominator);
     Q_INVOKABLE bool setSongSwitchEarly(int song, bool early);
-    [[nodiscard]] bool songFollowChords() const;
-    Q_INVOKABLE bool setSongFollowChords(int song, bool on);
-    // Chord follow: whether this song follows its chords now, its first chord,
-    // "Chorus · chord 2 of 8" for a step, and the chartLines() index of its line.
-    [[nodiscard]] bool following() const;
     // ---- The song's timeline (it runs at its tempo along its flow)
-    // Whether the current song moves by its timeline (not by the chords played).
+    // Whether the current song has a timeline (parts to play along).
     [[nodiscard]] bool onTimeline() const;
     // Timeline part `part`'s place in songFlow() (-1: none).
     Q_INVOKABLE int timelinePlace(int part) const;
     // The chord lit `quarter` quarter notes into timeline part `part` (a
-    // step of the chart's chords, as followLine() takes); -1: none yet.
+    // step of the chart's chords, as chordLine() takes); -1: none yet.
     Q_INVOKABLE int timelineStep(int part, double quarter) const;
     // The live controls: on the next bar line, or at the part's end.
     Q_INVOKABLE void nextPart();
@@ -272,11 +264,8 @@ public:
     Q_INVOKABLE void stopAtEndOfPart();
     // Play from the song's first part.
     Q_INVOKABLE void playSongFromTop();
-    [[nodiscard]] QString followFirstChord() const;
-    Q_INVOKABLE QString followLabel(int step) const;
-    Q_INVOKABLE int followLine(int step) const;
-    // The part of the song's flow (songFlow) a followed chord is in; -1: none.
-    Q_INVOKABLE int followPart(int step) const;
+    // The chartLines() index of the line a step of the chart's chords is on (-1: none).
+    Q_INVOKABLE int chordLine(int step) const;
     [[nodiscard]] bool songLoopSync() const;
     Q_INVOKABLE bool setSongLoopSync(int song, bool sync);
     [[nodiscard]] int songLoopBars() const;
@@ -299,8 +288,8 @@ public:
     Q_INVOKABLE void playSong();
     Q_INVOKABLE void stopSong();
     Q_INVOKABLE void selectSection(int section);
-    // Part `place` of songFlow() (a tile in Perform): its section, and chord
-    // follow from that very time the section comes round.
+    // Part `place` of songFlow() (a tile in Perform): playing, it comes in at
+    // the next bar line; stopped, it is where Play starts.
     Q_INVOKABLE void selectFlowPart(int place);
     Q_INVOKABLE void nextSection();
     // (A song on its timeline without section titles plays as one section.)
@@ -399,13 +388,12 @@ private:
     bool storeSection(int section, const std::function<void(core::SectionSetup&)>& edit);
     core::SongId m_sectionsSong; // the song whose sections the engine has
     int m_sectionCount = 0;
-    core::SongMap m_songMap; // the current song's chords, when it follows them
-    bool m_followTooLong = false; // its chart has too many chords (or sections) to follow (said once)
-    std::vector<int> m_followLines;            // per step: its chartLines() index
-    std::vector<int> m_timelinePlaces;         // per timeline part: its place in songFlow()
+    core::SongMap m_songMap;          // the current song's chords, lit along its timeline
+    bool m_chordsTooMany = false;     // its chart has too many chords (or sections) to light (said once)
+    std::vector<int> m_chordLines;     // per step: its chartLines() index
+    std::vector<int> m_timelinePlaces; // per timeline part: its place in songFlow()
     // Per timeline part: its chords, (quarter notes into the part, step).
     std::vector<std::vector<std::pair<double, int>>> m_timelineSteps;
-    std::vector<QString> m_followSectionNames; // per chart section: its name
     [[nodiscard]] const core::Song* currentSong() const;
     // Undo: the setlist as it was before each edit. Called whenever an edit
     // is committed; edits in a row with the same `m_coalesceKey` within a

@@ -128,8 +128,11 @@ public:
         m_position.section = section;
         m_position.bars = m_sections.sections.at(static_cast<std::size_t>(section)).bars;
         m_position.bar = m_position.playing ? 1 : 0;
+        // The part: the section's first in the flow (or, without one, the section itself).
+        const auto first = std::ranges::find(m_sections.parts, section);
+        m_position.part = m_sections.parts.empty() ? section
+                          : first != m_sections.parts.end() ? static_cast<int>(first - m_sections.parts.begin()) : -1;
     }
-    void jumpToPart(int section, int) override { jumpToSection(section); }
     // (No count runs here: what is queued is only shown.)
     void queueNextPart() override { m_position.queuedPart = m_position.queuedPart >= 0 ? -1 : m_position.part + 1; }
     void queuePart(int part) override
@@ -154,14 +157,6 @@ public:
         m_position.stopAtEnd = false;
     }
     [[nodiscard]] SongPosition songPosition() const override { return m_position; }
-    core::Result<void> setChordFollow(const ChordFollowMap& map) override
-    {
-        const bool active = map.steps.size() >= 2;
-        m_follow = ChordFollowPosition{.active = active, .started = false, .step = -1,
-                                       .section = active ? map.steps.front().section : -1};
-        return {};
-    }
-    [[nodiscard]] ChordFollowPosition chordFollow() const override { return m_follow; }
 
     // The demo's loops change state at once (no sound, no bars): a 4-bar loop.
     void loopCommand(const core::ChannelId& channel, LoopCommand command) override
@@ -220,7 +215,6 @@ private:
     std::vector<ChannelLoop> m_loops;
     SongSections m_sections;
     SongPosition m_position;
-    ChordFollowPosition m_follow;
     double m_tempo = 120.0;
     bool m_click = false;
     MidiActivity m_keyboard; // notes played on screen (the demo has no MIDI input)

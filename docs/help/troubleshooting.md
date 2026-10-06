@@ -49,14 +49,22 @@ instrument.
 Each plugin's settings are saved with the song when you **Save**. If you
 changed a sound and did not save, the old sound comes back next time.
 
-## Chord follow goes to the wrong part
+## The song plays the parts in the wrong order
 
-Check the song's **Flow** bar above the chart (Edit): chord follow only moves
-forward along it. If the band plays the chorus twice, or the pre-chorus only
-the second time, set that there (**Play it once more**, **Take it out**). If
-it loses you mid-song, a section's title, a tile in Perform or a pedal puts it
-right. A part shown dimmed with a **?** names a section the chart no longer
-has: it is skipped; take it out. See [Sections, tempo and backing tracks](sections-and-tempo.md).
+Check the song's **Flow** bar above the chart (Edit): Play and **Next part**
+go along it. If the band plays the chorus twice, or the pre-chorus only the
+second time, set that there (**Play it once more**, **Take it out**). Mid-song,
+a tap on a part's tile in Perform goes there at the next bar line. A part
+shown dimmed with a **?** names a section the chart no longer has: it is
+skipped; take it out. See [Sections, tempo and backing tracks](sections-and-tempo.md).
+
+## Two instruments have the same name
+
+Using the same plugin twice (two presets of Analog Lab, say), the second is
+called *Analog Lab V 2*. Plugins do not tell the app which preset they play,
+so name each after its sound: **double-click its name** at the foot of its
+strip (or right-click > **Rename…**, or click it and press **F2**), type
+*Classic American Piano*, **Enter**. Sections then show that name.
 
 ## Practice shows nothing
 

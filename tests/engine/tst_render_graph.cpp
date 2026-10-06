@@ -456,85 +456,20 @@ private slots:
         QCOMPARE(other->received.at(0).status, uint8_t{0x80});
     }
 
-    // Chord follow entering the chorus: the chord's keys pressed a moment
-    // before (they reached the verse) move to the chorus at the switch.
-    void aHandoverMovesTheHeldChord()
-    {
-        auto verse = std::make_shared<HeldNoteNode>(0.25F);
-        auto chorus = std::make_shared<HeldNoteNode>(0.5F);
-        auto both = std::make_shared<HeldNoteNode>(0.125F);
-        for (auto* node : {verse.get(), chorus.get(), both.get()}) node->received.reserve(16);
-        std::vector<StripSpec> specs;
-        specs.push_back(strip(verse));
-        specs.push_back(strip(chorus));
-        specs.push_back(strip(both));
-        RenderGraph graph(std::move(specs), 48000.0, kFrames);
-        graph.strip(0)->setSections(0b01);
-        graph.strip(1)->setSections(0b10);
-        graph.strip(2)->setSections(0b11); // plays in both: nothing to move
-
-        MidiEvent trigger = noteOn(53); // the key that completed the chord, at the switch
-        trigger.sampleOffset = 20;
-        MidiEvent handOn = noteOn(48);
-        handOn.sampleOffset = 20;
-        MidiEvent handOff = cc(0x80, 48, 0);
-        handOff.sampleOffset = 20;
-        const std::array events{trigger};
-        const std::array handover{handOn, handOff};
-        Output out;
-        graph.render(events, out.block(), 1.0F, {}, {},
-                     SectionGate{.before = 0, .after = 1, .switchAt = 20, .handover = handover});
-
-        // The verse lets go of 48 and gets nothing new.
-        QCOMPARE(verse->received.size(), std::size_t{1});
-        QCOMPARE(verse->received.at(0).status, uint8_t{0x80});
-        QCOMPARE(verse->received.at(0).data1, uint8_t{48});
-        // The chorus gets 48 (handed over) and 53 (the trigger).
-        QCOMPARE(chorus->received.size(), std::size_t{2});
-        QVERIFY(std::ranges::all_of(chorus->received, [](const MidiEvent& e) { return (e.status & 0xF0) == 0x90; }));
-        // A strip in both sections already had 48: only the trigger.
-        QCOMPARE(both->received.size(), std::size_t{1});
-        QCOMPARE(both->received.at(0).data1, uint8_t{53});
-    }
-
-    // A key held down through the chorus and back into the verse (a drone)
-    // is still sounding on the verse's strip: it is not struck there twice.
-    void aHandoverSkipsANoteStillSounding()
-    {
-        auto verse = std::make_shared<HeldNoteNode>(0.25F);
-        verse->received.reserve(16);
-        std::vector<StripSpec> specs;
-        specs.push_back(strip(verse));
-        RenderGraph graph(std::move(specs), 48000.0, kFrames);
-        graph.strip(0)->setSections(0b01);
-        Output out;
-        const std::array press{noteOn(48)};
-        graph.render(press, out.block(), 1.0F, {}, {}, SectionGate{.before = 0, .after = 0});
-        // The chorus (the verse's strip keeps the drone), then back to the verse.
-        graph.render({}, out.block(), 1.0F, {}, {}, SectionGate{.before = 0, .after = 1});
-        const std::array handover{noteOn(48)};
-        graph.render({}, out.block(), 1.0F, {}, {}, SectionGate{.before = 1, .after = 0, .handover = handover});
-        QCOMPARE(std::ranges::count_if(verse->received, [](const MidiEvent& e) { return e.status == 0x90 && e.data1 == 48; }),
-                 1);
-    }
-
-    // A full block (a mod wheel swept) and a chord handed over on top: the
-    // handover still arrives (a lost note-off would be a stuck note). Past
-    // what a strip holds, the events left out are counted, never lost unseen.
-    void aFullBlockStillTakesTheHandover()
+    // A full block (a mod wheel swept) all arrives. Past what a strip holds,
+    // the events left out are counted, never lost unseen.
+    void aFullBlockCountsWhatItLeavesOut()
     {
         auto verse = std::make_shared<HeldNoteNode>(0.25F);
         verse->received.reserve(1024);
         std::vector<StripSpec> specs;
         specs.push_back(strip(verse));
         RenderGraph graph(std::move(specs), 48000.0, kFrames);
-        graph.strip(0)->setSections(0b01);
         std::vector<MidiEvent> full(static_cast<std::size_t>(kMaxEventsPerBlock));
         for (std::size_t i = 0; i < full.size(); ++i) full.at(i) = cc(0xB0, 1, static_cast<uint8_t>(i % 128));
-        const std::array handover{cc(0x80, 48, 0)}; // the verse lets go of a key
         Output out;
-        graph.render(full, out.block(), 1.0F, {}, {}, SectionGate{.before = 0, .after = 1, .handover = handover});
-        QVERIFY(std::ranges::any_of(verse->received, [](const MidiEvent& e) { return e.status == 0x80 && e.data1 == 48; }));
+        graph.render(full, out.block(), 1.0F);
+        QCOMPARE(verse->received.size(), full.size());
         QCOMPARE(graph.takeDroppedEvents(), uint64_t{0});
 
         // More than a strip ever takes in one block: counted.

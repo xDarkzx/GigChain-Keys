@@ -37,6 +37,19 @@ Rectangle {
     property EffectWindows effectWindows: null
     // Audio input channels open now (for "Play Audio Input").
     property int inputChannels: 0
+    // Renamed here (not on stage).
+    property bool editable: true
+
+    // The channel's name: the sound it plays ("Classic American Piano", "Juno
+    // Pad"), where the plugin alone would say "Analog Lab V" twice. Typed
+    // into its name plate.
+    function startRename() {
+        if (!strip.editable) return
+        nameField.text = strip.name
+        nameField.visible = true
+        nameField.forceActiveFocus()
+        nameField.selectAll()
+    }
 
     readonly property var noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     function noteName(n) { return noteNames[n % 12] + (Math.floor(n / 12) - 1) }
@@ -127,6 +140,11 @@ Rectangle {
         id: channelMenuComponent
         StageMenu {
             StageMenuItem { text: qsTr("Open %1").arg(strip.instrumentName || qsTr("instrument")); onTriggered: strip.doc.selectedChannel = strip.index }
+            StageMenuItem {
+                text: qsTr("Rename…")
+                enabled: strip.editable
+                onTriggered: strip.startRename()
+            }
             StageMenuItem { text: strip.mute ? qsTr("Unmute") : qsTr("Mute"); onTriggered: strip.doc.setChannelMute(strip.index, !strip.mute) }
             StageMenuItem { text: strip.solo ? qsTr("Unsolo") : qsTr("Solo"); onTriggered: strip.doc.setChannelSolo(strip.index, !strip.solo) }
             StageMenuItem { text: qsTr("Keyboard Zone…"); onTriggered: strip.doc.editChannel(strip.index, "zone") }
@@ -400,8 +418,9 @@ Rectangle {
             }
         }
 
-        // name tag: a coloured plate, lit from above
+        // name tag: a coloured plate, lit from above; double-click to rename
         Rectangle {
+            objectName: "stripNamePlate"
             Layout.fillWidth: true
             Layout.preferredHeight: 22
             radius: Theme.radiusSmall
@@ -412,8 +431,10 @@ Rectangle {
             }
             Rectangle { x: 1; y: 1; width: parent.width - 2; height: 1; color: "#40ffffff" }
             Text {
+                objectName: "stripName"
                 anchors.fill: parent
                 anchors.margins: 3
+                visible: !nameField.visible
                 text: strip.name
                 color: "white"
                 font.pixelSize: Theme.smallFontSize
@@ -421,6 +442,36 @@ Rectangle {
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
+            }
+            HoverHandler { id: plateHover; enabled: strip.editable }
+            ToolTip.visible: plateHover.hovered && !nameField.visible
+            ToolTip.delay: 600
+            ToolTip.text: strip.instrumentName !== "" && strip.instrumentName !== strip.name
+                          ? qsTr("%1 · %2 (double-click to rename)").arg(strip.name).arg(strip.instrumentName)
+                          : qsTr("%1 (double-click to rename it after the sound it plays)").arg(strip.name)
+            TapHandler {
+                onTapped: {
+                    strip.doc.selectedChannel = strip.index
+                    strip.takeKeys()
+                }
+                onDoubleTapped: strip.startRename()
+            }
+            StageTextField {
+                id: nameField
+                objectName: "stripNameField"
+                anchors.fill: parent
+                visible: false
+                font.pixelSize: Theme.smallFontSize
+                onAccepted: {
+                    if (text.trim() !== "" && text.trim() !== strip.name) strip.doc.setChannelName(strip.index, text.trim())
+                    visible = false
+                    strip.takeKeys()
+                }
+                onActiveFocusChanged: if (!activeFocus) visible = false
+                Keys.onEscapePressed: {
+                    visible = false
+                    strip.takeKeys()
+                }
             }
         }
     }

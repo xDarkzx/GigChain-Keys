@@ -4,11 +4,12 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // On stage, as MainStage and Gig Performer lay it out: a slim header
-// (previous, the song and what comes next, next), the song's parts as tiles
-// (the one playing lit; a tap jumps there), and the chart filling the rest,
-// big enough to read from the keys, scrolled by chord follow. Panic is the
-// toolbar's. Pedals and pads learned in Settings switch songs and parts too.
-// Nothing here edits the setlist.
+// (previous, the song and what comes next, next), the song's transport (Play,
+// Next part, Loop part: big, for a finger), its parts as tiles (the one
+// playing lit; a tap goes there at the next bar line, as Playback does), and
+// the chart filling the rest, big enough to read from the keys, scrolled
+// along as the song plays. Panic is the toolbar's. Pedals and pads learned
+// in Settings switch songs and parts too. Nothing here edits the setlist.
 Rectangle {
     id: perform
     objectName: "performView"
@@ -142,9 +143,68 @@ Rectangle {
                     }
                 }
 
+                // The song's transport: Play / Stop, on to the next part (at
+                // the next bar line), loop the part playing, and where it is.
+                RowLayout {
+                    objectName: "performTransport"
+                    Layout.fillWidth: true
+                    visible: perform.doc.canPlaySong
+                    spacing: Theme.spacing
+                    StageButton {
+                        objectName: "performPlay"
+                        Layout.preferredWidth: 120
+                        Layout.preferredHeight: Theme.touchTarget
+                        iconSource: perform.engineStatus.songPlaying ? "icons/player-stop.svg" : "icons/player-play.svg"
+                        iconSize: 24
+                        text: perform.engineStatus.songPlaying ? qsTr("Stop") : qsTr("Play")
+                        font.pixelSize: Theme.fontSize + 3
+                        font.bold: true
+                        tone: perform.engineStatus.songPlaying ? "normal" : "accent"
+                        checked: perform.engineStatus.songPlaying
+                        tip: perform.engineStatus.songPlaying ? qsTr("Stop the song (Space)")
+                                                              : qsTr("Play the song at its tempo along its parts (Space)")
+                        onClicked: perform.engineStatus.songPlaying ? perform.doc.stopSong() : perform.doc.playSong()
+                    }
+                    StageButton {
+                        objectName: "performNextPart"
+                        Layout.preferredHeight: Theme.touchTarget
+                        iconSource: "icons/chevron-right.svg"
+                        iconSize: 22
+                        text: qsTr("Next part")
+                        font.pixelSize: Theme.fontSize + 2
+                        tip: qsTr("Playing: on to the next part at the next bar line (N). Stopped: the next part is where Play starts")
+                        onClicked: perform.doc.nextPart()
+                    }
+                    StageButton {
+                        objectName: "performLoopPart"
+                        Layout.preferredHeight: Theme.touchTarget
+                        iconSource: "icons/loop.svg"
+                        iconSize: 22
+                        text: qsTr("Loop part")
+                        font.pixelSize: Theme.fontSize + 2
+                        enabled: perform.engineStatus.songPlaying
+                        checked: perform.engineStatus.songHold
+                        tip: qsTr("Play this part again and again until tapped again (H)")
+                        onClicked: perform.doc.holdPart()
+                    }
+                    Label {
+                        objectName: "performWhere"
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignRight
+                        elide: Text.ElideRight
+                        text: perform.engineStatus.songCountingIn ? qsTr("Count-in…")
+                              : !perform.engineStatus.songPlaying ? ""
+                              : qsTr("Bar %1 of %2").arg(perform.engineStatus.songBar).arg(perform.engineStatus.songBars)
+                                + (perform.engineStatus.songQueued !== "" ? "   " + perform.engineStatus.songQueued : "")
+                        color: Theme.chord
+                        font.pixelSize: Theme.fontSize + 3
+                        font.bold: true
+                    }
+                }
+
                 // The song's parts in the order it is played (its flow), as
                 // Gig Performer's tiles: the one playing lit, a tap goes
-                // to that very part.
+                // to that very part (playing: at the next bar line).
                 Flow {
                     id: parts
                     objectName: "performParts"
@@ -152,11 +212,8 @@ Rectangle {
                     visible: count > 0
                     spacing: Theme.spacing
                     readonly property int count: perform.doc.songFlow.length
-                    // On the timeline (playing, or stopped at a part): that part. Following
-                    // chords: the exact part; else every part of the section in force.
-                    readonly property int playingPart: perform.engineStatus.songPlace >= 0 ? perform.engineStatus.songPlace
-                                                     : perform.engineStatus.chordStarted
-                                                       ? perform.doc.followPart(perform.engineStatus.chordStep) : -1
+                    // The part playing, or the one Play starts from.
+                    readonly property int playingPart: perform.engineStatus.songPlace
                     // A tile tapped: that very part of the flow.
                     function choose(place) { perform.doc.selectFlowPart(place) }
                     Repeater {
@@ -166,7 +223,7 @@ Rectangle {
                             required property var modelData
                             required property int index
                             objectName: "performPart"
-                            height: 40
+                            height: Theme.touchTarget
                             width: Math.max(110, implicitWidth + 24)
                             text: part.modelData.label
                             font.pixelSize: Theme.fontSize + 2
@@ -217,7 +274,7 @@ Rectangle {
                         target: perform.doc
                         function onChartChanged() { performChart.contentY = 0 }
                     }
-                    // Chord follow: the line being played stays in the upper third.
+                    // Playing: the line it has come to stays in the upper third.
                     NumberAnimation {
                         id: followScroll
                         target: performChart

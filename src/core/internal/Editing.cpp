@@ -157,13 +157,6 @@ Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early)
     return {};
 }
 
-Result<void> setSongFollowChords(Setlist& setlist, int songIndex, bool follow)
-{
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
-    setlist.songs.at(toIndex(songIndex)).followChords = follow;
-    return {};
-}
-
 Result<void> renameSongSection(Setlist& setlist, int songIndex, const QString& chart)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
@@ -322,7 +315,16 @@ Result<int> addChannel(Setlist& setlist, Cursor cursor, const PluginSlot& instru
         return fail(ErrorCode::LimitExceeded,
                     u"A patch can hold at most %1 channels"_s.arg(limits::kMaxChannelsPerPatch));
     }
-    Channel channel = makeChannel(instrument.displayName.trimmed());
+    // The same instrument again (another preset of it): "Piano V2 2", told apart.
+    const QString base = instrument.displayName.trimmed();
+    QString name = base;
+    const auto taken = [patch](const QString& n) {
+        return std::ranges::any_of(patch->channels, [&n](const Channel& c) { return c.name.compare(n, Qt::CaseInsensitive) == 0; });
+    };
+    for (int number = 2; taken(name) && number <= limits::kMaxChannelsPerPatch + 1; ++number) {
+        name = u"%1 %2"_s.arg(base).arg(number);
+    }
+    Channel channel = makeChannel(name.left(limits::kMaxNameLength));
     channel.instrument = instrument;
     if (auto valid = validateChannel(channel, u"New channel"_s); !valid) return tl::unexpected(valid.error());
     patch->channels.push_back(std::move(channel));

@@ -25,8 +25,6 @@ Result<void> setSongKeyAndTempo(Setlist& setlist, int songIndex, const QString& 
 Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator, int denominator);
 // Sections switch a beat early (true) or just before their first beat.
 Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early);
-// Whether the song's sections follow the chords played or its tempo.
-Result<void> setSongFollowChords(Setlist& setlist, int songIndex, bool follow);
 // The song's chart with a section renamed (renameSection()'s result): its
 // flow and its sections' instruments keep to each section, by its place.
 Result<void> renameSongSection(Setlist& setlist, int songIndex, const QString& chart);

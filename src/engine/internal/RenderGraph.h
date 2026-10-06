@@ -57,10 +57,6 @@ struct SectionGate
     int before = -1;
     int after = -1;
     int switchAt = 0;
-    // Chord follow entering a section: keys already held go to the strips
-    // coming in (note-ons), and the chord's first keys leave the strips going
-    // out (note-offs), all at switchAt. Owned by the ChordFollower.
-    std::span<const MidiEvent> handover = {};
 };
 
 // One mixer strip inside a graph. Routing and nodes are fixed; volume, mute
@@ -137,9 +133,6 @@ private:
     std::vector<float> m_left;
     std::vector<float> m_right;
     std::vector<MidiEvent> m_routed;
-    // Keys this strip's instrument was sent and not yet let go of (audio
-    // thread): a section handover never strikes them twice.
-    std::bitset<128> m_sounding;
     std::atomic<uint64_t> m_droppedEvents{0};
     std::atomic<float> m_gain{1.0F};
     std::atomic<float> m_pan{0.0F};

@@ -22,7 +22,7 @@ if (-not $env:VSCMD_VER) {
 
 cmake --preset fuzz
 if ($LASTEXITCODE) { throw 'configure failed' }
-cmake --build --preset fuzz --target fuzz_setlist_json fuzz_chart fuzz_plugin_state fuzz_plugin_files fuzz_midi fuzz_chord_follow
+cmake --build --preset fuzz --target fuzz_setlist_json fuzz_chart fuzz_plugin_state fuzz_plugin_files fuzz_midi
 if ($LASTEXITCODE) { throw 'build failed' }
 $env:PATH = "$env:QT_ROOT_DIR\bin;$env:PATH"
 

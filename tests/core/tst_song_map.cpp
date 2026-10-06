@@ -1,4 +1,4 @@
-// A chart as the chords a player goes through (chord follow).
+// A chart as the chords a player goes through (lit along the timeline, practised).
 #include "gigchain/core/Chart.h"
 #include "gigchain/core/SongMap.h"
 
@@ -80,7 +80,7 @@ private slots:
     }
 
     // Each part knows its place in the flow, though parts without chords (a
-    // spoken intro, a section the chart no longer has) are not parts to follow.
+    // spoken intro, a section the chart no longer has) are not parts here.
     void eachPartKnowsItsPlaceInTheFlow()
     {
         const Chart chart = parseChordPro(
@@ -147,7 +147,7 @@ private slots:
 
     // The longest chart a setlist may hold, its chords repeated as often as
     // repeat marks allow: read in a moment (the app does not freeze), and
-    // too long to follow.
+    // too long to light.
     void theLongestChartIsReadQuickly_data()
     {
         QTest::addColumn<QString>("chord");
@@ -171,9 +171,8 @@ private slots:
         QVERIFY(!map.followable());
     }
 
-    // More sections than the engine follows (one bit each): not followed,
-    // like too many chords, never a map the engine refuses. (Found by the
-    // chord follow fuzzer: 65 bridge marks.)
+    // More sections than the engine takes (one bit each): too long, like
+    // too many chords. (Found by a fuzzer: 65 bridge marks.)
     void moreSectionsThanCanBeFollowedIsTooLong()
     {
         QString chart;

@@ -163,10 +163,6 @@ RealEngine::~RealEngine()
         m_track.publish(nullptr);
         m_track.collectGarbage();
     });
-    step("releasing the chord follow map", [this] {
-        m_follow.publish(nullptr);
-        m_follow.collectGarbage();
-    });
     // A backing track still being read writes into this engine: let it stop.
     step("stopping the backing track reader", [this] {
         if (m_trackReader) {
@@ -741,7 +737,6 @@ std::vector<Notice> RealEngine::poll()
     notices.swap(m_pendingNotices);
 
     m_exchange.collectGarbage();
-    m_follow.collectGarbage();
     std::ranges::move(m_audio.poll(), std::back_inserter(notices));
     // A lost device may have come back at another rate or block size.
     syncPluginsToDevice();
@@ -1057,7 +1052,6 @@ void RealEngine::panic()
     const double rate = m_audio.sampleRate();
     const int block = m_audio.maxBlock();
     m_keyboard.clear(); // every key shown up again
-    m_follower.reset(); // following waits for the song's first chord again
     for (const auto* nodes : {&m_nodes, &m_masterNodes}) {
         for (const auto& [key, node] : *nodes) {
             node->releaseAllNotes();
@@ -1319,11 +1313,6 @@ void RealEngine::playSong(int fromSection, bool countIn)
 
 void RealEngine::jumpToSection(int section)
 {
-    jumpToPart(section, -1);
-}
-
-void RealEngine::jumpToPart(int section, int part)
-{
     GC_ONLY_MAIN_THREAD();
     const int count = static_cast<int>(m_sections.sections.size());
     if (section < 0 || section >= count) {
@@ -1331,40 +1320,6 @@ void RealEngine::jumpToPart(int section, int part)
         return;
     }
     if (const int at = partForSection(section); at >= 0) m_transport.jump(at);
-    m_follower.jumpToPart(section, part); // (ignored when not following)
-}
-
-core::Result<void> RealEngine::setChordFollow(const ChordFollowMap& map)
-{
-    GC_ONLY_MAIN_THREAD();
-    // Checked here, on the main thread: the audio thread trusts every index.
-    // Refused, the song before it is not followed on.
-    if (auto checked = ChordFollower::check(map); !checked) {
-        qCWarning(lcEngine).noquote() << checked.error().message;
-        m_follow.publish(nullptr);
-        m_following = false;
-        return checked;
-    }
-    if (map.steps.size() < 2) {
-        m_follow.publish(nullptr);
-        m_following = false;
-        return {};
-    }
-    m_follow.publish(std::make_shared<FollowSnapshot>(FollowSnapshot{.map = map, .generation = ++m_followGeneration}));
-    m_following = true;
-    return {};
-}
-
-SongPosition RealEngine::songPosition() const
-{
-    // Following chords: where the playing is, not the bar counter.
-    if (m_following) {
-        const ChordFollowPosition follow = m_follower.position();
-        if (follow.active) {
-            return SongPosition{.playing = follow.started, .countingIn = false, .section = follow.section, .bar = 0, .bars = 0};
-        }
-    }
-    return m_transport.position();
 }
 
 // ---------------------------------------------------------------- loops
@@ -1780,22 +1735,7 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     const SongTransport::Block song = m_transport.advance(m_timeline.acquire(), m_ppq, out.frames, quartersPerSample);
     m_timeline.release();
     m_ppq = song.ppq;
-    // Chord follow: where the song is, from what is played; its gate when the
-    // song's sections are this patch's (a map without sections only lights
-    // the chart).
-    SectionGate gate = song.gate;
-    {
-        const FollowSnapshot* follow = m_follow.acquire();
-        const SectionGate followed = m_follower.process(follow != nullptr ? &follow->map : nullptr,
-                                                        follow != nullptr ? follow->generation : 0,
-                                                        std::span<const MidiEvent>(m_events.data(), count), out.frames, rate);
-        const bool sections = song.gate.before >= 0 || song.gate.after >= 0;
-        if (follow != nullptr && sections) {
-            gate = followed;
-            gate.handover = m_follower.handover();
-        }
-        m_follow.release();
-    }
+    const SectionGate gate = song.gate;
     // A free first loop set the tempo: bar 1 starts where it started.
     if (const int64_t origin = m_barOriginAt.exchange(-1, std::memory_order_acq_rel); origin >= 0) {
         m_ppq = static_cast<double>(m_samplePosition - origin) * quartersPerSample;

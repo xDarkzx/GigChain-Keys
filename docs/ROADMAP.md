@@ -52,8 +52,8 @@ bars. Play counts the bars at the song's tempo and time signature (with a
 count-in on the click) and switches the instruments by themselves a
 sixteenth before each section (or a beat early), sample-exactly; the
 backing track plays along; a pedal moves on to the next section. Songs
-without sections play everything, as before. Still open below: following
-the player by ear, tempo changes inside a song, fades between sections.
+without sections play everything, as before. Still open below: tempo
+changes inside a song, fades between sections.
 
 **The idea:** within one song, switch sounds for the verse, chorus, drop and
 so on without building a separate patch for each, and turn instruments on
@@ -162,19 +162,17 @@ front of the player.
 Charts are editable ChordPro with chords placed over the words, and Perform
 shows the whole song.
 
-**Done (chord follow, version 1):** the chart follows the chords played on
-the keyboard. The song waits for its first chord ("Play Am to start"); the
-root and any one other note of the next chord move on (any voicing, any
-bass, sus and power chords count); the first two chords of another section,
-played clearly, jump there; the pedal or a click picks a section. The chord
-being played is lit, the next one outlined, and the chart scrolls with it.
-Sections switch instruments on the note that entered them, with the held
-chord handed over. Each song follows its chords (the default) or its tempo
-(Play counts bars), in the song's settings.
+**Done:** the song's timeline lights the chord it has come to, outlines the
+next one, and scrolls the chart with it; Perform's Play, Next part, Loop
+part and part tiles move it, as do pedals.
 
-**Next:** following the tempo from the playing, a backing track kept in
-time with it, recognising which song is being played, and following from
-an audio input (guitar, voice) as well as MIDI.
+**Dropped (0.3): following the chords played.** Version 1 listened to the
+keys and moved the song along. It could not be made reliable: a verse and
+a chorus often share their chords, so a chord played could as well be the
+chorus, and it jumped there. No stage tool players use (MainStage, Gig
+Performer, MultiTracks Playback, Prime, OnSong) listens to the playing;
+they all move on with a pedal, a tap or the timeline, and so does this app
+now.
 
 ## 6. Installer
 

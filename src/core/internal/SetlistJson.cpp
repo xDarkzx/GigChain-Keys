@@ -323,20 +323,8 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
         song.timeDenominator = denominator;
     }
     song.switchEarly = obj.contains("switchEarly"_L1) && r.boolean(obj, "switchEarly"_L1, path);
-    // What moves it on: "timeline" or "chords". Files from before the
-    // timeline say only followChords (absent: true): a song with a tempo
-    // runs on its timeline now, one without follows its chords as it did.
-    if (obj.contains("movesBy"_L1)) {
-        const QString moves = r.string(obj, "movesBy"_L1, path, 16);
-        if (moves != "timeline"_L1 && moves != "chords"_L1 && !r.failed()) {
-            r.invalid(u"%1.movesBy must be \"timeline\" or \"chords\" (got \"%2\")"_s.arg(path, moves));
-            return song;
-        }
-        song.followChords = moves == "chords"_L1;
-    } else {
-        const bool followed = !obj.contains("followChords"_L1) || r.boolean(obj, "followChords"_L1, path);
-        song.followChords = followed && song.tempo <= 0.0;
-    }
+    // (Older files say what moved the song on, "movesBy" or "followChords":
+    // the player does now, so both are passed over.)
     song.loopSync = !obj.contains("loopSync"_L1) || r.boolean(obj, "loopSync"_L1, path);
     song.loopBars = r.optionalInteger(obj, "loopBars"_L1, path, 0, limits::kMaxLoopBars, 4);
     // Its flow: [{"name": "Verse 1", "occurrence": 1}, ...] (absent in older files: the chart's order).
@@ -498,8 +486,6 @@ QJsonObject writeSong(const Song& song)
                        {u"backingTrack"_s, song.backingTrack},
                        {u"timeSignature"_s, u"%1/%2"_s.arg(song.timeNumerator).arg(song.timeDenominator)},
                        {u"switchEarly"_s, song.switchEarly},
-                       {u"followChords"_s, song.followChords},
-                       {u"movesBy"_s, song.followChords ? u"chords"_s : u"timeline"_s},
                        {u"loopSync"_s, song.loopSync},
                        {u"loopBars"_s, song.loopBars},
                        {u"sections"_s, sections}};

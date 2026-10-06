@@ -16,7 +16,7 @@ export QT_ROOT_DIR="${QT_ROOT_DIR:-$HOME/Qt/6.10.2/gcc_64}"
 BUILD="$HOME/.cache/gigchain/build/linux-fuzz"
 
 cmake --preset linux-fuzz >/dev/null
-cmake --build --preset linux-fuzz --target fuzz_setlist_json fuzz_chart fuzz_plugin_state fuzz_plugin_files fuzz_midi fuzz_chord_follow
+cmake --build --preset linux-fuzz --target fuzz_setlist_json fuzz_chart fuzz_plugin_state fuzz_plugin_files fuzz_midi
 failed=()
 for seeds in tests/fuzz/corpus/*/; do
     name="$(basename "$seeds")"

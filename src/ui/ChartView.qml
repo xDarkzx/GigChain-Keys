@@ -30,29 +30,18 @@ Column {
     property int currentSection: -1
     property bool playing: false
     property int bar: 0
-    // Chord follow (from EngineStatus): the chord being played, lit.
+    // The chord the song's timeline has come to (from EngineStatus), lit.
     property int currentStep: -1
     property bool followStarted: false
-    // Where the line being played is (-1: not following), for the view
-    // around the chart to scroll to.
+    // Where the line being played is (-1: none), for the view around the
+    // chart to scroll to.
     readonly property real followY: {
-        const line = chart.doc !== null && chart.followStarted ? chart.doc.followLine(chart.currentStep) : -1
+        const line = chart.doc !== null && chart.followStarted ? chart.doc.chordLine(chart.currentStep) : -1
         const item = line >= 0 ? lineRepeater.itemAt(line) : null
         return item !== null ? item.y : -1
     }
 
     spacing: 2 * size
-
-    Text {
-        objectName: "followStartLine"
-        width: chart.width
-        visible: chart.doc !== null && chart.doc.following && !chart.followStarted
-        text: chart.doc !== null ? qsTr("Play %1 to start").arg(chart.doc.followFirstChord) : ""
-        horizontalAlignment: Text.AlignHCenter
-        color: Theme.textDim
-        font.pixelSize: (Theme.fontSize + 2) * chart.size
-        bottomPadding: 6 * chart.size
-    }
 
     Repeater {
         id: lineRepeater

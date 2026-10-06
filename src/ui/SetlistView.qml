@@ -220,7 +220,6 @@ Item {
             times = commonTimes.indexOf(now) >= 0 ? commonTimes : commonTimes.concat([now])
             timeBox.currentIndex = times.indexOf(now)
             earlyBox.checked = view.doc.songSwitchEarly
-            followBox.checked = view.doc.songFollowChords
         }
         ColumnLayout {
             width: parent.width
@@ -262,23 +261,6 @@ Item {
                 text: qsTr("Change sections a beat early (for pads that swell in)")
                 focusPolicy: Qt.NoFocus
             }
-            CheckBox {
-                id: followBox
-                objectName: "songFollowChordsBox"
-                Layout.leftMargin: Theme.spacing
-                text: qsTr("Follow the chords I play (a free-time song). Off: Play runs the song at its tempo along its flow")
-                focusPolicy: Qt.NoFocus
-            }
-            Label {
-                objectName: "songFollowHint"
-                Layout.fillWidth: true
-                Layout.leftMargin: Theme.spacingLarge
-                Layout.rightMargin: Theme.spacingLarge
-                visible: followBox.checked && !view.doc.following
-                text: qsTr("Add chords to the chart to follow them (until then the tempo leads).")
-                color: Theme.textDim
-                wrapMode: Text.Wrap
-            }
             StageDivider { Layout.fillWidth: true; Layout.topMargin: Theme.spacing }
             RowLayout {
                 Layout.fillWidth: true
@@ -293,7 +275,6 @@ Item {
                         const time = tempoPopup.times[timeBox.currentIndex].split("/")
                         view.doc.setSongTimeSignature(tempoPopup.song, parseInt(time[0]), parseInt(time[1]))
                         view.doc.setSongSwitchEarly(tempoPopup.song, earlyBox.checked)
-                        view.doc.setSongFollowChords(tempoPopup.song, followBox.checked)
                         tempoPopup.close()
                     }
                 }

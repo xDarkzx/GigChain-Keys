@@ -76,8 +76,8 @@ for example *Verse 1 → Pre-Chorus → Chorus → Verse 2 → Chorus ×3 → Ou
 It starts as the chart's order. A chord sheet often writes the chorus once,
 though the band plays it three times. Click a part for **Play it once more**,
 **Move earlier** or **later** and **Take it out**. **+** adds a section of the
-chart again, and **Chart order** goes back. Chord follow keeps to this flow:
-see [Sections, tempo and backing tracks](sections-and-tempo.md).
+chart again, and **Chart order** goes back. Play runs the song along this
+flow: see [Sections, tempo and backing tracks](sections-and-tempo.md).
 
 Renaming a section (double-click its title) keeps it in the flow. A part
 whose section is no longer in the chart (changed in the ChordPro text) shows

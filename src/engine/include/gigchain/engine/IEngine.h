@@ -204,9 +204,6 @@ public:
     virtual void stopSong() = 0;
     // Playing: on to that section now. Stopped: that section is in force.
     virtual void jumpToSection(int section) = 0;
-    // As jumpToSection; chord follow goes to part `part` of the song's flow
-    // (ChordFollowMap::partStarts) when that is a time `section` comes round.
-    virtual void jumpToPart(int section, int part) = 0;
     // The live controls, while the song plays (SongSections::parts: the flow).
     // On the next bar line: the next part / part `part` (asked again: not).
     virtual void queueNextPart() = 0;
@@ -219,16 +216,6 @@ public:
     virtual void toggleStopAtEndOfPart() = 0;
     virtual void cancelQueuedParts() = 0;
     [[nodiscard]] virtual SongPosition songPosition() const = 0;
-
-    // ---- Chord follow (the chart follows what is played)
-    // The current song's chords in playing order, their sections those of
-    // setSongSections in the same order. While a map is set, what is played
-    // decides the section in force (see ChordFollowMap); fewer than two
-    // steps = not following (the song's sections follow the tempo). A map
-    // that does not hang together (an index out of range, too many chords)
-    // is refused with the reason, and nothing is followed.
-    virtual core::Result<void> setChordFollow(const ChordFollowMap& map) = 0;
-    [[nodiscard]] virtual ChordFollowPosition chordFollow() const = 0;
 
     // ---- The loop station (one audio loop per channel, see LoopCommand)
     // Record on a channel without a loop makes room for one (at most 2

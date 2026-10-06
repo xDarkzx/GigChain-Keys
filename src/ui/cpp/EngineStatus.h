@@ -67,11 +67,12 @@ class EngineStatus : public QObject
     Q_PROPERTY(double songProgress READ songProgress NOTIFY songPositionChanged)
     Q_PROPERTY(QString songQueued READ songQueued NOTIFY songPositionChanged)
     Q_PROPERTY(int songQueuedPlace READ songQueuedPlace NOTIFY songPositionChanged)
-    // Chord follow: a song's chords are followed, the first one was heard,
-    // and which chord (of DocumentController's map) is being played.
-    Q_PROPERTY(bool chordFollowing READ chordFollowing NOTIFY chordFollowChanged)
-    Q_PROPERTY(bool chordStarted READ chordStarted NOTIFY chordFollowChanged)
-    Q_PROPERTY(int chordStep READ chordStep NOTIFY chordFollowChanged)
+    // The part playing loops until released (Loop part / Hold).
+    Q_PROPERTY(bool songHold READ songHold NOTIFY songPositionChanged)
+    // The chord the song's timeline has come to (of DocumentController's
+    // map), while it plays.
+    Q_PROPERTY(bool chordStarted READ chordStarted NOTIFY chordStepChanged)
+    Q_PROPERTY(int chordStep READ chordStep NOTIFY chordStepChanged)
     // Learning a knob for a plugin parameter: what has been caught so far.
     Q_PROPERTY(bool learningMapping READ learningMapping NOTIFY mappingLearnChanged)
     Q_PROPERTY(QString learnedKnob READ learnedKnob NOTIFY mappingLearnChanged)
@@ -126,13 +127,12 @@ public:
     [[nodiscard]] double trackLength() const { return m_track.length; }
     [[nodiscard]] bool songPlaying() const { return m_song.playing; }
     [[nodiscard]] bool songCountingIn() const { return m_song.countingIn; }
+    [[nodiscard]] bool songHold() const { return m_song.playing && m_song.hold; }
     [[nodiscard]] int songSection() const { return m_song.section; }
     [[nodiscard]] int songBar() const { return m_song.bar; }
     [[nodiscard]] int songBars() const { return m_song.bars; }
-    [[nodiscard]] bool chordFollowing() const { return m_follow.active; }
-    // (On the timeline, the chord lit by time; else the chord followed.)
-    [[nodiscard]] bool chordStarted() const { return m_timelineStep >= 0 || m_follow.started; }
-    [[nodiscard]] int chordStep() const { return m_timelineStep >= 0 ? m_timelineStep : m_follow.step; }
+    [[nodiscard]] bool chordStarted() const { return m_timelineStep >= 0; }
+    [[nodiscard]] int chordStep() const { return m_timelineStep; }
     [[nodiscard]] int songPart() const { return m_song.part; }
     [[nodiscard]] int songPlace() const;
     [[nodiscard]] double songProgress() const;
@@ -172,7 +172,7 @@ signals:
     void limitingChanged();
     void transportChanged();
     void songPositionChanged();
-    void chordFollowChanged();
+    void chordStepChanged();
     void mappingLearnChanged();
     void mappingLearned(int channel); // a knob was mapped
     void keyboardChanged();
@@ -202,7 +202,6 @@ private:
     double m_clickVolumeDb = -6.0;
     engine::BackingTrackState m_track;
     engine::SongPosition m_song;
-    engine::ChordFollowPosition m_follow;
     int m_timelineStep = -1; // the chord lit by the timeline; -1 = not playing on it
     QElapsedTimer m_tapClock;
     std::vector<qint64> m_taps; // ms, the last few taps

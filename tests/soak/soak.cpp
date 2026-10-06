@@ -1,7 +1,7 @@
 // The soak: a long gig on the real engine, run by tools\soak.ps1. Patches
 // change every moment with chords held across them, loops are recorded,
-// layered, played and cleared, a song's sections follow the chords played
-// (switching instruments, handing the chord over) and jump, a backing
+// layered, played and cleared, a song's timeline plays (switching
+// instruments at each part), is moved on, held and jumped, a backing
 // track starts and stops, the tempo moves, and now and then the audio
 // device is reopened (another buffer size) and MIDI set up again, as
 // Settings does. Silent: the master is at -inf.
@@ -260,26 +260,20 @@ int soak()
     engine.applyPatch(song, patches.front());
     engine.setBackingTrack(track);
     // The split's song: its low layer plays the verse, its high one the
-    // chorus, and the chords played lead (Am F | C G): the chart follows,
-    // sections switch on the note and the held chord is handed over.
+    // chorus; its timeline plays (verse, chorus, verse...) and the live
+    // controls move it along.
     const core::Patch& split = patches.at(1);
     engine.setSongSections(SongSections{.patch = split.id,
-                                        .sections = {{.bars = 4, .live = {split.channels.at(0).id}},
-                                                     {.bars = 4, .live = {split.channels.at(1).id}}},
-                                        .switchEarly = false});
-    ChordFollowMap follow;
-    for (const auto& [name, section] : {std::pair{"Am", 0}, {"F", 0}, {"C", 1}, {"G", 1}}) {
-        follow.steps.push_back(followStepOf(*core::parseChordName(QString::fromLatin1(name)), section));
-    }
-    follow.sectionStarts = {0, 2};
-    if (auto set = engine.setChordFollow(follow); !set) {
-        say(u"chord follow refused: "_s + set.error().message);
-        return 2;
-    }
-    // Each step plays the song's next chord (on MIDI channel 1).
+                                        .sections = {{.bars = 1, .live = {split.channels.at(0).id}},
+                                                     {.bars = 1, .live = {split.channels.at(1).id}}},
+                                        .switchEarly = false,
+                                        .parts = {0, 1, 0, 1, 0, 1, 0, 1},
+                                        .unsectioned = std::nullopt});
+    engine.playSong(-1, false);
+    // Each step plays a chord (on MIDI channel 1).
     const std::array<std::array<int, 3>, 4> chords{{{57, 60, 64}, {53, 57, 60}, {48, 52, 55}, {55, 59, 62}}};
-    bool heard = false;    // an instrument sounded (the notes reached it)
-    bool followed = false; // the chart moved with the chords
+    bool heard = false; // an instrument sounded (the notes reached it)
+    bool moved = false; // the timeline moved on to another part
 
     std::vector<Sample> samples;
     std::map<QString, int> warmTypes;
@@ -313,6 +307,10 @@ int soak()
         if (step % 5 == 0) engine.setTempo(80.0 + (step % 7) * 20.0);
         if (step % 50 == 25) engine.panic();
         if (step % 30 == 10) engine.jumpToSection(step % 2); // the pedal's "next section"
+        if (step % 30 == 20) engine.queueNextPart();
+        if (step % 60 == 40) engine.toggleHoldPart();
+        if (step % 60 == 55) engine.toggleHoldPart();
+        if (!engine.songPosition().playing) engine.playSong(-1, false); // the end of the song: again
         // Settings: another buffer size (the device reopens), and back.
         if (step % 200 == 100) {
             AudioSetup other = original;
@@ -332,7 +330,7 @@ int soak()
             QThread::msleep(20);
         }
         if (!patch.channels.empty()) heard = heard || engine.channelLevel(patch.channels.front().id).peak > 0.0F;
-        followed = followed || engine.chordFollow().step > 0;
+        moved = moved || engine.songPosition().part > 0;
         for (const int note : chord) engine.injectNote(1, note, 0);
         ++step;
 
@@ -360,7 +358,7 @@ int soak()
     // What was soaked has to have run: notes that never reach an instrument
     // prove nothing (a soak once played on MIDI channel 0, which is none).
     if (!instrument.isEmpty() && !heard) problems << u"no note was heard: the chords never reached the instrument"_s;
-    if (!followed) problems << u"the chart never followed the chords played"_s;
+    if (!moved) problems << u"the song's timeline never moved on"_s;
     if (samples.size() < 6) problems << u"too short to judge (at least a minute)"_s;
     else {
         // After the warm-up (the first fifth: plugins load, caches fill), the

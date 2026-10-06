@@ -26,17 +26,14 @@ the others fade out. Held notes and reverb tails ring on naturally.
 
 ## Let the song change by itself
 
-There are two ways, and you pick one per song: right-click the song in the
-setlist and choose **Tempo…**.
-
-### The timeline (the usual way)
-
 The song runs at its **tempo** along its **flow** (the Flow bar's order: a
 chorus played twice is played twice), like the playback rigs bands use with a
-click. Set the song's **beats per minute**, **time signature** and each
-section's **bars** (click the number under its title). Then start it:
+click (MainStage, MultiTracks Playback, Prime). Set the song's **beats per
+minute** and **time signature** (right-click the song in the setlist >
+**Tempo…**) and each section's **bars** (click the number under its title).
+Then start it:
 
-- **Play** (▶ in the top bar) or **Space**;
+- **Play** (the big ▶ in Perform, ▶ in the top bar) or **Space**;
 - your keyboard's own **Play / Stop** buttons (on by default: **Settings >
   MIDI > Starting the song**);
 - a pedal or pad learned to **Song / backing track: play / stop**;
@@ -52,12 +49,14 @@ shows how far through it you are. The display shows *Chorus · 3/8*.
 again to take it back. What is coming shows beside the display (*→ Bridge*,
 *Repeat*, *Hold*).
 
-| Control | Keys | Pedal or pad |
-|---|---|---|
-| **Next part** (cut this one short) | **N**, or tap a tile to go to that part | Next part of the song |
-| **Repeat this part** once more | **Shift+N** (twice: two more) | Repeat this part once more |
-| **Hold this part** (it loops until you press again) | **H** | Hold this part |
-| **Stop at the end of this part** | **Shift+Space** | — |
+| Control | Perform | Keys | Pedal or pad |
+|---|---|---|---|
+| **Next part** (cut this one short) | **Next part**, or tap a part's tile to go to that part | **N** | Next part of the song |
+| **Repeat this part** once more | | **Shift+N** (twice: two more) | Repeat this part once more |
+| **Loop this part** (it plays again and again until you press again) | **Loop part** | **H** | Hold this part |
+| **Stop at the end of this part** | | **Shift+Space** | — |
+
+Stopped, **Next part** and the tiles choose where **Play** starts.
 
 **Change sections a beat early** helps pads that swell in slowly.
 
@@ -65,31 +64,14 @@ A chart **without section titles** plays too: the whole song is one part, a
 bar per chord (add titles like *Verse* and *Chorus* to change sounds at each
 part, and set their bars).
 
-### Follow the chords I play (free time)
+### A song without a steady tempo
 
-For a song with no steady tempo, switch on **Follow the chords I play**. Now there is no counting:
-the app listens to the chords you play and moves through the song with you.
-The display says **Play C to start**, then follows. It needs chords in the
-chart.
-
-It follows the song's **flow**: the order the song is played in, set in the
-**Flow** bar over the chart (see [Chord charts](charts.md)). It only ever
-moves **forward** along it:
-
-- **The next chord** you play moves it on. The same chord written twice in
-  a row (D over two words) is two chords: the second is reached when you
-  strike the chord again at least a second and a half after the first came
-  in (striking it again sooner is just playing the first).
-- **A missed chord** is caught up: play the chord after the next and it
-  follows (within the part you are in).
-- **The next part:** play the next part's first two chords clearly (you cut
-  the end of a section short) and it goes there.
-
-It never jumps back, and never to another part that happens to open with the
-same chords (common: verse, pre-chorus and chorus often start alike). If it
-ever loses you, a pedal (**Settings > MIDI > Pedals and pads**) or a tap on a
-section's title puts it right: it goes to the next time the flow comes to that
-section. A tile in Perform goes to that very part (the second chorus, say).
+Leave it stopped and move it on yourself, the way MainStage players do: a
+pedal learned to **Next part of the song** (**Settings > MIDI > Pedals and
+pads**), **N**, or a tap on the part's tile in Perform. Each part's
+instruments come in as you get there. (The app does not listen to what you
+play to guess where you are: a verse and a chorus often share their chords,
+so a guess would jump to the wrong part.)
 
 ## Tempo, tap and click
 

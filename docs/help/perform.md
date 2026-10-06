@@ -9,19 +9,25 @@ by accident.
 
 - **The header:** ◀ the previous song, the **song's name** and its sound, what
   comes **Next**, and ▶ the next song.
+- **The song's transport**, big enough for a finger on a touch screen:
+  **Play / Stop**, **Next part** (on at the next bar line) and **Loop part**
+  (the part plays again and again until you tap it again), with the bar it
+  is on (*Bar 3 of 8*) and what is coming (*→ Chorus*).
 - **The song's parts** as tiles, in the order the song is played (its
   [flow](charts.md): *Verse 1, Chorus, Verse 2, Chorus…*). The one playing is
-  lit; tap a tile to jump to that very part.
+  lit, with how far through it you are; tap a tile to go to that very part
+  (playing: at the next bar line; stopped: Play starts there).
 - **The chart**, filling the screen. While the song plays it scrolls by itself
-  so the line you are on stays in the upper third.
+  so the line you are on stays in the upper third. Slide a finger (or the
+  mouse wheel) to look ahead.
+- **The master level** and how the computer is doing (**CPU**), small at the
+  bottom.
 
 ## Forgot a chord?
 
 **Tap any chord** in the chart: a keyboard shows the keys to press, a dot on
 each (blue ring: left hand, gold ring: right hand), with the notes by name and
 its inversions. See [How to play a chord](charts.md).
-- **The master level** and how the computer is doing (**CPU**), small at the
-  bottom.
 
 ## Make the chart bigger or smaller
 
@@ -35,8 +41,9 @@ next time.
 | ◀ ▶ in the header | Previous / next song |
 | **↑** / **↓**, or **Page Up** / **Page Down** | Previous / next song |
 | **→** / **←** | Next / previous sound |
-| **Space** | Play or stop the song (its count and backing track) |
-| **N** | The next section now |
+| **Play**, or **Space** | Play or stop the song (its count and backing track) |
+| **Next part**, or **N** | The next part (playing: at the next bar line) |
+| **Loop part**, or **H** | Loop the part playing until pressed again |
 | A tile | That part of the song |
 | A pedal or pad | Whatever you learned it to do (Settings > MIDI > **Pedals and pads**) |
 

@@ -126,17 +126,23 @@ Rectangle {
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.horizontal: ScrollBar {}
             keyNavigationEnabled: false // (the arrows change sounds and songs: Main's shortcuts)
-            // A strip clicked: Delete (or Backspace) removes its channel. Not on stage.
+            // A strip clicked: Delete (or Backspace) removes its channel, F2
+            // (on a Mac also Return) renames it. Not on stage.
             Keys.onPressed: (event) => {
                 const channel = mixer.doc.selectedChannel
                 if (!mixer.editable || channel < 0) return
                 if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
                     event.accepted = true
                     mixer.doc.removeChannel(channel)
+                } else if (event.key === Qt.Key_F2 || (Theme.mac && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter))) {
+                    event.accepted = true
+                    const selected = strips.itemAtIndex(channel) as ChannelStrip
+                    if (selected !== null) selected.startRename()
                 }
             }
             delegate: ChannelStrip {
                 onKeysWanted: strips.forceActiveFocus()
+                editable: mixer.editable
                 songSection: mixer.engineStatus.songSection
                 height: Math.min(ListView.view.height, Theme.stripHeight)
                 doc: mixer.doc

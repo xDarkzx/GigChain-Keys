@@ -125,6 +125,29 @@ class TestQmlSmoke : public QObject
         QTest::qWait(20);
     }
 
+    // A finger on a touch screen: pressed at `from`, slid to `to` the way a
+    // hand moves (a frame at a time), lifted.
+    QPointingDevice* m_finger = nullptr;
+    void fingerDrag(QPoint from, QPoint to)
+    {
+        QTest::touchEvent(window(), m_finger).press(0, from);
+        constexpr int kSteps = 12;
+        for (int i = 1; i <= kSteps; ++i) {
+            QTest::qWait(16);
+            QTest::touchEvent(window(), m_finger).move(0, from + ((to - from) * i / kSteps));
+        }
+        QTest::touchEvent(window(), m_finger).release(0, to);
+        QTest::qWait(50);
+    }
+    void fingerTap(QQuickItem* target)
+    {
+        const QPoint at = target->mapToScene(QPointF(target->width() / 2, target->height() / 2)).toPoint();
+        QTest::touchEvent(window(), m_finger).press(0, at);
+        QTest::qWait(30);
+        QTest::touchEvent(window(), m_finger).release(0, at);
+        QTest::qWait(30);
+    }
+
     // Clicks a value box, types, presses Enter.
     void type(const QString& name, const QString& text)
     {
@@ -135,7 +158,11 @@ class TestQmlSmoke : public QObject
     }
 
 private slots:
-    void initTestCase() { QQuickStyle::setStyle(u"Basic"_s); }
+    void initTestCase()
+    {
+        QQuickStyle::setStyle(u"Basic"_s);
+        m_finger = QTest::createTouchDevice();
+    }
 
     void init()
     {
@@ -285,6 +312,121 @@ private slots:
         QCOMPARE(root->property("performMode").toBool(), false);
         auto* tabs = root->findChild<QObject*>(u"mainTabs"_s);
         QCOMPARE(tabs->property("currentIndex").toInt(), 0); // the chart tab
+    }
+
+    // On stage with a touch screen: Play, Next part and Loop part are big
+    // enough for a finger and work with one; a part tile tapped is where the
+    // song goes; a finger slid over the chart scrolls it (and plays nothing,
+    // even when it starts on a tile or a chord).
+    void aFingerPlaysAndScrollsOnStage()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        window()->resize(1400, 800);
+        ui::DocumentController& doc = m_session->document();
+        QString chart = u"{comment: Verse}\n"_s;
+        for (int i = 0; i < 30; ++i) chart += u"[C]Line [G]of the [Am]long [F]verse\n"_s;
+        chart += u"{comment: Chorus}\n[F]Sing it [G]loud\n"_s;
+        QVERIFY(doc.setSongChart(0, chart));
+        QVERIFY(doc.selectPatch(0, 0));
+        QVERIFY(root->setProperty("performMode", true));
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        settle();
+
+        auto* play = item(u"performPlay"_s);
+        auto* nextPart = item(u"performNextPart"_s);
+        auto* loopPart = item(u"performLoopPart"_s);
+        QVERIFY(play != nullptr && nextPart != nullptr && loopPart != nullptr);
+        for (QQuickItem* button : {play, nextPart, loopPart}) {
+            QVERIFY2(button->isVisible() && button->height() >= 44,
+                     qPrintable(u"%1 is %2 px high: too small for a finger"_s.arg(button->objectName()).arg(button->height())));
+        }
+        shoot(u"perform-transport"_s);
+
+        // A tile tapped (stopped): that part is where the song is.
+        const QList<QQuickItem*> tiles = findAll(item(u"performParts"_s), u"performPart"_s);
+        QCOMPARE(tiles.size(), 2);
+        QVERIFY(tiles.at(1)->height() >= 44);
+        fingerTap(tiles.at(1));
+        QTRY_COMPARE(m_engine->songPosition().section, 1);
+        fingerTap(tiles.at(0));
+        QTRY_COMPARE(m_engine->songPosition().section, 0);
+
+        // A finger slid up the chart scrolls it, even starting on a chord.
+        auto* stage = item(u"performChart"_s);
+        QVERIFY(stage != nullptr);
+        QVERIFY(stage->property("contentHeight").toReal() > stage->height());
+        const QPoint start = stage->mapToScene(QPointF(stage->width() / 2, stage->height() * 0.8)).toPoint();
+        fingerDrag(start, start - QPoint(0, 300));
+        QTRY_VERIFY2(stage->property("contentY").toReal() > 100,
+                     qPrintable(u"the chart scrolled to %1"_s.arg(stage->property("contentY").toReal())));
+        QCOMPARE(m_engine->songPosition().section, 0); // nothing was tapped on the way
+
+        // Play, by finger: the song plays; Loop part lights; Stop.
+        fingerTap(play);
+        QTRY_VERIFY(m_engine->songPosition().playing);
+        fingerTap(loopPart);
+        QTRY_VERIFY(loopPart->property("checked").toBool());
+        fingerTap(play);
+        QTRY_VERIFY(!m_engine->songPosition().playing);
+    }
+
+    // In the setlist a finger slid over the songs scrolls the list; it does
+    // not drag a song to another place (a mouse still does).
+    void aFingerScrollsTheSetlist()
+    {
+        window()->resize(1400, 700);
+        ui::DocumentController& doc = m_session->document();
+        for (int i = 0; i < 40; ++i) QVERIFY(doc.addSong());
+        QVERIFY(doc.selectPatch(0, 0));
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        settle();
+        auto* list = window()->findChild<QQuickItem*>(u"setlistList"_s);
+        QVERIFY(list != nullptr);
+        QVERIFY(list->property("contentHeight").toReal() > list->height());
+        const double before = list->property("contentY").toReal();
+        QStringList order;
+        for (const core::Song& song : doc.setlist().songs) order << song.id.value();
+        const QPoint start = list->mapToScene(QPointF(list->width() / 2, list->height() * 0.7)).toPoint();
+        fingerDrag(start, start - QPoint(0, 250));
+        QTRY_VERIFY2(list->property("contentY").toReal() > before + 100,
+                     qPrintable(u"the list scrolled from %1 to %2"_s.arg(before).arg(list->property("contentY").toReal())));
+        QStringList after;
+        for (const core::Song& song : doc.setlist().songs) after << song.id.value();
+        QCOMPARE(after, order); // no song was moved
+    }
+
+    // A channel is named after the sound it plays: double-click its name
+    // plate, type, Enter (F2 does the same for the strip clicked).
+    void aChannelIsRenamedOnItsStrip()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Analog Lab V"_s));
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Analog Lab V"_s));
+        QCOMPARE(doc.currentPatch()->channels.at(1).name, u"Analog Lab V 2"_s);
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        settle();
+        QQuickItem* plate = stripChild(u"stripNamePlate"_s);
+        QVERIFY(plate != nullptr);
+        const QPoint at = plate->mapToScene(QPointF(plate->width() / 2, plate->height() / 2)).toPoint();
+        QTest::mouseDClick(w, Qt::LeftButton, {}, at);
+        QQuickItem* field = stripChild(u"stripNameField"_s);
+        QVERIFY(field != nullptr);
+        QTRY_VERIFY(field->isVisible() && field->hasActiveFocus());
+        QVERIFY(field->setProperty("text", u"Classic American Piano"_s));
+        QTest::keyClick(w, Qt::Key_Return);
+        QTRY_COMPARE(doc.currentPatch()->channels.at(0).name, u"Classic American Piano"_s);
+        QVERIFY(!field->isVisible());
+        settle();
+
+        // F2 on the strip clicked.
+        click(u"stripNamePlate"_s); // selects the strip (the mixer takes the keys)
+        QTest::keyClick(w, Qt::Key_F2);
+        QTRY_VERIFY(field->isVisible());
+        QTest::keyClick(w, Qt::Key_Escape); // nothing changed
+        QTRY_VERIFY(!field->isVisible());
+        QCOMPARE(doc.currentPatch()->channels.at(0).name, u"Classic American Piano"_s);
     }
 
     // A−/A+ in the Perform view change the chart's size, kept for next time.
@@ -751,15 +893,10 @@ private slots:
         QTest::keyClick(w, Qt::Key_Return);
         QTRY_COMPARE(doc.currentSections().at(0).toMap().value(u"bars"_s).toInt(), 8);
 
-        // Following the chords (a free-time song), there is no Play: the first chord starts.
-        QVERIFY(doc.setSongFollowChords(0, true));
+        // Play counts the bars along its timeline, the toolbar shows where
+        // the song is, the chart lights the section.
         auto* play = w->findChild<QQuickItem*>(u"songPlayButton"_s);
         QVERIFY(play != nullptr);
-        QTRY_VERIFY(!play->isVisible());
-        QTRY_COMPARE(w->findChild<QQuickItem*>(u"songWhere"_s)->property("text").toString(), u"Play C to start"_s);
-        // On its timeline (the default): Play counts the bars, the toolbar
-        // shows where the song is, the chart lights the section.
-        QVERIFY(doc.setSongFollowChords(0, false));
         QTRY_VERIFY(play->isVisible() && play->width() > 0);
         settle(); // (the toolbar laid out again with Play in it)
         click(u"songPlayButton"_s);
@@ -1136,7 +1273,7 @@ private slots:
     }
 
     // The flow bar over the chart: the chart's sections in order; a part
-    // played once more shows ×2 and is the song's flow (chord follow keeps to it).
+    // played once more shows ×2 and is the song's flow (its timeline keeps to it).
     void theFlowBarShowsAndChangesTheSongsOrder()
     {
         QObject* root = m_qml->rootObjects().value(0);
@@ -1599,7 +1736,6 @@ private slots:
         QVERIFY(doc.addPatch(0));
         QVERIFY(doc.addSong());
         QVERIFY(doc.setSongChart(0, u"{c: Verse}\n[C]a [G]b\n{c: Chorus}\n[F]c\n"_s));
-        QVERIFY(doc.setSongFollowChords(0, false)); // (the count leads)
         QVERIFY(doc.selectPatch(0, 0));
         QQuickWindow* w = window();
         QVERIFY(w != nullptr);
@@ -1737,15 +1873,14 @@ private slots:
         QCOMPARE(doc.currentPatch()->channels.size(), 1u);
     }
 
-    // The fake engine is not played: the first chord is shown and outlined.
-    void aChartWaitsForItsFirstChord()
+    // Before Play, the song's first chord is outlined and nothing is lit.
+    void aChartOutlinesItsFirstChord()
     {
         QQuickWindow* w = window();
         w->requestActivate();
         QVERIFY(QTest::qWaitForWindowExposed(w));
         ui::DocumentController& doc = m_session->document();
         QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
-        QVERIFY(doc.setSongFollowChords(0, true));
         QVERIFY(doc.setSongChart(0, u"{c: Verse}\n[Am]words [F]more\n{c: Chorus}\n[C]la [G]la\n"_s));
         auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
         QVERIFY(tabs != nullptr);
@@ -1753,25 +1888,8 @@ private slots:
         settle();
         auto* chart = w->findChild<QQuickItem*>(u"chartView"_s);
         QVERIFY(chart != nullptr);
-        QQuickItem* start = findItem(chart, u"followStartLine"_s);
-        QVERIFY(start != nullptr);
-        QTRY_VERIFY(start->isVisible());
-        QCOMPARE(start->property("text").toString(), u"Play Am to start"_s);
-        const QList<QQuickItem*> next = findAll(chart, u"chartChordNext"_s);
-        QVERIFY(!next.isEmpty()); // the first chord, outlined
-        QVERIFY(findAll(chart, u"chartChordCurrent"_s).isEmpty()); // nothing lit before the start
-        shoot(u"follow-waiting"_s);
-
-        // One chord is not a song to follow (the song settings' hint).
-        QVERIFY(doc.setSongChart(0, u"[C]only one"_s));
-        QVERIFY(!doc.following());
-        QTRY_VERIFY(!start->isVisible());
-        QVERIFY(doc.setSongChart(0, u"{c: Verse}\n[Am]words [F]more\n"_s));
-        QTRY_VERIFY(start->isVisible());
-
-        // Following by tempo: no start line.
-        QVERIFY(doc.setSongFollowChords(0, false));
-        QTRY_VERIFY(!start->isVisible());
+        QTRY_VERIFY(!findAll(chart, u"chartChordNext"_s).isEmpty()); // the first chord, outlined
+        QVERIFY(findAll(chart, u"chartChordCurrent"_s).isEmpty()); // nothing lit before Play
     }
 };
 

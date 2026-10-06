@@ -12,7 +12,7 @@ Where this page says **Ctrl**, a Mac uses **⌘ Command**: ⌘S saves, ⌘Z undo
 | Mac keys | Does |
 |---|---|
 | **delete** or **⌘delete** | Delete the selected song or channel (the Windows Delete) |
-| **Return** or **F2** | Rename the selected song (as in the Finder) |
+| **Return** or **F2** | Rename the selected song or channel (as in the Finder) |
 | **⌘?** or **F1** | This guide |
 | **↑** / **↓** | Previous / next song (a Mac laptop has no Page Up / Page Down) |
 | **⌘Q** | Quit (asks about unsaved changes first) |
@@ -29,7 +29,7 @@ The single letters (Space, N, T, C, M, P, R, L) are the same on both.
 | **↓** / **↑**, or **Page Down** / **Page Up** | Next / previous song |
 | **N** | The next part (playing: on the next bar line) |
 | **Shift+N** | Repeat this part once more |
-| **H** | Hold this part (loops until pressed again) |
+| **H** | Loop this part (until pressed again; Perform's **Loop part**) |
 | **Shift+Space** | Stop at the end of this part |
 | **T** | Tap tempo: tap a few times in time |
 | **C** | Click on or off |
@@ -58,7 +58,7 @@ anything deleted.
 | Keys | Does |
 |---|---|
 | **Delete** or **Backspace** | Delete the selected song, or remove the selected channel |
-| **F2** | Rename the selected song |
+| **F2** | Rename the selected song, or the selected channel (after the sound it plays) |
 | **Ctrl+D** | Duplicate the selected song |
 | **Ctrl+Shift+N** | New song |
 | **Ctrl+N** | New setlist |
