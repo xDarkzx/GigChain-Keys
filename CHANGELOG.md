@@ -41,7 +41,7 @@ Downloads for every version are on the
 - **All together or one at a time:** each sound now plays **every**
   instrument together by default (layers: piano, pad and synth on every
   chord); mute, solo or the song's sections choose per part. Or switch it to
-  **One at a time** (under the mixer's strips): only the selected strip
+  **One at a time** (the layers button in the top bar): only the selected strip
   plays, and clicking another switches at once, held notes ringing on.
 - **Fixed:** in a song with chart sections, only the first instrument played
   in every section not set up by hand. Every instrument plays there now.

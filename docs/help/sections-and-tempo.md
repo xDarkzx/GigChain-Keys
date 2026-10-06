@@ -9,7 +9,7 @@ GigChain Keys the song's **chart sections** decide this, and they can change
 
 In the **Chart** tab, under each section's title, there is a chip for every
 instrument that plays in it. A section you have not touched plays what the
-sound's **play mode** says (below the mixer's strips): **All together**, every
+sound's **play mode** says (the **layers** button in the top bar): **All together**, every
 instrument at once (piano, pad and synth on every chord), or **One at a
 time**, the selected one. So to have the piano alone in the verse and the
 synth join in the chorus: take the pad and synth out of the verse (**✕**),

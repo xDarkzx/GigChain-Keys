@@ -6,8 +6,9 @@ your keyboard can move any setting of any plugin.
 
 ## All together, or one at a time
 
-Each sound has a **play mode**, switched under the mixer's strips (next to
-**+ Instrument**):
+Each sound has a **play mode**, switched with the **layers** button in the top
+bar (next to **Keys** and **Mixer**; hover over it to see which mode is on). It
+shows three layers for all together, one layer, lit, for one at a time:
 
 - **All together** (the usual): every instrument plays on every note. A piano,
   a pad and a synth stack into one big sound. Mute or solo strips to choose,

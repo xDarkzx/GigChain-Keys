@@ -469,6 +469,18 @@ ToolBar {
             tip: qsTr("Show or hide the keyboard: the keys light up as you play")
             onClicked: bar.toggleKeyboard()
         }
+        // How the sound's instruments play: all together (layers), or the
+        // selected strip alone. Lit while one at a time.
+        StageButton {
+            objectName: "playModeButton"
+            visible: !bar.practiceMode
+            readonly property bool one: bar.doc.playMode === 1
+            iconSource: one ? "icons/stack-single.svg" : "icons/stack-2.svg"
+            checked: one
+            tip: one ? qsTr("One instrument at a time: only the selected strip plays (click a strip to switch). Click for all together")
+                     : qsTr("All instruments together (layers): every strip plays on every note. Click for one at a time")
+            onClicked: bar.doc.setPlayMode(one ? 0 : 1)
+        }
         StageButton {
             text: qsTr("Mixer")
             iconSource: "icons/adjustments-horizontal.svg"

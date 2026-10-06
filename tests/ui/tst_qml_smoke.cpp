@@ -422,9 +422,9 @@ private slots:
         QVERIFY(plugins->property("count").toInt() > 0);
     }
 
-    // The mixer's play mode: "All together" lights every strip; "One at a
-    // time" dims the others (the reason on hover); a click on another strip
-    // plays that one instead.
+    // The play mode (the top bar's layers button): all together lights every
+    // strip; one at a time dims the others (the reason on hover); a click on
+    // another strip plays that one instead.
     void theMixerPlaysAllTogetherOrOneAtATime()
     {
         ui::DocumentController& doc = m_session->document();
@@ -446,12 +446,18 @@ private slots:
         QCOMPARE(stripAt(1)->property("silentReason").toString(), QString()); // layers: both play
         const auto centre = [](QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); };
 
-        QList<QQuickItem*> one = findAll(w->contentItem(), u"playModeOne"_s);
-        QVERIFY(!one.isEmpty());
+        // One button in the top bar, where it always is: lit while one at a time.
+        QQuickItem* mode = item(u"playModeButton"_s);
+        QVERIFY(mode != nullptr && mode->isVisible());
+        QVERIFY(!mode->property("checked").toBool());
+        QVERIFY(mode->property("tip").toString().contains(u"together"_s));
         doc.setSelectedChannel(0);
-        QTest::mouseClick(w, Qt::LeftButton, {}, centre(one.first()));
+        click(u"playModeButton"_s);
         settle();
         QCOMPARE(doc.playMode(), 1);
+        QVERIFY(mode->property("checked").toBool());
+        QVERIFY(mode->property("iconSource").toString().contains(u"stack-single"_s));
+        shoot(u"play-mode-one"_s);
         QVERIFY(stripAt(1)->property("silentReason").toString().contains(u"One at a time"_s));
         QVERIFY(stripAt(1)->opacity() < 1.0);
         QCOMPARE(stripAt(0)->opacity(), 1.0);
@@ -465,9 +471,10 @@ private slots:
         QCOMPARE(stripAt(1)->property("silentReason").toString(), QString());
         QVERIFY(!stripAt(0)->property("silentReason").toString().isEmpty());
 
-        QTest::mouseClick(w, Qt::LeftButton, {}, centre(findAll(w->contentItem(), u"playModeAll"_s).first()));
+        click(u"playModeButton"_s);
         settle();
         QCOMPARE(doc.playMode(), 0);
+        QVERIFY(!mode->property("checked").toBool());
         QCOMPARE(stripAt(0)->property("silentReason").toString(), QString());
     }
 

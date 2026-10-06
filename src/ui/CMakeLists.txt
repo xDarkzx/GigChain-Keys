@@ -110,6 +110,8 @@ qt_add_qml_module(gigchain_ui
         icons/loop.svg
         icons/player-skip-back.svg
         icons/redo.svg
+        icons/stack-2.svg
+        icons/stack-single.svg
         icons/star.svg
         icons/star-filled.svg
         icons/undo.svg
