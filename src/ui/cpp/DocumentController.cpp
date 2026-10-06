@@ -57,6 +57,7 @@ DocumentController::DocumentController(engine::IEngine& engine, QSettings& setti
     // A different current song (or setlist) means a different chart.
     connect(this, &DocumentController::currentChanged, this, &DocumentController::chartChanged);
     connect(this, &DocumentController::currentChanged, this, &DocumentController::chordInversionsChanged);
+    connect(this, &DocumentController::currentChanged, this, &DocumentController::playModeChanged);
     resetSelectedChannel();
     applyCurrentPatchToEngine();
 }
@@ -94,6 +95,12 @@ void DocumentController::setSelectedChannel(int index)
     if (clamped == m_selectedChannel) return;
     m_selectedChannel = clamped;
     emit selectedChannelChanged();
+    // One at a time: the selected instrument is the one that plays, at once
+    // (held notes of the last one ring on).
+    if (patch != nullptr && patch->playMode == core::PlayMode::Selected) {
+        m_engine.setSongSections(songSections());
+        emit sectionsChanged();
+    }
 }
 
 QString DocumentController::displayName() const
@@ -1216,7 +1223,7 @@ QVariantList DocumentController::currentSections() const
     if (song == nullptr || patch == nullptr) return {};
     QVariantList list;
     int index = 0;
-    for (const core::ResolvedSection& section : core::resolveSections(*song, *patch)) {
+    for (const core::ResolvedSection& section : core::resolveSections(*song, *patch, selectedChannelId())) {
         QVariantList channels;
         for (const core::ChannelId& id : section.live) {
             const auto it = std::ranges::find_if(patch->channels, [&id](const core::Channel& c) { return c.id == id; });
@@ -1254,7 +1261,7 @@ std::optional<std::vector<core::ChannelId>> DocumentController::sectionLive(int 
     const core::Song* song = currentSong();
     const core::Patch* patch = currentPatch();
     if (song == nullptr || patch == nullptr) return std::nullopt;
-    const auto sections = core::resolveSections(*song, *patch);
+    const auto sections = core::resolveSections(*song, *patch, selectedChannelId());
     if (section < 0 || std::cmp_greater_equal(section, sections.size())) return std::nullopt;
     return sections.at(static_cast<std::size_t>(section)).live;
 }
@@ -1263,7 +1270,7 @@ bool DocumentController::storeSection(int section, const std::function<void(core
 {
     const core::Song* song = currentSong();
     const core::Patch* patch = currentPatch();
-    const auto sections = song != nullptr && patch != nullptr ? core::resolveSections(*song, *patch)
+    const auto sections = song != nullptr && patch != nullptr ? core::resolveSections(*song, *patch, selectedChannelId())
                                                               : std::vector<core::ResolvedSection>{};
     if (section < 0 || std::cmp_greater_equal(section, sections.size())) {
         return report(core::Error{core::ErrorCode::OutOfRange, tr("Section %1 does not exist in this song's chart").arg(section + 1)});
@@ -1376,19 +1383,86 @@ void DocumentController::nextSection()
     m_engine.jumpToSection(next);
 }
 
-void DocumentController::applySectionsToEngine()
+std::optional<core::ChannelId> DocumentController::selectedChannelId() const
+{
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || m_selectedChannel < 0 || std::cmp_greater_equal(m_selectedChannel, patch->channels.size())) {
+        return std::nullopt;
+    }
+    return patch->channels.at(static_cast<std::size_t>(m_selectedChannel)).id;
+}
+
+engine::SongSections DocumentController::songSections() const
 {
     const core::Song* song = currentSong();
     const core::Patch* patch = currentPatch();
     engine::SongSections sections;
-    if (song != nullptr && patch != nullptr) {
-        sections.patch = patch->id;
-        sections.switchEarly = song->switchEarly;
-        std::ranges::transform(core::resolveSections(*song, *patch), std::back_inserter(sections.sections),
-                               [](const core::ResolvedSection& section) {
-                                   return engine::SongSections::Section{.bars = section.bars, .live = section.live};
-                               });
+    if (song == nullptr || patch == nullptr) return sections;
+    const std::optional<core::ChannelId> selected = selectedChannelId();
+    sections.patch = patch->id;
+    sections.switchEarly = song->switchEarly;
+    sections.unsectioned = core::unsectionedLive(*patch, selected);
+    std::ranges::transform(core::resolveSections(*song, *patch, selected), std::back_inserter(sections.sections),
+                           [](const core::ResolvedSection& section) {
+                               return engine::SongSections::Section{.bars = section.bars, .live = section.live};
+                           });
+    return sections;
+}
+
+int DocumentController::playMode() const
+{
+    const core::Patch* patch = currentPatch();
+    return patch != nullptr ? static_cast<int>(patch->playMode) : static_cast<int>(core::PlayMode::All);
+}
+
+bool DocumentController::setPlayMode(int mode)
+{
+    if (mode != static_cast<int>(core::PlayMode::All) && mode != static_cast<int>(core::PlayMode::Selected)) {
+        return report(core::Error{core::ErrorCode::OutOfRange,
+                                  tr("A sound plays every instrument (0) or the selected one (1), not %1").arg(mode)});
     }
+    if (mode == playMode()) return true;
+    if (auto r = core::setPatchPlayMode(m_setlist, m_cursor, static_cast<core::PlayMode>(mode)); !r) return report(r.error());
+    // One at a time with nothing selected: its first instrument.
+    if (mode == static_cast<int>(core::PlayMode::Selected) && m_selectedChannel < 0) resetSelectedChannel();
+    setDirty(true);
+    m_engine.setSongSections(songSections());
+    emit playModeChanged();
+    emit sectionsChanged(); // (what each section plays)
+    return true;
+}
+
+QString DocumentController::silentReason(int index) const
+{
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || index < 0 || std::cmp_greater_equal(index, patch->channels.size())) return {};
+    const core::Channel& channel = patch->channels.at(static_cast<std::size_t>(index));
+    if (!channel.instrument) return {}; // (an audio input: not played from the keys)
+    if (channel.mute) return tr("Muted");
+    const bool otherSolo = std::ranges::any_of(patch->channels, [](const core::Channel& c) { return c.solo; }) && !channel.solo;
+    if (otherSolo) return tr("Another channel is soloed");
+    const engine::SongSections sections = songSections();
+    const int section = m_engine.songPosition().section;
+    if (section >= 0 && std::cmp_less(section, sections.sections.size())) {
+        const auto& live = sections.sections.at(static_cast<std::size_t>(section)).live;
+        if (std::ranges::find(live, channel.id) != live.end()) return {};
+        const QVariantList shown = currentSections();
+        const QString name = shown.at(section).toMap().value(u"label"_s).toString();
+        if (patch->playMode == core::PlayMode::Selected && m_selectedChannel != index) {
+            return tr("One at a time: %1 plays the selected instrument. Click this strip to play it").arg(name);
+        }
+        return tr("Not in %1: add it to that section to hear it there").arg(name);
+    }
+    if (sections.unsectioned && std::ranges::find(*sections.unsectioned, channel.id) == sections.unsectioned->end()) {
+        return tr("One at a time: click this strip to play it");
+    }
+    return {};
+}
+
+void DocumentController::applySectionsToEngine()
+{
+    const core::Song* song = currentSong();
+    const engine::SongSections sections = songSections();
     const core::SongId songId = song != nullptr ? song->id : core::SongId{};
     const bool newSong = songId != m_sectionsSong;
     if (newSong) {

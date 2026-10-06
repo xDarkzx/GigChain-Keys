@@ -163,9 +163,12 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
                           const AudioInputs& inputs, const SectionGate& gate, LoopStation* loops) noexcept
 {
     const uint64_t mask = m_sections.load(std::memory_order_relaxed);
-    // Whether this strip plays in `section` (none, or out of range: every strip does).
-    const auto inSection = [mask](int section) {
-        return section < 0 || section >= 64 || ((mask >> section) & 1U) != 0;
+    const bool outside = m_unsectioned.load(std::memory_order_relaxed);
+    // Whether this strip plays in `section` (none: as set for outside any
+    // section; out of range: every strip does).
+    const auto inSection = [mask, outside](int section) {
+        if (section < 0) return outside;
+        return section >= 64 || ((mask >> section) & 1U) != 0;
     };
     // Whether a new note at `offset` is for this strip: its section is in force.
     const auto plays = [&gate, &inSection](int offset) {

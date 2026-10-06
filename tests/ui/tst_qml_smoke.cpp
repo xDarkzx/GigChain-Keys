@@ -422,6 +422,55 @@ private slots:
         QVERIFY(plugins->property("count").toInt() > 0);
     }
 
+    // The mixer's play mode: "All together" lights every strip; "One at a
+    // time" dims the others (the reason on hover); a click on another strip
+    // plays that one instead.
+    void theMixerPlaysAllTogetherOrOneAtATime()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
+        QVERIFY(doc.addChannel(u"demo.pad"_s, u"Pad"_s));
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        settle();
+        auto* strips = m_qml->rootObjects().value(0)->findChild<QObject*>(u"mixerStrips"_s);
+        QVERIFY(strips != nullptr);
+        const auto stripAt = [strips](int i) {
+            QQuickItem* strip = nullptr;
+            QMetaObject::invokeMethod(strips, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, strip), Q_ARG(int, i));
+            return strip;
+        };
+        QVERIFY(stripAt(0) != nullptr && stripAt(1) != nullptr);
+        QCOMPARE(stripAt(0)->property("silentReason").toString(), QString());
+        QCOMPARE(stripAt(1)->property("silentReason").toString(), QString()); // layers: both play
+        const auto centre = [](QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); };
+
+        QList<QQuickItem*> one = findAll(w->contentItem(), u"playModeOne"_s);
+        QVERIFY(!one.isEmpty());
+        doc.setSelectedChannel(0);
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(one.first()));
+        settle();
+        QCOMPARE(doc.playMode(), 1);
+        QVERIFY(stripAt(1)->property("silentReason").toString().contains(u"One at a time"_s));
+        QVERIFY(stripAt(1)->opacity() < 1.0);
+        QCOMPARE(stripAt(0)->opacity(), 1.0);
+
+        // The pad's strip clicked: the pad plays, the piano rests.
+        QQuickItem* padSlot = findItem(stripAt(1), u"instrumentSlot"_s);
+        QVERIFY(padSlot != nullptr);
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(padSlot));
+        settle();
+        QCOMPARE(doc.selectedChannel(), 1);
+        QCOMPARE(stripAt(1)->property("silentReason").toString(), QString());
+        QVERIFY(!stripAt(0)->property("silentReason").toString().isEmpty());
+
+        QTest::mouseClick(w, Qt::LeftButton, {}, centre(findAll(w->contentItem(), u"playModeAll"_s).first()));
+        settle();
+        QCOMPARE(doc.playMode(), 0);
+        QCOMPARE(stripAt(0)->property("silentReason").toString(), QString());
+    }
+
     // A message is shown in its level's colour, in its own window (above a
     // plugin's window), and goes away by itself; worse news stays longer.
     void notificationsShowInTheirColourAndGoAwayByThemselves()
@@ -634,7 +683,7 @@ private slots:
             QVERIFY2(qAbs(lineCentre - chartCentre) <= 3.0, qPrintable(u"%1 vs %2"_s.arg(lineCentre).arg(chartCentre))); // ... in its middle
         }
 
-        // Each plays the first instrument until told otherwise.
+        // Each plays every instrument (layers) until told otherwise.
         const auto chipNames = [](QQuickItem* header) {
             QStringList names;
             for (QQuickItem* chip : findAll(header, u"sectionChip"_s)) {
@@ -644,13 +693,22 @@ private slots:
             }
             return names;
         };
-        QCOMPARE(chipNames(headers.value(0)), QStringList{u"Piano"_s});
-        QCOMPARE(chipNames(headers.value(1)), QStringList{u"Piano"_s});
+        QCOMPARE(chipNames(headers.value(0)), (QStringList{u"Piano"_s, u"Strings"_s}));
+        QCOMPARE(chipNames(headers.value(1)), (QStringList{u"Piano"_s, u"Strings"_s}));
+        QVERIFY(!findItem(headers.value(1), u"sectionAdd"_s)->isEnabled()); // nothing left to add
         // The header of section `n`, as the chart shows it now.
         const auto header = [chart](int n) { return findAll(chart, u"sectionHeader"_s).value(n); };
 
-        // [+] on the chorus: the menu offers Strings; picking it adds it.
-        QQuickItem* add = findItem(headers.value(1), u"sectionAdd"_s);
+        // ✕ on the chorus's Strings: the piano alone.
+        QQuickItem* takeOut = findAll(headers.value(1), u"sectionChipRemove"_s).value(1);
+        QVERIFY(takeOut != nullptr);
+        scrollIntoView(takeOut);
+        settle();
+        QTest::mouseClick(w, Qt::LeftButton, {}, takeOut->mapToScene(QPointF(takeOut->width() / 2, takeOut->height() / 2)).toPoint());
+        QTRY_COMPARE(chipNames(header(1)), QStringList{u"Piano"_s});
+
+        // [+] on the chorus: the menu offers Strings; picking it adds it back.
+        QQuickItem* add = findItem(header(1), u"sectionAdd"_s);
         QVERIFY(add != nullptr && add->isEnabled());
         scrollIntoView(add);
         settle();

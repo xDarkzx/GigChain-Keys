@@ -7,14 +7,17 @@ Something not right? Find it below.
 1. Is the **MIDI** light in the top bar flashing when you play? If not, your
    keyboard is not heard: open **Settings > MIDI** and set your keyboard's
    port to **Enabled**. See [Sound and your keyboard](audio-and-midi.md).
-2. Does the channel's meter move? If not, check the channel is not **muted**
+2. Is the channel's strip **dimmed**? Hover over it: it says why it is silent
+   (muted, another soloed, not in this section, or the sound plays **one at a
+   time** and another strip is selected). See [Splits, layers and knobs](splits-layers-knobs.md).
+3. Does the channel's meter move? If not, check the channel is not **muted**
    and its **keyboard zone** covers the keys you play (right-click the strip >
    **Keyboard Zone…** > **Whole keyboard**). In a song with sections, check the
    instrument is in the **section** you are in (see
    [Sections, tempo and backing tracks](sections-and-tempo.md)).
-3. Does the master meter move but you still hear nothing? Check **Settings >
+4. Does the master meter move but you still hear nothing? Check **Settings >
    Audio**: the right **Device**, and **Running now** shows it open. Check the
-   master fader and that **Mute everything** is off.
+   master fader and that **Mute everything** is off (the **M** key toggles it).
 
 ## Crackles, clicks or dropouts
 

@@ -40,19 +40,55 @@ class TestSections : public QObject
     Q_OBJECT
 
 private slots:
-    void everySectionPlaysTheFirstInstrumentByDefault()
+    // Layers: a sound plays all its channels together (piano, pad and synth
+    // on every chord) in every section not told otherwise.
+    void everySectionPlaysEveryChannelByDefault()
     {
         const Song song = fourChannelSong();
+        QCOMPARE(song.patches.front().playMode, PlayMode::All);
         const auto sections = resolveSections(song, song.patches.front());
         QCOMPARE(sections.size(), std::size_t{5});
+        // (Its instruments: the vocal mic's sound is not gated by sections.)
+        const std::vector<ChannelId> all{idOf(song, 1), idOf(song, 2), idOf(song, 3)};
         for (const ResolvedSection& s : sections) {
             QVERIFY(!s.assigned);
             QVERIFY(s.guessed);
-            QCOMPARE(s.live, std::vector<ChannelId>{idOf(song, 1)}); // Piano: the mic is not an instrument
+            QCOMPARE(s.live, all);
         }
+        QVERIFY(!unsectionedLive(song.patches.front(), std::nullopt)); // without sections: everything plays
         QCOMPARE(sections.at(2).bars, 3);
         QCOMPARE(sections.at(3).chart.name, u"Verse"_s);
         QCOMPARE(sections.at(3).chart.occurrence, 2);
+    }
+
+    // One at a time: only the selected instrument plays where nothing says
+    // otherwise (with or without sections); a section set up still plays
+    // what it was given.
+    void selectedModePlaysTheSelectedInstrument()
+    {
+        Song song = fourChannelSong();
+        song.patches.front().playMode = PlayMode::Selected;
+        song.sections.push_back(SectionSetup{.name = u"Chorus"_s, .occurrence = 1, .bars = 0, .assigned = true,
+                                             .channels = {idOf(song, 1), idOf(song, 3)}});
+        const Patch& patch = song.patches.front();
+        const auto sections = resolveSections(song, patch, idOf(song, 2));
+        QCOMPARE(sections.at(0).live, std::vector<ChannelId>{idOf(song, 2)}); // Strings, selected
+        QCOMPARE(sections.at(2).live, (std::vector<ChannelId>{idOf(song, 1), idOf(song, 3)})); // the chorus as set
+        QCOMPARE(unsectionedLive(patch, idOf(song, 2)), std::optional(std::vector<ChannelId>{idOf(song, 2)}));
+        // Nothing selected, or a channel not in this sound: its first instrument.
+        QCOMPARE(resolveSections(song, patch).at(0).live, std::vector<ChannelId>{idOf(song, 1)});
+        QCOMPARE(unsectionedLive(patch, ChannelId(u"elsewhere"_s)), std::optional(std::vector<ChannelId>{idOf(song, 1)}));
+        // The vocal mic selected: it is not played from the keys, so the first instrument is.
+        QCOMPARE(unsectionedLive(patch, idOf(song, 0)), std::optional(std::vector<ChannelId>{idOf(song, 1)}));
+    }
+
+    void aPlayModeIsSetPerSound()
+    {
+        Setlist setlist;
+        setlist.songs = {fourChannelSong()};
+        QVERIFY(setPatchPlayMode(setlist, Cursor(0, 0), PlayMode::Selected).has_value());
+        QCOMPARE(setlist.songs.front().patches.front().playMode, PlayMode::Selected);
+        QVERIFY(setPatchPlayMode(setlist, Cursor(0, 5), PlayMode::All).error().code == ErrorCode::OutOfRange);
     }
 
     void aSectionPlaysWhatItIsGiven()
@@ -73,7 +109,7 @@ private slots:
         QCOMPARE(sections.at(4).live, (std::vector<ChannelId>{idOf(song, 2), idOf(song, 3)})); // the patch's order
         QCOMPARE(sections.at(4).bars, 8);
         QVERIFY(!sections.at(4).guessed);
-        QCOMPARE(sections.at(2).live, std::vector<ChannelId>{idOf(song, 1)}); // the first chorus: still the default
+        QCOMPARE(sections.at(2).live.size(), std::size_t{3}); // the first chorus: still the default (every instrument)
 
         // Setting the same section again replaces it.
         QVERIFY(setSectionSetup(setlist, 0, SectionSetup{.name = u"CHORUS"_s, .occurrence = 2, .bars = 4,
@@ -88,7 +124,7 @@ private slots:
         song.sections.push_back(SectionSetup{.name = u"Intro"_s, .occurrence = 1, .bars = 0, .assigned = true,
                                              .channels = {ChannelId(u"elsewhere"_s)}});
         const auto sections = resolveSections(song, song.patches.front());
-        QCOMPARE(sections.at(0).live, std::vector<ChannelId>{idOf(song, 1)});
+        QCOMPARE(sections.at(0).live.size(), std::size_t{3}); // the default: every instrument
     }
 
     void aChartWithoutSectionsHasNone()
@@ -100,10 +136,11 @@ private slots:
         QVERIFY(resolveSections(song, song.patches.front()).empty());
     }
 
-    void aPatchWithoutInstrumentsPlaysNothingByDefault()
+    void aPatchWithoutInstrumentsHasNoneToSelect()
     {
         Song song = fourChannelSong();
         song.patches.front().channels.resize(1); // only the mic
+        song.patches.front().playMode = PlayMode::Selected;
         const auto sections = resolveSections(song, song.patches.front());
         QCOMPARE(sections.size(), std::size_t{5});
         QVERIFY(sections.at(0).live.empty());

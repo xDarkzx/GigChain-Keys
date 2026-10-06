@@ -6,6 +6,7 @@
 #include "gigchain/core/Model.h"
 #include "gigchain/core/Navigation.h"
 #include "gigchain/core/SongMap.h"
+#include "gigchain/engine/EngineTypes.h"
 
 #include <QObject>
 #include <QVariantList>
@@ -44,6 +45,9 @@ class DocumentController : public QObject
     Q_PROPERTY(int currentPatchNumber READ currentPatchNumber NOTIFY currentChanged)
     Q_PROPERTY(QString nextPatchLabel READ nextPatchLabel NOTIFY currentChanged)
     Q_PROPERTY(int selectedChannel READ selectedChannel WRITE setSelectedChannel NOTIFY selectedChannelChanged)
+    // The current sound's play mode: 0 every instrument together (layers),
+    // 1 only the selected channel (one at a time). Sections set up override it.
+    Q_PROPERTY(int playMode READ playMode NOTIFY playModeChanged)
     Q_PROPERTY(bool dirty READ isDirty NOTIFY dirtyChanged)
     Q_PROPERTY(QString filePath READ filePath NOTIFY filePathChanged)
     Q_PROPERTY(QString displayName READ displayName NOTIFY filePathChanged)
@@ -98,6 +102,13 @@ public:
     [[nodiscard]] int currentPatchNumber() const { return hasPatch() ? m_cursor.patch + 1 : 0; }
     [[nodiscard]] QString nextPatchLabel() const;
     [[nodiscard]] int selectedChannel() const { return m_selectedChannel; }
+    [[nodiscard]] int playMode() const;
+    // An undo step; the engine plays it at once.
+    Q_INVOKABLE bool setPlayMode(int mode);
+    // Why channel `index` of the current sound would not sound if played now
+    // ("" = it plays): muted, another soloed, not in the section in force,
+    // another selected (one at a time), no instrument loaded.
+    Q_INVOKABLE QString silentReason(int index) const;
     void setSelectedChannel(int index);
     [[nodiscard]] bool isDirty() const { return m_dirty; }
     [[nodiscard]] QString filePath() const { return m_filePath; }
@@ -312,6 +323,7 @@ signals:
     void channelUpdated(int channel); // one channel's fields changed
     void channelAdded(int channel);   // an instrument was added and loaded (after channelsChanged)
     void selectedChannelChanged();
+    void playModeChanged();
     void dirtyChanged();
     void filePathChanged();
     void lastErrorChanged();
@@ -351,6 +363,10 @@ private:
     // note). A different song than last time stops the count and starts
     // again at its first section.
     void applySectionsToEngine();
+    // What each section (and a song without sections) plays, for the engine.
+    [[nodiscard]] engine::SongSections songSections() const;
+    // The selected channel's id (one-at-a-time sounds play it).
+    [[nodiscard]] std::optional<core::ChannelId> selectedChannelId() const;
     // The channels a section of the current song plays in the current
     // patch; nothing when there is no such section.
     [[nodiscard]] std::optional<std::vector<core::ChannelId>> sectionLive(int section) const;

@@ -4,6 +4,22 @@ When a song has more than one instrument you decide **which keys** each one
 plays and **how hard** you must play to hear it. And the knobs and sliders on
 your keyboard can move any setting of any plugin.
 
+## All together, or one at a time
+
+Each sound has a **play mode**, switched under the mixer's strips (next to
+**+ Instrument**):
+
+- **All together** (the usual): every instrument plays on every note. A piano,
+  a pad and a synth stack into one big sound. Mute or solo strips to choose,
+  and let the song's sections change it per part (piano alone in the verse,
+  the synth in the chorus: see [Sections, tempo and backing tracks](sections-and-tempo.md)).
+- **One at a time:** only the **selected** strip plays. Click another strip
+  to switch: the change is instant, and notes you are holding ring on.
+
+A strip that would be silent if you played now is **dimmed**. Hover over it
+to see why: *Muted*, *Another channel is soloed*, *Not in Chorus*, or
+*One at a time*.
+
 ## Keyboard zones (splits)
 
 Right-click a channel strip and choose **Keyboard Zone…**.

@@ -72,6 +72,29 @@ Rectangle {
 
     HoverHandler { id: stripHover }
 
+    // Why it would not sound if played now ("" = it plays): dimmed, the
+    // reason on hover (muted, another soloed, not in this section, another
+    // selected in a one-at-a-time sound).
+    property int songSection: -1 // the section in force (the mixer passes it)
+    property string silentReason: ""
+    function refreshSilent() { strip.silentReason = strip.doc.silentReason(strip.index) }
+    onSongSectionChanged: refreshSilent()
+    onIndexChanged: refreshSilent()
+    Component.onCompleted: refreshSilent()
+    Connections {
+        target: strip.doc
+        function onChannelUpdated() { strip.refreshSilent() }
+        function onChannelsChanged() { strip.refreshSilent() }
+        function onSectionsChanged() { strip.refreshSilent() }
+        function onSelectedChannelChanged() { strip.refreshSilent() }
+        function onPlayModeChanged() { strip.refreshSilent() }
+        function onCurrentChanged() { strip.refreshSilent() }
+    }
+    opacity: silentReason !== "" ? 0.55 : 1
+    ToolTip.visible: stripHover.hovered && silentReason !== ""
+    ToolTip.delay: 400
+    ToolTip.text: qsTr("Silent now: %1").arg(silentReason)
+
     // Background: left click selects, right click opens the channel menu.
     MouseArea {
         anchors.fill: parent

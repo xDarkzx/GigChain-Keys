@@ -1204,7 +1204,9 @@ void RealEngine::publishTimeline()
 void RealEngine::applySectionMasks(RenderGraph& graph) const
 {
     GC_ONLY_MAIN_THREAD();
-    const bool ours = !m_sections.sections.empty() && m_sections.patch == m_patch.id;
+    const bool thisPatch = m_sections.patch == m_patch.id;
+    const bool ours = !m_sections.sections.empty() && thisPatch;
+    const auto& unsectioned = m_sections.unsectioned;
     for (std::size_t i = 0; i < graph.stripCount(); ++i) {
         ChannelStrip* strip = graph.strip(i);
         uint64_t mask = ours ? 0 : ~uint64_t{0};
@@ -1213,6 +1215,8 @@ void RealEngine::applySectionMasks(RenderGraph& graph) const
             if (std::ranges::find(live, strip->id()) != live.end()) mask |= uint64_t{1} << s;
         }
         strip->setSections(mask);
+        // Outside any section: every channel, unless the sound plays one at a time.
+        strip->setUnsectioned(!thisPatch || !unsectioned || std::ranges::find(*unsectioned, strip->id()) != unsectioned->end());
     }
 }
 

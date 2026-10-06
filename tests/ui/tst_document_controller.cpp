@@ -969,7 +969,8 @@ private slots:
 
     // ---- Song sections
 
-    void theChartsSectionsPlayTheFirstInstrument()
+    // Layers by default: every instrument plays in every section not set up.
+    void theChartsSectionsPlayEveryInstrument()
     {
         addSectionsSong();
         const QVariantList sections = m_doc->currentSections();
@@ -977,12 +978,13 @@ private slots:
         QCOMPARE(sections.at(0).toMap().value(u"name"_s).toString(), u"Verse"_s);
         QCOMPARE(sections.at(0).toMap().value(u"bars"_s).toInt(), 2);
         QVERIFY(sections.at(0).toMap().value(u"guessed"_s).toBool());
-        QCOMPARE(sectionChannels(0), QStringList{u"Piano"_s});
-        QCOMPARE(sectionChannels(1), QStringList{u"Piano"_s});
+        QCOMPARE(sectionChannels(0), (QStringList{u"Piano"_s, u"Strings"_s}));
+        QCOMPARE(sectionChannels(1), (QStringList{u"Piano"_s, u"Strings"_s}));
         // To the engine, for this patch.
         QVERIFY(m_engine->sections.patch == m_doc->currentPatch()->id);
         QCOMPARE(m_engine->sections.sections.size(), std::size_t{2});
-        QCOMPARE(m_engine->sections.sections.at(0).live, std::vector<core::ChannelId>{channelId(0)});
+        QCOMPARE(m_engine->sections.sections.at(0).live, (std::vector<core::ChannelId>{channelId(0), channelId(1)}));
+        QVERIFY(!m_engine->sections.unsectioned); // (no section: everything)
         QCOMPARE(m_engine->sections.sections.at(1).bars, 1);
         // The chart's title lines know their section.
         const QVariantList lines = m_doc->chartLines(m_doc->currentChart());
@@ -995,11 +997,13 @@ private slots:
     {
         addSectionsSong();
         QSignalSpy changed(m_doc.get(), &DocumentController::sectionsChanged);
-        QCOMPARE(m_doc->sectionChoices(1).size(), 1); // Strings (Piano plays there already)
-        QVERIFY(m_doc->addSectionChannel(1, 1));
+        QVERIFY(m_doc->sectionChoices(1).isEmpty()); // both play there already
+        // The verse: piano alone (the strings come in for the chorus).
+        QVERIFY(m_doc->removeSectionChannel(0, 1));
+        QCOMPARE(sectionChannels(0), QStringList{u"Piano"_s});
+        QCOMPARE(m_doc->sectionChoices(0).size(), 1); // Strings, to put back
+        QCOMPARE(m_engine->sections.sections.at(0).live, std::vector<core::ChannelId>{channelId(0)});
         QCOMPARE(sectionChannels(1), (QStringList{u"Piano"_s, u"Strings"_s}));
-        QVERIFY(m_doc->sectionChoices(1).isEmpty());
-        QCOMPARE(m_engine->sections.sections.at(1).live, (std::vector<core::ChannelId>{channelId(0), channelId(1)}));
         QVERIFY(!changed.isEmpty());
         QVERIFY(m_doc->isDirty());
 
@@ -1024,6 +1028,55 @@ private slots:
         QVERIFY(!m_doc->addSectionChannel(5, 0));
         QVERIFY2(m_doc->lastError().contains(u"Section 6"_s), qPrintable(m_doc->lastError()));
         QVERIFY(!m_doc->addSectionChannel(0, 9));
+    }
+
+    // One at a time: only the selected instrument plays (sections not set up,
+    // and a song without sections); selecting another switches at once;
+    // a section set up keeps its own; an undo step; each strip says why it
+    // is silent.
+    void aSoundPlaysOneInstrumentAtATime()
+    {
+        addSectionsSong();
+        QSignalSpy mode(m_doc.get(), &DocumentController::playModeChanged);
+        QVERIFY(m_doc->removeSectionChannel(1, 0)); // the chorus: strings only (set up)
+        m_doc->setSelectedChannel(0);
+        QVERIFY(m_doc->setPlayMode(1));
+        QCOMPARE(m_doc->playMode(), 1);
+        QCOMPARE(mode.count(), 1);
+        QCOMPARE(m_engine->sections.sections.at(0).live, std::vector<core::ChannelId>{channelId(0)}); // the piano
+        QCOMPARE(m_engine->sections.sections.at(1).live, std::vector<core::ChannelId>{channelId(1)}); // as set
+        QCOMPARE(m_engine->sections.unsectioned, std::optional(std::vector<core::ChannelId>{channelId(0)}));
+        m_doc->setSelectedChannel(1); // a strip clicked
+        QCOMPARE(m_engine->sections.sections.at(0).live, std::vector<core::ChannelId>{channelId(1)});
+        QCOMPARE(m_engine->sections.unsectioned, std::optional(std::vector<core::ChannelId>{channelId(1)}));
+
+        // Why a strip is silent now (the verse in force).
+        m_engine->jumpToSection(0);
+        QVERIFY(m_doc->silentReason(1).isEmpty());
+        QVERIFY2(m_doc->silentReason(0).contains(u"One at a time"_s), qPrintable(m_doc->silentReason(0)));
+        QVERIFY(m_doc->setPlayMode(0));
+        QVERIFY(m_doc->silentReason(0).isEmpty());
+        QVERIFY(m_doc->setChannelMute(0, true));
+        QCOMPARE(m_doc->silentReason(0), u"Muted"_s);
+        QVERIFY(m_doc->setChannelMute(0, false));
+        QVERIFY(m_doc->setChannelSolo(1, true));
+        QVERIFY(m_doc->silentReason(0).contains(u"soloed"_s));
+        QVERIFY(m_doc->setChannelSolo(1, false));
+        m_engine->jumpToSection(1);
+        QVERIFY2(m_doc->silentReason(0).contains(u"Not in Chorus"_s), qPrintable(m_doc->silentReason(0)));
+
+        // Undo: one at a time again, then the layers.
+        QVERIFY(m_doc->undo()); // the solo off
+        QVERIFY(m_doc->undo()); // the solo
+        QVERIFY(m_doc->undo()); // the mute off
+        QVERIFY(m_doc->undo()); // the mute
+        QVERIFY(m_doc->undo()); // all together
+        QCOMPARE(m_doc->playMode(), 1);
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->playMode(), 0);
+        QVERIFY(!m_engine->sections.unsectioned);
+        QVERIFY(!m_doc->setPlayMode(7));
+        QVERIFY(m_doc->lastError().contains(u"7"_s));
     }
 
     void sectionsReachTheEngineBeforeThePatch()

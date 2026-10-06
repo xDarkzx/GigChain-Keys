@@ -433,6 +433,29 @@ private slots:
         QCOMPARE(out.left.at(kFrames - 1), 0.5F); // the verse's key was let go; the chorus sounds
     }
 
+    // Outside any section (a song without sections), a strip held back takes
+    // no new notes (a sound playing one channel at a time); its note-offs
+    // still arrive, so a note held from before ends.
+    void aStripHeldBackOutsideSectionsTakesNoNewNotes()
+    {
+        auto picked = std::make_shared<HeldNoteNode>(0.25F);
+        auto other = std::make_shared<HeldNoteNode>(0.5F);
+        picked->received.reserve(16);
+        other->received.reserve(16);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(picked));
+        specs.push_back(strip(other));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        QVERIFY(graph.strip(1)->unsectioned());
+        graph.strip(1)->setUnsectioned(false);
+        const std::array events{noteOn(60), cc(0x80, 62, 0)};
+        Output out;
+        graph.render(events, out.block(), 1.0F, {}, {}, SectionGate{});
+        QCOMPARE(picked->received.size(), std::size_t{2});
+        QCOMPARE(other->received.size(), std::size_t{1}); // the note-off only
+        QCOMPARE(other->received.at(0).status, uint8_t{0x80});
+    }
+
     // Chord follow entering the chorus: the chord's keys pressed a moment
     // before (they reached the verse) move to the chorus at the switch.
     void aHandoverMovesTheHeldChord()

@@ -73,11 +73,18 @@ struct Channel
 
 // A song section (Intro, Verse, Chorus...). Stepping through a song means
 // stepping through its patches in order.
+// What a sound plays where its song's sections do not say otherwise.
+enum class PlayMode : int {
+    All,      // every channel together (layers: piano, pad and synth on every chord)
+    Selected, // only the selected channel (one instrument at a time, chosen live)
+};
+
 struct Patch
 {
     PatchId id;
     QString name;
     std::vector<Channel> channels;
+    PlayMode playMode = PlayMode::All;
 
     friend bool operator==(const Patch&, const Patch&) = default;
 };
@@ -89,8 +96,8 @@ struct SectionSetup
     QString name;       // as the chart names it, e.g. "Verse 1" (matched ignoring case)
     int occurrence = 1; // 2 = the second section with this name
     int bars = 0;       // its length; 0 = guessed from the chart
-    // false: the default (the patch's first instrument). true: `channels`,
-    // which may be empty (a silent break).
+    // false: the default (the patch's play mode: every channel, or the
+    // selected one). true: `channels`, which may be empty (a silent break).
     bool assigned = false;
     std::vector<ChannelId> channels;
 

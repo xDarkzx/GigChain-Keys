@@ -126,6 +126,17 @@ Result<void> renamePatch(Setlist& setlist, Cursor cursor, const QString& name)
     return {};
 }
 
+Result<void> setPatchPlayMode(Setlist& setlist, Cursor cursor, PlayMode mode)
+{
+    Patch* patch = patchAt(setlist, cursor);
+    if (patch == nullptr) return missing(u"Song %1, sound %2"_s.arg(cursor.song + 1).arg(cursor.patch + 1));
+    if (mode != PlayMode::All && mode != PlayMode::Selected) {
+        return fail(ErrorCode::OutOfRange, u"A sound plays all its channels (0) or the selected one (1), not %1"_s.arg(static_cast<int>(mode)));
+    }
+    patch->playMode = mode;
+    return {};
+}
+
 Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator, int denominator)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));

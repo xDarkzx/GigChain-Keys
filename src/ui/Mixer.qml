@@ -137,6 +137,7 @@ Rectangle {
             }
             delegate: ChannelStrip {
                 onKeysWanted: strips.forceActiveFocus()
+                songSection: mixer.engineStatus.songSection
                 height: Math.min(ListView.view.height, Theme.stripHeight)
                 doc: mixer.doc
                 pluginModel: mixer.pluginModel
@@ -147,11 +148,43 @@ Rectangle {
                 width: Theme.stripWidth + 8
                 height: Math.min(strips.height, Theme.stripHeight)
                 // Add a channel: pick an instrument (grouped by maker)
+                // How this sound's channels play: all together (layers), or
+                // the selected one alone. Sections set up still choose their own.
+                Column {
+                    id: playModeChips
+                    objectName: "playModeChips"
+                    x: 4
+                    width: Theme.stripWidth
+                    spacing: 3
+                    ToggleChip {
+                        objectName: "playModeAll"
+                        width: parent.width
+                        text: qsTr("All together")
+                        active: mixer.doc.playMode === 0
+                        onClicked: mixer.doc.setPlayMode(0)
+                        ToolTip.visible: allHover.hovered
+                        ToolTip.delay: 500
+                        ToolTip.text: qsTr("Every instrument plays on every note (layers). Mute or solo to choose; song sections can choose per part.")
+                        HoverHandler { id: allHover }
+                    }
+                    ToggleChip {
+                        objectName: "playModeOne"
+                        width: parent.width
+                        text: qsTr("One at a time")
+                        active: mixer.doc.playMode === 1
+                        onClicked: mixer.doc.setPlayMode(1)
+                        ToolTip.visible: oneHover.hovered
+                        ToolTip.delay: 500
+                        ToolTip.text: qsTr("Only the selected instrument plays: click a strip to switch (held notes ring on).")
+                        HoverHandler { id: oneHover }
+                    }
+                }
                 EffectSlot {
                     id: newChannelSlot
                     x: 4
+                    y: playModeChips.height + 4
                     width: Theme.stripWidth
-                    height: parent.height - newInputSlot.height - 4
+                    height: parent.height - newInputSlot.height - 8 - playModeChips.height
                     text: ""
                     onClicked: newChannelPicker.popup(newChannelSlot, newChannelSlot.width / 2, newChannelSlot.height / 2)
                     Text {

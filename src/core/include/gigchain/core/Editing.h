@@ -14,6 +14,8 @@ Result<int> addSong(Setlist& setlist, const QString& name);
 Result<int> addPatch(Setlist& setlist, int songIndex, const QString& name);
 Result<void> renameSong(Setlist& setlist, int songIndex, const QString& name);
 Result<void> renamePatch(Setlist& setlist, Cursor cursor, const QString& name);
+// Every channel of the sound plays together, or only the selected one.
+Result<void> setPatchPlayMode(Setlist& setlist, Cursor cursor, PlayMode mode);
 // The song's chart (ChordPro). Refused when longer than limits::kMaxChartLength.
 Result<void> setSongChart(Setlist& setlist, int songIndex, const QString& chart);
 // The song's key ("" = not set) and tempo in BPM (0 = not set).

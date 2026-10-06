@@ -266,6 +266,12 @@ Patch readPatch(JsonReader& r, const QJsonObject& obj, const QString& path)
         const QString channelPath = u"%1.channels[%2]"_s.arg(path).arg(i);
         patch.channels.push_back(readChannel(r, r.object(channels.at(i), channelPath), channelPath));
     }
+    // "all" (every channel together) or "selected"; absent in older files: all.
+    if (!r.failed() && obj.contains("playMode"_L1)) {
+        const QString mode = r.string(obj, "playMode"_L1, path, 16);
+        if (mode == "selected"_L1) patch.playMode = PlayMode::Selected;
+        else if (mode != "all"_L1 && !r.failed()) r.invalid(u"%1.playMode must be \"all\" or \"selected\" (got \"%2\")"_s.arg(path, mode));
+    }
     return patch;
 }
 
@@ -435,7 +441,10 @@ QJsonObject writePatch(const Patch& patch)
     for (const Channel& channel : patch.channels) {
         channels.append(writeChannel(channel));
     }
-    return QJsonObject{{u"id"_s, patch.id.value()}, {u"name"_s, patch.name}, {u"channels"_s, channels}};
+    return QJsonObject{{u"id"_s, patch.id.value()},
+                       {u"name"_s, patch.name},
+                       {u"channels"_s, channels},
+                       {u"playMode"_s, patch.playMode == PlayMode::Selected ? u"selected"_s : u"all"_s}};
 }
 
 QJsonObject writeSong(const Song& song)

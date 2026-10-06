@@ -36,6 +36,18 @@ Downloads for every version are on the
   one missed chord caught up, the next part's opening). It no longer jumps
   to another part that opens with the same chords.
 
+### Sounds
+
+- **All together or one at a time:** each sound now plays **every**
+  instrument together by default (layers: piano, pad and synth on every
+  chord); mute, solo or the song's sections choose per part. Or switch it to
+  **One at a time** (under the mixer's strips): only the selected strip
+  plays, and clicking another switches at once, held notes ringing on.
+- **Fixed:** in a song with chart sections, only the first instrument played
+  in every section not set up by hand. Every instrument plays there now.
+- A strip that would be silent if played now is dimmed, and says why on
+  hover (muted, another soloed, not in this section, one at a time).
+
 ### Keyboard shortcuts
 
 - **Space plays and stops the song** (its count and backing track; in

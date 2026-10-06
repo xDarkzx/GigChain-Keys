@@ -89,6 +89,11 @@ public:
     // pedals and knobs carry on, so it rings out.
     void setSections(uint64_t mask) { m_sections.store(mask, std::memory_order_relaxed); }
     [[nodiscard]] uint64_t sections() const { return m_sections.load(std::memory_order_relaxed); }
+    // Whether it takes new notes outside any section (a song without
+    // sections); false: a sound playing another of its channels. Held notes
+    // ring out as above.
+    void setUnsectioned(bool plays) { m_unsectioned.store(plays, std::memory_order_relaxed); }
+    [[nodiscard]] bool unsectioned() const { return m_unsectioned.load(std::memory_order_relaxed); }
     // The loop-station slot this channel records into (-1: none). What it
     // records is its sound at its fader and pan: what is heard of it.
     void setLoopSlot(int slot) { m_loopSlot.store(slot, std::memory_order_relaxed); }
@@ -141,6 +146,7 @@ private:
     std::atomic<bool> m_mute{false};
     std::atomic<bool> m_solo{false};
     std::atomic<uint64_t> m_sections{~uint64_t{0}};
+    std::atomic<bool> m_unsectioned{true};
     std::atomic<int> m_loopSlot{-1};
     std::atomic<float> m_peak{0.0F};
     std::atomic<float> m_rms{0.0F};

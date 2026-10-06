@@ -9,6 +9,7 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <vector>
 
 namespace gigchain::engine {
@@ -131,6 +132,9 @@ struct SongSections
     core::PatchId patch; // the patch `live` was worked out for
     std::vector<Section> sections;
     bool switchEarly = false; // a beat before each section instead of a sixteenth
+    // What plays outside any section (a song without sections): nullopt =
+    // every channel; else only these (a sound playing one channel at a time).
+    std::optional<std::vector<core::ChannelId>> unsectioned;
 
     bool operator==(const SongSections&) const = default;
 };

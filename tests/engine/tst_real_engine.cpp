@@ -899,6 +899,18 @@ private slots:
         const auto [verseAll, chorusAll] = levelsAfter(playNote);
         QVERIFY(verseAll > 0.0F && chorusAll > 0.0F);
         QCOMPARE(engine.songPosition().section, -1);
+
+        // No sections, one channel at a time: only the selected one plays.
+        pump(engine, 3000);
+        engine.setSongSections(SongSections{.patch = patch.id, .sections = {}, .switchEarly = false, .unsectioned = {{chorus}}});
+        const auto [verseHeld, chorusPicked] = levelsAfter(playNote);
+        QCOMPARE(verseHeld, 0.0F);
+        QVERIFY2(chorusPicked > 0.0F, "the selected piano stayed silent");
+        // Every channel again.
+        pump(engine, 3000);
+        engine.setSongSections(SongSections{.patch = patch.id, .sections = {}, .switchEarly = false, .unsectioned = std::nullopt});
+        const auto [verseBack, chorusBack] = levelsAfter(playNote);
+        QVERIFY(verseBack > 0.0F && chorusBack > 0.0F);
     }
 
     // A setup saved on another system (ASIO on Linux, JACK on Windows): the

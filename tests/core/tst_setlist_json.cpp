@@ -499,6 +499,38 @@ private slots:
         QVERIFY(!bad.has_value());
         QVERIFY2(bad.error().message.contains(u"chordInversions"_s), qPrintable(bad.error().message));
     }
+
+    // A sound's play mode is kept; an older file's sounds play every channel.
+    void aSoundKeepsItsPlayMode()
+    {
+        Setlist setlist;
+        setlist.songs.push_back(makeSong(u"Layers"_s));
+        setlist.songs.front().patches.front().playMode = PlayMode::Selected;
+        const auto read = fromJson(toJson(setlist));
+        QVERIFY2(read.has_value(), read ? "" : qPrintable(read.error().message));
+        QCOMPARE(read->songs.front().patches.front().playMode, PlayMode::Selected);
+
+        QJsonObject root = QJsonDocument::fromJson(toJson(setlist)).object();
+        QJsonArray songs = root.value(u"songs"_s).toArray();
+        QJsonObject song = songs.at(0).toObject();
+        QJsonArray patches = song.value(u"patches"_s).toArray();
+        QJsonObject patch = patches.at(0).toObject();
+        const auto withPatch = [&](const QJsonObject& edited) {
+            patches.replace(0, edited);
+            song.insert(u"patches"_s, patches);
+            songs.replace(0, song);
+            root.insert(u"songs"_s, songs);
+            return fromJson(QJsonDocument(root).toJson());
+        };
+        patch.remove(u"playMode"_s);
+        const auto older = withPatch(patch);
+        QVERIFY2(older.has_value(), older ? "" : qPrintable(older.error().message));
+        QCOMPARE(older->songs.front().patches.front().playMode, PlayMode::All);
+        patch.insert(u"playMode"_s, u"loud"_s);
+        const auto bad = withPatch(patch);
+        QVERIFY(!bad.has_value());
+        QVERIFY2(bad.error().message.contains(u"playMode"_s), qPrintable(bad.error().message));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestSetlistJson)
