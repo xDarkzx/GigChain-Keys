@@ -110,7 +110,8 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 | 📜 **Setlists** | All the night's songs in one file, in order. Change songs with the keyboard, a pedal or a pad. Undo for every edit. |
 | 📝 **Chord charts** | Paste a song from any chord website and each chord lands on its word. Edit it where you read it, like cells: a chord box over every word to type into, words changed in place, chords dragged from word to word. |
 | 🎹 **How to play a chord** | Forgot one on stage? Tap it: a keyboard with a dot on each key to press (left and right hand), its notes by name, and its inversions. Keep the one you like for the song. |
-| 🔀 **Sections that change the sound** | Each part of the chart (verse, chorus, solo…) picks which instruments play. They change by themselves, counted in bars or **following the chords you play**, always forward through the song's **flow** (Verse 1 → Chorus → Verse 2 → Chorus ×3…), never jumping to the wrong part. |
+| 🔀 **Sections that change the sound** | Every instrument plays together (layers), or one at a time. Each part of the chart (verse, chorus, solo…) can pick which instruments play, and they change by themselves as the song goes. |
+| ⏱️ **The song's timeline** | Press Play (Space, your keyboard's Play button, or a pedal) and the song runs at its tempo along its **flow** (Verse 1 → Chorus → Verse 2 → Chorus ×3…): sounds change at each part, the chord lights in the chart. Live controls land on the bar line: **next part**, **repeat it**, **hold it**, **stop at its end**. Free-time songs can follow the chords you play instead. |
 | 🎤 **Perform mode** | Full screen, built for the stage: the chart big and clear, the song's parts as tiles, nothing you can knock by accident. |
 | 🔁 **Loop station** | Record a loop of any instrument, in time with the song, and layer on top: street-performer style, from buttons on your keyboard. |
 | 🎓 **Practice mode** | The song's chords fall onto a keyboard as glowing notes, YouTube-piano style. *Listen*, *Play along*, or *Wait for me*, slowed down and looped. The left hand plays the bass, an octave, root and fifth or the full chord; the right hand smooth, in root position or in your chosen inversions. |
@@ -189,6 +190,7 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
+| 0.2.1 | Alpha: the song's timeline with live controls; instruments all together or one at a time; keyboard shortcuts for the stage |
 | 0.2 | Alpha: the chart edited as cells, chord diagrams, the song's flow and steadier chord follow, Practice hand styles |
 | 0.1 | First public alpha: Windows 10/11; macOS (Apple Silicon) |
 
