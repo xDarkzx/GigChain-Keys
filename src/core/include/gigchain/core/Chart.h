@@ -116,7 +116,7 @@ struct ChartSection
 struct ImportedSheet
 {
     QString chart;  // ChordPro
-    QString title;  // e.g. "Hallelujah" from "Hallelujah Chords by Leonard Cohen"
+    QString title;  // e.g. "Morning Light" from "Morning Light Chords by The Example Band"
     QString artist;
     QString key;
     int capo = 0;   // fret; 0 = none (kept as a comment in the chart too)

@@ -7,7 +7,7 @@ param([double]$Minutes = 30, [ValidateSet('release', 'debug', 'asan')][string]$P
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
-if (-not $env:VCPKG_ROOT) { $env:VCPKG_ROOT = 'D:\DansProject\vcpkg' }
+if (-not $env:VCPKG_ROOT) { $env:VCPKG_ROOT = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'vcpkg' } # (next to the project)
 if (-not $env:QT_ROOT_DIR) { $env:QT_ROOT_DIR = 'C:\Qt\6.10.2\msvc2022_64' }
 $vsInstaller = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
 if (-not $env:VSCMD_VER) {

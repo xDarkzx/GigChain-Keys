@@ -490,7 +490,7 @@ QString tidyChordSheet(const QString& text)
 
 namespace {
 
-// "Hallelujah Chords by Leonard Cohen", "Wonderwall Tab", "Let It Be Lyrics".
+// "Morning Light Chords by The Example Band", "Blue Harbour Tab", "Blue Harbour Lyrics".
 const QRegularExpression& kSiteTitle()
 {
     static const QRegularExpression pattern(
@@ -498,7 +498,7 @@ const QRegularExpression& kSiteTitle()
         QRegularExpression::CaseInsensitiveOption);
     return pattern;
 }
-// "Wonderwall - Oasis"
+// "Blue Harbour - The Example Band"
 const QRegularExpression& kTitleDashArtist()
 {
     static const QRegularExpression pattern(uR"(^(.+?)\s+[-–]\s+(.+?)\s*$)"_s);

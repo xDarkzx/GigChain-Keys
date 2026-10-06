@@ -14,10 +14,9 @@
 
 namespace gigchain::engine {
 
-// Follows a song's chords as they are played, by the five rules of
-// docs/superpowers/specs/2026-09-29-chord-follow-design.md: which chord of
-// the song is being played, and the section gate that switches instruments
-// on the note that entered a section.
+// Follows a song's chords as they are played: which chord of the song is
+// being played, and the section gate that switches instruments on the note
+// that entered a section.
 //
 // process() runs on the audio thread (no allocation, no locks);
 // jumpToSection(), reset() and position() on any thread.

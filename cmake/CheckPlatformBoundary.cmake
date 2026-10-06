@@ -1,6 +1,6 @@
 # Fails when system code appears outside the platform files: files named
 # *_win.*, *_posix.*, *_linux.* and *_mac.* may use it; nothing else in src/
-# may (docs/superpowers/specs/2026-09-30-cross-platform-linux-design.md).
+# may.
 #   cmake -DSOURCE_DIR=<repo>/src -P CheckPlatformBoundary.cmake
 if(NOT IS_DIRECTORY "${SOURCE_DIR}")
     message(FATAL_ERROR "SOURCE_DIR must be the source folder (-DSOURCE_DIR=<repo>/src before -P); got '${SOURCE_DIR}'")

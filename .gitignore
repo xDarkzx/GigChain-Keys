@@ -2,7 +2,6 @@
 /dist/
 /.vs/
 /vcpkg_installed/
-/.superpowers/
 CMakeUserPresets.json
 *.user
 # Mac disk images downloaded from CI (tools/package-mac.sh makes them)

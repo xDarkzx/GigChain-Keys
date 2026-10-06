@@ -38,10 +38,10 @@ private slots:
 
     void directivesGiveTitleKeyTempoAndSections()
     {
-        const Chart chart = parseChordPro(u"{title: Hallelujah}\n{artist: Leonard Cohen}\n{key: C}\n{tempo: 56}\n"
-                                          "{start_of_chorus}\n[F]Halle[Am]lujah\n{end_of_chorus}\n{c: Softly}\n\n"_s);
-        QCOMPARE(chart.title, u"Hallelujah"_s);
-        QCOMPARE(chart.artist, u"Leonard Cohen"_s);
+        const Chart chart = parseChordPro(u"{title: Morning Light}\n{artist: The Example Band}\n{key: C}\n{tempo: 56}\n"
+                                          "{start_of_chorus}\n[F]Morning [Am]light\n{end_of_chorus}\n{c: Softly}\n\n"_s);
+        QCOMPARE(chart.title, u"Morning Light"_s);
+        QCOMPARE(chart.artist, u"The Example Band"_s);
         QCOMPARE(chart.key, u"C"_s);
         QCOMPARE(chart.tempo, 56.0);
         // Title, artist, key and tempo stay in the chart as Meta lines (so
@@ -104,9 +104,9 @@ private slots:
     void ultimateGuitarMarkup()
     {
         // Ultimate Guitar's own markup when copied from its page source.
-        // The F sits above "myself" once the markup is removed.
-        const QString sheet = u"[ch]Am[/ch]          [ch]F[/ch]\nWhen I find myself\n[tab]x[/tab]"_s;
-        QCOMPARE(chordSheetToChordPro(sheet), u"[Am]When I find [F]myself\nx\n"_s);
+        // The F sits above "street" once the markup is removed.
+        const QString sheet = u"[ch]Am[/ch]          [ch]F[/ch]\nDown a long street\n[tab]x[/tab]"_s;
+        QCOMPARE(chordSheetToChordPro(sheet), u"[Am]Down a long [F]street\nx\n"_s);
     }
 
     void aLyricLineIsNotMistakenForChords()
@@ -114,7 +114,7 @@ private slots:
         // "A" and "Am" are chords, but a line of words is lyrics.
         QVERIFY(isChordLine(u"Am  F  C  G"_s));
         QVERIFY(isChordLine(u"Cmaj7   Dsus4  E7(b9)  F#m7b5  Bb/D  N.C."_s));
-        QVERIFY(!isChordLine(u"A day in the life"_s));
+        QVERIFY(!isChordLine(u"A day by the sea"_s));
         QVERIFY(!isChordLine(u"Am I the only one"_s));
         QVERIFY(!isChordLine(u""_s));
     }
@@ -123,7 +123,7 @@ private slots:
     {
         // Typical copy from a chord site: header junk, tab staff lines,
         // separator rows, non-breaking spaces, tabs and too many blank lines.
-        const QString pasted = u"Hallelujah chords by Leonard Cohen\n"
+        const QString pasted = u"Morning Light chords by The Example Band\n"
                                "Tabbed by someone\n"
                                "Tuning: E A D G B E\n"
                                "Capo: 2\n"
@@ -137,22 +137,22 @@ private slots:
                                "G|-0-----0-------|\n"
                                "\n"
                                "[Verse 1]\n"
-                               "C                     Am\n" // Am above "secret"
-                               "I heard there was   a secret chord   \n"
+                               "C                     Am\n" // Am above "silver"
+                               "I found my way in   a silver light   \n"
                                "=====================\n"
                                "\n\n\n"
                                "F     G              C\n" // C past the end of the words
-                               "That David   played\n"_s;
-        QCOMPARE(tidyChordSheet(pasted), u"Hallelujah chords by Leonard Cohen\n"
+                               "Then River   rolled\n"_s;
+        QCOMPARE(tidyChordSheet(pasted), u"Morning Light chords by The Example Band\n"
                                           "{comment: Capo 2}\n"
                                           "{key: C}\n"
                                           "\n"
                                           "{comment: Intro}\n"
                                           "\n"
                                           "{comment: Verse 1}\n"
-                                          "[C]I heard there was a [Am]secret chord\n"
+                                          "[C]I found my way in a [Am]silver light\n"
                                           "\n"
-                                          "[F]That [G]David played [C]\n"_s);
+                                          "[F]Then [G]River rolled [C]\n"_s);
     }
 
     void tabsCountAsColumns()
@@ -173,17 +173,17 @@ private slots:
     // sits over, where a keys player reads it.
     void aPastedChordInsideAWordGoesOnTheWordsStart()
     {
-        // From "Slow" (SHY Martin), as Ultimate Guitar copies it.
+        // Laid out as a chord site copies it.
         const ImportedSheet sheet = importChordSheet(u"[Pre-Chorus]\n"
                                                      "E          E/D#          C#m\n"
-                                                     "Every time you get too close\n"
+                                                     "Maybe once you see the stars\n"
                                                      "[Verse 1]\n"
                                                      "C#m             E/D#                      E\n"
-                                                     "     I've spent way too much time moving on\n"_s);
+                                                     "     I'll carry the old song back inside me\n"_s);
         QCOMPARE(sheet.chart, u"{comment: Pre-Chorus}\n"
-                               "[E]Every time [E/D#]you get too [C#m]close\n"
+                               "[E]Maybe once [E/D#]you see the [C#m]stars\n"
                                "{comment: Verse 1}\n"
-                               "[C#m]I've spent [E/D#]way too much time moving [E]on\n"_s);
+                               "[C#m]I'll carry [E/D#]the old song back inside [E]me\n"_s);
     }
 
     void aChordOverTheSpaceBeforeAWordGoesOnTheWord()
@@ -195,15 +195,15 @@ private slots:
     {
         // Laid out the way a chord site's page copies: header clutter, the
         // song, then footer clutter.
-        const QString page = u"Hallelujah Chords by Leonard Cohen\n"
-                             "Leonard Cohen\n"
+        const QString page = u"Morning Light Chords by The Example Band\n"
+                             "The Example Band\n"
                              "Tuning: E A D G B E\n"
                              "Key: C\n"
                              "Capo: 2nd fret\n"
                              "BPM: 56\n"
                              "Author: someone 12,345. 3 contributors total, last edit on Jan 1, 2021\n"
                              "View official tab\n"
-                             "We have an official Hallelujah tab made by UG professional guitarists.\n"
+                             "We have an official Morning Light tab made by UG professional guitarists.\n"
                              "Difficulty: novice\n"
                              "Chords used: C Am F G\n"
                              "Am  x02210\n"
@@ -211,8 +211,8 @@ private slots:
                              "C  Am  C  Am\n"
                              "\n"
                              "[Verse 1]\n"
-                             "C                   Am\n" // Am above "secret"
-                             "I heard there was a secret chord\n"
+                             "C                   Am\n" // Am above "silver"
+                             "I found my way in a silver light\n"
                              "\n"
                              "Last update: Jan 1, 2021\n"
                              "Rating\n"
@@ -220,8 +220,8 @@ private slots:
                              "Please, rate this tab\n"
                              "12 Comments\n"_s;
         const ImportedSheet sheet = importChordSheet(page);
-        QCOMPARE(sheet.title, u"Hallelujah"_s);
-        QCOMPARE(sheet.artist, u"Leonard Cohen"_s);
+        QCOMPARE(sheet.title, u"Morning Light"_s);
+        QCOMPARE(sheet.artist, u"The Example Band"_s);
         QCOMPARE(sheet.key, u"C"_s);
         QCOMPARE(sheet.capo, 2);
         QCOMPARE(sheet.tempo, 56.0);
@@ -230,36 +230,36 @@ private slots:
                                "[C] [Am] [C] [Am]\n"
                                "\n"
                                "{comment: Verse 1}\n"
-                               "[C]I heard there was a [Am]secret chord\n"_s);
+                               "[C]I found my way in a [Am]silver light\n"_s);
     }
 
     void aSheetWithoutSectionsStartsAtItsFirstChords()
     {
-        const ImportedSheet sheet = importChordSheet(u"Wonderwall - Oasis\n"
+        const ImportedSheet sheet = importChordSheet(u"Blue Harbour - The Example Band\n"
                                                      "Some site text\n"
                                                      "Em7        G\n"
-                                                     "Today is gonna be the day\n"_s);
-        QCOMPARE(sheet.title, u"Wonderwall"_s);
-        QCOMPARE(sheet.artist, u"Oasis"_s);
-        QCOMPARE(sheet.chart, u"[Em7]Today is [G]gonna be the day\n"_s); // (a chord inside a word: on its start)
+                                                     "Maybe we could be the end\n"_s);
+        QCOMPARE(sheet.title, u"Blue Harbour"_s);
+        QCOMPARE(sheet.artist, u"The Example Band"_s);
+        QCOMPARE(sheet.chart, u"[Em7]Maybe we [G]could be the end\n"_s); // (a chord inside a word: on its start)
     }
 
     void chordProKeepsItsTitle()
     {
-        const ImportedSheet sheet = importChordSheet(u"{title: Let It Be}\n{artist: The Beatles}\n[C]When I find\n"_s);
-        QCOMPARE(sheet.title, u"Let It Be"_s);
-        QCOMPARE(sheet.artist, u"The Beatles"_s);
-        QVERIFY(sheet.chart.contains(u"[C]When I find"_s));
+        const ImportedSheet sheet = importChordSheet(u"{title: Blue Harbour}\n{artist: The Example Band}\n[C]When we go\n"_s);
+        QCOMPARE(sheet.title, u"Blue Harbour"_s);
+        QCOMPARE(sheet.artist, u"The Example Band"_s);
+        QVERIFY(sheet.chart.contains(u"[C]When we go"_s));
     }
 
     void realUltimateGuitarPage()
     {
-        // Copied from ultimate-guitar.com by the user (Creep, Radiohead).
-        QFile file(QFINDTESTDATA("data/ug_creep.txt"));
+        // Laid out exactly as an ultimate-guitar.com page copies (a made-up song).
+        QFile file(QFINDTESTDATA("data/ug_page.txt"));
         QVERIFY(file.open(QIODevice::ReadOnly));
         const ImportedSheet sheet = importChordSheet(QString::fromUtf8(file.readAll()));
-        QCOMPARE(sheet.title, u"Creep"_s);
-        QCOMPARE(sheet.artist, u"Radiohead"_s);
+        QCOMPARE(sheet.title, u"Harbour Lights"_s);
+        QCOMPARE(sheet.artist, u"The Example Band"_s);
         QCOMPARE(sheet.key, u"G"_s);
         QCOMPARE(sheet.capo, 0); // "Capo:No capo"
         // The chart starts at [Intro]: views, difficulty, tuning, the chord
@@ -270,12 +270,12 @@ private slots:
             QVERIFY2(!sheet.chart.contains(clutter), qPrintable(clutter));
         }
         // Chords over the syllables the site put them on.
-        QVERIFY(sheet.chart.contains(u"When you were here [G]before, couldn't look you in the [B]eyes"_s));
+        QVERIFY(sheet.chart.contains(u"Down by the [G]water we wait for the morning [B]light"_s));
         // "[Chorus] (play loud)" is a heading with its note, not a chord.
         QVERIFY(sheet.chart.contains(u"{comment: Chorus (play loud)}"_s));
         QVERIFY(!sheet.chart.contains(u"[Chorus]"_s));
         QVERIFY(sheet.chart.contains(u"{comment: Verse 3 (play soft until the end)}"_s));
-        QVERIFY(sheet.chart.trimmed().endsWith(u"I don't [G]belong here"_s)); // the last G sits over "long": on the word
+        QVERIFY(sheet.chart.trimmed().endsWith(u"We are [G]almost home"_s)); // the last G sits over "most": on the word
     }
 
     // Sections: what each gets called, which one it is, and how many bars.

@@ -1,6 +1,6 @@
 # What differs by system: one interface per piece (include/gigchain/platform),
 # one file per system (<piece>_win.cpp, _posix.cpp, _linux.cpp), picked by
-# gigchain_platform_sources (docs/superpowers/specs/2026-09-30-cross-platform-linux-design.md).
+# gigchain_platform_sources (cmake/PlatformSources.cmake).
 add_library(gigchain_platform STATIC PlatformLog.h PlatformLog.cpp)
 add_library(gigchain::platform ALIAS gigchain_platform)
 target_include_directories(gigchain_platform PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

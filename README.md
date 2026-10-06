@@ -219,7 +219,7 @@ Steinberg VST3 SDK; audio and MIDI go through RtAudio and RtMidi.
 - [**Building from source**](docs/BUILDING.md): Windows, Linux and macOS
 - [**Contributing**](CONTRIBUTING.md): how to send a fix, and the code rules
 - [**Releasing**](docs/RELEASING.md): how a version is built and published
-- [**Roadmap**](docs/ROADMAP.md) and the design notes in [`docs/superpowers`](docs/superpowers)
+- [**Roadmap**](docs/ROADMAP.md): what is coming next
 
 Everyone taking part is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).
 

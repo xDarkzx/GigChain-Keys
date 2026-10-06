@@ -32,7 +32,7 @@ add_test(NAME no_hardcoded_product_name
          COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR} "-DBRAND=${PRODUCT_BRAND}"
                  "-DOLD_NAMES=${_previous_names}" -P ${PROJECT_SOURCE_DIR}/tests/NoHardcodedName.cmake)
 
-# No system code outside the platform files (docs/superpowers/specs/2026-09-30-cross-platform-linux-design.md).
+# No system code outside the platform files (cmake/CheckPlatformBoundary.cmake).
 add_test(NAME platform_boundary
          COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR}/src -P ${PROJECT_SOURCE_DIR}/cmake/CheckPlatformBoundary.cmake)
 # The third-party notices name the files this system's app really carries.

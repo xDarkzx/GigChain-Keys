@@ -24,7 +24,7 @@ Requirements (Windows 10/11, x64):
   VST3 SDK is fetched by CMake.
 
 ```powershell
-$env:VCPKG_ROOT  = 'C:\path\to\vcpkg'
+$env:VCPKG_ROOT  = 'C:\path\to\vcpkg'   # (not set: a vcpkg folder next to this project)
 $env:QT_ROOT_DIR = 'C:\Qt\6.10.2\msvc2022_64'
 .\tools\build.ps1 -Preset debug     # configure, build and run every test
 .\tools\build.ps1 -Preset release -NoTest
@@ -110,7 +110,7 @@ is described in [RELEASING.md](RELEASING.md).
 ## Checks before a commit
 
 `tools\verify.ps1` (Windows; `tools/verify.sh` on Linux) is the gate every
-commit passes, run by the commit hook (`tools\verify-hook.ps1`):
+commit passes:
 
 - a build with every warning an error (`/W4 /WX`);
 - clang-tidy and cppcheck on the changed files;
@@ -141,5 +141,4 @@ earlier names carry over on first start.
 | `src/app` | Startup: wires the engine, settings and UI together |
 | `tests` | Qt Test suites for every module |
 | `docs/help` | The user guide (built into the app and shown on GitHub) |
-| `docs/superpowers` | Design specs and implementation plans |
 | `installer`, `tools` | The Windows installer, build, check and packaging scripts |

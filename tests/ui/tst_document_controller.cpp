@@ -117,10 +117,10 @@ private slots:
     {
         DocumentController fresh(*m_engine, *m_settings);
         fresh.newSetlist();
-        QVERIFY(fresh.pasteChart(-1, u"Hallelujah chords by Leonard Cohen\nC        Am\nI heard there was\n"_s));
+        QVERIFY(fresh.pasteChart(-1, u"Morning Light chords by The Example Band\nC        Am\nI found my way in\n"_s));
         QCOMPARE(fresh.setlist().songs.size(), std::size_t{1});
-        QCOMPARE(fresh.currentSongName(), u"Hallelujah"_s); // named from the sheet
-        QVERIFY(fresh.currentChart().contains(u"[C]I heard"_s));
+        QCOMPARE(fresh.currentSongName(), u"Morning Light"_s); // named from the sheet
+        QVERIFY(fresh.currentChart().contains(u"[C]I found"_s));
         QVERIFY(fresh.hasPatch());
     }
 
@@ -556,10 +556,10 @@ private slots:
 
     void pastingAPageNamesTheSongAndCanBeUndone()
     {
-        const QString page = u"Hallelujah Chords by Leonard Cohen\nKey: C\nBPM: 56\nDifficulty: novice\n[Verse 1]\nC        Am\nI heard there was\nLast update: Jan 1\n"_s;
+        const QString page = u"Morning Light Chords by The Example Band\nKey: C\nBPM: 56\nDifficulty: novice\n[Verse 1]\nC        Am\nI found my way in\nLast update: Jan 1\n"_s;
         QCOMPARE(m_doc->currentSongName(), u"Song 1"_s); // still the placeholder name
         QVERIFY(m_doc->pasteChart(0, page));
-        QCOMPARE(m_doc->currentSongName(), u"Hallelujah"_s); // named from the sheet
+        QCOMPARE(m_doc->currentSongName(), u"Morning Light"_s); // named from the sheet
         QCOMPARE(m_doc->setlist().songs[0].key, u"C"_s);
         QCOMPARE(m_doc->setlist().songs[0].tempo, 56.0);
         QVERIFY(!m_doc->currentChart().contains(u"Difficulty"_s)); // clutter gone
@@ -573,9 +573,9 @@ private slots:
         QCOMPARE(m_doc->setlist().songs.at(0).key, QString());
         QCOMPARE(m_doc->setlist().songs.at(0).tempo, 0.0);
         QVERIFY(m_doc->redo()); // and back again, all of it
-        QCOMPARE(m_doc->currentSongName(), u"Hallelujah"_s);
+        QCOMPARE(m_doc->currentSongName(), u"Morning Light"_s);
         QCOMPARE(m_doc->setlist().songs.at(0).tempo, 56.0);
-        QVERIFY(m_doc->currentChart().contains(u"[C]I heard [Am]there was"_s));
+        QVERIFY(m_doc->currentChart().contains(u"[C]I found [Am]my way in"_s));
     }
 
     // The chart editor's cells: each word of a line with the chords on it
@@ -732,7 +732,7 @@ private slots:
     void pastingKeepsANameTheUserChose()
     {
         QVERIFY(m_doc->renameSong(0, u"Opener"_s));
-        QVERIFY(m_doc->pasteChart(0, u"Hallelujah Chords by Leonard Cohen\nC        Am\nI heard there was\n"_s));
+        QVERIFY(m_doc->pasteChart(0, u"Morning Light Chords by The Example Band\nC        Am\nI found my way in\n"_s));
         QCOMPARE(m_doc->currentSongName(), u"Opener"_s);
     }
 
@@ -797,7 +797,7 @@ private slots:
         m_doc->newSetlist();
         QVERIFY(!m_doc->canUndo()); // a new setlist starts with no history
         QVERIFY(m_doc->addSong());
-        QVERIFY(m_doc->renameSong(0, u"Hallelujah"_s));
+        QVERIFY(m_doc->renameSong(0, u"Morning Light"_s));
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
         QVERIFY(m_doc->canUndo());
         QVERIFY(m_doc->undo()); // the channel goes
@@ -808,7 +808,7 @@ private slots:
         QVERIFY(m_doc->canRedo());
         QVERIFY(m_doc->redo());
         QVERIFY(m_doc->redo());
-        QCOMPARE(m_doc->currentSongName(), u"Hallelujah"_s);
+        QCOMPARE(m_doc->currentSongName(), u"Morning Light"_s);
         QVERIFY(m_doc->canUndo()); // and back to the empty setlist, three steps down
         QVERIFY(m_doc->undo() && m_doc->undo() && m_doc->undo());
         QVERIFY(m_doc->setlist().songs.empty());
@@ -867,7 +867,7 @@ private slots:
 
         QVERIFY(QDir().mkpath(path(u"show"_s)));
         QVERIFY(m_doc->saveAs(path(u"show/set.gigchain"_s)));
-        const QString elsewhere = path(u"music/Hallelujah backing.wav"_s);
+        const QString elsewhere = path(u"music/Morning Light backing.wav"_s);
         QDir().mkpath(path(u"music"_s));
         {
             QFile file(elsewhere);
@@ -875,13 +875,13 @@ private slots:
             file.write("RIFF....WAVE");
         }
         QVERIFY(m_doc->setSongBackingTrack(0, QUrl::fromLocalFile(elsewhere)));
-        QCOMPARE(m_doc->songBackingTrack(), u"Hallelujah backing.wav"_s);
-        QVERIFY(QFileInfo::exists(path(u"show/Hallelujah backing.wav"_s))); // copied next to the setlist
-        QCOMPARE(QFileInfo(m_engine->track.path).absoluteFilePath(), QFileInfo(path(u"show/Hallelujah backing.wav"_s)).absoluteFilePath());
+        QCOMPARE(m_doc->songBackingTrack(), u"Morning Light backing.wav"_s);
+        QVERIFY(QFileInfo::exists(path(u"show/Morning Light backing.wav"_s))); // copied next to the setlist
+        QCOMPARE(QFileInfo(m_engine->track.path).absoluteFilePath(), QFileInfo(path(u"show/Morning Light backing.wav"_s)).absoluteFilePath());
         // Saved and read back with the song.
         QVERIFY(m_doc->save());
         QVERIFY(m_doc->open(path(u"show/set.gigchain"_s)));
-        QCOMPARE(m_doc->songBackingTrack(), u"Hallelujah backing.wav"_s);
+        QCOMPARE(m_doc->songBackingTrack(), u"Morning Light backing.wav"_s);
         // Removing it stops it.
         QVERIFY(m_doc->setSongBackingTrack(0, QUrl()));
         QVERIFY(m_engine->track.path.isEmpty());

@@ -45,8 +45,7 @@ rely on come before the new ideas below. First audited against the code on
 
 ## 1. Instrument toggles and song sections
 
-**First version built (2026-09-27)** — see
-`docs/superpowers/specs/2026-09-27-song-sections-design.md`. The chart's
+**First version built (2026-09-27).** The chart's
 sections (pasted `[Verse 1]`, `[Chorus]`...) show centred and large, each
 with the patch's instruments it plays (click [+] / ✕), and its length in
 bars. Play counts the bars at the song's tempo and time signature (with a
@@ -80,8 +79,7 @@ and off with one easy toggle.
 
 ## 2. Loop station
 
-**First version built (2026-09-28)**, see
-`docs/superpowers/specs/2026-09-28-loop-station-design.md`: a looper strip
+**First version built (2026-09-28):** a looper strip
 above the mixer (● record, ⟳ loop with a progress ring and bar count), one
 audio loop per channel with up to 8 layers and undo, synced to the bars or
 free (the first loop can set the tempo), loops playing on through sections
@@ -187,7 +185,7 @@ separate for this. With 7: a macOS app bundle and Linux packages.
 ## 7. Windows, macOS and Linux
 
 **The goal:** the same app on all three, then a public, free, open-source
-beta. Four pieces (design: `docs/superpowers/specs/2026-09-30-cross-platform-linux-design.md`):
+beta. Four pieces:
 
 1. **Done: the platform layer and Linux.** Everything that differs by system
    lives in per-system files (`src/platform`, and a few engine files):
@@ -200,8 +198,7 @@ beta. Four pieces (design: `docs/superpowers/specs/2026-09-30-cross-platform-lin
    with GCC 13 and passes every test that is not about Windows, with Surge XT
    as its test instrument; ASan, the fuzzers and the soak run on Linux too.
    Windows works exactly as before.
-2. **In testing: macOS** (design:
-   `docs/superpowers/specs/2026-09-30-cross-platform-mac-design.md`). The
+2. **In testing: macOS.** The
    `_mac` files (plugin windows in an NSView, sized in points; Core Audio and
    Core MIDI; `~/Library/Audio/Plug-Ins/VST3`), Apple Silicon on macOS 13+,
    built and tested on GitHub's Mac machines by hand or on a release tag

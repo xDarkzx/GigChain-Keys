@@ -38,8 +38,7 @@ namespace gigchain::engine {
 // The engine that makes sound. Main thread: applyPatch builds a RenderGraph
 // (plugins cached per channel so returning to a patch is instant) and
 // publishes it; mixer calls change atomics on the live graph. Audio thread:
-// drain MIDI, render the current graph, measure load. See
-// docs/superpowers/specs/2026-09-24-real-engine-design.md.
+// drain MIDI, render the current graph, measure load.
 class RealEngine final : public IEngine
 {
     friend class ::TestRealEngine; // unplugs the MIDI clock's output

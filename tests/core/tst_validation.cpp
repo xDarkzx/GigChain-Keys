@@ -17,7 +17,7 @@ namespace {
 Setlist sampleSetlist()
 {
     Setlist setlist;
-    Song song = makeSong(QStringLiteral("Wonderwall"));
+    Song song = makeSong(QStringLiteral("Blue Harbour"));
     Channel piano = makeChannel(QStringLiteral("Piano"));
     piano.instrument =
         PluginSlot{.pluginId = QStringLiteral("fake.grand-piano"), .displayName = QStringLiteral("Grand Piano"), .bypass = false, .state = {}};

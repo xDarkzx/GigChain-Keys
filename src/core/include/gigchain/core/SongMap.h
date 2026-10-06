@@ -24,8 +24,8 @@ struct SongStep
 };
 
 // A chart's chords in playing order: repeat marks played out, the same
-// chord twice in a row (within a section) one step, chords it cannot read
-// left out (docs/superpowers/specs/2026-09-29-chord-follow-design.md).
+// chord twice in a row (within a part) one step unless asked otherwise
+// (buildSongMap's mergeTwins), chords it cannot read left out.
 struct SongMap
 {
     std::vector<SongStep> steps;

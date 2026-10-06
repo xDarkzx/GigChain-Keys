@@ -4,7 +4,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // The Practice mode: the song's chords as notes falling onto a keyboard,
-// as the piano videos show them (docs/superpowers/specs/2026-10-04-practice-tab-design.md):
+// as the piano videos show them:
 // glowing bars, sparks and a light where they land. Listen plays them
 // through the patch; Play along lets the player play at the tempo; Wait for
 // me waits at each chord for its keys. The keyboard lights the notes to
