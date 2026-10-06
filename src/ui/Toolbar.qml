@@ -33,6 +33,7 @@ ToolBar {
     signal settingsRequested()
     signal helpRequested(string topic) // "": the page for what is on screen
     signal aboutRequested()
+    signal freeInstrumentsRequested()
 
     implicitHeight: 48
     // This bar is the window's title bar: drag it to move the window,
@@ -516,6 +517,11 @@ ToolBar {
                 StageMenuItem { text: qsTr("Keyboard shortcuts"); onTriggered: bar.helpRequested("shortcuts") }
                 StageMenuItem { text: qsTr("Troubleshooting"); onTriggered: bar.helpRequested("troubleshooting") }
                 MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+                StageMenuItem {
+                    objectName: "freeInstrumentsItem"
+                    text: qsTr("Get free instruments…")
+                    onTriggered: bar.freeInstrumentsRequested()
+                }
                 StageMenuItem { text: qsTr("About %1").arg(Branding.name); onTriggered: bar.aboutRequested() }
             }
         }

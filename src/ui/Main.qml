@@ -313,6 +313,7 @@ ApplicationWindow {
         onSettingsRequested: settingsDialog.open()
         onHelpRequested: (topic) => root.openHelp(topic)
         onAboutRequested: root.openAbout()
+        onFreeInstrumentsRequested: freeInstrumentsDialog.open()
     }
 
     HelpWindow { id: helpWindow }
@@ -320,6 +321,7 @@ ApplicationWindow {
         id: aboutDialog
         onGuideRequested: root.openHelp("")
     }
+    FreeInstrumentsDialog { id: freeInstrumentsDialog }
 
     ColumnLayout {
         anchors.fill: parent
@@ -362,7 +364,7 @@ ApplicationWindow {
                         onOpenRecentRequested: (path) => root.openRecent(path)
                         // Plugin windows sit above Qt content: hide them while a dialog is up.
                         suspended: settingsDialog.visible || unsavedDialog.visible || zoneDialog.visible || knobDialog.visible
-                                   || loopControlsDialog.visible || aboutDialog.visible
+                                   || loopControlsDialog.visible || aboutDialog.visible || freeInstrumentsDialog.visible
                     }
                     Mixer {
                         visible: root.mixerOpen

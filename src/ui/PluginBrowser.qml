@@ -57,8 +57,42 @@ Item {
             onClicked: browser.pluginModel.showAll()
         }
 
+        // No instruments installed: free ones to get, instead of an empty list.
+        Flickable {
+            id: noInstruments
+            objectName: "noInstruments"
+            visible: pluginList.count === 0 && browser.pluginModel.filterText === ""
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            contentHeight: noneColumn.implicitHeight
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar {}
+            ColumnLayout {
+                id: noneColumn
+                width: parent.width
+                spacing: Theme.spacing
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("No instruments yet")
+                    color: Theme.text
+                    font.bold: true
+                    font.pixelSize: Theme.fontSize + 2
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("%1 plays the VST3 instruments on your computer. These are free:").arg(Branding.name)
+                    color: Theme.textDim
+                    wrapMode: Text.Wrap
+                }
+                FreeInstruments { Layout.fillWidth: true }
+            }
+        }
+
         ListView {
+            id: pluginList
             objectName: "pluginList"
+            visible: !noInstruments.visible
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true

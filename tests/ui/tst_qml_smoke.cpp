@@ -1543,6 +1543,51 @@ private slots:
         QVERIFY(version->property("text").toString().contains(gigchain::branding::version()));
         shoot(u"about"_s);
         QVERIFY(QMetaObject::invokeMethod(about, "close"));
+
+        // Help > Get free instruments: each with its download page.
+        auto* menuItem = root->findChild<QObject*>(u"freeInstrumentsItem"_s);
+        QVERIFY(menuItem != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(menuItem, "triggered"));
+        auto* free = root->findChild<QObject*>(u"freeInstrumentsDialog"_s); // (a popup, not an item)
+        QVERIFY(free != nullptr);
+        QTRY_VERIFY(free->property("visible").toBool());
+        settle();
+        const QList<QQuickItem*> entries = findAll(window()->contentItem(), u"freeInstrument"_s); // (dialogs sit in the overlay, under it)
+        QStringList urls;
+        for (QQuickItem* entry : entries) {
+            if (entry->isVisible()) urls << entry->property("url").toString();
+        }
+        urls.removeDuplicates();
+        QVERIFY2(urls.size() >= 5, qPrintable(urls.join(u", "_s)));
+        QVERIFY(urls.contains(u"https://splice.com/instrument/labs-instrument"_s));
+        QVERIFY(urls.contains(u"https://surge-synthesizer.github.io/"_s));
+        for (const QString& url : urls) QVERIFY2(url.startsWith(u"https://"_s), qPrintable(url));
+        shoot(u"free-instruments"_s);
+        QVERIFY(QMetaObject::invokeMethod(free, "close"));
+    }
+
+    // No instruments installed: the Instruments panel shows free ones to
+    // get instead of an empty list; with some, the list.
+    void noInstrumentsShowsFreeOnesToGet()
+    {
+        QQuickWindow* w = window();
+        auto* tabs = m_qml->rootObjects().value(0)->findChild<QObject*>(u"sidePanelTabs"_s);
+        QVERIFY(tabs != nullptr);
+        tabs->setProperty("currentIndex", 1); // the Instruments tab
+        settle();
+        auto* none = w->findChild<QQuickItem*>(u"noInstruments"_s);
+        auto* list = w->findChild<QQuickItem*>(u"pluginList"_s);
+        QVERIFY(none != nullptr && list != nullptr);
+        QVERIFY(list->property("count").toInt() > 0); // (the demo engine has instruments)
+        QVERIFY(!none->isVisible());
+        QVERIFY(list->isVisible());
+        // A search with no match is not "none installed".
+        auto* search = w->findChild<QQuickItem*>(u"pluginSearch"_s);
+        QVERIFY(search->setProperty("text", u"zzzz no such instrument"_s));
+        settle();
+        QCOMPARE(list->property("count").toInt(), 0);
+        QVERIFY(!none->isVisible());
+        QVERIFY(search->setProperty("text", QString()));
     }
 
     // The computer keyboard plays: Space plays and stops the song, the

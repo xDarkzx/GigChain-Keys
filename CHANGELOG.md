@@ -8,6 +8,13 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Getting started
+
+- **Free instruments to get:** no instruments installed? The Instruments tab
+  (and Help > Get free instruments) lists free ones for pianos, synths and
+  pads (Splice INSTRUMENT with the LABS sounds, Surge XT, Vital, Dexed, the
+  Salamander Grand Piano), each a click from its download page.
+
 ## [0.2.1] - 2026-10-06 (alpha)
 
 ### Sounds

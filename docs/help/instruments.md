@@ -5,6 +5,23 @@ effects such as reverbs and delays. It finds the plugins installed on your
 computer by itself (on Windows in *C:\Program Files\Common Files\VST3*).
 **Settings > Plugins** shows how many were found.
 
+## No instruments yet?
+
+Free ones cover everything a keys player needs to start. **Help > Get free
+instruments** (and the Instruments tab, when it is empty) lists them, each
+with a **Get it** button to its download page:
+
+- **Splice INSTRUMENT (LABS):** pianos, pads, strings and more (free with a
+  Splice account).
+- **Surge XT:** a big synth with hundreds of pads, leads, basses and keys.
+- **Vital:** a modern synth with lush pads and leads (the free version).
+- **Dexed:** classic 80s electric pianos, bells and basses.
+- **Salamander Grand Piano:** a sampled concert grand, played in the free
+  sfizz player.
+
+Install them as their makers say (choose **VST3** when asked), then close and
+reopen GigChain Keys: it finds new instruments when it starts.
+
 ## Load an instrument
 
 Each instrument plays on its own **channel** in the mixer at the bottom of the

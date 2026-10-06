@@ -93,9 +93,20 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
 ### What you need
 
-- **Instruments:** any VST3 instruments and effects (free ones such as
-  Surge XT, Dexed or Vital work well). GigChain Keys finds them in the
-  usual VST3 folders by itself.
+- **Instruments:** any VST3 instruments and effects. GigChain Keys finds them
+  in the usual VST3 folders by itself. No instruments yet? These free ones
+  cover pianos, synths and pads:
+
+  | Instrument | What it gives you | Get it |
+  |---|---|---|
+  | **Splice INSTRUMENT** (LABS) | Pianos, pads, strings and more: Spitfire's LABS sounds. Free with a Splice account. | [splice.com](https://splice.com/instrument/labs-instrument) |
+  | **Surge XT** | A big synth: hundreds of pads, leads, basses and keys. Open source. | [surge-synthesizer.github.io](https://surge-synthesizer.github.io/) |
+  | **Vital** | A modern synth with lush pads and leads. Free version with an account. | [vital.audio](https://vital.audio/) |
+  | **Dexed** | Classic 80s electric pianos, bells and basses (a DX7). Open source. | [asb2m10.github.io/dexed](https://asb2m10.github.io/dexed/) |
+  | **Salamander Grand Piano** | A sampled concert grand, in the free sfizz player. | [sfzinstruments.github.io](https://sfzinstruments.github.io/pianos/salamander) |
+
+  The app shows the same list (Help > **Get free instruments**). They are
+  the makers' own downloads, not part of GigChain Keys.
 - **A MIDI keyboard** (USB or a MIDI interface). A sustain pedal, knobs and
   pads are used when present.
 - **An audio interface** is recommended for low latency (ASIO on Windows).
