@@ -74,6 +74,10 @@ class SettingsController : public QObject
     Q_PROPERTY(QString clockOutput READ clockOutput WRITE setClockOutput NOTIFY changed)
     Q_PROPERTY(QStringList midiOutputs READ midiOutputs NOTIFY changed)
     Q_PROPERTY(bool followClock READ followClock WRITE setFollowClock NOTIFY changed)
+    // The keyboard's Play/Stop buttons start and stop the song; a quick
+    // double press of the sustain pedal does too.
+    Q_PROPERTY(bool transportButtons READ transportButtons WRITE setTransportButtons NOTIFY changed)
+    Q_PROPERTY(bool sustainDoubleTap READ sustainDoubleTap WRITE setSustainDoubleTap NOTIFY changed)
 
 public:
     SettingsController(engine::IEngine& engine, DocumentController& document, QSettings& settings,
@@ -126,6 +130,10 @@ public:
     [[nodiscard]] QStringList midiOutputs() const { return m_midiOutputs; }
     [[nodiscard]] bool followClock() const { return m_followClock; }
     void setFollowClock(bool follow);
+    [[nodiscard]] bool transportButtons() const { return m_transportButtons; }
+    void setTransportButtons(bool on);
+    [[nodiscard]] bool sustainDoubleTap() const { return m_sustainDoubleTap; }
+    void setSustainDoubleTap(bool on);
 
     // Probes the devices (ASIO drivers can take a moment) and shows what runs now.
     Q_INVOKABLE void load();
@@ -177,6 +185,8 @@ private:
     QStringList m_midiOutputs;
     QString m_clockOutput;
     bool m_followClock = false;
+    bool m_transportButtons = true;
+    bool m_sustainDoubleTap = false;
     InputPermission m_inputPermission;
 };
 

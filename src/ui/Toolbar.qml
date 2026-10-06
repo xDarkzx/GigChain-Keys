@@ -265,12 +265,13 @@ ToolBar {
                 visible: !bar.engineStatus.chordFollowing
                 iconSource: bar.engineStatus.songPlaying ? "icons/player-stop.svg" : "icons/player-play.svg"
                 checked: bar.engineStatus.songPlaying
-                tip: bar.engineStatus.songPlaying ? qsTr("Stop the song")
-                                                  : qsTr("Play the song from the section lit in the chart: its instruments change by themselves at each section")
+                tip: bar.engineStatus.songPlaying ? qsTr("Stop the song (Space)")
+                                                  : qsTr("Play the song at its tempo along its flow (Space): its instruments change by themselves at each part. "
+                                                         + "N next part, Shift+N repeat it, H hold it, Shift+Space stop at its end")
                 onClicked: bar.engineStatus.songPlaying ? bar.doc.stopSong() : bar.doc.playSong()
             }
             Rectangle {
-                width: 170
+                width: 210
                 height: Theme.controlHeight
                 radius: Theme.radiusSmall
                 color: Theme.readoutBackground
@@ -291,6 +292,7 @@ ToolBar {
                           : parent.section === null ? ""
                           : bar.engineStatus.songCountingIn ? qsTr("Count-in…")
                           : bar.engineStatus.songPlaying ? qsTr("%1 · %2/%3").arg(parent.section.name).arg(bar.engineStatus.songBar).arg(bar.engineStatus.songBars)
+                                                           + (bar.engineStatus.songQueued !== "" ? "  " + bar.engineStatus.songQueued : "")
                           : parent.section.name
                     color: bar.engineStatus.songPlaying ? Theme.chord : Theme.readoutText
                     font.pixelSize: Theme.smallFontSize

@@ -161,6 +161,10 @@ public:
     // For "Learn": the last control pressed (a pedal down, a pad or key hit,
     // a program change) since the previous call; unset when none.
     virtual MidiTrigger takeLearnedTrigger() = 0;
+    // What the keyboard's transport buttons and the sustain pedal's double
+    // press asked since the last call (transport::k* flags; MidiSetup says
+    // which are on).
+    virtual uint32_t takeTransportRequests() = 0;
     // Stops every sound now: every plugin is reset (its voices and tails
     // cleared) and held notes are released. Instruments play again at once.
     virtual void panic() = 0;
@@ -190,9 +194,11 @@ public:
     // empty = the song has none: every channel plays. Sections worked out for
     // another patch than the one playing count as none.
     virtual void setSongSections(const SongSections& sections) = 0;
-    // Counts the song's bars at the tempo from `fromSection` (a bar of click
-    // first when `countIn`), switching sections on the way; the backing track
-    // (if any) plays along from that section's first beat.
+    // Counts the song's bars at the tempo along its parts (SongSections::parts)
+    // from `fromSection` (the part in force when it is that section, else that
+    // section's first part; -1: the first part), a bar of click first when
+    // `countIn`, switching sections on the way; the backing track (if any)
+    // plays along from that part's first beat.
     virtual void playSong(int fromSection, bool countIn) = 0;
     // Stops counting (and the backing track); the section playing stays.
     virtual void stopSong() = 0;
@@ -201,6 +207,17 @@ public:
     // As jumpToSection; chord follow goes to part `part` of the song's flow
     // (ChordFollowMap::partStarts) when that is a time `section` comes round.
     virtual void jumpToPart(int section, int part) = 0;
+    // The live controls, while the song plays (SongSections::parts: the flow).
+    // On the next bar line: the next part / part `part` (asked again: not).
+    virtual void queueNextPart() = 0;
+    virtual void queuePart(int part) = 0;
+    // When the part ends: once more (each call one more time).
+    virtual void repeatPart() = 0;
+    // The part loops until asked again.
+    virtual void toggleHoldPart() = 0;
+    // Stops at the part's end (asked again: not).
+    virtual void toggleStopAtEndOfPart() = 0;
+    virtual void cancelQueuedParts() = 0;
     [[nodiscard]] virtual SongPosition songPosition() const = 0;
 
     // ---- Chord follow (the chart follows what is played)

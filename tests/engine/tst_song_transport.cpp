@@ -52,13 +52,17 @@ struct Run
         sample += frames;
         return last;
     }
-    // Runs until the gate changes section; the absolute sample it changes at, or -1.
+    // Runs until the gate changes section (within a block, or right on a
+    // block's first sample); the absolute sample it changes at, or -1.
     int64_t sampleOfNextSwitch(int maxBlocks = 5000)
     {
+        int previous = last.gate.after;
         for (int i = 0; i < maxBlocks; ++i) {
             const int64_t start = sample;
             const auto block = step();
+            if (previous >= 0 && block.gate.before != previous) return start;
             if (block.gate.after != block.gate.before) return start + block.gate.switchAt;
+            previous = block.gate.after;
         }
         return -1;
     }
@@ -254,6 +258,130 @@ private slots:
         QCOMPARE(transport.advance(&empty, 3.0, kBlock, kQuartersPerSample).gate.before, -1);
     }
 
+    // ---- The flow: parts, a section each time it comes round.
+
+    void aTimelineOfPartsPlaysASectionTwice()
+    {
+        // Verse (2 bars), Chorus (2 bars), Chorus again.
+        const SongTimeline t = SongTimeline::fromParts({0, 1, 1, 7}, {2, 2}, 4.0, 0.25); // (section 7: none, left out)
+        QCOMPARE(t.count(), 3);
+        QCOMPARE(t.starts, (std::vector<double>{0.0, 8.0, 16.0, 24.0}));
+        QCOMPARE(t.sections, (std::vector<int>{0, 1, 1}));
+        Run run(t);
+        run.transport.play(0, false);
+        QCOMPARE(run.sampleOfNextSwitch(), int64_t{186000}); // into the chorus
+        while (run.ppq < 17.0) run.step();
+        const SongPosition at = run.transport.position();
+        QCOMPARE(at.part, 2);
+        QCOMPARE(at.section, 1); // the chorus again, without a switch
+        QCOMPARE(at.bar, 1);
+    }
+
+    // Next part: queued mid-bar, it lands on the next bar line, to the sample,
+    // the count and the track moving to the next part.
+    void nextPartLandsOnTheNextBarLine()
+    {
+        Run run(SongTimeline::fromBars({4, 2}, 4.0, 0.25)); // a verse of 4 bars
+        run.transport.play(0, false);
+        while (run.ppq < 1.0) run.step(); // in the first bar
+        run.transport.queueNext();
+        run.step();
+        QCOMPARE(run.transport.position().queuedPart, 1);
+        // The next bar line: 4 quarter notes = 96000 samples.
+        QCOMPARE(run.sampleOfNextSwitch(), int64_t{96000});
+        QCOMPARE(run.last.gate.after, 1);
+        // The count moves to the chorus's bar 1 in the block starting on (or
+        // just after) that bar line.
+        int64_t blockStart = run.sample - kBlock;
+        SongTransport::Block landed = run.last;
+        if (!landed.seekTrack) {
+            blockStart = run.sample;
+            landed = run.step();
+        }
+        QVERIFY(landed.seekTrack);
+        QVERIFY(std::abs(landed.ppq - (16.0 + (blockStart - 96000) * kQuartersPerSample)) < 1e-6); // bar 1 of the chorus
+        QCOMPARE(landed.trackQuarter, landed.ppq);
+        QCOMPARE(run.transport.position().part, 1);
+        QCOMPARE(run.transport.position().queuedPart, -1);
+    }
+
+    // Asked again before the bar line: not.
+    void aQueuedNextAskedAgainIsCancelled()
+    {
+        Run run(SongTimeline::fromBars({4, 2}, 4.0, 0.25));
+        run.transport.play(0, false);
+        run.step();
+        run.transport.queueNext();
+        run.step();
+        run.transport.queueNext();
+        run.step();
+        QCOMPARE(run.transport.position().queuedPart, -1);
+        QCOMPARE(run.sampleOfNextSwitch(), int64_t{378000}); // the verse's own end (16 quarters less a sixteenth)
+    }
+
+    // Repeat: the part plays once more; then the song goes on.
+    void aRepeatedPartPlaysOnceMore()
+    {
+        Run run = twoSections();
+        run.transport.play(0, false);
+        run.step();
+        run.transport.queueRepeat();
+        while (run.transport.position().part == 0 && run.ppq < 7.9) run.step();
+        QCOMPARE(run.transport.position().repeats, 1);
+        while (run.ppq >= 1.0 || run.sample < 200000) run.step(); // past its end: back to its start
+        QCOMPARE(run.transport.position().part, 0);
+        QCOMPARE(run.transport.position().repeats, 0);
+        QVERIFY(run.last.gate.before == 0 && run.last.gate.after == 0);
+        // Then on to the chorus: two bars later.
+        while (run.transport.position().part == 0) run.step();
+        QVERIFY2(run.sample >= 384000 && run.sample <= 384000 + 2 * kBlock, qPrintable(QString::number(run.sample)));
+    }
+
+    // Hold: the part loops until released, then the song goes on at its end.
+    void aHeldPartLoopsUntilReleased()
+    {
+        Run run = twoSections();
+        run.transport.play(0, false);
+        run.transport.toggleHold();
+        for (int i = 0; i < 2000; ++i) run.step(); // 512000 samples: past its end twice
+        QCOMPARE(run.transport.position().part, 0);
+        QVERIFY(run.transport.position().hold);
+        run.transport.toggleHold();
+        while (run.transport.position().part == 0) run.step();
+        QCOMPARE(run.transport.position().part, 1);
+        QVERIFY(!run.transport.position().hold);
+    }
+
+    // Stop at the end of the part: the count and the track stop there.
+    void stopAtTheEndOfThePart()
+    {
+        Run run = twoSections();
+        run.transport.play(0, false);
+        run.transport.toggleStopAtEnd();
+        run.step();
+        QVERIFY(run.transport.position().stopAtEnd);
+        bool trackStopped = false;
+        while (run.transport.position().playing && run.sample < 400000) trackStopped = run.step().stopTrack || trackStopped;
+        QVERIFY(trackStopped);
+        QVERIFY2(run.sample >= 192000 && run.sample <= 192000 + 2 * kBlock, qPrintable(QString::number(run.sample)));
+        QCOMPARE(run.transport.position().part, 0);
+    }
+
+    // Go to a part (a tile tapped): on the next bar line; at a part's end
+    // its sound switches early, as the song's own changes do.
+    void aPartChosenIsPlayedFromTheNextBarLine()
+    {
+        Run run(SongTimeline::fromBars({1, 1, 1}, 4.0, 0.25));
+        run.transport.play(0, false);
+        run.step();
+        run.transport.queuePart(2);
+        QCOMPARE(run.sampleOfNextSwitch(), int64_t{90000}); // the bar line is the verse's end: a sixteenth before
+        QCOMPARE(run.last.gate.after, 2);
+        while (run.transport.position().part == 0) run.step();
+        QCOMPARE(run.transport.position().part, 2);
+        QVERIFY(run.last.ppq >= 8.0 && run.last.ppq < 8.1);
+    }
+
     void advanceDoesNotAllocate()
     {
         Run run = twoSections();
@@ -263,6 +391,12 @@ private slots:
         for (int i = 0; i < 3000; ++i) run.step(); // count-in, both sections, the end
         run.transport.jump(0);
         run.step();
+        run.transport.play(0, false);
+        run.transport.queueRepeat();
+        run.transport.toggleHold();
+        run.transport.queueNext();
+        run.transport.toggleStopAtEnd();
+        for (int i = 0; i < 1000; ++i) run.step();
         t_countAllocations = false;
         QCOMPARE(g_allocations.load(), 0);
     }

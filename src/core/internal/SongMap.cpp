@@ -17,7 +17,7 @@ int sectionIndexOf(const std::vector<ChartSection>& sections, const SectionRef& 
     return it == sections.end() ? -1 : static_cast<int>(it - sections.begin());
 }
 
-SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow)
+SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow, bool mergeTwins)
 {
     const std::vector<ChartSection> sections = chartSections(chart);
     SongMap map;
@@ -119,7 +119,7 @@ SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow)
 
     // The same chord twice in a row (in one part) is one step, lit in every place.
     for (SongStep& step : played) {
-        if (!map.steps.empty() && map.steps.back().part == step.part && map.steps.back().shape == step.shape) {
+        if (mergeTwins && !map.steps.empty() && map.steps.back().part == step.part && map.steps.back().shape == step.shape) {
             auto& places = map.steps.back().places;
             const std::vector<std::pair<int, int>> earlier = places;
             std::ranges::copy_if(step.places, std::back_inserter(places),

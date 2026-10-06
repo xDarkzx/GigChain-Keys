@@ -911,6 +911,23 @@ private slots:
         engine.setSongSections(SongSections{.patch = patch.id, .sections = {}, .switchEarly = false, .unsectioned = std::nullopt});
         const auto [verseBack, chorusBack] = levelsAfter(playNote);
         QVERIFY(verseBack > 0.0F && chorusBack > 0.0F);
+
+        // The song's flow: the chorus first, then the verse. Play from the
+        // top is the chorus (its first part), and its piano plays.
+        pump(engine, 3000);
+        engine.setSongSections(SongSections{.patch = patch.id,
+                                            .sections = {{.bars = 1, .live = {verse}}, {.bars = 1, .live = {chorus}}},
+                                            .switchEarly = false,
+                                            .parts = {1, 0},
+                                            .unsectioned = std::nullopt});
+        engine.playSong(-1, false);
+        pump(engine, 100);
+        QCOMPARE(engine.songPosition().part, 0);
+        QCOMPARE(engine.songPosition().section, 1);
+        const auto [verseInChorus, chorusFirstPart] = levelsAfter(playNote);
+        QCOMPARE(verseInChorus, 0.0F);
+        QVERIFY2(chorusFirstPart > 0.0F, "the chorus's piano stayed silent in the flow's first part");
+        engine.stopSong();
     }
 
     // A setup saved on another system (ASIO on Linux, JACK on Windows): the

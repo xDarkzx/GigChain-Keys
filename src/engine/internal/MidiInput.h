@@ -25,6 +25,30 @@ namespace gigchain::engine {
 // (system messages, truncated or malformed input). Real-time safe.
 std::optional<MidiEvent> parseMidi(std::span<const unsigned char> bytes) noexcept;
 
+// The sustain pedal's presses, for "a quick double press starts or stops the
+// song": press() says whether this press came within kDoubleTapNs of the last
+// (and then starts counting afresh: a third quick press is not another).
+struct SustainTaps
+{
+    static constexpr int64_t kDoubleTapNs = 400'000'000; // 0.4 s
+    bool down = false;
+    int64_t lastPressNs = -1;
+
+    // The pedal's value changed (CC 64) at `nowNs`: whether that was the second press of a double press.
+    bool change(bool pressed, int64_t nowNs) noexcept
+    {
+        const bool newPress = pressed && !down;
+        down = pressed;
+        if (!newPress) return false;
+        if (lastPressNs >= 0 && nowNs - lastPressNs <= kDoubleTapNs) {
+            lastPressNs = -1;
+            return true;
+        }
+        lastPressNs = nowNs;
+        return false;
+    }
+};
+
 // Every MIDI input port on the machine, wrapping RtMidi. The only unit that
 // includes RtMidi. Each port has its own lock-free queue (RtMidi calls back
 // on one thread per port); the audio thread drains them all.
@@ -62,6 +86,17 @@ public:
     // Any thread: true once after a MIDI Start (the clock's source started
     // its song at bar 1).
     bool takeClockStart() { return m_clockStart.exchange(false, std::memory_order_relaxed); }
+    // Any thread: what the transport buttons and the sustain pedal asked
+    // (transport::k* flags) since the last call, when switched on.
+    uint32_t takeTransportRequests() { return m_transportRequests.exchange(0, std::memory_order_acq_rel); }
+    void setTransportControls(bool buttons, bool sustainDoubleTap)
+    {
+        m_transportButtons.store(buttons, std::memory_order_relaxed);
+        m_sustainDoubleTap.store(sustainDoubleTap, std::memory_order_relaxed);
+    }
+    // Whether `message` (RtMidi's bytes) is a transport request: its
+    // transport::k* flag, else 0. Sysex: MMC Play (deferred too) and Stop.
+    [[nodiscard]] static uint32_t transportRequestOf(const std::vector<unsigned char>& message);
 
 private:
     struct Port
@@ -75,6 +110,7 @@ private:
         // smoothed time between ticks.
         int64_t lastTickNs = 0;
         double tickSeconds = 0.0;
+        SustainTaps sustain; // (this port's thread)
     };
 
     static void callback(double timeStamp, std::vector<unsigned char>* message, void* user);
@@ -86,6 +122,9 @@ private:
     std::atomic<double> m_clockTempo{0.0};
     std::atomic<int64_t> m_lastClockNs{0};
     std::atomic<bool> m_clockStart{false};
+    std::atomic<uint32_t> m_transportRequests{0};
+    std::atomic<bool> m_transportButtons{true};
+    std::atomic<bool> m_sustainDoubleTap{false};
 };
 
 // MIDI clock: 24 ticks per quarter note.

@@ -163,10 +163,48 @@ void EngineStatus::pollTransport()
         m_song = song;
         emit songPositionChanged();
     }
-    if (const engine::ChordFollowPosition follow = m_engine.chordFollow(); follow != m_follow) {
+    // On the timeline the chart lights the chord the time has come to.
+    const int step = m_song.playing && m_document.onTimeline() ? m_document.timelineStep(m_song.part, m_song.quarter) : -1;
+    const engine::ChordFollowPosition follow = m_engine.chordFollow();
+    if (follow != m_follow || step != m_timelineStep) {
         m_follow = follow;
+        m_timelineStep = step;
         emit chordFollowChanged();
     }
+}
+
+int EngineStatus::songPlace() const
+{
+    return m_document.onTimeline() ? m_document.timelinePlace(m_song.part) : -1;
+}
+
+double EngineStatus::songProgress() const
+{
+    const int numerator = m_document.songTimeNumerator();
+    const int denominator = m_document.songTimeDenominator();
+    const double quartersPerBar = numerator > 0 && denominator > 0 ? numerator * 4.0 / denominator : 4.0;
+    if (!m_song.playing || m_song.bars <= 0) return 0.0;
+    return std::clamp(m_song.quarter / (m_song.bars * quartersPerBar), 0.0, 1.0);
+}
+
+int EngineStatus::songQueuedPlace() const
+{
+    return m_song.queuedPart >= 0 ? m_document.timelinePlace(m_song.queuedPart) : -1;
+}
+
+QString EngineStatus::songQueued() const
+{
+    if (!m_song.playing) return {};
+    if (m_song.stopAtEnd) return tr("Stop at the end");
+    if (m_song.queuedPart >= 0) {
+        const QVariantList flow = m_document.songFlow();
+        const int place = songQueuedPlace();
+        return place >= 0 && place < flow.size() ? tr("→ %1").arg(flow.at(place).toMap().value(u"label"_s).toString()) : tr("→ the end");
+    }
+    if (m_song.hold) return tr("Hold");
+    if (m_song.repeats > 1) return tr("Repeat ×%1").arg(m_song.repeats);
+    if (m_song.repeats == 1) return tr("Repeat");
+    return {};
 }
 
 std::optional<core::ChannelId> EngineStatus::channelId(int channel) const
@@ -282,7 +320,21 @@ void EngineStatus::poll()
         case engine::ControlAction::Panic: panic(); break;
         case engine::ControlAction::TapTempo: tapTempo(); break;
         case engine::ControlAction::PlayBacking: playPauseTrack(); break;
-        case engine::ControlAction::NextSection: m_document.nextSection(); break;
+        case engine::ControlAction::NextSection: m_document.nextPart(); break;
+        case engine::ControlAction::RepeatPart: m_document.repeatPart(); break;
+        case engine::ControlAction::HoldPart: m_document.holdPart(); break;
+        }
+    }
+    // The keyboard's transport buttons and the sustain pedal's double press.
+    if (const uint32_t asked = m_engine.takeTransportRequests(); asked != 0) {
+        if ((asked & engine::transport::kStop) != 0) {
+            if (songPlaying()) m_document.stopSong();
+        } else if ((asked & engine::transport::kStart) != 0) {
+            m_document.playSongFromTop();
+        } else if ((asked & engine::transport::kContinue) != 0) {
+            if (!songPlaying()) m_document.playSong();
+        } else if ((asked & engine::transport::kToggle) != 0) {
+            playPauseTrack();
         }
     }
     // A keyboard's patch buttons (Program Change).

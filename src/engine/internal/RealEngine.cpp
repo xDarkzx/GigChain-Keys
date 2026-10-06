@@ -518,6 +518,7 @@ std::vector<QString> RealEngine::applyClockSetup()
 {
     GC_ONLY_MAIN_THREAD();
     m_followClock.store(m_midiSetup.followClock, std::memory_order_relaxed);
+    m_midi.setTransportControls(m_midiSetup.transportButtons, m_midiSetup.sustainDoubleTap);
     if (m_midiSetup.clockOutput == m_clockOut.portName()) return {};
     m_clockOut.setTempo(tempo());
     if (auto opened = m_clockOut.open(m_midiSetup.clockOutput); !opened) return {opened.error().message}; // logged
@@ -1198,7 +1199,78 @@ void RealEngine::publishTimeline()
     std::ranges::transform(m_sections.sections, std::back_inserter(bars), [](const auto& s) { return s.bars; });
     // Just before the section (a sixteenth), or a whole beat early.
     const double lead = m_sections.switchEarly ? beat : 0.25;
-    m_timeline.publish(std::make_shared<SongTimeline>(SongTimeline::fromBars(bars, numerator * beat, lead)));
+    m_timeline.publish(std::make_shared<SongTimeline>(SongTimeline::fromParts(songParts(), bars, numerator * beat, lead)));
+}
+
+std::vector<int> RealEngine::songParts() const
+{
+    // The flow (parts naming no section dropped, as the timeline drops them),
+    // else each section once.
+    std::vector<int> parts;
+    const auto sections = static_cast<int>(m_sections.sections.size());
+    std::ranges::copy_if(m_sections.parts, std::back_inserter(parts), [sections](int s) { return s >= 0 && s < sections; });
+    if (parts.empty()) {
+        for (int s = 0; s < sections; ++s) parts.push_back(s);
+    }
+    return parts;
+}
+
+int RealEngine::partForSection(int section) const
+{
+    // The next time the song comes to that section (after the part in
+    // force), else its first time.
+    const std::vector<int> parts = songParts();
+    const int current = m_transport.position().part;
+    int first = -1;
+    for (int p = 0; std::cmp_less(p, parts.size()); ++p) {
+        if (parts.at(static_cast<std::size_t>(p)) != section) continue;
+        if (first < 0) first = p;
+        if (p > current) return p;
+    }
+    return first;
+}
+
+void RealEngine::queueNextPart()
+{
+    GC_ONLY_MAIN_THREAD();
+    m_transport.queueNext();
+}
+
+void RealEngine::queuePart(int part)
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto count = static_cast<int>(songParts().size());
+    if (part < 0 || part >= count) {
+        qCWarning(lcEngine) << "Go to part" << part + 1 << "ignored: the song has" << count << "parts";
+        return;
+    }
+    // Stopped: that part is where the song is (and where Play starts).
+    if (!m_transport.position().playing) m_transport.jump(part);
+    else m_transport.queuePart(part);
+}
+
+void RealEngine::repeatPart()
+{
+    GC_ONLY_MAIN_THREAD();
+    m_transport.queueRepeat();
+}
+
+void RealEngine::toggleHoldPart()
+{
+    GC_ONLY_MAIN_THREAD();
+    m_transport.toggleHold();
+}
+
+void RealEngine::toggleStopAtEndOfPart()
+{
+    GC_ONLY_MAIN_THREAD();
+    m_transport.toggleStopAtEnd();
+}
+
+void RealEngine::cancelQueuedParts()
+{
+    GC_ONLY_MAIN_THREAD();
+    m_transport.cancelQueued();
 }
 
 void RealEngine::applySectionMasks(RenderGraph& graph) const
@@ -1224,11 +1296,25 @@ void RealEngine::playSong(int fromSection, bool countIn)
 {
     GC_ONLY_MAIN_THREAD();
     const int count = static_cast<int>(m_sections.sections.size());
-    if (count == 0 || fromSection < 0 || fromSection >= count) {
+    if (count == 0 || fromSection < -1 || fromSection >= count) {
         qCWarning(lcEngine) << "Play from section" << fromSection + 1 << "ignored: the song has" << count << "sections";
         return;
     }
-    m_transport.play(fromSection, countIn);
+    if (fromSection < 0) { // from the top
+        m_transport.play(0, countIn);
+        return;
+    }
+    // From the part in force when it is that section, else that section's first time.
+    const std::vector<int> parts = songParts();
+    const int current = m_transport.position().part;
+    int from = current >= 0 && std::cmp_less(current, parts.size()) && parts.at(static_cast<std::size_t>(current)) == fromSection
+                   ? current
+                   : -1;
+    if (from < 0) {
+        const auto first = std::ranges::find(parts, fromSection);
+        from = first != parts.end() ? static_cast<int>(first - parts.begin()) : 0;
+    }
+    m_transport.play(from, countIn);
 }
 
 void RealEngine::jumpToSection(int section)
@@ -1244,7 +1330,7 @@ void RealEngine::jumpToPart(int section, int part)
         qCWarning(lcEngine) << "Jump to section" << section + 1 << "ignored: the song has" << count << "sections";
         return;
     }
-    m_transport.jump(section);
+    if (const int at = partForSection(section); at >= 0) m_transport.jump(at);
     m_follower.jumpToPart(section, part); // (ignored when not following)
 }
 

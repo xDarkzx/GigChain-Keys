@@ -61,6 +61,18 @@ then press the pedal, pad or button. Done. See [Perform mode](perform.md).
 **Follow the tempo of a MIDI clock coming in** lets a drum machine or DAW
 lead instead. See [Sections, tempo and backing tracks](sections-and-tempo.md).
 
+### Starting the song
+
+- **My keyboard's Play and Stop buttons start and stop the song** (on): the
+  transport buttons many keyboards have (they send MIDI Start/Stop or MMC).
+  Play starts the song from the top; Stop stops it. Switch it off if your
+  keyboard sends Start for its own arpeggiator.
+- **Pressing the sustain pedal twice quickly starts and stops the song**
+  (off): two presses within 0.4 s. Each press still sustains.
+
+Pedals and pads can also learn **Next part of the song**, **Repeat this part
+once more** and **Hold this part**.
+
 ## Check it works
 
 Load an instrument (see [Instruments and effects](instruments.md)) and

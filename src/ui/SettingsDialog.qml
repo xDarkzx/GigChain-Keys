@@ -314,6 +314,24 @@ StageDialog {
                             focusPolicy: Qt.NoFocus
                         }
 
+                        SettingsSection { title: qsTr("Starting the song") }
+                        CheckBox {
+                            objectName: "transportButtons"
+                            Layout.leftMargin: 14
+                            text: qsTr("My keyboard's Play and Stop buttons start and stop the song")
+                            checked: dialog.settings.transportButtons
+                            onToggled: dialog.settings.transportButtons = checked
+                            focusPolicy: Qt.NoFocus
+                        }
+                        CheckBox {
+                            objectName: "sustainDoubleTap"
+                            Layout.leftMargin: 14
+                            text: qsTr("Pressing the sustain pedal twice quickly starts and stops the song (it still sustains)")
+                            checked: dialog.settings.sustainDoubleTap
+                            onToggled: dialog.settings.sustainDoubleTap = checked
+                            focusPolicy: Qt.NoFocus
+                        }
+
                         SettingsSection { title: qsTr("Pedals and pads") }
                         Label {
                             Layout.leftMargin: 20

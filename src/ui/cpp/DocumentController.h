@@ -253,7 +253,22 @@ public:
     Q_INVOKABLE bool setSongFollowChords(int song, bool on);
     // Chord follow: whether this song follows its chords now, its first chord,
     // "Chorus · chord 2 of 8" for a step, and the chartLines() index of its line.
-    [[nodiscard]] bool following() const { return m_songMap.followable(); }
+    [[nodiscard]] bool following() const;
+    // ---- The song's timeline (it runs at its tempo along its flow)
+    // Whether the current song moves by its timeline (not by the chords played).
+    [[nodiscard]] bool onTimeline() const;
+    // Timeline part `part`'s place in songFlow() (-1: none).
+    Q_INVOKABLE int timelinePlace(int part) const;
+    // The chord lit `quarter` quarter notes into timeline part `part` (a
+    // step of the chart's chords, as followLine() takes); -1: none yet.
+    Q_INVOKABLE int timelineStep(int part, double quarter) const;
+    // The live controls: on the next bar line, or at the part's end.
+    Q_INVOKABLE void nextPart();
+    Q_INVOKABLE void repeatPart();
+    Q_INVOKABLE void holdPart();
+    Q_INVOKABLE void stopAtEndOfPart();
+    // Play from the song's first part.
+    Q_INVOKABLE void playSongFromTop();
     [[nodiscard]] QString followFirstChord() const;
     Q_INVOKABLE QString followLabel(int step) const;
     Q_INVOKABLE int followLine(int step) const;
@@ -365,6 +380,7 @@ private:
     void applySectionsToEngine();
     // What each section (and a song without sections) plays, for the engine.
     [[nodiscard]] engine::SongSections songSections() const;
+    [[nodiscard]] std::vector<int> timelinePlaces() const;
     // The selected channel's id (one-at-a-time sounds play it).
     [[nodiscard]] std::optional<core::ChannelId> selectedChannelId() const;
     // The channels a section of the current song plays in the current
@@ -379,6 +395,9 @@ private:
     core::SongMap m_songMap; // the current song's chords, when it follows them
     bool m_followTooLong = false; // its chart has too many chords (or sections) to follow (said once)
     std::vector<int> m_followLines;            // per step: its chartLines() index
+    std::vector<int> m_timelinePlaces;         // per timeline part: its place in songFlow()
+    // Per timeline part: its chords, (quarter notes into the part, step).
+    std::vector<std::vector<std::pair<double, int>>> m_timelineSteps;
     std::vector<QString> m_followSectionNames; // per chart section: its name
     [[nodiscard]] const core::Song* currentSong() const;
     // Undo: the setlist as it was before each edit. Called whenever an edit

@@ -21,6 +21,11 @@ struct MidiSetup
     // the tempo follows a clock coming in (a drum machine or DAW leads).
     QString clockOutput;
     bool followClock = false;
+    // The keyboard's transport buttons (MIDI Start / Continue / Stop, MMC
+    // Play / Stop) start and stop the song; a quick double press of the
+    // sustain pedal does too (its presses still sustain).
+    bool transportButtons = true;
+    bool sustainDoubleTap = false;
 
     bool operator==(const MidiSetup&) const = default;
 };

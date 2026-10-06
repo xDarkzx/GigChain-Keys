@@ -95,7 +95,13 @@ private slots:
         QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::PlayBacking)).toMap().value(u"label"_s).toString(),
                  u"Song / backing track: play / stop"_s);
         QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::NextSection)).toMap().value(u"label"_s).toString(),
-                 u"Next section"_s);
+                 u"Next part of the song (on the next bar)"_s);
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::RepeatPart)).toMap().value(u"label"_s).toString(),
+                 u"Repeat this part once more"_s);
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::HoldPart)).toMap().value(u"label"_s).toString(),
+                 u"Hold this part (loops until pressed again)"_s);
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::NextPatch)).toMap().value(u"label"_s).toString(),
+                 u"Next sound"_s);
         // Learnable like the others, and kept.
         settings.learnControl(static_cast<int>(engine::ControlAction::NextSection));
         QCOMPARE(settings.learning(), static_cast<int>(engine::ControlAction::NextSection));

@@ -152,8 +152,10 @@ Rectangle {
                     visible: count > 0
                     spacing: Theme.spacing
                     readonly property int count: perform.doc.songFlow.length
-                    // Following chords: the exact part; else every part of the section in force.
-                    readonly property int playingPart: perform.engineStatus.chordStarted
+                    // On the timeline (playing, or stopped at a part): that part. Following
+                    // chords: the exact part; else every part of the section in force.
+                    readonly property int playingPart: perform.engineStatus.songPlace >= 0 ? perform.engineStatus.songPlace
+                                                     : perform.engineStatus.chordStarted
                                                        ? perform.doc.followPart(perform.engineStatus.chordStep) : -1
                     // A tile tapped: that very part of the flow.
                     function choose(place) { perform.doc.selectFlowPart(place) }
@@ -171,6 +173,29 @@ Rectangle {
                             checked: parts.playingPart >= 0 ? part.index === parts.playingPart
                                                             : part.modelData.section === perform.engineStatus.songSection
                             onClicked: parts.choose(part.index)
+                            // Playing: how far through the part (a bar along its foot).
+                            Rectangle {
+                                objectName: "performPartProgress"
+                                visible: part.checked && perform.engineStatus.songPlaying
+                                anchors.left: parent.left
+                                anchors.bottom: parent.bottom
+                                anchors.margins: 3
+                                height: 3
+                                radius: 1.5
+                                width: (parent.width - 6) * perform.engineStatus.songProgress
+                                color: Theme.text
+                                opacity: 0.85
+                            }
+                            // Queued for the next bar line: outlined.
+                            Rectangle {
+                                objectName: "performPartQueued"
+                                visible: perform.engineStatus.songQueuedPlace === part.index
+                                anchors.fill: parent
+                                color: "transparent"
+                                radius: Theme.radiusCard
+                                border.color: Theme.chord
+                                border.width: 2
+                            }
                         }
                     }
                 }

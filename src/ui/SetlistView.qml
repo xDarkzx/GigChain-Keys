@@ -266,7 +266,7 @@ Item {
                 id: followBox
                 objectName: "songFollowChordsBox"
                 Layout.leftMargin: Theme.spacing
-                text: qsTr("Sections follow the chords I play (off: they follow the tempo)")
+                text: qsTr("Follow the chords I play (a free-time song). Off: Play runs the song at its tempo along its flow")
                 focusPolicy: Qt.NoFocus
             }
             Label {

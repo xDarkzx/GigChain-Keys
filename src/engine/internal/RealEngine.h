@@ -74,6 +74,7 @@ public:
     std::vector<ControlAction> takeControlActions() override;
     int takeProgramChange() override;
     MidiTrigger takeLearnedTrigger() override;
+    uint32_t takeTransportRequests() override { return m_midi.takeTransportRequests(); }
     void panic() override;
     void setMasterEffects(const std::vector<core::PluginSlot>& effects) override;
     std::vector<QString> storeMasterEffectStates(std::vector<core::PluginSlot>& effects) override;
@@ -104,6 +105,12 @@ public:
     void stopSong() override { m_transport.stop(); }
     void jumpToSection(int section) override;
     void jumpToPart(int section, int part) override;
+    void queueNextPart() override;
+    void queuePart(int part) override;
+    void repeatPart() override;
+    void toggleHoldPart() override;
+    void toggleStopAtEndOfPart() override;
+    void cancelQueuedParts() override;
     [[nodiscard]] SongPosition songPosition() const override;
     core::Result<void> setChordFollow(const ChordFollowMap& map) override;
     [[nodiscard]] ChordFollowPosition chordFollow() const override { return m_follower.position(); }
@@ -181,6 +188,10 @@ private:
     // Main thread: the song's sections as a timeline for the audio thread,
     // from m_sections and the time signature.
     void publishTimeline();
+    // The song's parts (each a section), in playing order: the flow, else each section once.
+    [[nodiscard]] std::vector<int> songParts() const;
+    // The part a section is reached at: its next time after the part in force, else its first.
+    [[nodiscard]] int partForSection(int section) const;
     // Main thread: which sections each strip of `graph` plays in (all, when
     // the sections were worked out for another patch).
     void applySectionMasks(RenderGraph& graph) const;

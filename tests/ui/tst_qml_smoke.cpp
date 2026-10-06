@@ -751,13 +751,14 @@ private slots:
         QTest::keyClick(w, Qt::Key_Return);
         QTRY_COMPARE(doc.currentSections().at(0).toMap().value(u"bars"_s).toInt(), 8);
 
-        // Following the chords (the default), there is no Play: the first chord starts.
+        // Following the chords (a free-time song), there is no Play: the first chord starts.
+        QVERIFY(doc.setSongFollowChords(0, true));
         auto* play = w->findChild<QQuickItem*>(u"songPlayButton"_s);
         QVERIFY(play != nullptr);
         QTRY_VERIFY(!play->isVisible());
         QTRY_COMPARE(w->findChild<QQuickItem*>(u"songWhere"_s)->property("text").toString(), u"Play C to start"_s);
-        // By the tempo: Play counts the bars, the toolbar shows where the
-        // song is, the chart lights the section.
+        // On its timeline (the default): Play counts the bars, the toolbar
+        // shows where the song is, the chart lights the section.
         QVERIFY(doc.setSongFollowChords(0, false));
         QTRY_VERIFY(play->isVisible() && play->width() > 0);
         settle(); // (the toolbar laid out again with Play in it)
@@ -1699,6 +1700,7 @@ private slots:
         QVERIFY(QTest::qWaitForWindowExposed(w));
         ui::DocumentController& doc = m_session->document();
         QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
+        QVERIFY(doc.setSongFollowChords(0, true));
         QVERIFY(doc.setSongChart(0, u"{c: Verse}\n[Am]words [F]more\n{c: Chorus}\n[C]la [G]la\n"_s));
         auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
         QVERIFY(tabs != nullptr);

@@ -40,6 +40,8 @@ public:
     int takeProgramChange() override { return std::exchange(pendingProgram, -1); }
     engine::MidiTrigger learned;
     engine::MidiTrigger takeLearnedTrigger() override { return std::exchange(learned, {}); }
+    uint32_t transportRequests = 0; // what the next poll takes (transport::k*)
+    uint32_t takeTransportRequests() override { return std::exchange(transportRequests, 0U); }
     int panics = 0;
     void panic() override { ++panics; }
     int storeCount = 0;
@@ -262,8 +264,9 @@ public:
     void playSong(int fromSection, bool countIn) override
     {
         played = {fromSection, countIn};
-        position = {.playing = true, .countingIn = countIn, .section = fromSection, .bar = countIn ? 0 : 1,
-                    .bars = sections.sections.at(static_cast<std::size_t>(fromSection)).bars};
+        const int section = std::max(fromSection, 0); // (-1: the top)
+        position = {.playing = true, .countingIn = countIn, .section = section, .bar = countIn ? 0 : 1,
+                    .bars = sections.sections.at(static_cast<std::size_t>(section)).bars, .part = section};
     }
     int stops = 0;
     void stopSong() override
@@ -278,6 +281,13 @@ public:
         jumpParts.push_back(-1);
         position.section = section;
     }
+    std::vector<QString> liveControls; // "next", "part 2", "repeat", "hold", "stop", "cancel", in order
+    void queueNextPart() override { liveControls.push_back(QStringLiteral("next")); }
+    void queuePart(int part) override { liveControls.push_back(QStringLiteral("part %1").arg(part)); }
+    void repeatPart() override { liveControls.push_back(QStringLiteral("repeat")); }
+    void toggleHoldPart() override { liveControls.push_back(QStringLiteral("hold")); }
+    void toggleStopAtEndOfPart() override { liveControls.push_back(QStringLiteral("stop")); }
+    void cancelQueuedParts() override { liveControls.push_back(QStringLiteral("cancel")); }
     std::vector<int> jumpParts; // per jump: the flow part asked (-1: a plain section jump)
     void jumpToPart(int section, int part) override
     {

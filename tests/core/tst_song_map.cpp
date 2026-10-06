@@ -110,6 +110,10 @@ private slots:
         const SongMap map = buildSongMap(parseChordPro(u"[C]Hello [C]world [G]now [C]then [C/E]bass moves\n"_s));
         QCOMPARE(names(map), (QStringList{u"C"_s, u"G"_s, u"C"_s, u"C/E"_s}));
         QCOMPARE(map.steps.at(0).places, (Places{{0, 0}, {0, 1}})); // lit in both places
+        // For the timeline: each is its own step, lit in its own place.
+        const SongMap timed = buildSongMap(parseChordPro(u"[C]Hello [C]world [G]now\n"_s), {}, false);
+        QCOMPARE(names(timed), (QStringList{u"C"_s, u"C"_s, u"G"_s}));
+        QCOMPARE(timed.steps.at(1).places, (Places{{0, 1}}));
     }
 
     void aSectionsFirstChordIsNeverMergedIntoThePrevious()

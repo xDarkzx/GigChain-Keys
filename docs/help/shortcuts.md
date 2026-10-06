@@ -27,7 +27,10 @@ The single letters (Space, N, T, C, M, P, R, L) are the same on both.
 | **Space** | Play or stop the song: its sections' count and its backing track (in Practice: play or pause) |
 | **→** / **←** | Next / previous sound (then the next song) |
 | **↓** / **↑**, or **Page Down** / **Page Up** | Next / previous song |
-| **N** | On to the next section now |
+| **N** | The next part (playing: on the next bar line) |
+| **Shift+N** | Repeat this part once more |
+| **H** | Hold this part (loops until pressed again) |
+| **Shift+Space** | Stop at the end of this part |
 | **T** | Tap tempo: tap a few times in time |
 | **C** | Click on or off |
 | **M** | Mute everything, or unmute |

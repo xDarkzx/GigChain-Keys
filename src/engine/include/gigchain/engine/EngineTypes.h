@@ -132,6 +132,9 @@ struct SongSections
     core::PatchId patch; // the patch `live` was worked out for
     std::vector<Section> sections;
     bool switchEarly = false; // a beat before each section instead of a sixteenth
+    // The flow: each part's section, in playing order (a chorus played twice
+    // is listed twice); empty: each section once, in order.
+    std::vector<int> parts;
     // What plays outside any section (a song without sections): nullopt =
     // every channel; else only these (a sound playing one channel at a time).
     std::optional<std::vector<core::ChannelId>> unsectioned;
@@ -139,14 +142,32 @@ struct SongSections
     bool operator==(const SongSections&) const = default;
 };
 
+// What the keyboard asked of the song since the last look
+// (IEngine::takeTransportRequests): flags.
+namespace transport {
+inline constexpr uint32_t kStart = 1;    // MIDI Start, MMC Play: from the top
+inline constexpr uint32_t kContinue = 2; // MIDI Continue: from where it is
+inline constexpr uint32_t kStop = 4;     // MIDI Stop, MMC Stop
+inline constexpr uint32_t kToggle = 8;   // a double press of the sustain pedal: play or stop
+} // namespace transport
+
 // Where the song is (IEngine::songPosition).
 struct SongPosition
 {
     bool playing = false;
     bool countingIn = false;
     int section = -1; // in force; -1 = the song has no sections
-    int bar = 0;      // 1-based within the section; 0 while stopped or counting in
-    int bars = 0;     // the section's length
+    int bar = 0;      // 1-based within the part; 0 while stopped or counting in
+    int bars = 0;     // the part's length
+    // The song's timeline (its flow): the part in force (-1: none), and how
+    // far into it the count is, in quarter notes.
+    int part = -1;
+    double quarter = 0.0;
+    // Queued for the next bar line or the part's end (the live controls).
+    int queuedPart = -1; // Next part / Go to part: where; -1 = none
+    int repeats = 0;     // Repeat part: times more
+    bool hold = false;   // Hold: loops until released
+    bool stopAtEnd = false;
 
     bool operator==(const SongPosition&) const = default;
 };

@@ -205,10 +205,10 @@ private slots:
     void followingChordsIsSetPerSong()
     {
         Setlist s = abc();
+        QVERIFY(!s.songs.at(0).followChords); // new songs run on their timeline
+        QVERIFY(setSongFollowChords(s, 0, true).has_value());
         QVERIFY(s.songs.at(0).followChords);
-        QVERIFY(setSongFollowChords(s, 0, false).has_value());
-        QVERIFY(!s.songs.at(0).followChords);
-        QVERIFY(s.songs.at(1).followChords);
+        QVERIFY(!s.songs.at(1).followChords);
         QVERIFY(setSongFollowChords(s, 5, false).error().code == ErrorCode::OutOfRange);
     }
 

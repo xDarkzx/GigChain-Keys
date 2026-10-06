@@ -246,7 +246,11 @@ ApplicationWindow {
     Shortcut { sequence: "Left"; enabled: root.keysFree; onActivated: root.doc.previousPatch() }
     Shortcut { sequences: ["Down", "PgDown"]; enabled: root.keysFree; onActivated: root.doc.nextSong() }
     Shortcut { sequences: ["Up", "PgUp"]; enabled: root.keysFree; onActivated: root.doc.previousSong() }
-    Shortcut { sequence: "N"; enabled: root.keysFree && !root.practiceMode; onActivated: root.doc.nextSection() }
+    // The song's live controls (on the next bar line, or at the part's end).
+    Shortcut { sequence: "N"; enabled: root.keysFree && !root.practiceMode; onActivated: root.doc.nextPart() }
+    Shortcut { sequence: "Shift+N"; enabled: root.keysFree && !root.practiceMode; onActivated: root.doc.repeatPart() }
+    Shortcut { sequence: "H"; enabled: root.keysFree && !root.practiceMode; onActivated: root.doc.holdPart() }
+    Shortcut { sequence: "Shift+Space"; enabled: root.keysFree && !root.practiceMode; onActivated: root.doc.stopAtEndOfPart() }
     Shortcut { sequence: "T"; enabled: root.keysFree; onActivated: root.engineStatus.tapTempo() }
     Shortcut { sequence: "C"; enabled: root.keysFree; onActivated: root.engineStatus.clickOn = !root.engineStatus.clickOn }
     Shortcut { sequence: "M"; enabled: root.keysFree; onActivated: root.engineStatus.masterMuted = !root.engineStatus.masterMuted }

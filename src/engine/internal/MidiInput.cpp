@@ -21,7 +21,35 @@ namespace {
 
 RepeatedWarning s_listing; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables): the listing's last failure, for listPorts (static)
 
+int64_t nowNs()
+{
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
 } // namespace
+
+uint32_t MidiInput::transportRequestOf(const std::vector<unsigned char>& message)
+{
+    if (message.empty()) return 0;
+    switch (message.front()) {
+    case 0xFA: return transport::kStart;
+    case 0xFB: return transport::kContinue;
+    case 0xFC: return transport::kStop;
+    default: break;
+    }
+    // MMC: F0 7F <device> 06 <command> F7; Stop 01, Play 02, Deferred Play 03.
+    constexpr std::size_t kMmcLength = 6;
+    if (message.size() == kMmcLength && message.at(0) == 0xF0 && message.at(1) == 0x7F && message.at(3) == 0x06 &&
+        message.at(5) == 0xF7) {
+        switch (message.at(4)) {
+        case 0x01: return transport::kStop;
+        case 0x02:
+        case 0x03: return transport::kStart;
+        default: break;
+        }
+    }
+    return 0;
+}
 
 std::optional<MidiEvent> parseMidi(std::span<const unsigned char> bytes) noexcept
 {
@@ -100,7 +128,8 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
                 },
                 port.get());
             port->in->openPort(static_cast<unsigned int>(i), branding::name().toStdString());
-            port->in->ignoreTypes(true, false, true); // sysex and active sensing; timing (MIDI clock) is read
+            // Active sensing ignored; timing (MIDI clock) and sysex (MMC Play/Stop) are read.
+            port->in->ignoreTypes(false, false, true);
             port->in->setCallback(&MidiInput::callback, port.get());
         } catch (const std::exception& e) {
             notices.push_back(u"Could not open MIDI input %1: %2"_s.arg(name, QString::fromUtf8(e.what())));
@@ -150,31 +179,34 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
 {
     auto* port = static_cast<Port*>(user);
     if (message == nullptr) return;
+    MidiInput& owner = *port->owner;
     if (!message->empty()) {
+        // The keyboard's transport buttons (when they start the song).
+        if (const uint32_t request = transportRequestOf(*message); request != 0) {
+            if (message->front() == 0xFA) owner.m_clockStart.store(true, std::memory_order_relaxed); // (a clock's bar 1)
+            if (owner.m_transportButtons.load(std::memory_order_relaxed)) {
+                owner.m_transportRequests.fetch_or(request, std::memory_order_acq_rel);
+            }
+            return;
+        }
         switch (message->front()) {
-        case 0xF8: port->owner->onClockTick(*port); return; // MIDI clock
-        case 0xFA: port->owner->m_clockStart.store(true, std::memory_order_relaxed); return; // Start
-        case 0xFB:                                                                          // Continue
-        case 0xFC: return;                                                                  // Stop
+        case 0xF8: owner.onClockTick(*port); return; // MIDI clock
+        case 0xF0: return;                          // other sysex: not for us
         default: break;
         }
     }
     const auto event = parseMidi(*message);
     if (!event || !passesChannelFilter(event->status, port->channel)) return;
+    // The sustain pedal pressed twice quickly: play or stop (it still sustains).
+    if ((event->status & 0xF0) == 0xB0 && event->data1 == 64 &&
+        port->sustain.change(event->data2 >= 64, nowNs()) && owner.m_sustainDoubleTap.load(std::memory_order_relaxed)) {
+        owner.m_transportRequests.fetch_or(transport::kToggle, std::memory_order_acq_rel);
+    }
     if ((event->status & 0xF0) == 0x90 && event->data2 > 0) {
         port->owner->m_activity.store(true, std::memory_order_relaxed);
     }
     if (!port->queue.push(*event)) port->owner->m_dropped.fetch_add(1, std::memory_order_relaxed);
 }
-
-namespace {
-
-int64_t nowNs()
-{
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-}
-
-} // namespace
 
 void MidiInput::onClockTick(Port& port)
 {

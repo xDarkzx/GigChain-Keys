@@ -162,6 +162,42 @@ private slots:
         QVERIFY(!parseMidi(std::vector<unsigned char>{0x90, 200, 100}).has_value()); // data byte > 127
     }
 
+    // The keyboard's transport buttons: MIDI Start / Continue / Stop and
+    // MMC Play / Stop (any device id); other sysex is not one.
+    void transportButtonsAreRecognised()
+    {
+        using V = std::vector<unsigned char>;
+        QCOMPARE(MidiInput::transportRequestOf(V{0xFA}), transport::kStart);
+        QCOMPARE(MidiInput::transportRequestOf(V{0xFB}), transport::kContinue);
+        QCOMPARE(MidiInput::transportRequestOf(V{0xFC}), transport::kStop);
+        QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x7F, 0x06, 0x02, 0xF7}), transport::kStart); // MMC Play
+        QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x10, 0x06, 0x03, 0xF7}), transport::kStart); // deferred play
+        QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x00, 0x06, 0x01, 0xF7}), transport::kStop);
+        QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x7F, 0x06, 0x04, 0xF7}), 0U); // fast forward: not ours
+        QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x43, 0x10, 0x4C, 0x00, 0xF7}), 0U); // a synth's own sysex
+        QCOMPARE(MidiInput::transportRequestOf(V{0xF8}), 0U);                             // clock
+        QCOMPARE(MidiInput::transportRequestOf(V{0x90, 60, 100}), 0U);
+        QCOMPARE(MidiInput::transportRequestOf(V{}), 0U);
+    }
+
+    // The sustain pedal pressed twice within 0.4 s is a double press; slower
+    // is not; a held pedal's repeated values are not presses.
+    void aQuickDoubleSustainPressIsSeen()
+    {
+        constexpr int64_t ms = 1'000'000;
+        SustainTaps taps;
+        QVERIFY(!taps.change(true, 0));
+        QVERIFY(!taps.change(true, 50 * ms)); // still down (a half-pedal value): not a press
+        QVERIFY(!taps.change(false, 100 * ms));
+        QVERIFY(taps.change(true, 300 * ms)); // the second press, 0.3 s after the first
+        QVERIFY(!taps.change(false, 350 * ms));
+        QVERIFY(!taps.change(true, 500 * ms)); // a third quick press starts afresh
+        QVERIFY(!taps.change(false, 600 * ms));
+        QVERIFY(!taps.change(true, 1200 * ms)); // 0.7 s later: too slow
+        QVERIFY(!taps.change(false, 1300 * ms));
+        QVERIFY(taps.change(true, 1500 * ms));
+    }
+
     void listingAndOpeningNeverThrow()
     {
         const QStringList ports = MidiInput::listPorts();

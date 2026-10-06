@@ -20,6 +20,7 @@ public:
     std::vector<ControlAction> takeControlActions() override { return {}; }
     int takeProgramChange() override { return -1; } // no MIDI input
     MidiTrigger takeLearnedTrigger() override { return {}; }
+    uint32_t takeTransportRequests() override { return 0; }
     void panic() override {}
     [[nodiscard]] QStringList blockedPlugins() const override { return {}; }
     void unblockPlugin(const QString&) override {}
@@ -110,9 +111,11 @@ public:
     }
     void playSong(int fromSection, bool) override
     {
-        if (fromSection < 0 || std::cmp_greater_equal(fromSection, m_sections.sections.size())) return;
+        fromSection = std::max(fromSection, 0); // (-1: the top)
+        if (std::cmp_greater_equal(fromSection, m_sections.sections.size())) return;
         m_position = SongPosition{.playing = true, .countingIn = false, .section = fromSection, .bar = 1,
-                                  .bars = m_sections.sections.at(static_cast<std::size_t>(fromSection)).bars};
+                                  .bars = m_sections.sections.at(static_cast<std::size_t>(fromSection)).bars,
+                                  .part = fromSection};
     }
     void stopSong() override
     {
@@ -127,6 +130,29 @@ public:
         m_position.bar = m_position.playing ? 1 : 0;
     }
     void jumpToPart(int section, int) override { jumpToSection(section); }
+    // (No count runs here: what is queued is only shown.)
+    void queueNextPart() override { m_position.queuedPart = m_position.queuedPart >= 0 ? -1 : m_position.part + 1; }
+    void queuePart(int part) override
+    {
+        // Stopped: that part is where the song is (its section, the parts' order or the sections').
+        if (!m_position.playing) {
+            const bool listed = part >= 0 && std::cmp_less(part, m_sections.parts.size());
+            jumpToSection(listed ? m_sections.parts.at(static_cast<std::size_t>(part)) : part);
+            m_position.part = part;
+            return;
+        }
+        m_position.queuedPart = m_position.queuedPart == part ? -1 : part;
+    }
+    void repeatPart() override { ++m_position.repeats; }
+    void toggleHoldPart() override { m_position.hold = !m_position.hold; }
+    void toggleStopAtEndOfPart() override { m_position.stopAtEnd = !m_position.stopAtEnd; }
+    void cancelQueuedParts() override
+    {
+        m_position.queuedPart = -1;
+        m_position.repeats = 0;
+        m_position.hold = false;
+        m_position.stopAtEnd = false;
+    }
     [[nodiscard]] SongPosition songPosition() const override { return m_position; }
     core::Result<void> setChordFollow(const ChordFollowMap& map) override
     {

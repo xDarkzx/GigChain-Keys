@@ -35,6 +35,8 @@ const QString kControlsKey = u"midi/controls"_s; // one packed trigger per actio
 const QString kInputDeviceKey = u"audio/inputDevice"_s;
 const QString kClockOutputKey = u"midi/clockOutput"_s;
 const QString kFollowClockKey = u"midi/followClock"_s;
+const QString kTransportButtonsKey = u"midi/transportButtons"_s;
+const QString kSustainDoubleTapKey = u"midi/sustainDoubleTap"_s;
 // 2: MIDI port names without RtMidi's place number (see engine::portNames).
 const QString kMidiNamesKey = u"midi/names"_s;
 constexpr int kMidiNames = 2;
@@ -116,6 +118,8 @@ engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
     options.audio.inputDevice = settings.value(kInputDeviceKey).toString();
     options.midi.clockOutput = settings.value(kClockOutputKey).toString();
     options.midi.followClock = settings.value(kFollowClockKey, false).toBool();
+    options.midi.transportButtons = settings.value(kTransportButtonsKey, true).toBool();
+    options.midi.sustainDoubleTap = settings.value(kSustainDoubleTapKey, false).toBool();
     options.midi.configured = settings.value(kMidiConfiguredKey, false).toBool();
     options.midi.enabled = settings.value(kMidiEnabledKey).toStringList();
     const QVariantMap channels = settings.value(kMidiChannelsKey).toMap();
@@ -137,6 +141,8 @@ void SettingsController::saveMidi(QSettings& settings, const engine::MidiSetup& 
     settings.setValue(kMidiChannelsKey, channels);
     settings.setValue(kClockOutputKey, midi.clockOutput);
     settings.setValue(kFollowClockKey, midi.followClock);
+    settings.setValue(kTransportButtonsKey, midi.transportButtons);
+    settings.setValue(kSustainDoubleTapKey, midi.sustainDoubleTap);
     settings.setValue(kMidiNamesKey, kMidiNames);
 }
 
@@ -158,6 +164,8 @@ void SettingsController::load()
     m_midiOutputs = m_engine.midiOutputs();
     m_clockOutput = m_engine.midiSetup().clockOutput;
     m_followClock = m_engine.midiSetup().followClock;
+    m_transportButtons = m_engine.midiSetup().transportButtons;
+    m_sustainDoubleTap = m_engine.midiSetup().sustainDoubleTap;
     keepRateValid();
     emit changed();
 }
@@ -194,6 +202,22 @@ void SettingsController::setFollowClock(bool follow)
     emit changed();
 }
 
+void SettingsController::setTransportButtons(bool on)
+{
+    if (on == m_transportButtons) return;
+    m_transportButtons = on;
+    m_midiTouched = true;
+    emit changed();
+}
+
+void SettingsController::setSustainDoubleTap(bool on)
+{
+    if (on == m_sustainDoubleTap) return;
+    m_sustainDoubleTap = on;
+    m_midiTouched = true;
+    emit changed();
+}
+
 void SettingsController::setLimiterEnabled(bool on)
 {
     if (m_limiterOn == on) return;
@@ -213,9 +237,16 @@ void SettingsController::setLimiterCeilingDb(double ceilingDb)
 QVariantList SettingsController::controls() const
 {
     static constexpr std::array<const char*, engine::kControlActionCount> kLabels{
-        QT_TR_NOOP("Next song"),     QT_TR_NOOP("Previous song"), QT_TR_NOOP("Next part"),
-        QT_TR_NOOP("Previous part"), QT_TR_NOOP("Panic (stop all sound)"), QT_TR_NOOP("Tap tempo"),
-        QT_TR_NOOP("Song / backing track: play / stop"), QT_TR_NOOP("Next section")};
+        QT_TR_NOOP("Next song"),
+        QT_TR_NOOP("Previous song"),
+        QT_TR_NOOP("Next sound"),
+        QT_TR_NOOP("Previous sound"),
+        QT_TR_NOOP("Panic (stop all sound)"),
+        QT_TR_NOOP("Tap tempo"),
+        QT_TR_NOOP("Song / backing track: play / stop"),
+        QT_TR_NOOP("Next part of the song (on the next bar)"),
+        QT_TR_NOOP("Repeat this part once more"),
+        QT_TR_NOOP("Hold this part (loops until pressed again)")};
     QVariantList list;
     for (int i = 0; i < engine::kControlActionCount; ++i) {
         const engine::MidiTrigger& trigger = m_controls.at(static_cast<std::size_t>(i));
@@ -456,6 +487,8 @@ engine::MidiSetup SettingsController::pendingMidi() const
     setup.configured = true;
     setup.clockOutput = m_clockOutput;
     setup.followClock = m_followClock;
+    setup.transportButtons = m_transportButtons;
+    setup.sustainDoubleTap = m_sustainDoubleTap;
     for (const auto& port : m_midi) {
         // Inputs not plugged in now keep their saved choice.
         setup.enabled.removeAll(port.name);
@@ -478,6 +511,8 @@ void SettingsController::resetToDefaults()
     m_pending.inputDevice.clear();
     m_clockOutput.clear();
     m_followClock = false;
+    m_transportButtons = true;
+    m_sustainDoubleTap = false;
     keepRateValid();
     for (engine::MidiPort& port : m_midi) {
         port.enabled = &port == &m_midi.front(); // the default: only the first port

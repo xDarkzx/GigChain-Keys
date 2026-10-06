@@ -29,18 +29,41 @@ the others fade out. Held notes and reverb tails ring on naturally.
 There are two ways, and you pick one per song: right-click the song in the
 setlist and choose **Tempo…**.
 
-### Follow the tempo (bars)
+### The timeline (the usual way)
 
-Set the song's **beats per minute** and **time signature**. Then press **Play**
-(the ▶ next to the section display in the top bar). The song counts its bars,
-and at the end of each section the next one's instruments come in. The display
-shows where you are (*Chorus · 3/8*). Press it again to stop.
+The song runs at its **tempo** along its **flow** (the Flow bar's order: a
+chorus played twice is played twice), like the playback rigs bands use with a
+click. Set the song's **beats per minute**, **time signature** and each
+section's **bars** (click the number under its title). Then start it:
+
+- **Play** (▶ in the top bar) or **Space**;
+- your keyboard's own **Play / Stop** buttons (on by default: **Settings >
+  MIDI > Starting the song**);
+- a pedal or pad learned to **Song / backing track: play / stop**;
+- or, if you switch it on, **press the sustain pedal twice quickly** (each
+  press still sustains).
+
+At each part the next one's instruments come in, the current chord lights in
+the chart and the chart scrolls with you. Perform's tile for the part playing
+shows how far through it you are. The display shows *Chorus · 3/8*.
+
+**Live controls** change the song as the band plays it. They happen on the
+**next bar line** (or when the part ends), so nobody falls out of time; press
+again to take it back. What is coming shows beside the display (*→ Bridge*,
+*Repeat*, *Hold*).
+
+| Control | Keys | Pedal or pad |
+|---|---|---|
+| **Next part** (cut this one short) | **N**, or tap a tile to go to that part | Next part of the song |
+| **Repeat this part** once more | **Shift+N** (twice: two more) | Repeat this part once more |
+| **Hold this part** (it loops until you press again) | **H** | Hold this part |
+| **Stop at the end of this part** | **Shift+Space** | — |
 
 **Change sections a beat early** helps pads that swell in slowly.
 
-### Follow the chords I play
+### Follow the chords I play (free time)
 
-Switch on **Sections follow the chords I play**. Now there is no counting:
+For a song with no steady tempo, switch on **Follow the chords I play**. Now there is no counting:
 the app listens to the chords you play and moves through the song with you.
 The display says **Play C to start**, then follows. It needs chords in the
 chart.

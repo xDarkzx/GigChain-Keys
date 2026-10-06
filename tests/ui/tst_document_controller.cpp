@@ -668,6 +668,7 @@ private slots:
     // keeps to it; an undo step; a section the chart does not have is refused.
     void aSongsFlowIsSetAndFollowed()
     {
+        QVERIFY(m_doc->setSongFollowChords(0, true));
         QVERIFY(m_doc->setSongChart(0, u"{comment: Verse 1}\n[Am]a [F]b\n{comment: Chorus}\n[C]c [G]d\n{comment: Verse 2}\n[Dm]e [E]f\n"_s));
         const auto labels = [this] {
             QStringList list;
@@ -1134,6 +1135,16 @@ private slots:
         status.poll();
         // From the section it was at; with the click on, a bar of it first.
         QCOMPARE(m_engine->played.value_or(notPlayed), (std::pair{1, true}));
+        // The next-part pedal, playing on the timeline: on the next bar line.
+        m_engine->pendingActions = {engine::ControlAction::NextSection};
+        m_engine->liveControls.clear();
+        status.poll();
+        QCOMPARE(m_engine->liveControls, std::vector<QString>{u"next"_s});
+        m_engine->pendingActions = {engine::ControlAction::RepeatPart, engine::ControlAction::HoldPart};
+        status.poll();
+        QCOMPARE(m_engine->liveControls, (std::vector<QString>{u"next"_s, u"repeat"_s, u"hold"_s}));
+        // Stopped: the pedal moves on now.
+        m_engine->stopSong();
         m_engine->pendingActions = {engine::ControlAction::NextSection};
         m_engine->jumps.clear();
         m_engine->position.section = 0;
@@ -1143,6 +1154,61 @@ private slots:
         QCOMPARE(m_engine->jumps.back(), 0);
         m_doc->selectSection(4);
         QVERIFY(m_doc->lastError().contains(u"Section 5"_s));
+    }
+
+    // The song's timeline: its flow's parts to the engine; the chord lit by
+    // time (the same chord twice: one, then the other); the live controls;
+    // the keyboard's transport buttons.
+    void aSongPlaysOnItsTimeline()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));
+        QVERIFY(m_doc->setSongChart(0, u"{comment: Verse}\n[D]la [D]la [G]la [A]la\n{comment: Chorus}\n[G]oh [A]oh\n"_s));
+        QVERIFY(!m_doc->songFollowChords()); // new songs: the timeline
+        QVERIFY(!m_doc->following());
+        QVERIFY(m_engine->follow.steps.empty()); // nothing followed by ear
+        const auto part = [](const QString& name) { return QVariantMap{{u"name"_s, name}, {u"occurrence"_s, 1}}; };
+        QVERIFY(m_doc->setSongFlow({part(u"Verse"_s), part(u"Chorus"_s), part(u"Chorus"_s)}));
+        QCOMPARE(m_engine->sections.parts, (std::vector<int>{0, 1, 1}));
+        QCOMPARE(m_doc->timelinePlace(2), 2);
+        QCOMPARE(m_doc->timelinePlace(3), -1);
+        // The verse's 4 chords over its guessed bars: D, D (each its own step), G, A.
+        const int bars = m_engine->sections.sections.at(0).bars;
+        const double each = bars * 4.0 / 4;
+        QCOMPARE(m_doc->timelineStep(0, 0.0), 0);
+        QCOMPARE(m_doc->timelineStep(0, each), 1); // the second D
+        QCOMPARE(m_doc->followLine(1), m_doc->followLine(0)); // (on the same line, in its own place)
+        QCOMPARE(m_doc->timelineStep(0, 3 * each + 0.1), 3);
+        QCOMPARE(m_doc->timelineStep(2, 0.0), 6); // the second chorus's G
+        QCOMPARE(m_doc->timelineStep(5, 0.0), -1);
+
+        // The live controls while it plays.
+        EngineStatus status(*m_engine, *m_doc);
+        m_doc->playSong();
+        m_doc->nextPart();
+        m_doc->repeatPart();
+        m_doc->holdPart();
+        m_doc->stopAtEndOfPart();
+        m_doc->selectFlowPart(2); // a tile: that very part, on the next bar line
+        QCOMPARE(m_engine->liveControls,
+                 (std::vector<QString>{u"next"_s, u"repeat"_s, u"hold"_s, u"stop"_s, u"part 2"_s}));
+        status.poll();
+        QVERIFY(status.chordStarted()); // the chart lights the chord the time has come to
+        QCOMPARE(status.chordStep(), 0);
+
+        // The keyboard's transport buttons.
+        m_engine->transportRequests = engine::transport::kStop;
+        status.poll();
+        QVERIFY(!status.songPlaying());
+        m_engine->transportRequests = engine::transport::kStart;
+        status.poll();
+        QCOMPARE(m_engine->played.value_or(std::pair{9, true}), (std::pair{-1, false})); // from the top
+        QVERIFY(status.songPlaying());
+        m_engine->transportRequests = engine::transport::kToggle; // the sustain pedal twice
+        status.poll();
+        QVERIFY(!status.songPlaying());
+        m_engine->transportRequests = engine::transport::kContinue;
+        status.poll();
+        QVERIFY(status.songPlaying());
     }
 
     void pastingTakesTheTempoAndTimeAndSaysSo()
@@ -1349,6 +1415,7 @@ private slots:
     void aSongsChordsAreFollowed()
     {
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->setSongFollowChords(0, true));
         QVERIFY(m_doc->setSongChart(0, u"{sov: Verse 1}\n[Am]One [F]two\n{eov}\n{soc: Chorus}\n[C]three [G]four\n{eoc}\n"_s));
         QCOMPARE(m_engine->follow.steps.size(), std::size_t{4});
         QCOMPARE(m_engine->follow.sectionStarts, (std::vector<int>{0, 2}));
@@ -1385,7 +1452,9 @@ private slots:
     void aNewSongsTopIsChosenBeforeItsChords()
     {
         addSectionsSong();
+        QVERIFY(m_doc->setSongFollowChords(0, true));
         QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->setSongFollowChords(1, true));
         QVERIFY(m_doc->setSongChart(1, u"{comment: Intro}\n[Am]one [F]two\n"_s));
         m_engine->jumps.clear();
         m_doc->previousSong();
@@ -1492,6 +1561,7 @@ private slots:
     void followingALongChartKeepsUp()
     {
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->setSongFollowChords(0, true));
         QString chart;
         for (int s = 0; chart.size() < 99'000; ++s) {
             chart += u"{c: Part %1}\n"_s.arg(s + 1);
@@ -1529,6 +1599,7 @@ private slots:
     void anEditedChartKeepsItsPlace()
     {
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->setSongFollowChords(0, true));
         QVERIFY(m_doc->setSongChart(0, u"[Am]One [F]two [C]three [G]four\n"_s));
         m_engine->followPosition = engine::ChordFollowPosition{.active = true, .started = true, .step = 2, .section = -1};
         QVERIFY(m_doc->setSongChart(0, u"[Am]One [F]two [C]tres [G]four\n"_s)); // a word fixed while playing C

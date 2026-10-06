@@ -48,7 +48,10 @@ struct SongMap
 
 // `flow`: the order the sections are played in (Song::flow); empty: the
 // chart's order. A part naming no section of the chart is left out.
-[[nodiscard]] SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow = {});
+// `mergeTwins`: the same chord twice in a row in a part is one step (chord
+// follow cannot tell a held chord from the same chord again); false: a step
+// each (the song's timeline places each in time).
+[[nodiscard]] SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow = {}, bool mergeTwins = true);
 // The section of `sections` that `ref` names; -1: none.
 [[nodiscard]] int sectionIndexOf(const std::vector<ChartSection>& sections, const SectionRef& ref);
 

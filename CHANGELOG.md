@@ -8,6 +8,26 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### The song's timeline
+
+- **Songs run on a timeline:** Play (or Space, your keyboard's Play/Stop
+  buttons, a pedal, or optionally two quick presses of the sustain pedal)
+  runs the song at its tempo along its **flow** (the chorus twice when the
+  Flow bar says so). Instruments change at each part, the current chord
+  lights in the chart and Perform's tile shows how far through the part you
+  are.
+- **Live controls on the bar line:** Next part (**N**, a tile), Repeat this
+  part (**Shift+N**), Hold this part (**H**), Stop at its end
+  (**Shift+Space**); pedals can learn them too. What is queued shows by the
+  song display.
+- **Chord follow** is now the option for free-time songs (Tempo… > Follow
+  the chords I play). Songs from older files with a tempo run on the
+  timeline; songs without one still follow their chords.
+- On the timeline the same chord twice in a row is two chords, each lit in
+  its own place.
+- Pedal names: "Next part" / "Previous part" were the sounds: now "Next
+  sound" / "Previous sound".
+
 ## [0.2.0] - 2026-10-05 (alpha)
 
 ### Charts

@@ -58,6 +58,15 @@ class EngineStatus : public QObject
     Q_PROPERTY(int songSection READ songSection NOTIFY songPositionChanged)
     Q_PROPERTY(int songBar READ songBar NOTIFY songPositionChanged)
     Q_PROPERTY(int songBars READ songBars NOTIFY songPositionChanged)
+    // The song's timeline: the part playing, its place in the song's flow
+    // (Perform's tiles), how far through it (0-1), and what is queued for
+    // the next bar line or the part's end ("→ Bridge", "Repeat", "Hold",
+    // "Stop at the end"; "" = nothing) and the queued part's place.
+    Q_PROPERTY(int songPart READ songPart NOTIFY songPositionChanged)
+    Q_PROPERTY(int songPlace READ songPlace NOTIFY songPositionChanged)
+    Q_PROPERTY(double songProgress READ songProgress NOTIFY songPositionChanged)
+    Q_PROPERTY(QString songQueued READ songQueued NOTIFY songPositionChanged)
+    Q_PROPERTY(int songQueuedPlace READ songQueuedPlace NOTIFY songPositionChanged)
     // Chord follow: a song's chords are followed, the first one was heard,
     // and which chord (of DocumentController's map) is being played.
     Q_PROPERTY(bool chordFollowing READ chordFollowing NOTIFY chordFollowChanged)
@@ -121,8 +130,14 @@ public:
     [[nodiscard]] int songBar() const { return m_song.bar; }
     [[nodiscard]] int songBars() const { return m_song.bars; }
     [[nodiscard]] bool chordFollowing() const { return m_follow.active; }
-    [[nodiscard]] bool chordStarted() const { return m_follow.started; }
-    [[nodiscard]] int chordStep() const { return m_follow.step; }
+    // (On the timeline, the chord lit by time; else the chord followed.)
+    [[nodiscard]] bool chordStarted() const { return m_timelineStep >= 0 || m_follow.started; }
+    [[nodiscard]] int chordStep() const { return m_timelineStep >= 0 ? m_timelineStep : m_follow.step; }
+    [[nodiscard]] int songPart() const { return m_song.part; }
+    [[nodiscard]] int songPlace() const;
+    [[nodiscard]] double songProgress() const;
+    [[nodiscard]] QString songQueued() const;
+    [[nodiscard]] int songQueuedPlace() const;
     Q_INVOKABLE void playPauseTrack();
     Q_INVOKABLE void rewindTrack();
 
@@ -188,6 +203,7 @@ private:
     engine::BackingTrackState m_track;
     engine::SongPosition m_song;
     engine::ChordFollowPosition m_follow;
+    int m_timelineStep = -1; // the chord lit by the timeline; -1 = not playing on it
     QElapsedTimer m_tapClock;
     std::vector<qint64> m_taps; // ms, the last few taps
     int m_learnChannel = -1;
