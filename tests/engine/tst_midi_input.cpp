@@ -112,7 +112,7 @@ private slots:
         if (ports.isEmpty()) QSKIP("No MIDI inputs on this machine");
         std::vector<MidiPort> all;
         std::ranges::transform(ports, std::back_inserter(all), [](const QString& name) {
-            return MidiPort{.name = name, .enabled = true, .channel = 0};
+            return MidiPort{.name = name, .enabled = true, .controlsOnly = false, .channel = 0};
         });
         MidiInput input;
         (void)input.openAll(all);
@@ -173,11 +173,38 @@ private slots:
         QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x7F, 0x06, 0x02, 0xF7}), transport::kStart); // MMC Play
         QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x10, 0x06, 0x03, 0xF7}), transport::kStart); // deferred play
         QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x00, 0x06, 0x01, 0xF7}), transport::kStop);
-        QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x7F, 0x06, 0x04, 0xF7}), 0U); // fast forward: not ours
+        QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x7F, 0x06, 0x04, 0xF7}), transport::kNextPart);     // fast forward
+        QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x7F, 0x06, 0x05, 0xF7}), transport::kPreviousPart); // rewind
+        QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x7F, 0x7F, 0x06, 0x06, 0xF7}), 0U); // record: not ours
         QCOMPARE(MidiInput::transportRequestOf(V{0xF0, 0x43, 0x10, 0x4C, 0x00, 0xF7}), 0U); // a synth's own sysex
         QCOMPARE(MidiInput::transportRequestOf(V{0xF8}), 0U);                             // clock
         QCOMPARE(MidiInput::transportRequestOf(V{0x90, 60, 100}), 0U);
         QCOMPARE(MidiInput::transportRequestOf(V{}), 0U);
+    }
+
+    // Mackie Control, the DAW mode of most controller keyboards (Korg
+    // nanoKONTROL, M-Audio, Arturia, Novation, Akai...): its transport and
+    // navigation buttons, from a keyboard's DAW port. Shift turns ◀◀ ▶▶ into
+    // the previous / next song. A release, or any other note, asks nothing.
+    void mackieControlButtons()
+    {
+        const auto press = [](uint8_t note, bool shift = false) { return MidiInput::mackieRequestOf(0x90, note, 0x7F, shift); };
+        QCOMPARE(press(0x5E), transport::kContinue);     // Play: from where the song is
+        QCOMPARE(press(0x5D), transport::kStop);
+        QCOMPARE(press(0x5B), transport::kPreviousPart); // ◀◀
+        QCOMPARE(press(0x5C), transport::kNextPart);     // ▶▶
+        QCOMPARE(press(0x5B, true), transport::kPreviousSong);
+        QCOMPARE(press(0x5C, true), transport::kNextSong);
+        QCOMPARE(press(0x56), transport::kLoopPart);     // Cycle
+        QCOMPARE(press(0x59), transport::kClick);
+        QCOMPARE(press(0x2E), transport::kPreviousSong); // Bank ◀ ▶
+        QCOMPARE(press(0x2F), transport::kNextSong);
+        QCOMPARE(press(0x30), transport::kPreviousSound); // Channel ◀ ▶
+        QCOMPARE(press(0x31), transport::kNextSound);
+        QCOMPARE(MidiInput::mackieRequestOf(0x90, 0x5E, 0x00, false), 0U); // released
+        QCOMPARE(MidiInput::mackieRequestOf(0x80, 0x5E, 0x40, false), 0U); // a note-off
+        QCOMPARE(press(60), 0U);
+        QCOMPARE(MidiInput::mackieRequestOf(0xB0, 0x5E, 0x7F, false), 0U); // a controller, not a button
     }
 
     // The sustain pedal pressed twice within 0.4 s is a double press; slower
@@ -204,7 +231,7 @@ private slots:
         MidiInput input;
         std::vector<MidiPort> all;
         std::ranges::transform(ports, std::back_inserter(all), [](const QString& name) {
-            return MidiPort{.name = name, .enabled = true, .channel = 0};
+            return MidiPort{.name = name, .enabled = true, .controlsOnly = false, .channel = 0};
         });
         const auto notices = input.openAll(all);
         QCOMPARE(input.openPortNames().size() + static_cast<qsizetype>(notices.size()) >= ports.size(), true);
@@ -239,7 +266,7 @@ private slots:
         const QStringList ports = MidiInput::listPorts();
         if (ports.isEmpty()) QSKIP("No MIDI inputs on this machine");
         MidiInput input;
-        (void)input.openAll({MidiPort{ports.first(), false, 0}}); // switched off in Settings
+        (void)input.openAll({MidiPort{.name = ports.first(), .enabled = false, .controlsOnly = false, .channel = 0}}); // switched off in Settings
         QVERIFY(!input.openPortNames().contains(ports.first()));
         input.close();
     }

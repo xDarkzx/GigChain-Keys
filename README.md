@@ -56,7 +56,8 @@ open source too, under the GPL.
 | **Windows 10 / 11** (64-bit) | [**Installer** (`GigChainKeys-<version>-x64-setup.exe`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Recommended. Installs for you or for everyone, upgrades in place, uninstalls from *Apps & features*. |
 | | [Portable zip (`GigChainKeys-<version>-x64-portable.zip`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | No install: unzip anywhere (a USB stick, too) and run `GigChainKeys.exe`. |
 | **macOS 13+** (Apple Silicon) | [Disk image (`GigChainKeys-<version>-arm64.dmg`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Less tested than Windows: Mac reports are especially welcome. See *First start on a Mac* below. |
-| **Linux** | [Build from source](docs/BUILDING.md#linux-and-wsl) | Ubuntu 22.04+ and similar. A ready-made package is planned. |
+| **Linux** (64-bit) | [AppImage (`GigChainKeys-<version>-x86_64.AppImage`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | One file for most distributions (Ubuntu 22.04+, Fedora, Arch, Mint…): make it executable and run it. |
+| | [.deb (`gigchain-keys_<version>_amd64.deb`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Ubuntu, Debian, Mint, Pop!_OS: double-click to install. Adds a menu entry and opens `.gigchain` setlists. |
 
 All versions, with their release notes, are on the
 [**Releases**](https://github.com/xDarkzx/GigChain-Keys/releases) page.
@@ -78,7 +79,28 @@ Get-FileHash .\GigChainKeys-0.1.0-x64-setup.exe -Algorithm SHA256   # Windows (P
 
 ```bash
 shasum -a 256 GigChainKeys-0.1.0-arm64.dmg                          # macOS (Terminal)
+sha256sum GigChainKeys-0.3.0-x86_64.AppImage                         # Linux
 ```
+
+### First start on Linux
+
+**AppImage:** make it executable, then run it (or double-click it in your
+file manager):
+
+```bash
+chmod +x GigChainKeys-*-x86_64.AppImage
+./GigChainKeys-*-x86_64.AppImage
+```
+
+(If it says *"FUSE"* is missing, install `libfuse2`, or run it with
+`--appimage-extract-and-run`.)
+
+**.deb:** `sudo apt install ./gigchain-keys_*_amd64.deb`, then start
+**GigChain Keys** from your menu or type `gigchain-keys`. Remove it with
+`sudo apt remove gigchain-keys`.
+
+Sound goes through PulseAudio or PipeWire (or JACK, chosen in **Settings**);
+Linux VST3 plugins are found in `~/.vst3` and `/usr/lib/vst3`.
 
 ### First start on Windows
 
@@ -118,7 +140,8 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 |---|---|
 | 🎹 **Plays your plugins** | Hosts VST3 instruments and effects with their own windows. Every sound in the setlist is loaded up front, so switching songs is instant, and held notes and reverb tails ring on across the change. |
 | 🎚️ **A real mixer** | Logic-style channel strips: instrument, effects, pan, fader, meters, mute and solo. A master strip with its own effects, and a safety limiter before your speakers. |
-| 🎼 **Splits, layers and knobs** | Key zones, transpose and velocity layers per instrument. Learn any knob, fader or pedal on your keyboard to any plugin setting. |
+| 🎼 **Splits, layers and knobs** | Key zones, transpose and velocity layers per instrument. Right-click any fader, pan knob or plugin setting and learn a knob, fader or pedal on your keyboard for it. Expression, mod wheel, breath and sustain go straight to the instruments. |
+| 🎛️ **Works with your keyboard** | Its Play, Stop, ◀◀ ▶▶, Loop and Click buttons work by themselves when it speaks MIDI Start/Stop, MMC or Mackie Control (the DAW mode of Korg nanoKONTROL, M-Audio, Arturia, Novation, Akai…); any other button is learned in one press. |
 | 📜 **Setlists** | All the night's songs in one file, in order. Change songs with the keyboard, a pedal or a pad. Undo for every edit. |
 | 📝 **Chord charts** | Paste a song from any chord website and each chord lands on its word. Edit it where you read it, like cells: a chord box over every word to type into, words changed in place, chords dragged from word to word. |
 | 🎹 **How to play a chord** | Forgot one on stage? Tap it: a keyboard with a dot on each key to press (left and right hand), its notes by name, and its inversions. Keep the one you like for the song. |
@@ -127,11 +150,28 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 | 🎤 **Perform mode** | Full screen, built for the stage and for touch screens: the chart big and clear, big **Play**, **Next part** and **Loop part** buttons, the song's parts as tiles (tap one to go there), nothing you can knock by accident. |
 | 🔁 **Loop station** | Record a loop of any instrument, in time with the song, and layer on top: street-performer style, from buttons on your keyboard. |
 | 🎓 **Practice mode** | The song's chords fall onto a keyboard as glowing notes, YouTube-piano style. *Listen*, *Play along*, or *Wait for me*, slowed down and looped. The left hand plays the bass, an octave, root and fifth or the full chord; the right hand smooth, in root position or in your chosen inversions. |
+| 🔥 **Warm-ups** | A daily warm-up at your level (Beginner, Intermediate, Pro): each exercise right hand, left hand, then both, the finger to use on every note. Every run scored (notes, timing, evenness, hands together) with one tip; three clean runs raise the tempo, and passing a level opens the next. |
 | 🥁 **Tempo, click and backing tracks** | A tempo per song, tap tempo, a click, MIDI clock in and out, and a backing track (WAV, MP3, FLAC…) per song. |
 | 🛟 **Built not to fail** | Plugins are scanned in a separate process; a plugin that crashes while loading is switched off next time; an unplugged keyboard or audio interface comes back by itself. |
 
 <p align="center">
+  <img src="docs/images/perform.png" alt="Perform mode: the song playing, big Play, Next part and Loop part buttons, the parts as tiles and the chart" width="900">
+  <br><em>Perform: the song plays along its parts; Next part and Loop part land on the bar line.</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/midi-learn.png" alt="Right-click a fader: MIDI Learn the volume" width="900">
+  <br><em>Right-click a fader, a pan knob or the master: MIDI Learn, then turn a knob on your keyboard.</em>
+</p>
+
+<p align="center">
   <img src="docs/images/practice.png" alt="Practice mode: the chords falling onto a keyboard" width="900">
+</p>
+
+<p align="center">
+  <img src="docs/images/warmup.png" alt="A warm-up: five fingers from C with both hands, the finger to use on each falling note" width="445">
+  <img src="docs/images/warmup-score.png" alt="A warm-up run's score: three stars, every note right, 5 ms from the beat" width="445">
+  <br><em>Warm-ups: the finger for every note, then the score.</em>
 </p>
 
 <p align="center">
@@ -202,14 +242,15 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
+| 0.3.0 | Alpha: Linux AppImage and .deb; you move the song (Perform's Play, Next part, Loop part, made for touch screens); MIDI Learn and keyboard transport buttons; instruments named for their sound; Practice warm-ups |
 | 0.2.2 | Alpha: free instruments to get, from the app (pianos, synths, pads) |
 | 0.2.1 | Alpha: the song's timeline with live controls; instruments all together or one at a time; keyboard shortcuts for the stage |
 | 0.2 | Alpha: the chart edited as cells, chord diagrams, the song's flow and steadier chord follow, Practice hand styles |
 | 0.1 | First public alpha: Windows 10/11; macOS (Apple Silicon) |
 
-What is coming next is in the [**roadmap**](docs/ROADMAP.md): an
-installer for Linux, bundled free instruments, a tablet remote for the music
-stand, melody and intro practice, and more.
+What is coming next is in the [**roadmap**](docs/ROADMAP.md): bundled free
+instruments, a tablet remote for the music stand, melody and intro practice,
+and more.
 
 ## For developers
 

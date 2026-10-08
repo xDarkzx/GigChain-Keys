@@ -149,6 +149,11 @@ void FakeEngine::injectNote(int, int note, int velocity)
     // The fake engine makes no sound; the note only shows on the keyboard.
     if (note < 0 || note > 127 || velocity < 0 || velocity > 127) return;
     m_keyboard.velocity.at(static_cast<std::size_t>(note)) = static_cast<uint8_t>(velocity);
+    if (velocity > 0) {
+        const auto now = std::chrono::steady_clock::now().time_since_epoch();
+        m_presses.push_back(KeyPress{.note = note, .velocity = velocity,
+                                     .timeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count()});
+    }
 }
 
 std::vector<Notice> FakeEngine::poll()

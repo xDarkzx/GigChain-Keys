@@ -23,6 +23,12 @@ Rectangle {
     Connections {
         target: area.doc
         function onChannelAdded(channel) { tabs.currentIndex = 1 }
+        // A strip's "MIDI Learn a knob": its plugin's window, learning.
+        function onChannelEditRequested(channel, page) {
+            if (page !== "plugin-learn") return
+            tabs.currentIndex = 1
+            area.engineStatus.startMappingLearn(channel, -1)
+        }
     }
 
     // Nothing is open yet: start a setlist or open one.
@@ -63,6 +69,7 @@ Rectangle {
             }
             PluginArea {
                 doc: area.doc
+                engineStatus: area.engineStatus
                 editorService: area.editorService
                 // The plugin's window sits above everything: hide it behind the chart tab and dialogs.
                 suspended: area.suspended || tabs.currentIndex !== 1 || !area.doc.hasSetlist

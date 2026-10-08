@@ -143,6 +143,7 @@ Rectangle {
             delegate: ChannelStrip {
                 onKeysWanted: strips.forceActiveFocus()
                 editable: mixer.editable
+                engineStatus: mixer.engineStatus
                 songSection: mixer.engineStatus.songSection
                 height: Math.min(ListView.view.height, Theme.stripHeight)
                 doc: mixer.doc
@@ -369,6 +370,20 @@ Rectangle {
                     volumeDb: mixer.engineStatus.masterVolumeDb
                     level: mixer.engineStatus.masterPeak
                     onVolumeMoved: (db) => mixer.engineStatus.masterVolumeDb = db
+                    // Right-click: learn the keyboard knob or fader that moves it.
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.RightButton
+                        onClicked: (mouse) => masterKnobMenu.popup(mouse.x, mouse.y) // (where it was clicked)
+                    }
+                    KnobLearnMenu {
+                        id: masterKnobMenu
+                        objectName: "masterKnobMenu"
+                        doc: mixer.doc
+                        engineStatus: mixer.engineStatus
+                        slot: 0
+                        what: qsTr("the master")
+                    }
                 }
                 // The safety limiter caught a peak: the output is running hot.
                 Rectangle {

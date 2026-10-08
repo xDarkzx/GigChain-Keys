@@ -259,6 +259,9 @@ public:
     Q_INVOKABLE int timelineStep(int part, double quarter) const;
     // The live controls: on the next bar line, or at the part's end.
     Q_INVOKABLE void nextPart();
+    // The part before (◀◀): playing, at the next bar line; stopped, where
+    // Play starts; at the first part, its start again.
+    Q_INVOKABLE void previousPart();
     Q_INVOKABLE void repeatPart();
     Q_INVOKABLE void holdPart();
     Q_INVOKABLE void stopAtEndOfPart();
@@ -273,6 +276,15 @@ public:
     // The looper's keyboard controls, kept with the setlist (an undoable edit).
     [[nodiscard]] const core::LoopControls& loopControls() const { return m_setlist.loopControls; }
     bool setLoopControls(const core::LoopControls& controls);
+    // Keyboard knobs learned for the mixer (kept with the setlist; an undo
+    // step each). Knob `slot`: 0 the master, 1 + n strip n's volume,
+    // 1 + MixerControls::kStrips + n strip n's pan. One knob, one job: set
+    // for one slot, it leaves any other.
+    Q_INVOKABLE bool setMixerKnob(int slot, int midiChannel, int controller);
+    Q_INVOKABLE bool forgetMixerKnob(int slot);
+    // "CC 7 (channel 1)", or "" when none is learned.
+    Q_INVOKABLE QString mixerKnobName(int slot) const;
+    [[nodiscard]] const core::MixerControls& mixerControls() const { return m_setlist.mixerControls; }
 
     // Song sections: what each section of the current song's chart plays in
     // the current patch, and how long it is.
@@ -343,6 +355,7 @@ signals:
     void sectionsChanged(); // the current song's sections or what they play
     void chordInversionsChanged(); // the current song's chosen inversions (or which song is current)
     void loopControlsChanged();
+    void mixerControlsChanged();
     void channelEditRequested(int channel, const QString& page);
 
 private:
@@ -384,6 +397,10 @@ private:
     [[nodiscard]] std::optional<std::vector<core::ChannelId>> sectionLive(int section) const;
     // The setlist's looper controls, to the engine.
     void applyLoopControlsToEngine();
+    // The setlist's mixer knobs, to the engine.
+    void applyMixerControlsToEngine();
+    // The learned knob of `slot`, or nullptr when there is no such slot.
+    static core::LearnedControl* mixerKnob(core::MixerControls& controls, int slot);
     // Stores one section's setup (an undoable edit) and plays it.
     bool storeSection(int section, const std::function<void(core::SectionSetup&)>& edit);
     core::SongId m_sectionsSong; // the song whose sections the engine has

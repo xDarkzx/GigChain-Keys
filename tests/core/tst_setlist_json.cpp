@@ -426,6 +426,32 @@ private slots:
                  0LL);
     }
 
+    // Keyboard knobs learned for the mixer (a strip's volume and pan, the
+    // master) are kept with the setlist; older files have none; a button
+    // is not a knob.
+    void mixerKnobsAreKept()
+    {
+        Setlist setlist;
+        setlist.songs.push_back(makeSong(u"One"_s));
+        setlist.mixerControls.master = LearnedControl{.kind = 0xB0, .channel = 1, .number = 7};
+        setlist.mixerControls.volume.at(2) = LearnedControl{.kind = 0xB0, .channel = 1, .number = 3};
+        setlist.mixerControls.pan.at(0) = LearnedControl{.kind = 0xB0, .channel = 2, .number = 16};
+        const auto read = fromJson(toJson(setlist));
+        QVERIFY2(read.has_value(), read ? "" : qPrintable(read.error().message));
+        QCOMPARE(read->mixerControls, setlist.mixerControls);
+
+        QJsonObject root = QJsonDocument::fromJson(toJson(setlist)).object();
+        root.remove(u"mixerControls"_s);
+        const auto older = fromJson(QJsonDocument(root).toJson());
+        QVERIFY(older.has_value());
+        QVERIFY(!older->mixerControls.master.isSet());
+
+        setlist.mixerControls.master.kind = 0x90; // a pad
+        const auto bad = fromJson(toJson(setlist));
+        QVERIFY(!bad.has_value());
+        QVERIFY2(bad.error().message.contains(u"mixerControls.master"_s), qPrintable(bad.error().message));
+    }
+
     // Songs no longer follow the chords played (the player moves them on):
     // files that said a song did still open, the same as any other song,
     // and nothing about it is written any more.

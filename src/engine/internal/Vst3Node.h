@@ -57,6 +57,10 @@ public:
         QString name;
     };
     [[nodiscard]] std::vector<Parameter> parameters() const;
+    // Main thread: the plugin parameter a MIDI controller (0-127, or VST3's
+    // pitch bend / aftertouch numbers) on `midiChannel` (0-15) moves, as the
+    // plugin assigned it; nothing when the plugin does not take it.
+    [[nodiscard]] std::optional<uint32_t> controllerParameter(int midiChannel, int controller) const;
     // Main thread: the last parameter the user moved in the plugin's own
     // window since the previous call (for "learn"), or nothing.
     [[nodiscard]] std::optional<uint32_t> takeTouchedParameter();

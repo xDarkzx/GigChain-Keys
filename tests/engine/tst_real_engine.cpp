@@ -1231,6 +1231,63 @@ private slots:
         QCOMPARE(actions(), std::vector<LoopAction>{LoopAction::Record});
     }
 
+    // A knob learned for the app (the master fader here: the mod wheel's
+    // CC 1) reports where it is turned to and the instruments never hear
+    // it; an unlearned controller still reaches them (a fader for
+    // expression, CC 11).
+    void anAppKnobIsReadAndNeverPlayed()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.applyPatch(core::makePatch(u"Empty"_s));
+        AppKnobs knobs{};
+        knobs.at(0) = MidiTrigger{.kind = MidiTrigger::ControlChange, .channel = 0, .number = 1};
+        engine.setAppKnobs(knobs);
+        const auto value = [&engine] {
+            for (int i = 0; i < 20; ++i) {
+                pump(engine, 50);
+                if (const int v = engine.takeAppKnobValues().at(0); v >= 0) return v;
+            }
+            return -1;
+        };
+        engine.injectController(1, 1, 90);
+        QCOMPARE(value(), 90);
+        QCOMPARE(engine.keyboardActivity().modWheel, 0); // the instruments did not hear it
+        engine.setAppKnobs(AppKnobs{}); // forgotten: the mod wheel plays again
+        engine.injectController(1, 1, 64);
+        for (int i = 0; i < 20 && engine.keyboardActivity().modWheel != 64; ++i) pump(engine, 50);
+        QCOMPARE(engine.keyboardActivity().modWheel, 64);
+        QCOMPARE(value(), -1);
+    }
+
+    // Each key pressed is kept with when it came (to the millisecond, for
+    // scoring a warm-up), once; a key let go is not a press.
+    void keyPressesAreTimed()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        (void)engine.takeKeyPresses();
+        const auto before = std::chrono::steady_clock::now().time_since_epoch();
+        engine.injectNote(1, 60, 90);
+        QTest::qSleep(20);
+        engine.injectNote(1, 60, 0);
+        engine.injectNote(1, 64, 70);
+        const auto after = std::chrono::steady_clock::now().time_since_epoch();
+        const std::vector<KeyPress> presses = engine.takeKeyPresses();
+        QCOMPARE(presses.size(), std::size_t{2});
+        QCOMPARE(presses.at(0).note, 60);
+        QCOMPARE(presses.at(0).velocity, 90);
+        QCOMPARE(presses.at(1).note, 64);
+        QVERIFY(presses.at(0).timeNs >= std::chrono::duration_cast<std::chrono::nanoseconds>(before).count());
+        QVERIFY(presses.at(1).timeNs <= std::chrono::duration_cast<std::chrono::nanoseconds>(after).count());
+        QVERIFY(presses.at(1).timeNs - presses.at(0).timeNs >= 15'000'000); // the 20 ms between them
+        QVERIFY(engine.takeKeyPresses().empty()); // taken once
+    }
+
     void aPluginsParametersAreListedForKnobs()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");

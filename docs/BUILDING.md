@@ -8,6 +8,7 @@ macOS (Apple Silicon) build from the same sources.
 - [Linux (and WSL)](#linux-and-wsl)
 - [macOS (Apple Silicon)](#macos-apple-silicon)
 - [The Windows installer](#the-windows-installer)
+- [The Linux packages](#the-linux-packages)
 - [Checks before a commit](#checks-before-a-commit)
 - [Name and branding](#name-and-branding)
 - [Source layout](#source-layout)
@@ -106,6 +107,25 @@ setlists, uninstalls from Apps & Features) and a portable zip of the same
 files. The installer is described in [`installer/setup.iss`](../installer/setup.iss);
 its pictures come from `tools\make-installer-art.ps1`. Publishing a version
 is described in [RELEASING.md](RELEASING.md).
+
+## The Linux packages
+
+```bash
+bash tools/package-linux.sh     # Release build, every test, then dist/
+```
+
+On Ubuntu 22.04 (or WSL with it), set up as in [Linux](#linux-and-wsl).
+`dist/` then holds `GigChainKeys-<version>-x86_64.AppImage` (one file for
+most distributions) and `gigchain-keys_<version>_amd64.deb` (installs under
+`/opt/gigchain-keys`, with a menu entry, an icon and the `.gigchain` file
+type). Qt and the app's libraries travel inside them
+([linuxdeploy](https://github.com/linuxdeploy/linuxdeploy) gathers them,
+fetched into `~/.cache/gigchain/tools` the first time); the sound and
+graphics systems (ALSA, PulseAudio, PipeWire, JACK, OpenGL) are the
+player's own. The script checks that every library is found inside the
+package or is one every desktop Linux has, and that the scanner starts on
+its own. Built on 22.04, the packages run on it and on newer systems.
+`.github/workflows/linux.yml` builds both on every release tag.
 
 ## Checks before a commit
 

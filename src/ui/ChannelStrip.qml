@@ -39,6 +39,8 @@ Rectangle {
     property int inputChannels: 0
     // Renamed here (not on stage).
     property bool editable: true
+    // For learning keyboard knobs (right-click on the fader or the pan).
+    property EngineStatus engineStatus: null
 
     // The channel's name: the sound it plays ("Classic American Piano", "Juno
     // Pad"), where the plugin alone would say "Analog Lab V" twice. Typed
@@ -136,6 +138,29 @@ Rectangle {
         return builtMenus[key]
     }
 
+    // A strip's knob slots (DocumentController.setMixerKnob): the first 16 strips have them.
+    readonly property int volumeKnobSlot: strip.index < 16 ? 1 + strip.index : -1
+    readonly property int panKnobSlot: strip.index < 16 ? 17 + strip.index : -1
+    Component {
+        id: volumeKnobMenuComponent
+        KnobLearnMenu {
+            objectName: "volumeKnobMenu"
+            doc: strip.doc
+            engineStatus: strip.engineStatus
+            slot: strip.volumeKnobSlot
+            what: qsTr("the volume")
+        }
+    }
+    Component {
+        id: panKnobMenuComponent
+        KnobLearnMenu {
+            doc: strip.doc
+            engineStatus: strip.engineStatus
+            slot: strip.panKnobSlot
+            what: qsTr("the pan")
+        }
+    }
+
     Component {
         id: channelMenuComponent
         StageMenu {
@@ -149,6 +174,17 @@ Rectangle {
             StageMenuItem { text: strip.solo ? qsTr("Unsolo") : qsTr("Solo"); onTriggered: strip.doc.setChannelSolo(strip.index, !strip.solo) }
             StageMenuItem { text: qsTr("Keyboard Zone…"); onTriggered: strip.doc.editChannel(strip.index, "zone") }
             StageMenuItem { text: qsTr("Knobs…"); onTriggered: strip.doc.editChannel(strip.index, "knobs") }
+            StageMenuItem {
+                objectName: "learnPluginKnob"
+                text: qsTr("MIDI Learn a knob of %1…").arg(strip.instrumentName || qsTr("the instrument"))
+                enabled: strip.instrumentName !== ""
+                onTriggered: strip.doc.editChannel(strip.index, "plugin-learn")
+            }
+            StageMenuItem {
+                text: qsTr("MIDI Learn the volume…")
+                enabled: strip.engineStatus !== null && strip.volumeKnobSlot >= 0
+                onTriggered: strip.engineStatus.learnMixerKnob(strip.volumeKnobSlot)
+            }
             StageMenu {
                 id: inputMenu
                 title: qsTr("Play Audio Input")
@@ -354,6 +390,16 @@ Rectangle {
             Layout.topMargin: 2
             pan: strip.pan
             onPanMoved: (v) => strip.doc.setChannelPan(strip.index, v)
+            // Right-click: learn the keyboard knob that turns it.
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.RightButton
+                enabled: strip.engineStatus !== null
+                onClicked: (mouse) => {
+                    const at = mapToItem(strip, mouse.x, mouse.y) // (the menu opens where it was clicked)
+                    strip.menu(panKnobMenuComponent).popup(at.x, at.y)
+                }
+            }
         }
 
         RowLayout {
@@ -381,6 +427,17 @@ Rectangle {
             volumeDb: strip.volumeDb
             level: strip.peak
             onVolumeMoved: (db) => strip.doc.setChannelVolume(strip.index, db)
+            // Right-click: learn the keyboard knob or fader that moves it.
+            MouseArea {
+                objectName: "faderKnobArea"
+                anchors.fill: parent
+                acceptedButtons: Qt.RightButton
+                enabled: strip.engineStatus !== null
+                onClicked: (mouse) => {
+                    const at = mapToItem(strip, mouse.x, mouse.y) // (the menu opens where it was clicked)
+                    strip.menu(volumeKnobMenuComponent).popup(at.x, at.y)
+                }
+            }
         }
 
         RowLayout {

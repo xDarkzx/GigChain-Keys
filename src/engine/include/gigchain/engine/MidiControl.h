@@ -21,8 +21,12 @@ enum class ControlAction : int
     NextSection, // on to the song's next part (playing on its timeline: at the next bar line)
     RepeatPart,  // the song's part once more when it ends
     HoldPart,    // the song's part loops until pressed again
+    PlaySong,     // plays the song from where it is (already playing: nothing)
+    StopSong,     // stops it
+    PreviousPart, // the part before (playing: at the next bar line)
+    ToggleClick,  // the click on or off
 };
-inline constexpr int kControlActionCount = 10;
+inline constexpr int kControlActionCount = 14;
 
 // One MIDI control: a CC (a pedal or button), a note (a pad or key) or a
 // program change, on one channel.
@@ -53,6 +57,14 @@ struct MidiTrigger
 };
 
 using ControlTriggers = std::array<MidiTrigger, kControlActionCount>;
+
+// Keyboard knobs and faders learned for the app's own controls: the
+// master, then each mixer strip's volume, then each strip's pan (by the
+// strip's place). Never heard by the instruments.
+inline constexpr int kAppKnobStrips = 16;
+inline constexpr int kAppKnobCount = 1 + (2 * kAppKnobStrips);
+using AppKnobs = std::array<MidiTrigger, kAppKnobCount>;      // ControlChange triggers (or unset)
+using AppKnobValues = std::array<int, kAppKnobCount>;         // each knob's last value 0-127; -1 = not moved
 
 // The looper's keyboard buttons (learned per setlist). Clear is not a
 // button of its own: Record and PlayStop held together.

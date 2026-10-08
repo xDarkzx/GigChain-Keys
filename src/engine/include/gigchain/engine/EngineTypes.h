@@ -107,6 +107,17 @@ struct MidiActivity
     bool operator==(const MidiActivity&) const = default;
 };
 
+// A key pressed (note-on), from the keyboard or the screen, with when it
+// came: the steady clock (std::chrono::steady_clock), in nanoseconds.
+struct KeyPress
+{
+    int note = 60;
+    int velocity = 100;
+    int64_t timeNs = 0;
+
+    bool operator==(const KeyPress&) const = default;
+};
+
 // The song's backing track as it plays now.
 struct BackingTrackState
 {
@@ -147,6 +158,14 @@ inline constexpr uint32_t kStart = 1;    // MIDI Start, MMC Play: from the top
 inline constexpr uint32_t kContinue = 2; // MIDI Continue: from where it is
 inline constexpr uint32_t kStop = 4;     // MIDI Stop, MMC Stop
 inline constexpr uint32_t kToggle = 8;   // a double press of the sustain pedal: play or stop
+inline constexpr uint32_t kNextPart = 16;     // ▶▶ (MMC Fast Forward, Mackie Control)
+inline constexpr uint32_t kPreviousPart = 32; // ◀◀ (MMC Rewind, Mackie Control)
+inline constexpr uint32_t kLoopPart = 64;     // Cycle / Loop: the part loops until pressed again
+inline constexpr uint32_t kClick = 128;       // the click on or off
+inline constexpr uint32_t kNextSong = 256;
+inline constexpr uint32_t kPreviousSong = 512;
+inline constexpr uint32_t kNextSound = 1024;
+inline constexpr uint32_t kPreviousSound = 2048;
 } // namespace transport
 
 // Where the song is (IEngine::songPosition).
@@ -214,8 +233,9 @@ struct ChannelLoop
 struct MidiPort
 {
     QString name;
-    bool enabled = false; // plays into the app
-    int channel = 0;      // 0 = all channels, 1-16 = only that one
+    bool enabled = false;      // plays into the app
+    bool controlsOnly = false; // not played: its buttons and knobs only (transport, learned controls)
+    int channel = 0;           // 0 = all channels, 1-16 = only that one
 
     bool operator==(const MidiPort&) const = default;
 };

@@ -102,6 +102,15 @@ private slots:
                  u"Hold this part (loops until pressed again)"_s);
         QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::NextPatch)).toMap().value(u"label"_s).toString(),
                  u"Next sound"_s);
+        // A keyboard's own Play, Stop, ◀◀ and Click buttons, learned once.
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::PlaySong)).toMap().value(u"label"_s).toString(),
+                 u"Play the song"_s);
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::StopSong)).toMap().value(u"label"_s).toString(),
+                 u"Stop the song"_s);
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::PreviousPart)).toMap().value(u"label"_s).toString(),
+                 u"Previous part of the song (on the next bar)"_s);
+        QCOMPARE(controls.at(static_cast<int>(engine::ControlAction::ToggleClick)).toMap().value(u"label"_s).toString(),
+                 u"Click on / off"_s);
         // Learnable like the others, and kept.
         settings.learnControl(static_cast<int>(engine::ControlAction::NextSection));
         QCOMPARE(settings.learning(), static_cast<int>(engine::ControlAction::NextSection));
@@ -179,6 +188,28 @@ private slots:
         QVERIFY(options.midi.configured);
         QCOMPARE(options.midi.enabled, (QStringList{u"MIDIIN2 (Spy Keys) 1"_s}));
         QCOMPARE(options.midi.channels.at(u"MIDIIN2 (Spy Keys) 1"_s), 2);
+    }
+
+    // Each input plays, gives its buttons and knobs only (the keyboard's DAW
+    // port, by default), or is off; the choice is kept.
+    void midiInputModesApplyAndAreRemembered()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QCOMPARE(settings.midiInputs().at(0).toMap().value(u"mode"_s).toInt(), 0);
+        QCOMPARE(settings.midiInputs().at(1).toMap().value(u"mode"_s).toInt(), 1); // the DAW port: its buttons
+        settings.setMidiInputMode(u"MIDIIN2 (Spy Keys) 1"_s, 2);
+        QCOMPARE(settings.midiInputs().at(1).toMap().value(u"mode"_s).toInt(), 2);
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->midi.off, QStringList{u"MIDIIN2 (Spy Keys) 1"_s});
+        settings.setMidiInputMode(u"MIDIIN2 (Spy Keys) 1"_s, 1);
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->midi.controls, QStringList{u"MIDIIN2 (Spy Keys) 1"_s});
+        QVERIFY(m_engine->midi.off.isEmpty());
+        const auto options = SettingsController::engineOptions(*m_settings); // next start
+        QCOMPARE(options.midi.controls, QStringList{u"MIDIIN2 (Spy Keys) 1"_s});
+        settings.resetToDefaults();
+        QCOMPARE(settings.midiInputs().at(1).toMap().value(u"mode"_s).toInt(), 1);
     }
 
     // Saved before port names left out their place in Windows' list

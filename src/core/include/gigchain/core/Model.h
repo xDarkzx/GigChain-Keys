@@ -191,10 +191,25 @@ struct LoopControls
     friend bool operator==(const LoopControls&, const LoopControls&) = default;
 };
 
+// Keyboard knobs and faders learned for the mixer (right-click > Learn),
+// kept with the setlist: the master, and each strip's volume and pan by its
+// place in the mixer (the first strip of whichever sound is playing), as a
+// controller's eight faders sit over eight strips.
+struct MixerControls
+{
+    static constexpr std::size_t kStrips = 16;
+    LearnedControl master;
+    std::array<LearnedControl, kStrips> volume{};
+    std::array<LearnedControl, kStrips> pan{};
+
+    friend bool operator==(const MixerControls&, const MixerControls&) = default;
+};
+
 struct Setlist
 {
     std::vector<Song> songs;
     LoopControls loopControls;
+    MixerControls mixerControls;
 
     friend bool operator==(const Setlist&, const Setlist&) = default;
 };

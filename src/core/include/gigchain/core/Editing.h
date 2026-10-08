@@ -38,6 +38,8 @@ Result<void> setSongLoopSync(Setlist& setlist, int songIndex, bool sync);
 Result<void> setSongLoopBars(Setlist& setlist, int songIndex, int bars);
 // The looper's keyboard controls (validated).
 Result<void> setLoopControls(Setlist& setlist, const LoopControls& controls);
+// The mixer's keyboard knobs (validated).
+Result<void> setMixerControls(Setlist& setlist, const MixerControls& controls);
 // Stores what one section plays and how long it is, replacing the setup of
 // the same section (same name ignoring case, same occurrence).
 Result<void> setSectionSetup(Setlist& setlist, int songIndex, const SectionSetup& setup);

@@ -944,6 +944,9 @@ private slots:
         status.poll();
         QCOMPARE(learned.count(), 1);
         QVERIFY(!status.learningMapping());
+        // Said, so the player knows it took.
+        const auto lastSaid = [this] { return m_doc->notifications()->text(m_doc->notifications()->count() - 1); };
+        QCOMPARE(lastSaid(), u"MIDI learnt: CC 21 (channel 1) now moves Drive on Spy Piano"_s);
         const auto mapping = m_engine->lastPatch.channels.at(0).mappings.at(0);
         QCOMPARE(mapping.controller, 21);
         QCOMPARE(mapping.parameter, quint32{9});
@@ -1223,6 +1226,124 @@ private slots:
         m_engine->transportRequests = engine::transport::kContinue;
         status.poll();
         QVERIFY(status.songPlaying());
+    }
+
+    // The keyboard's universal buttons (MMC, Mackie Control): ◀◀ ▶▶ move by
+    // part, Cycle loops the part, Click switches the click, the bank and
+    // channel buttons change songs and sounds.
+    void theKeyboardsButtonsMoveTheSong()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));
+        QVERIFY(m_doc->addPatch(0));
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->selectPatch(0, 0));
+        QVERIFY(m_doc->setSongChart(0, u"{comment: Verse}\n[C]la\n{comment: Chorus}\n[F]oh\n{comment: Outro}\n[G]end\n"_s));
+        EngineStatus status(*m_engine, *m_doc);
+        const auto press = [&](uint32_t buttons) {
+            m_engine->transportRequests = buttons;
+            status.poll();
+        };
+        m_engine->liveControls.clear();
+        m_engine->position.part = 1;
+        press(engine::transport::kNextPart);
+        press(engine::transport::kPreviousPart);
+        QCOMPARE(m_engine->liveControls, (std::vector<QString>{u"part 2"_s, u"part 0"_s}));
+        m_engine->position.part = 0;
+        press(engine::transport::kPreviousPart); // at the first: its start again
+        QCOMPARE(m_engine->liveControls.back(), u"part 0"_s);
+        m_doc->playSong();
+        status.poll();
+        press(engine::transport::kLoopPart);
+        QCOMPARE(m_engine->liveControls.back(), u"hold"_s);
+        const bool clickAfter = !status.clickOn();
+        press(engine::transport::kClick);
+        QCOMPARE(status.clickOn(), clickAfter);
+        press(engine::transport::kNextSound);
+        QCOMPARE(m_doc->patchIndex(), 1);
+        press(engine::transport::kPreviousSound);
+        QCOMPARE(m_doc->patchIndex(), 0);
+        press(engine::transport::kNextSong);
+        QCOMPARE(m_doc->songIndex(), 1);
+        press(engine::transport::kPreviousSong);
+        QCOMPARE(m_doc->songIndex(), 0);
+
+        // The same, from buttons learned in Settings.
+        const auto learned = [&](engine::ControlAction action) {
+            m_engine->pendingActions = {action};
+            status.poll();
+        };
+        m_doc->stopSong();
+        status.poll();
+        learned(engine::ControlAction::PlaySong);
+        QVERIFY(status.songPlaying());
+        learned(engine::ControlAction::PlaySong); // already playing: nothing
+        QVERIFY(status.songPlaying());
+        learned(engine::ControlAction::StopSong);
+        QVERIFY(!status.songPlaying());
+        m_engine->position.part = 2;
+        learned(engine::ControlAction::PreviousPart);
+        QCOMPARE(m_engine->liveControls.back(), u"part 1"_s);
+        const bool toggled = !status.clickOn();
+        learned(engine::ControlAction::ToggleClick);
+        QCOMPARE(status.clickOn(), toggled);
+    }
+
+    // Right-click > Learn on a fader, a pan knob or the master: the next
+    // knob moved on the keyboard drives it, in every song (by the strip's
+    // place); one knob, one job; an undo step; kept with the setlist.
+    void aKeyboardKnobIsLearnedForTheMixer()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));
+        QVERIFY(m_doc->addChannel(u"spy/Pad.vst3"_s, u"Pad"_s));
+        EngineStatus status(*m_engine, *m_doc);
+        const int volume1 = 1;                                   // the first strip's volume
+        const int pan2 = 1 + static_cast<int>(core::MixerControls::kStrips) + 1; // the second strip's pan
+        status.learnMixerKnob(volume1);
+        QCOMPARE(status.learningMixerKnob(), volume1);
+        m_engine->movedController = std::pair{1, 7}; // CC 7 on channel 1 turned
+        status.poll();
+        QCOMPARE(status.learningMixerKnob(), -1);
+        QCOMPARE(m_doc->mixerKnobName(volume1), u"CC 7 (channel 1)"_s);
+        QCOMPARE(m_doc->notifications()->text(m_doc->notifications()->count() - 1),
+                 u"MIDI learnt: CC 7 (channel 1) now moves the volume of strip 1 (Piano)"_s);
+        QCOMPARE(m_engine->appKnobs.at(volume1).number, uint8_t{7});
+        QCOMPARE(m_engine->appKnobs.at(volume1).channel, uint8_t{0});
+        status.learnMixerKnob(pan2);
+        m_engine->movedController = std::pair{2, 10};
+        status.poll();
+        QCOMPARE(m_doc->mixerKnobName(pan2), u"CC 10 (channel 2)"_s);
+
+        // The knobs move what they were learned for.
+        m_engine->appKnobValues.at(volume1) = 127;
+        m_engine->appKnobValues.at(pan2) = 0;
+        status.poll();
+        QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, 12.0);
+        QCOMPARE(m_doc->currentPatch()->channels.at(1).pan, -1.0);
+        m_engine->appKnobValues.at(volume1) = 0;
+        status.poll();
+        QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, -60.0);
+
+        // One knob, one job: CC 7 learned for the master leaves the strip.
+        status.learnMixerKnob(0);
+        m_engine->movedController = std::pair{1, 7};
+        status.poll();
+        QCOMPARE(m_doc->mixerKnobName(0), u"CC 7 (channel 1)"_s);
+        QVERIFY(m_doc->mixerKnobName(volume1).isEmpty());
+        m_engine->appKnobValues.at(0) = 0;
+        status.poll();
+        QCOMPARE(status.masterVolumeDb(), -60.0);
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->mixerKnobName(volume1), u"CC 7 (channel 1)"_s);
+        QVERIFY(m_doc->forgetMixerKnob(volume1));
+        QVERIFY(m_doc->mixerKnobName(volume1).isEmpty());
+        QVERIFY(!m_engine->appKnobs.at(volume1).isSet());
+        // Learning can be called off.
+        status.learnMixerKnob(volume1);
+        status.cancelMixerKnobLearn();
+        m_engine->movedController = std::pair{1, 20};
+        status.poll();
+        QVERIFY(m_doc->mixerKnobName(volume1).isEmpty());
+        QVERIFY(!m_doc->setMixerKnob(99, 1, 20)); // no such knob: said
     }
 
     // Stopped, Next part moves along the song's flow (the chorus played

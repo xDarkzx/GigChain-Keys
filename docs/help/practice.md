@@ -67,6 +67,43 @@ bar of count-in before the first chord.
 - Loop the part you find hard.
 - Leaving Practice (**Edit**, **Perform** or **Esc**) pauses it.
 
+## Warm-up
+
+Click **Warm-up** at the top left of Practice. Warm-ups get your fingers
+going before you play, the way pianists and teachers do it: short, every day,
+each hand alone first, then both together.
+
+**Start warm-up** runs today's warm-up at your level, about 5 minutes for
+Beginner, longer above it. Each exercise is played with the **right hand**,
+then the **left hand**, then **both hands**. Play along with the falling
+notes: the number on each note is the finger to use (**1** the thumb, **5**
+the little finger). You can also pick any exercise, and its hands, yourself.
+
+| Level | Exercises |
+|---|---|
+| **Beginner** | The warm-up run (C to G and back, round and round, one finger per key: every finger, smooth single notes); five fingers from C; from G; skipping fingers. 60 to 90 BPM |
+| **Intermediate** | Five fingers in C, G, D and F; C and G major scales; broken chords I-IV-V7-I; Ode to Joy (the tune in each hand, then both); hands moving apart. Eighth notes, 70 to 110 BPM |
+
+Every Beginner and Intermediate exercise works all five fingers of each hand.
+| **Pro** | Hanon No. 1; C major over two octaves, together and in contrary motion; the C major arpeggio; chord inversions. Sixteenth notes, 80 to 120 BPM |
+
+**Your score** comes after every run:
+
+- **Stars** (up to 3) and the notes you got right, missed or added.
+- **Timing:** how far from the beat you were, and whether you ran behind or ahead of it.
+- **Evenness:** how steady your rhythm was.
+- **Hands together** (both hands only): how far apart your hands landed on notes meant to sound together.
+- One **tip** about what to fix next.
+
+**Moving on:** a run is **clean** when every note is right and the timing is
+close enough for your level (Beginner within 80 ms, Intermediate 50 ms, Pro
+30 ms; with both hands, Intermediate within 60 ms of each other, Pro 40 ms).
+**Three clean runs in a row with both hands** move the tempo up 5 BPM. Three
+clean at the exercise's target tempo **pass** it, and passing every exercise
+of a level opens the next one. Your progress is kept on this computer.
+
+Play from your MIDI keyboard: the app times every key to the millisecond.
+
 ## Coming later
 
 Single-note intros and melodies (record or import them), playing along with

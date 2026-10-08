@@ -83,6 +83,8 @@ public:
     [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
     [[nodiscard]] double masterVolume() const override { return m_masterDb; }
     void injectNote(int midiChannel, int note, int velocity) override;
+    void injectController(int midiChannel, int controller, int value) override;
+    std::vector<KeyPress> takeKeyPresses() override { return m_midi.takePresses(); }
     std::vector<Notice> poll() override;
     [[nodiscard]] QString statusText() const override;
     [[nodiscard]] std::vector<AudioOutput> audioOutputs() const override;
@@ -120,6 +122,8 @@ public:
     std::vector<LoopAction> takeLoopActions() override;
     SelectorMove takeSelectorMove() override;
     std::optional<std::array<int, 3>> takeControllerMove() override;
+    void setAppKnobs(const AppKnobs& knobs) override;
+    AppKnobValues takeAppKnobValues() override;
     void setClick(bool on, double volumeDb) override;
     [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
     void setBackingTrack(const QString& path) override;
@@ -276,6 +280,9 @@ private:
     std::atomic<int> m_selectorMode{0};
     std::atomic<int> m_selectorValue{-1};
     std::atomic<int> m_selectorSteps{0};
+    // The app's knobs (packed triggers) and each one's last value + 1 (0: not moved since taken).
+    std::array<std::atomic<uint32_t>, kAppKnobCount> m_appKnobs{};
+    std::array<std::atomic<int>, kAppKnobCount> m_appKnobValues{};
     // Audio thread: takes control messages out of `count` events (in place).
     std::size_t takeControlMessages(std::size_t count) noexcept;
 

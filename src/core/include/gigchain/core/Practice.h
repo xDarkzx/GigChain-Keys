@@ -69,6 +69,7 @@ struct PracticeChord
     int bass = 36;          // the left hand's lowest note
     std::vector<int> left;  // low to high
     std::vector<int> right;
+    std::map<int, int> fingers; // pitch -> finger 1-5 (warm-ups); empty: none shown
 };
 
 struct PracticeSectionMark

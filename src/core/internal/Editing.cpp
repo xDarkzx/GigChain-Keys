@@ -229,6 +229,13 @@ Result<void> setLoopControls(Setlist& setlist, const LoopControls& controls)
     return {};
 }
 
+Result<void> setMixerControls(Setlist& setlist, const MixerControls& controls)
+{
+    if (auto r = validateMixerControls(controls); !r) return r;
+    setlist.mixerControls = controls;
+    return {};
+}
+
 Result<void> setSectionSetup(Setlist& setlist, int songIndex, const SectionSetup& setup)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));

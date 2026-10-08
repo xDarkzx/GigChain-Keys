@@ -364,6 +364,7 @@ private slots:
         // Play, by finger: the song plays; Loop part lights; Stop.
         fingerTap(play);
         QTRY_VERIFY(m_engine->songPosition().playing);
+        QTRY_VERIFY(loopPart->isEnabled()); // (it opens once the screen has seen the song playing)
         fingerTap(loopPart);
         QTRY_VERIFY(loopPart->property("checked").toBool());
         fingerTap(play);
@@ -427,6 +428,54 @@ private slots:
         QTest::keyClick(w, Qt::Key_Escape); // nothing changed
         QTRY_VERIFY(!field->isVisible());
         QCOMPARE(doc.currentPatch()->channels.at(0).name, u"Classic American Piano"_s);
+    }
+
+    // Right-click a strip's fader: Learn a keyboard knob; the banner says
+    // what to do and Esc calls it off. The master fader too.
+    void aFaderLearnsAKeyboardKnobFromItsMenu()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        settle();
+        auto* status = m_qml->rootObjects().value(0)->property("engineStatus").value<QObject*>();
+        QVERIFY(status != nullptr);
+        QQuickItem* fader = stripChild(u"faderKnobArea"_s);
+        QVERIFY(fader != nullptr);
+        QTest::mouseClick(w, Qt::RightButton, {}, fader->mapToScene(QPointF(fader->width() / 2, fader->height() / 2)).toPoint());
+        // The menu that opened (a menu's rows are in the window's overlay while it is open).
+        const auto openLearnItem = [w]() -> QQuickItem* {
+            const QList<QQuickItem*> items = findAll(w->contentItem(), u"learnKnob"_s);
+            const auto open = std::ranges::find_if(items, [](const QQuickItem* item) {
+                return item->isVisible() && item->property("enabled").toBool();
+            });
+            return open != items.end() ? *open : nullptr;
+        };
+        QTRY_VERIFY(openLearnItem() != nullptr);
+        QQuickItem* learn = openLearnItem();
+        QTest::mouseClick(w, Qt::LeftButton, {}, learn->mapToScene(QPointF(learn->width() / 2, learn->height() / 2)).toPoint());
+        QTRY_COMPARE(status->property("learningMixerKnob").toInt(), 1);
+        auto* banner = w->findChild<QQuickItem*>(u"knobLearnBanner"_s);
+        QVERIFY(banner != nullptr);
+        QTRY_VERIFY(banner->isVisible());
+        shoot(u"knob-learn"_s);
+        QTest::keyClick(w, Qt::Key_Escape);
+        QTRY_COMPARE(status->property("learningMixerKnob").toInt(), -1);
+        QVERIFY(!banner->isVisible());
+
+        // A knob inside the plugin: the strip's menu starts learning on the
+        // Instrument tab, and the banner says to move the knob in the plugin.
+        QVERIFY(QMetaObject::invokeMethod(&doc, "editChannel", Q_ARG(int, 0), Q_ARG(QString, u"plugin-learn"_s)));
+        QTRY_VERIFY(status->property("learningMapping").toBool());
+        QTRY_VERIFY(banner->isVisible());
+        auto* text = w->findChild<QQuickItem*>(u"knobLearnText"_s);
+        QVERIFY(text != nullptr);
+        QVERIFY2(text->property("text").toString().contains(u"in the plugin"_s), qPrintable(text->property("text").toString()));
+        QCOMPARE(w->findChild<QObject*>(u"mainTabs"_s)->property("currentIndex").toInt(), 1); // the Instrument tab
+        QTest::keyClick(w, Qt::Key_Escape);
+        QTRY_VERIFY(!status->property("learningMapping").toBool());
     }
 
     // A−/A+ in the Perform view change the chart's size, kept for next time.
@@ -1560,6 +1609,185 @@ private slots:
         QVERIFY(lineText != nullptr && shown != typed.end());
         QCOMPARE((*shown)->property("text").toString(), u"Hold meXtight"_s);
         QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[D]I need [Gm7]your love baby\nHold metight"_s); // (saved on Enter)
+    }
+
+    // The README's pictures (docs/images), with GIGCHAIN_README_SHOTS set to
+    // the folder to write them to: a small made-up setlist on the demo
+    // engine, in Edit, Perform (playing), the fader's MIDI Learn menu,
+    // Practice and a warm-up run played note by note (its score). Skipped
+    // otherwise.
+    void readmeScreenshots()
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_README_SHOTS");
+        if (folder.isEmpty()) QSKIP("Set GIGCHAIN_README_SHOTS to a folder to take the README's pictures");
+        const auto snap = [&](const QString& name) {
+            QTest::qWait(400);
+            QVERIFY(window()->grabWindow().save(folder + u'/' + name + u".png"_s));
+        };
+        QObject* root = m_qml->rootObjects().value(0);
+        QQuickWindow* w = window();
+        w->resize(1600, 1000);
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        ui::DocumentController& doc = m_session->document();
+        // (The loop station's row out of the way: the chart has the room.)
+        auto* loops = root->property("loops").value<QObject*>();
+        QVERIFY(loops != nullptr && loops->setProperty("stripVisible", false));
+
+        // The setlist: three songs, the first with sections, a flow, three instruments named for their sound.
+        QVERIFY(doc.renameSong(0, u"Morning Light"_s));
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.renameSong(1, u"Blue Harbour"_s));
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.renameSong(2, u"Silver Line"_s));
+        QVERIFY(doc.selectPatch(0, 0));
+        QVERIFY(doc.setSongTempo(0, 96));
+        QVERIFY(doc.setSongChart(0, u"{comment: Verse 1}\n"
+                                  "[C]Down by the [G]water we [Am]wait for the [F]morning\n"
+                                  "[C]Every small [G]light on the [F]harbour wall\n"
+                                  "{comment: Chorus}\n"
+                                  "[F]Hold on, [G]hold on, the [Am]night is nearly [F]over\n"
+                                  "[C]We are [G]almost [F]home\n"
+                                  "{comment: Verse 2}\n"
+                                  "[C]Out on the [G]road where the [Am]rain keeps on [F]falling\n"
+                                  "[C]Every old [G]song brings me [F]back again\n"_s));
+        const auto part = [](const QString& name) { return QVariantMap{{u"name"_s, name}, {u"occurrence"_s, 1}}; };
+        QVERIFY(doc.setSongFlow({part(u"Verse 1"_s), part(u"Chorus"_s), part(u"Verse 2"_s), part(u"Chorus"_s)}));
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        QVERIFY(doc.setChannelName(0, u"Warm Piano"_s));
+        QVERIFY(doc.addEffect(0, u"fake.reverb"_s, u"Reverb"_s));
+        QVERIFY(doc.addChannel(u"fake.analog-pad"_s, u"Analog Pad"_s));
+        QVERIFY(doc.setChannelName(1, u"Soft Pad"_s));
+        QVERIFY(doc.setChannelVolume(1, -8.0));
+        QVERIFY(doc.addChannel(u"fake.string-ensemble"_s, u"String Ensemble"_s));
+        QVERIFY(doc.setChannelName(2, u"Strings"_s));
+        QVERIFY(doc.setChannelVolume(2, -12.0));
+        QVERIFY(doc.removeSectionChannel(0, 2)); // the strings wait for the chorus
+        auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(tabs != nullptr && tabs->setProperty("currentIndex", 0));
+        doc.setSelectedChannel(0);
+        settle();
+        snap(u"edit"_s);
+
+        // MIDI Learn from a fader's right-click.
+        QQuickItem* fader = stripChild(u"faderKnobArea"_s);
+        QVERIFY(fader != nullptr);
+        QTest::mouseClick(w, Qt::RightButton, {}, fader->mapToScene(QPointF(fader->width() / 2, fader->height() / 3)).toPoint());
+        snap(u"midi-learn"_s);
+        QTest::keyClick(w, Qt::Key_Escape);
+        settle();
+
+        // Perform, the song playing.
+        QVERIFY(root->setProperty("performMode", true));
+        settle();
+        auto* play = findItem(w->contentItem(), u"performPlay"_s);
+        QVERIFY(play != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(play, "clicked"));
+        QTest::qWait(2500);
+        snap(u"perform"_s);
+        QVERIFY(QMetaObject::invokeMethod(play, "clicked"));
+        QVERIFY(root->setProperty("performMode", false));
+        settle();
+
+        // Practice: the song's chords falling.
+        auto* practiceButton = w->findChild<QObject*>(u"practiceButton"_s);
+        QVERIFY(QMetaObject::invokeMethod(practiceButton, "clicked"));
+        settle();
+        QVERIFY(QMetaObject::invokeMethod(findItem(w->contentItem(), u"practiceMode1"_s), "clicked"));
+        QVERIFY(QMetaObject::invokeMethod(findItem(w->contentItem(), u"practicePlay"_s), "clicked"));
+        QTest::qWait(3000);
+        snap(u"practice"_s);
+        QVERIFY(QMetaObject::invokeMethod(findItem(w->contentItem(), u"practicePlay"_s), "clicked"));
+
+        // The warm-up: five fingers from C with both hands, played on time
+        // (each note sent as it lands), then its score.
+        auto* warmup = root->property("warmup").value<ui::WarmupController*>();
+        QVERIFY(warmup != nullptr);
+        warmup->setActive(true);
+        warmup->startExercise(1, static_cast<int>(core::WarmupHands::Both));
+        const ui::PracticeController& practice = m_session->practice();
+        QList<QVariantMap> toPlay;
+        for (const QVariant& n : practice.notes()) toPlay << n.toMap();
+        QList<std::pair<int, double>> held; // (pitch, the beat it lets go at)
+        bool shotPlaying = false;
+        for (int i = 0; i < 4000 && practice.playing(); ++i) {
+            QTest::qWait(4);
+            for (auto it = held.begin(); it != held.end();) {
+                if (practice.position() < it->second) {
+                    ++it;
+                    continue;
+                }
+                m_engine->injectNote(1, it->first, 0);
+                it = held.erase(it);
+            }
+            for (auto it = toPlay.begin(); it != toPlay.end();) {
+                const double start = it->value(u"start"_s).toDouble();
+                if (practice.position() + 0.01 < start) {
+                    ++it;
+                    continue;
+                }
+                m_engine->injectNote(1, it->value(u"pitch"_s).toInt(), 96);
+                held << std::pair{it->value(u"pitch"_s).toInt(), start + (it->value(u"length"_s).toDouble() * 0.9)};
+                it = toPlay.erase(it);
+            }
+            if (!shotPlaying && practice.position() > 6.2) {
+                shotPlaying = true;
+                QVERIFY(w->grabWindow().save(folder + u"/warmup.png"_s));
+            }
+        }
+        QTRY_VERIFY(findItem(w->contentItem(), u"warmupStars"_s)->isVisible());
+        snap(u"warmup-score"_s);
+    }
+
+    // The Practice tab's warm-up: the level's exercises and Start; Start
+    // runs the first exercise, right hand, its notes falling with their
+    // fingers; back to Song, the song's notes return.
+    void theWarmupStartsFromThePracticeTab()
+    {
+        window()->resize(1500, 900);
+        QQuickItem* scene = window()->contentItem();
+        auto* practiceButton = window()->findChild<QObject*>(u"practiceButton"_s);
+        QVERIFY(practiceButton != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(practiceButton, "clicked"));
+        settle();
+        auto* warmupMode = findItem(scene, u"practiceWarmupMode"_s);
+        QVERIFY(warmupMode != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(warmupMode, "clicked"));
+        settle();
+        auto* panel = findItem(scene, u"warmupPanel"_s);
+        QVERIFY(panel != nullptr);
+        QTRY_VERIFY(panel->isVisible()); // the level's exercises, and Start
+        QVERIFY(findItem(scene, u"warmupBar"_s)->isVisible());
+        shoot(u"warmup-start"_s);
+
+        auto* begin = findItem(scene, u"warmupBegin"_s);
+        QVERIFY(begin != nullptr && begin->isVisible());
+        QVERIFY(QMetaObject::invokeMethod(begin, "clicked"));
+        settle();
+        QVERIFY(m_session->practice().exercise());
+        QVERIFY(m_session->practice().playing());
+        QTRY_VERIFY(findItem(scene, u"warmupPlaying"_s)->isVisible()); // what to play, and how
+        QVERIFY(!panel->isVisible());
+        const QList<QQuickItem*> fingers = findAll(scene, u"practiceFinger"_s);
+        QCOMPARE(fingers.size(), 33); // the warm-up run, right hand: C to G and back, four times, and the C
+        QTest::qWait(1200);           // (the count-in: the notes come into view)
+        shoot(u"warmup-playing"_s);
+        // To the end with nothing played (the demo has no keyboard): scored,
+        // no stars, and the tip says what to check.
+        m_session->practice().advance(60000.0);
+        QTRY_VERIFY(panel->isVisible());
+        auto* stars = findItem(scene, u"warmupStars"_s);
+        QVERIFY(stars != nullptr && stars->isVisible());
+        QCOMPARE(stars->property("text").toString(), u"☆☆☆"_s);
+        QVERIFY(findItem(scene, u"warmupTip"_s)->property("text").toString().contains(u"Nothing was heard"_s));
+        QVERIFY(findItem(scene, u"warmupNext"_s)->isVisible());
+        shoot(u"warmup-result"_s);
+
+        auto* songMode = findItem(scene, u"practiceSongMode"_s);
+        QVERIFY(QMetaObject::invokeMethod(songMode, "clicked"));
+        settle();
+        QVERIFY(!m_session->practice().exercise());
+        QVERIFY(!m_session->practice().playing());
     }
 
     // The Practice tab: the song's chords falling onto the keyboard, each

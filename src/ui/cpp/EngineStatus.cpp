@@ -280,12 +280,87 @@ void EngineStatus::pollMappingLearn()
         const int channel = m_learnChannel;
         if (m_document.addMapping(channel, m_learnedKnob->first, m_learnedKnob->second, m_learnTarget, m_learnedParameter->id,
                                   m_learnedParameter->name)) {
+            // Said, so the player knows it took.
+            const core::Patch* patch = m_document.currentPatch();
+            const core::Channel* c = patch != nullptr && std::cmp_less(channel, patch->channels.size())
+                                         ? &patch->channels.at(static_cast<std::size_t>(channel))
+                                         : nullptr;
+            QString plugin;
+            if (c != nullptr && m_learnTarget < 0 && c->instrument) plugin = c->instrument->displayName;
+            else if (c != nullptr && m_learnTarget >= 0 && std::cmp_less(m_learnTarget, c->effects.size())) {
+                plugin = c->effects.at(static_cast<std::size_t>(m_learnTarget)).displayName;
+            }
+            const QString what = plugin.isEmpty() ? m_learnedParameter->name : tr("%1 on %2").arg(m_learnedParameter->name, plugin);
+            m_document.reportMessage(tr("MIDI learnt: CC %1 (channel %2) now moves %3").arg(m_learnedKnob->second).arg(m_learnedKnob->first).arg(what),
+                                     Notifications::Info);
             emit mappingLearned(channel);
         }
         cancelMappingLearn();
         return;
     }
     if (changed) emit mappingLearnChanged();
+}
+
+void EngineStatus::learnMixerKnob(int slot)
+{
+    if (slot < 0 || slot >= engine::kAppKnobCount) {
+        qCWarning(lcUi) << "Ignored: no mixer control" << slot << "to learn a knob for";
+        return;
+    }
+    cancelMappingLearn(); // one learning at a time
+    (void)m_engine.takeMovedController(); // only a knob moved from now on counts
+    m_learnKnobSlot = slot;
+    emit mixerKnobLearnChanged();
+}
+
+void EngineStatus::cancelMixerKnobLearn()
+{
+    if (m_learnKnobSlot < 0) return;
+    m_learnKnobSlot = -1;
+    emit mixerKnobLearnChanged();
+}
+
+void EngineStatus::pollMixerKnobs()
+{
+    if (m_learnKnobSlot >= 0) {
+        if (const auto moved = m_engine.takeMovedController()) {
+            const int slot = std::exchange(m_learnKnobSlot, -1);
+            if (m_document.setMixerKnob(slot, moved->first, moved->second)) { // (a refusal is reported)
+                // Said, so the player knows it took.
+                constexpr int kStrips = engine::kAppKnobStrips;
+                const int strip = slot <= kStrips ? slot - 1 : slot - 1 - kStrips;
+                const core::Patch* playing = m_document.currentPatch();
+                const QString name = playing != nullptr && slot > 0 && std::cmp_less(strip, playing->channels.size())
+                                         ? playing->channels.at(static_cast<std::size_t>(strip)).name
+                                         : QString();
+                const QString stripText = name.isEmpty() ? tr("strip %1").arg(strip + 1) : tr("strip %1 (%2)").arg(strip + 1).arg(name);
+                const QString what = slot == 0 ? tr("the master volume")
+                                     : slot <= kStrips ? tr("the volume of %1").arg(stripText)
+                                                       : tr("the pan of %1").arg(stripText);
+                m_document.reportMessage(tr("MIDI learnt: CC %1 (channel %2) now moves %3").arg(moved->second).arg(moved->first).arg(what),
+                                         Notifications::Info);
+            }
+            emit mixerKnobLearnChanged();
+        }
+    }
+    // Where the learned knobs are: the fader's range (-60 to +12 dB, as on
+    // screen), the pan's (-1 to +1, 64 the middle).
+    constexpr int kStrips = engine::kAppKnobStrips;
+    const auto volumeOf = [](int value) { return -60.0 + (72.0 * value / 127.0); };
+    const engine::AppKnobValues values = m_engine.takeAppKnobValues();
+    const core::Patch* patch = m_document.currentPatch();
+    const int channels = patch != nullptr ? static_cast<int>(patch->channels.size()) : 0;
+    for (int slot = 0; slot < engine::kAppKnobCount; ++slot) {
+        const int value = values.at(static_cast<std::size_t>(slot));
+        if (value < 0) continue;
+        if (slot == 0) {
+            setMasterVolumeDb(volumeOf(value));
+        } else if (slot <= kStrips) {
+            if (slot - 1 < channels) (void)m_document.setChannelVolume(slot - 1, volumeOf(value));
+        } else if (slot - 1 - kStrips < channels) {
+            (void)m_document.setChannelPan(slot - 1 - kStrips, std::clamp((value - 64) / 63.0, -1.0, 1.0));
+        }
+    }
 }
 
 double EngineStatus::readMemoryMb()
@@ -320,6 +395,14 @@ void EngineStatus::poll()
         case engine::ControlAction::NextSection: m_document.nextPart(); break;
         case engine::ControlAction::RepeatPart: m_document.repeatPart(); break;
         case engine::ControlAction::HoldPart: m_document.holdPart(); break;
+        case engine::ControlAction::PlaySong:
+            if (!songPlaying()) m_document.playSong();
+            break;
+        case engine::ControlAction::StopSong:
+            if (songPlaying()) m_document.stopSong();
+            break;
+        case engine::ControlAction::PreviousPart: m_document.previousPart(); break;
+        case engine::ControlAction::ToggleClick: setClickOn(!m_clickOn); break;
         }
     }
     // The keyboard's transport buttons and the sustain pedal's double press.
@@ -333,11 +416,22 @@ void EngineStatus::poll()
         } else if ((asked & engine::transport::kToggle) != 0) {
             playPauseTrack();
         }
+        // The keyboard's other buttons (MMC, Mackie Control).
+        using namespace engine::transport;
+        if ((asked & kNextPart) != 0) m_document.nextPart();
+        if ((asked & kPreviousPart) != 0) m_document.previousPart();
+        if ((asked & kLoopPart) != 0) m_document.holdPart();
+        if ((asked & kClick) != 0) setClickOn(!m_clickOn);
+        if ((asked & kNextSong) != 0) m_document.nextSong();
+        if ((asked & kPreviousSong) != 0) m_document.previousSong();
+        if ((asked & kNextSound) != 0) m_document.nextPatch();
+        if ((asked & kPreviousSound) != 0) m_document.previousPatch();
     }
     // A keyboard's patch buttons (Program Change).
     if (const int program = m_engine.takeProgramChange(); program >= 0) m_document.selectProgram(program);
     pollTransport();
     pollMappingLearn();
+    pollMixerKnobs();
     if (const engine::MidiActivity keyboard = m_engine.keyboardActivity(); keyboard != m_keyboard) {
         m_keyboard = keyboard;
         emit keyboardChanged();

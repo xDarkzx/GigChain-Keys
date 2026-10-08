@@ -75,6 +75,8 @@ class EngineStatus : public QObject
     Q_PROPERTY(int chordStep READ chordStep NOTIFY chordStepChanged)
     // Learning a knob for a plugin parameter: what has been caught so far.
     Q_PROPERTY(bool learningMapping READ learningMapping NOTIFY mappingLearnChanged)
+    // The mixer control a keyboard knob is being learned for; -1: none.
+    Q_PROPERTY(int learningMixerKnob READ learningMixerKnob NOTIFY mixerKnobLearnChanged)
     Q_PROPERTY(QString learnedKnob READ learnedKnob NOTIFY mappingLearnChanged)
     Q_PROPERTY(QString learnedParameter READ learnedParameter NOTIFY mappingLearnChanged)
     // Audio input channels open now (0: no input device chosen in Settings).
@@ -149,6 +151,12 @@ public:
     // While learning: the parameter picked from the list instead of moved in
     // the plugin's window.
     Q_INVOKABLE void setLearnParameter(quint32 id, const QString& name);
+    // Learning a keyboard knob for a mixer control (right-click > Learn on
+    // a fader, a pan knob, the master; DocumentController::setMixerKnob's
+    // slots): the next knob moved is it.
+    Q_INVOKABLE void learnMixerKnob(int slot);
+    Q_INVOKABLE void cancelMixerKnobLearn();
+    [[nodiscard]] int learningMixerKnob() const { return m_learnKnobSlot; }
     [[nodiscard]] int audioInputChannels() const { return m_audioInputs; }
     [[nodiscard]] QVariantList keyVelocities() const;
     [[nodiscard]] double pitchBend() const { return (m_keyboard.pitchBend - 8192) / 8192.0; }
@@ -174,6 +182,7 @@ signals:
     void songPositionChanged();
     void chordStepChanged();
     void mappingLearnChanged();
+    void mixerKnobLearnChanged();
     void mappingLearned(int channel); // a knob was mapped
     void keyboardChanged();
     void polled();
@@ -182,6 +191,8 @@ private:
     double readMemoryMb();
     void pollTransport();
     void pollMappingLearn();
+    // The mixer's keyboard knobs: learning one, and moving what they drive.
+    void pollMixerKnobs();
     [[nodiscard]] std::optional<core::ChannelId> channelId(int channel) const;
 
     engine::IEngine& m_engine;
@@ -207,6 +218,7 @@ private:
     std::vector<qint64> m_taps; // ms, the last few taps
     int m_learnChannel = -1;
     int m_learnTarget = -1;
+    int m_learnKnobSlot = -1; // learning a mixer knob for this slot
     std::optional<std::pair<int, int>> m_learnedKnob;
     std::optional<engine::PluginParameter> m_learnedParameter;
 };

@@ -44,8 +44,31 @@ PracticeController::~PracticeController()
     releaseAll();
 }
 
+void PracticeController::loadExercise(const core::PracticeTimeline& timeline, double bpm)
+{
+    releaseAll();
+    m_timer.stop();
+    setPlaying(false);
+    m_exercise = true;
+    m_timeline = timeline;
+    m_tempo = bpm > 0.0 ? bpm : 120.0;
+    m_speed = 1.0;   // (the tempo is the exercise's)
+    m_loopSection = -1;
+    m_mode = PlayAlong;
+    emit settingsChanged();
+    publishTimeline();
+}
+
+void PracticeController::clearExercise()
+{
+    if (!m_exercise) return;
+    m_exercise = false;
+    rebuild();
+}
+
 void PracticeController::rebuild()
 {
+    if (m_exercise) return; // (the song's notes come back with clearExercise)
     releaseAll();
     setPlaying(false);
     const core::Chart chart = core::parseChordPro(m_document.currentChart());
@@ -63,7 +86,11 @@ void PracticeController::rebuild()
     const QVariantMap chosen = m_document.currentChordInversions();
     for (auto it = chosen.begin(); it != chosen.end(); ++it) m_style.chosen[it.key()] = it.value().toInt();
     m_timeline = core::practiceTimeline(map, bars, names, beats, m_style);
+    publishTimeline();
+}
 
+void PracticeController::publishTimeline()
+{
     m_notes.clear();
     m_chords.clear();
     m_sections.clear();
@@ -73,8 +100,10 @@ void PracticeController::rebuild()
                                 {u"section"_s, chord.section},
                                 {u"low"_s, chord.right.empty() ? chord.bass : chord.right.front()}}; // (its name sits beside it)
         const auto note = [&](int pitch, bool left) {
+            const auto finger = chord.fingers.find(pitch);
             m_notes << QVariantMap{{u"pitch"_s, pitch}, {u"start"_s, chord.start}, {u"length"_s, chord.length},
-                                   {u"left"_s, left}, {u"chord"_s, static_cast<int>(i)}};
+                                   {u"left"_s, left}, {u"chord"_s, static_cast<int>(i)},
+                                   {u"finger"_s, finger != chord.fingers.end() ? finger->second : 0}};
         };
         for (const int pitch : chord.left) note(pitch, true);
         for (const int pitch : chord.right) note(pitch, false);
@@ -107,12 +136,13 @@ QString PracticeController::nextChord() const
 
 QVariantList PracticeController::targetNotes() const
 {
+    // Every chord sounding now (a warm-up's held bass note and its tune's notes too).
     QVariantList list;
-    const int at = chordAt(m_position);
-    if (at < 0) return list;
-    const core::PracticeChord& chord = m_timeline.chords.at(static_cast<std::size_t>(at));
-    for (const int pitch : chord.left) list << pitch;
-    for (const int pitch : chord.right) list << pitch;
+    for (const core::PracticeChord& chord : m_timeline.chords) {
+        if (m_position < chord.start - 1e-9 || m_position >= chord.start + chord.length - 1e-9) continue;
+        for (const int pitch : chord.left) list << pitch;
+        for (const int pitch : chord.right) list << pitch;
+    }
     return list;
 }
 
@@ -261,6 +291,7 @@ void PracticeController::advance(double ms)
             m_timer.stop();
             setPlaying(false);
             emit positionChanged();
+            emit finished();
             return;
         }
         // A section: round again.

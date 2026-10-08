@@ -14,8 +14,11 @@ Rectangle {
     objectName: "practiceView"
 
     required property PracticeController practice
+    required property WarmupController warmup
     required property EngineStatus engineStatus
     required property DocumentController doc
+    // Warming up (the warm-up's exercise falls) rather than the song.
+    readonly property bool warming: view.warmup.active
 
     color: "#05060a"
 
@@ -26,7 +29,11 @@ Rectangle {
     }
 
     // Leaving the mode pauses (its notes let go).
-    onVisibleChanged: if (!visible) view.practice.pause()
+    onVisibleChanged: {
+        if (visible) return
+        if (view.warming) view.warmup.stop()
+        view.practice.pause()
+    }
 
     // The hands' colours: the left (the bass) blue, the right gold.
     readonly property color leftColour: "#36c5ff"
@@ -112,6 +119,35 @@ Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: Theme.spacingLarge
                 anchors.rightMargin: Theme.spacingLarge
+                spacing: Theme.spacing
+                // The song, or the warm-up.
+                Row {
+                    spacing: -1
+                    StageButton {
+                        objectName: "practiceSongMode"
+                        text: qsTr("Song")
+                        checked: !view.warming
+                        onClicked: view.warmup.active = false
+                    }
+                    StageButton {
+                        objectName: "practiceWarmupMode"
+                        text: qsTr("Warm-up")
+                        checked: view.warming
+                        tip: qsTr("Warm up your fingers: exercises for each hand, then both, scored as you play")
+                        onClicked: view.warmup.active = true
+                    }
+                }
+                Item { Layout.preferredWidth: Theme.spacing }
+                WarmupBar {
+                    objectName: "warmupBar"
+                    visible: view.warming
+                    Layout.fillWidth: true
+                    warmup: view.warmup
+                }
+                RowLayout {
+                id: songControls
+                visible: !view.warming
+                Layout.fillWidth: true
                 spacing: Theme.spacing
                 StageButton {
                     objectName: "practicePlay"
@@ -233,6 +269,7 @@ Rectangle {
                         font.bold: true
                     }
                 }
+                }
             }
         }
 
@@ -266,7 +303,7 @@ Rectangle {
 
             // A song without chords: nothing to practise; where to add them.
             Label {
-                visible: view.practice.chords.length === 0
+                visible: view.practice.chords.length === 0 && !view.warming
                 anchors.centerIn: parent
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("This song has no chords to practise yet.\nType or paste them in the Chart tab.")
@@ -378,6 +415,18 @@ Rectangle {
                         color: "white"
                         opacity: 0.35
                     }
+                    // The finger to play it with (warm-ups): 1 the thumb ... 5 the little finger.
+                    Text {
+                        objectName: "practiceFinger"
+                        visible: (fallingNote.modelData.finger || 0) > 0 && parent.height >= 14
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 2
+                        text: fallingNote.modelData.finger || ""
+                        color: "#10131c"
+                        font.pixelSize: Math.min(16, Math.max(10, parent.width * 0.55))
+                        font.bold: true
+                    }
                 }
             }
 
@@ -479,6 +528,14 @@ Rectangle {
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: practiceDiagram.show(chordName.modelData.name) }
                 }
+            }
+
+            // Warming up: what to play, the score after each run, the start and the end.
+            WarmupCard {
+                objectName: "warmupCard"
+                anchors.fill: parent
+                visible: view.warming
+                warmup: view.warmup
             }
         }
 

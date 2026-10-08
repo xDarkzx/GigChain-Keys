@@ -722,9 +722,25 @@ void RealEngine::injectNote(int midiChannel, int note, int velocity)
         return;
     }
     const auto status = static_cast<uint8_t>((velocity > 0 ? 0x90 : 0x80) | (midiChannel - 1));
+    if (velocity > 0) m_midi.recordPress(note, velocity); // (played from the screen: timed like the keyboard)
     if (!m_injected.push(MidiEvent{.status = status,
                                    .data1 = static_cast<uint8_t>(note),
                                    .data2 = static_cast<uint8_t>(velocity),
+                                   .sampleOffset = 0})) {
+        m_droppedInjected.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+void RealEngine::injectController(int midiChannel, int controller, int value)
+{
+    if (midiChannel < 1 || midiChannel > 16 || controller < 0 || controller > 127 || value < 0 || value > 127) {
+        qCWarning(lcEngine) << "Controller ignored: channel" << midiChannel << "(1-16), controller" << controller
+                            << "(0-127), value" << value << "(0-127)";
+        return;
+    }
+    if (!m_injected.push(MidiEvent{.status = static_cast<uint8_t>(0xB0 | (midiChannel - 1)),
+                                   .data1 = static_cast<uint8_t>(controller),
+                                   .data2 = static_cast<uint8_t>(value),
                                    .sampleOffset = 0})) {
         m_droppedInjected.fetch_add(1, std::memory_order_relaxed);
     }
@@ -911,6 +927,8 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
     std::ranges::transform(m_loopTriggers, loopButtons.begin(),
                            [](const auto& packed) { return MidiTrigger::unpack(packed.load(std::memory_order_relaxed)); });
     const MidiTrigger selector = MidiTrigger::unpack(m_selectorKnob.load(std::memory_order_relaxed));
+    std::array<uint32_t, kAppKnobCount> appKnobs{};
+    std::ranges::transform(m_appKnobs, appKnobs.begin(), [](const auto& packed) { return packed.load(std::memory_order_relaxed); });
     const auto selectorMode = static_cast<SelectorKnob::Mode>(m_selectorMode.load(std::memory_order_relaxed));
 
     // The block's events, filtered in place: what is not a control stays.
@@ -925,6 +943,16 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
                                     std::memory_order_relaxed);
         }
         bool consumed = false;
+        // The app's knobs (the mixer's faders and pans): where each is.
+        if ((event.status & 0xF0) == 0xB0) {
+            const uint32_t packed =
+                MidiTrigger{.kind = MidiTrigger::ControlChange, .channel = static_cast<uint8_t>(event.status & 0x0F), .number = event.data1}.pack();
+            for (std::size_t k = 0; k < appKnobs.size(); ++k) {
+                if (appKnobs.at(k) != packed) continue;
+                m_appKnobValues.at(k).store(event.data2 + 1, std::memory_order_relaxed);
+                consumed = true;
+            }
+        }
         // The instrument knob.
         if (selector.isSet() && (event.status & 0xF0) == 0xB0 && (event.status & 0x0F) == selector.channel &&
             event.data1 == selector.number) {
@@ -963,7 +991,8 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
             m_program.store(program, std::memory_order_relaxed);
             consumed = true;
         }
-        if (!consumed) *kept++ = event;
+        // A keyboard's DAW port only ever controls: the instruments never hear it.
+        if (!consumed && !event.controlsOnly) *kept++ = event;
     }
     return static_cast<std::size_t>(kept - events.begin());
 }
@@ -1005,6 +1034,22 @@ std::optional<std::array<int, 3>> RealEngine::takeControllerMove()
     const int moved = m_movedController.exchange(-1, std::memory_order_relaxed);
     if (moved < 0) return std::nullopt;
     return std::array{(moved / (128 * 128)) + 1, (moved / 128) % 128, moved % 128};
+}
+
+void RealEngine::setAppKnobs(const AppKnobs& knobs)
+{
+    GC_ONLY_MAIN_THREAD();
+    for (std::size_t i = 0; i < knobs.size(); ++i) {
+        m_appKnobs.at(i).store(knobs.at(i).kind == MidiTrigger::ControlChange ? knobs.at(i).pack() : 0U, std::memory_order_relaxed);
+    }
+}
+
+AppKnobValues RealEngine::takeAppKnobValues()
+{
+    GC_ONLY_MAIN_THREAD();
+    AppKnobValues values{};
+    for (std::size_t i = 0; i < values.size(); ++i) values.at(i) = m_appKnobValues.at(i).exchange(0, std::memory_order_relaxed) - 1;
+    return values;
 }
 
 void RealEngine::setLoopControls(const LoopTriggers& buttons, const SelectorKnob& selector)

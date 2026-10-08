@@ -223,6 +223,25 @@ private slots:
         QVERIFY2(held > damped * 3.0F && held > 0.001F, qPrintable(u"without pedal %1, with pedal %2"_s.arg(damped).arg(held)));
     }
 
+    // The keyboard's universal controllers reach the instrument: VST3 takes
+    // no raw controllers, so each goes to the parameter the plugin assigns
+    // it (the mod wheel, volume, expression and sustain at least; breath,
+    // foot and pan when it takes them), on every channel.
+    void theUniversalControllersReachTheInstrument()
+    {
+        if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");
+        auto node = Vst3Node::load(kInstrument, kRate, kBlock);
+        QVERIFY(node.has_value());
+        for (const int cc : {1, 2, 4, 7, 10, 11, 64}) {
+            qInfo().noquote() << "CC" << cc << "moves parameter" << ((*node)->controllerParameter(0, cc) ? u"yes"_s : u"no"_s);
+        }
+        for (const int cc : {1, 7, 11, 64}) {
+            QVERIFY2((*node)->controllerParameter(0, cc).has_value(), qPrintable(u"CC %1 does not reach the instrument"_s.arg(cc)));
+            QVERIFY2((*node)->controllerParameter(15, cc).has_value(), qPrintable(u"CC %1 on channel 16 does not reach it"_s.arg(cc)));
+        }
+        QVERIFY(!(*node)->controllerParameter(16, 1).has_value()); // no such channel
+    }
+
     void stateMovesToAFreshInstance()
     {
         // How a plugin is reloaded (e.g. at another window size) without losing its sound.

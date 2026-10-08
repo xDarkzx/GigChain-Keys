@@ -239,7 +239,7 @@ StageDialog {
                             visible: dialog.settings.midiInputs.length > 0
                             spacing: 12
                             Label { Layout.fillWidth: true; text: qsTr("Device"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
-                            Label { Layout.preferredWidth: 140; text: qsTr("Mode"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
+                            Label { Layout.preferredWidth: 180; text: qsTr("Mode"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
                             Label { Layout.preferredWidth: 150; text: qsTr("Channel"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
                         }
                         Repeater {
@@ -255,15 +255,16 @@ StageDialog {
                                 Label {
                                     Layout.fillWidth: true
                                     text: midiRow.modelData.name
-                                    color: midiRow.modelData.enabled ? Theme.text : Theme.textDim
+                                    color: midiRow.modelData.mode !== 2 ? Theme.text : Theme.textDim
                                     elide: Text.ElideRight
                                 }
                                 StageComboBox {
-                                    Layout.preferredWidth: 140
-                                    implicitWidth: 140
-                                    model: [qsTr("Enabled"), qsTr("Disabled")]
-                                    currentIndex: midiRow.modelData.enabled ? 0 : 1
-                                    onActivated: (i) => dialog.settings.setMidiInputEnabled(midiRow.modelData.name, i === 0)
+                                    objectName: "midiMode" + midiRow.index
+                                    Layout.preferredWidth: 180
+                                    implicitWidth: 180
+                                    model: [qsTr("Plays"), qsTr("Buttons and knobs"), qsTr("Off")]
+                                    currentIndex: midiRow.modelData.mode
+                                    onActivated: (i) => dialog.settings.setMidiInputMode(midiRow.modelData.name, i)
                                 }
                                 StageComboBox {
                                     Layout.preferredWidth: 150
@@ -286,10 +287,11 @@ StageDialog {
                             Layout.leftMargin: 20
                             Layout.rightMargin: 20
                             Layout.fillWidth: true
-                            text: qsTr("Enable only the port your keys play on. Many keyboards show a second port "
-                                       + "for DAW control (the Impact GXP61's \"MIDIIN2\"): leave it disabled, or "
-                                       + "every note can arrive twice. %1 remembers your choice; inputs it "
-                                       + "has not seen before stay disabled.").arg(Branding.name)
+                            text: qsTr("Set only the port your keys play on to Plays. Many keyboards show a second port "
+                                       + "for DAW control (\"MIDIIN2\", \"DAW In\"): it is on for its Buttons and knobs "
+                                       + "(Play, Stop, ◀◀ ▶▶, Loop, Click in Mackie Control mode, and anything you learn), "
+                                       + "and never plays a note. A controller without keys (a nanoKONTROL) can be set "
+                                       + "to Buttons and knobs too. %1 remembers your choice.").arg(Branding.name)
                             color: Theme.textDim
                             wrapMode: Text.Wrap
                         }

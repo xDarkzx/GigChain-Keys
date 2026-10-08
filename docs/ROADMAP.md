@@ -204,9 +204,10 @@ beta. Four pieces:
    testers use Open Anyway once). A Clang 18 build at home
    (`linux-clang`) catches Apple-compiler errors before any Mac minute is
    spent. Next: a friend's M5 MacBook runs `docs/testing/mac-checklist.md`.
-3. **Automatic builds and packages:** one GitHub workflow building and
-   testing all three on every change, and making the Windows installer, the
-   `.dmg` and a Linux AppImage (free for public repositories).
+3. **Automatic builds and packages:** the Linux AppImage and `.deb`
+   (`tools/package-linux.sh`, `.github/workflows/linux.yml`) are **done**,
+   built on a release tag as the `.dmg` is. Next: the Windows installer built
+   by GitHub too, and all three tested on every change.
 4. **Going public:** the pre-publication check of the repository and its
    history, licence notices, a landing page with the downloads and a
    donate button, the first public beta.

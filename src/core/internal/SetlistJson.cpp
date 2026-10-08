@@ -507,7 +507,15 @@ QByteArray toJson(const Setlist& setlist)
     const QJsonObject loopControls{{u"buttons"_s, buttons},
                                    {u"selector"_s, control(setlist.loopControls.selector)},
                                    {u"selectorMode"_s, setlist.loopControls.selectorMode}};
-    const QJsonObject root{{u"formatVersion"_s, kSetlistFormatVersion}, {u"songs"_s, songs}, {u"loopControls"_s, loopControls}};
+    QJsonArray volume;
+    QJsonArray pan;
+    for (const LearnedControl& knob : setlist.mixerControls.volume) volume.append(control(knob));
+    for (const LearnedControl& knob : setlist.mixerControls.pan) pan.append(control(knob));
+    const QJsonObject mixerControls{{u"master"_s, control(setlist.mixerControls.master)}, {u"volume"_s, volume}, {u"pan"_s, pan}};
+    const QJsonObject root{{u"formatVersion"_s, kSetlistFormatVersion},
+                           {u"songs"_s, songs},
+                           {u"loopControls"_s, loopControls},
+                           {u"mixerControls"_s, mixerControls}};
     return QJsonDocument(root).toJson(QJsonDocument::Indented);
 }
 
@@ -546,15 +554,30 @@ Result<Setlist> fromJson(const QByteArray& bytes)
         setlist.songs.push_back(readSong(reader, reader.object(songs.at(i), songPath), songPath));
     }
     if (reader.failed()) return tl::unexpected(reader.error());
+    const auto control = [&reader](const QJsonObject& obj, const QString& where) {
+        return LearnedControl{.kind = reader.integer(obj, "kind"_L1, where, 0, 0xC0),
+                              .channel = reader.integer(obj, "channel"_L1, where, 0, 16),
+                              .number = reader.integer(obj, "number"_L1, where, 0, 127)};
+    };
+    // Keyboard knobs learned for the mixer (absent in older files: none).
+    if (root.contains("mixerControls"_L1)) {
+        const QString path = rootPath + u".mixerControls"_s;
+        const QJsonObject controls = reader.object(root.value("mixerControls"_L1), path);
+        const QString masterPath = path + u".master"_s;
+        setlist.mixerControls.master = control(reader.object(controls.value("master"_L1), masterPath), masterPath);
+        for (const auto& [key, knobs] : {std::pair{"volume", &setlist.mixerControls.volume}, std::pair{"pan", &setlist.mixerControls.pan}}) {
+            const QJsonArray list = reader.optionalArray(controls, QLatin1StringView(key), path, MixerControls::kStrips);
+            for (qsizetype i = 0; i < list.size() && !reader.failed(); ++i) {
+                const QString where = u"%1.%2[%3]"_s.arg(path, QLatin1StringView(key)).arg(i);
+                knobs->at(static_cast<std::size_t>(i)) = control(reader.object(list.at(i), where), where);
+            }
+        }
+        if (reader.failed()) return tl::unexpected(reader.error());
+    }
     // Format 4: the looper's keyboard controls (absent: none learned).
     if (root.contains("loopControls"_L1)) {
         const QString path = rootPath + u".loopControls"_s;
         const QJsonObject controls = reader.object(root.value("loopControls"_L1), path);
-        const auto control = [&reader](const QJsonObject& obj, const QString& where) {
-            return LearnedControl{.kind = reader.integer(obj, "kind"_L1, where, 0, 0xC0),
-                                  .channel = reader.integer(obj, "channel"_L1, where, 0, 16),
-                                  .number = reader.integer(obj, "number"_L1, where, 0, 127)};
-        };
         const QJsonArray buttons = reader.array(controls, "buttons"_L1, path, LoopControls::ButtonCount);
         for (qsizetype i = 0; i < buttons.size() && !reader.failed(); ++i) {
             const QString where = u"%1.buttons[%2]"_s.arg(path).arg(i);

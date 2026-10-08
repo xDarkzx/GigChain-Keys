@@ -1163,6 +1163,77 @@ bool DocumentController::setLoopControls(const core::LoopControls& controls)
     return true;
 }
 
+static_assert(engine::kAppKnobStrips == static_cast<int>(core::MixerControls::kStrips), "a knob slot per mixer control");
+
+core::LearnedControl* DocumentController::mixerKnob(core::MixerControls& controls, int slot)
+{
+    constexpr int kStrips = static_cast<int>(core::MixerControls::kStrips);
+    if (slot == 0) return &controls.master;
+    if (slot >= 1 && slot <= kStrips) return &controls.volume.at(static_cast<std::size_t>(slot - 1));
+    if (slot > kStrips && slot <= 2 * kStrips) return &controls.pan.at(static_cast<std::size_t>(slot - 1 - kStrips));
+    return nullptr;
+}
+
+bool DocumentController::setMixerKnob(int slot, int midiChannel, int controller)
+{
+    core::MixerControls controls = m_setlist.mixerControls;
+    core::LearnedControl* knob = mixerKnob(controls, slot);
+    if (knob == nullptr) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("There is no mixer control %1 to learn a knob for").arg(slot)});
+    }
+    const core::LearnedControl learned{.kind = 0xB0, .channel = midiChannel, .number = controller};
+    // One knob, one job.
+    for (int other = 0; other <= 2 * static_cast<int>(core::MixerControls::kStrips); ++other) {
+        if (core::LearnedControl* taken = mixerKnob(controls, other); *taken == learned) *taken = {};
+    }
+    *knob = learned;
+    if (!m_hasSetlist) return report(core::Error{core::ErrorCode::OutOfRange, tr("Start or open a setlist first")});
+    if (auto r = core::setMixerControls(m_setlist, controls); !r) return report(r.error());
+    setDirty(true);
+    applyMixerControlsToEngine();
+    emit mixerControlsChanged();
+    qCInfo(lcUi).noquote() << "Knob CC" << controller << "(channel" << midiChannel << ") learned for mixer control" << slot;
+    return true;
+}
+
+bool DocumentController::forgetMixerKnob(int slot)
+{
+    core::MixerControls controls = m_setlist.mixerControls;
+    core::LearnedControl* knob = mixerKnob(controls, slot);
+    if (knob == nullptr) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("There is no mixer control %1").arg(slot)});
+    }
+    if (!knob->isSet()) return true;
+    *knob = {};
+    if (auto r = core::setMixerControls(m_setlist, controls); !r) return report(r.error());
+    setDirty(true);
+    applyMixerControlsToEngine();
+    emit mixerControlsChanged();
+    return true;
+}
+
+QString DocumentController::mixerKnobName(int slot) const
+{
+    core::MixerControls controls = m_setlist.mixerControls;
+    const core::LearnedControl* knob = mixerKnob(controls, slot);
+    if (knob == nullptr || !knob->isSet()) return {};
+    return tr("CC %1 (channel %2)").arg(knob->number).arg(knob->channel);
+}
+
+void DocumentController::applyMixerControlsToEngine()
+{
+    engine::AppKnobs knobs{};
+    core::MixerControls controls = m_setlist.mixerControls;
+    for (int slot = 0; slot < engine::kAppKnobCount; ++slot) {
+        const core::LearnedControl* knob = mixerKnob(controls, slot);
+        if (knob == nullptr || !knob->isSet()) continue;
+        knobs.at(static_cast<std::size_t>(slot)) = engine::MidiTrigger{.kind = engine::MidiTrigger::ControlChange,
+                                                                        .channel = static_cast<uint8_t>(knob->channel - 1),
+                                                                        .number = static_cast<uint8_t>(knob->number)};
+    }
+    m_engine.setAppKnobs(knobs);
+}
+
 void DocumentController::applyLoopControlsToEngine()
 {
     const auto trigger = [](const core::LearnedControl& c) {
@@ -1457,6 +1528,17 @@ void DocumentController::nextPart()
     m_engine.queuePart(next);
 }
 
+void DocumentController::previousPart()
+{
+    if (!onTimeline()) {
+        const int section = m_engine.songPosition().section;
+        if (m_sectionCount > 0) m_engine.jumpToSection(std::max(section - 1, 0));
+        return;
+    }
+    // The part before (playing: at the next bar line); at the first, its start again.
+    m_engine.queuePart(std::max(m_engine.songPosition().part - 1, 0));
+}
+
 void DocumentController::repeatPart()
 {
     if (!onTimeline() || !m_engine.songPosition().playing) {
@@ -1680,6 +1762,7 @@ void DocumentController::applyCurrentSongToEngine()
     m_engine.setLoopSync(song == nullptr || song->loopSync);
     m_engine.setLoopBars(song != nullptr ? song->loopBars : 4);
     applyLoopControlsToEngine(); // the setlist's (a newly opened one too)
+    applyMixerControlsToEngine();
     const QString track = song != nullptr && !song->backingTrack.isEmpty() && !m_filePath.isEmpty()
                               ? QFileInfo(m_filePath).absoluteDir().filePath(song->backingTrack)
                               : QString();
@@ -2002,6 +2085,7 @@ bool DocumentController::restore(std::vector<UndoStep>& from, std::vector<UndoSt
     m_committed = m_setlist;
     emit structureChanged();
     emit chordInversionsChanged();
+    emit mixerControlsChanged();
     setCursor(core::clampCursor(m_setlist, step.cursor), true); // plays it and refreshes every view
     m_committedCursor = m_cursor;
     setDirty(true);

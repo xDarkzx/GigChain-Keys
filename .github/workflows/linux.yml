@@ -1,0 +1,93 @@
+name: Linux
+
+# The Linux downloads: an AppImage (most distributions) and a .deb (Ubuntu,
+# Debian, Mint...), from tools/package-linux.sh. On a release tag, or by
+# hand (Actions → Linux → Run workflow). Built on Ubuntu 22.04: what the
+# packages link against is that old or older, so newer systems run them.
+"on":
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/../vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/../vcpkg-cache,readwrite
+    steps:
+      - uses: actions/checkout@v7
+
+      # As tools/setup-linux.sh --system: GCC 13 (22.04's GCC 11 lacks C++20
+      # parts the code uses), the build tools, and the libraries Qt and
+      # RtAudio build against (ALSA, PulseAudio, JACK, X11).
+      - name: System packages
+        run: |
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-13 g++-13 ninja-build pkg-config autoconf autoconf-archive automake libtool bison flex file \
+            libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 \
+            libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+            libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libx11-dev \
+            libx11-xcb-dev libxcb1-dev libxrandr-dev libxext-dev libxcursor-dev \
+            libfontconfig1-dev libfreetype6-dev libasound2-dev libpulse-dev libjack-jackd2-dev
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.10.2"
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          modules: qtmultimedia
+          cache: true
+
+      # The same vcpkg commit as vcpkg.json's builtin-baseline.
+      - name: Get vcpkg
+        run: |
+          baseline=$(python3 -c "import json;print(json.load(open('vcpkg.json'))['builtin-baseline'])")
+          git clone --quiet https://github.com/microsoft/vcpkg "$VCPKG_ROOT"
+          git -C "$VCPKG_ROOT" checkout --quiet "$baseline"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          mkdir -p "${{ github.workspace }}/../vcpkg-cache"
+
+      - name: Restore the library cache
+        id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ github.workspace }}/../vcpkg-cache
+          key: vcpkg-linux-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
+          restore-keys: vcpkg-linux-
+
+      # Build, every test (those needing a sound device, a MIDI keyboard or
+      # installed plugins skip themselves), stage, check, pack.
+      - name: Build, test and package
+        run: bash tools/package-linux.sh
+
+      - name: Save the library cache
+        if: always() && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ github.workspace }}/../vcpkg-cache
+          key: vcpkg-linux-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
+
+      - name: Upload the AppImage and the .deb
+        uses: actions/upload-artifact@v7
+        with:
+          name: GigChain-Keys-linux-x86_64
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+          if-no-files-found: error
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-test-logs
+          path: |
+            /home/runner/.cache/gigchain/build/linux-release/tests/**/*.log
+            /home/runner/.cache/gigchain/build/linux-release/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore

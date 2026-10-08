@@ -2,6 +2,7 @@
 #include "gigchain/engine/MidiControl.h"
 
 #include <QCoreApplication>
+#include <QRegularExpression>
 
 #include <QStringView>
 
@@ -41,13 +42,36 @@ QString withoutPlace(const QString& name)
 
 MidiSetup withoutPortPlaces(MidiSetup saved)
 {
-    for (QString& name : saved.enabled) name = withoutPlace(name);
-    saved.enabled.removeDuplicates();
+    for (QStringList* list : {&saved.enabled, &saved.controls, &saved.off}) {
+        for (QString& name : *list) name = withoutPlace(name);
+        list->removeDuplicates();
+    }
     std::map<QString, int> channels;
     for (const auto& [name, channel] : saved.channels) channels.try_emplace(withoutPlace(name), channel);
     saved.channels = std::move(channels);
     saved.clockOutput = withoutPlace(saved.clockOutput);
     return saved;
+}
+
+QString midiDeviceOf(const QString& port)
+{
+    // The Mac and others: "... MIDI In", "... DAW In", "... Port 2", "... 2"
+    // (and a place in the list, "Impact GXP61 0", in older settings).
+    static const QRegularExpression kSuffix(uR"(\s+(MIDI|DAW|In|Out|Port|\d+)$)"_s, QRegularExpression::CaseInsensitiveOption);
+    const auto bare = [](QString name) {
+        while (true) {
+            const QString shorter = QString(name).remove(kSuffix).trimmed();
+            if (shorter.isEmpty() || shorter == name) return name;
+            name = shorter;
+        }
+    };
+    QString name = bare(port.trimmed());
+    // Windows: a keyboard's further ports are "MIDIIN2 (Impact GXP61)".
+    static const QRegularExpression kWindows(uR"(^MIDIIN\d+ \((.+)\)$)"_s);
+    if (const auto match = kWindows.match(name); match.hasMatch()) name = match.captured(1);
+    // Linux (ALSA): "Impact GXP61:Impact GXP61 MIDI 2 24:1", the device first.
+    if (const qsizetype colon = name.indexOf(u':'); colon > 0) name = name.left(colon);
+    return bare(name.trimmed()).toLower();
 }
 
 std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSetup& setup)
@@ -58,10 +82,21 @@ std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSe
         const auto channel = setup.channels.find(name);
         ports.push_back(MidiPort{.name = name,
                                  .enabled = setup.configured && setup.enabled.contains(name),
+                                 .controlsOnly = setup.configured && setup.controls.contains(name) && !setup.enabled.contains(name),
                                  .channel = channel != setup.channels.end() ? std::clamp(channel->second, 0, 16) : 0});
     }
     const bool anyOn = std::ranges::any_of(ports, [](const MidiPort& p) { return p.enabled; });
-    if (!anyOn && !ports.empty()) ports.front().enabled = true;
+    if (!anyOn && !ports.empty()) {
+        ports.front().enabled = true;
+        ports.front().controlsOnly = false;
+    }
+    // A playing keyboard's other ports (its DAW port: transport buttons,
+    // faders) give their buttons and knobs, unless switched off.
+    for (MidiPort& port : ports) {
+        if (port.enabled || port.controlsOnly || setup.off.contains(port.name)) continue;
+        const QString device = midiDeviceOf(port.name);
+        port.controlsOnly = std::ranges::any_of(ports, [&](const MidiPort& p) { return p.enabled && midiDeviceOf(p.name) == device; });
+    }
     return ports;
 }
 

@@ -45,7 +45,9 @@ hear the other. For example a soft pad at velocity *1–80* and a brass stab at
 
 ## Knobs, faders and wheels
 
-Right-click a channel strip and choose **Knobs…**.
+Right-click a channel strip and choose **Learn a keyboard knob for a setting
+of …**: move the setting in the plugin's own window, then the knob on your
+keyboard. Done. Or choose **Knobs…** to pick the setting from a list:
 
 1. Click **Learn a knob**.
 2. Pick the setting it should move: choose the plugin, then search its
@@ -57,9 +59,13 @@ Right-click a channel strip and choose **Knobs…**.
 per song, so the same knob can be a filter in one song and a leslie speed in
 the next.
 
-## The pitch wheel, mod wheel and sustain
+A channel's **fader** and **pan**, and the **master**, learn a knob from
+their own right-click menu (see [Sound and your keyboard](audio-and-midi.md)).
 
-These go to every instrument that is playing. The on-screen keyboard (the
+## The pitch wheel, mod wheel, sustain and expression
+
+These go to every instrument that is playing, as do breath, foot pedal and
+expression (CC 2, 4 and 11). The on-screen keyboard (the
 **Keys** button) shows **Pitch**, **Mod** and **Sus** as they move.
 
 See also: [Instruments and effects](instruments.md) and

@@ -30,6 +30,8 @@ const QString kRateKey = u"audio/sampleRate"_s;
 const QString kBufferKey = u"audio/bufferFrames"_s;
 const QString kMidiConfiguredKey = u"midi/configured"_s;
 const QString kMidiEnabledKey = u"midi/enabled"_s;
+const QString kMidiControlsOnlyKey = u"midi/controlsOnly"_s; // inputs for their buttons and knobs only
+const QString kMidiOffKey = u"midi/off"_s;                   // inputs switched off
 const QString kMidiChannelsKey = u"midi/channels"_s;
 const QString kControlsKey = u"midi/controls"_s; // one packed trigger per action
 const QString kInputDeviceKey = u"audio/inputDevice"_s;
@@ -122,6 +124,8 @@ engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
     options.midi.sustainDoubleTap = settings.value(kSustainDoubleTapKey, false).toBool();
     options.midi.configured = settings.value(kMidiConfiguredKey, false).toBool();
     options.midi.enabled = settings.value(kMidiEnabledKey).toStringList();
+    options.midi.controls = settings.value(kMidiControlsOnlyKey).toStringList();
+    options.midi.off = settings.value(kMidiOffKey).toStringList();
     const QVariantMap channels = settings.value(kMidiChannelsKey).toMap();
     for (auto it = channels.begin(); it != channels.end(); ++it) options.midi.channels[it.key()] = it.value().toInt();
     if (settings.value(kMidiNamesKey, 1).toInt() < kMidiNames) {
@@ -138,6 +142,8 @@ void SettingsController::saveMidi(QSettings& settings, const engine::MidiSetup& 
     QVariantMap channels;
     for (const auto& [name, channel] : midi.channels) channels.insert(name, channel);
     settings.setValue(kMidiEnabledKey, midi.enabled);
+    settings.setValue(kMidiControlsOnlyKey, midi.controls);
+    settings.setValue(kMidiOffKey, midi.off);
     settings.setValue(kMidiChannelsKey, channels);
     settings.setValue(kClockOutputKey, midi.clockOutput);
     settings.setValue(kFollowClockKey, midi.followClock);
@@ -246,7 +252,11 @@ QVariantList SettingsController::controls() const
         QT_TR_NOOP("Song / backing track: play / stop"),
         QT_TR_NOOP("Next part of the song (on the next bar)"),
         QT_TR_NOOP("Repeat this part once more"),
-        QT_TR_NOOP("Hold this part (loops until pressed again)")};
+        QT_TR_NOOP("Hold this part (loops until pressed again)"),
+        QT_TR_NOOP("Play the song"),
+        QT_TR_NOOP("Stop the song"),
+        QT_TR_NOOP("Previous part of the song (on the next bar)"),
+        QT_TR_NOOP("Click on / off")};
     QVariantList list;
     for (int i = 0; i < engine::kControlActionCount; ++i) {
         const engine::MidiTrigger& trigger = m_controls.at(static_cast<std::size_t>(i));
@@ -440,19 +450,31 @@ QVariantList SettingsController::midiInputs() const
 {
     QVariantList list;
     for (const auto& port : m_midi) {
-        list << QVariantMap{{u"name"_s, port.name}, {u"enabled"_s, port.enabled}, {u"channel"_s, port.channel}};
+        list << QVariantMap{{u"name"_s, port.name},
+                            {u"enabled"_s, port.enabled},
+                            {u"mode"_s, port.enabled ? 0 : port.controlsOnly ? 1 : 2},
+                            {u"channel"_s, port.channel}};
     }
     return list;
 }
 
 void SettingsController::setMidiInputEnabled(const QString& name, bool enabled)
 {
+    setMidiInputMode(name, enabled ? 0 : 2);
+}
+
+void SettingsController::setMidiInputMode(const QString& name, int mode)
+{
+    if (mode < 0 || mode > 2) {
+        qCWarning(lcUi) << "Ignored: no MIDI input mode" << mode;
+        return;
+    }
     for (auto& port : m_midi) {
-        if (port.name == name && port.enabled != enabled) {
-            port.enabled = enabled;
-            m_midiTouched = true;
-            emit changed();
-        }
+        if (port.name != name || (port.enabled == (mode == 0) && port.controlsOnly == (mode == 1))) continue;
+        port.enabled = mode == 0;
+        port.controlsOnly = mode == 1;
+        m_midiTouched = true;
+        emit changed();
     }
 }
 
@@ -492,7 +514,9 @@ engine::MidiSetup SettingsController::pendingMidi() const
     for (const auto& port : m_midi) {
         // Inputs not plugged in now keep their saved choice.
         setup.enabled.removeAll(port.name);
-        if (port.enabled) setup.enabled << port.name;
+        setup.controls.removeAll(port.name);
+        setup.off.removeAll(port.name);
+        (port.enabled ? setup.enabled : port.controlsOnly ? setup.controls : setup.off) << port.name;
         if (port.channel != 0) setup.channels[port.name] = port.channel;
         else setup.channels.erase(port.name);
     }
@@ -515,7 +539,9 @@ void SettingsController::resetToDefaults()
     m_sustainDoubleTap = false;
     keepRateValid();
     for (engine::MidiPort& port : m_midi) {
-        port.enabled = &port == &m_midi.front(); // the default: only the first port
+        port.enabled = &port == &m_midi.front(); // the default: only the first port plays...
+        // ... and its keyboard's other ports give their buttons and knobs.
+        port.controlsOnly = !port.enabled && engine::midiDeviceOf(port.name) == engine::midiDeviceOf(m_midi.front().name);
         port.channel = 0;
     }
     m_midiTouched = true;

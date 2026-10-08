@@ -129,6 +129,22 @@ public:
     void setMasterMute(bool mute) override { muted = mute; }
     [[nodiscard]] bool masterMuted() const override { return muted; }
     void injectNote(int channel, int note, int velocity) override { notes.push_back({channel, note, velocity}); }
+    void injectController(int, int, int) override {}
+    std::vector<engine::KeyPress> keyPresses; // what takeKeyPresses() hands over next
+    std::vector<engine::KeyPress> takeKeyPresses() override { return std::exchange(keyPresses, {}); }
+    engine::AppKnobs appKnobs{};
+    engine::AppKnobValues appKnobValues = [] {
+        engine::AppKnobValues none{};
+        none.fill(-1);
+        return none;
+    }();
+    void setAppKnobs(const engine::AppKnobs& knobs) override { appKnobs = knobs; }
+    engine::AppKnobValues takeAppKnobValues() override
+    {
+        engine::AppKnobValues taken = appKnobValues;
+        appKnobValues.fill(-1);
+        return taken;
+    }
     std::vector<engine::Notice> poll() override
     {
         std::vector<engine::Notice> out;

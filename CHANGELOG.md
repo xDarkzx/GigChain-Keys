@@ -8,6 +8,62 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-08 (alpha)
+
+### Linux
+
+- **Linux downloads:** an **AppImage** (one file for most distributions:
+  make it executable and run it) and a **.deb** for Ubuntu, Debian and Mint
+  (installs with a menu entry and opens `.gigchain` setlists). No more
+  building from source.
+
+### On stage
+
+- **You move the song:** the song no longer listens to the chords you play
+  to guess where you are (a verse and a chorus often share chords, so it
+  jumped to the wrong part). It moves with Play (at its tempo along its
+  flow), Next part, a tap on a part, a pedal, or your keyboard's buttons, as
+  MainStage and Gig Performer do.
+- **Perform's transport:** big **Play / Stop**, **Next part** and **Loop
+  part** buttons, made for a finger on a touch screen, with the bar you are
+  on and what is coming. A tap on a part's tile goes there at the next bar
+  line. Stopped, Next part chooses where Play starts.
+- **Touch screens:** a finger slid over the chart or the setlist scrolls it;
+  taps press the buttons.
+
+### Your keyboard's knobs and buttons
+
+- **MIDI Learn:** right-click a channel's fader, its pan knob or the master
+  fader and choose **MIDI Learn**, then turn a knob or fader on your
+  keyboard. For a knob inside a plugin, click **MIDI Learn** above the
+  plugin, move the knob there, then the one on your keyboard. Each time it
+  says what was learnt. **Forget MIDI Learn** undoes it.
+- **Transport buttons that just work:** keyboards sending MIDI Start/Stop,
+  MMC or **Mackie Control** (the DAW mode of Korg nanoKONTROL, M-Audio,
+  Arturia, Novation, Akai and others) play and stop the song, move by part
+  (◀◀ ▶▶; with Shift, by song), loop the part and switch the click. A
+  keyboard's second "DAW" port is opened for its buttons and knobs only, so
+  it never plays a note twice (Settings > MIDI: **Plays**, **Buttons and
+  knobs**, **Off**).
+- **More to learn:** Play the song, Stop the song, Previous part and Click
+  on / off join the pedal and pad actions in Settings.
+- Expression, the mod wheel, breath, foot pedal and sustain go straight to
+  the instruments.
+
+### Instruments
+
+- **Name an instrument after its sound:** double-click its name at the foot
+  of its strip (or right-click > Rename…, or F2). The same plugin twice is
+  numbered (*Analog Lab V 2*) until you name it.
+
+### Practice
+
+- **Warm-up:** Practice > **Warm-up** runs a daily warm-up at your level
+  (Beginner, Intermediate, Pro): each exercise right hand, left hand, then
+  both, with the finger to use on every note. Each run is scored (notes,
+  timing, evenness, hands together, one tip); three clean runs with both
+  hands raise the tempo, and passing a level opens the next.
+
 ## [0.2.2] - 2026-10-06 (alpha)
 
 ### Getting started

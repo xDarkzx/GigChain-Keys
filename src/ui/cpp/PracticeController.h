@@ -34,8 +34,10 @@ class PracticeController : public QObject
     QML_ELEMENT
     QML_UNCREATABLE("Created by the application")
 
-    // [{pitch, start, length, left (the bass), chord (its index)}]
+    // [{pitch, start, length, left (the bass), chord (its index), finger (1-5; 0: not shown)}]
     Q_PROPERTY(QVariantList notes READ notes NOTIFY songChanged)
+    // A warm-up exercise is loaded (loadExercise) in place of the song.
+    Q_PROPERTY(bool exercise READ exercise NOTIFY songChanged)
     // [{name, start, length, section, low (its right hand's lowest note)}]
     Q_PROPERTY(QVariantList chords READ chords NOTIFY songChanged)
     // [{name, start, section}]
@@ -105,7 +107,15 @@ public:
     // The clock: `ms` of real time gone by (the timer's, or a test's).
     void advance(double ms);
 
+    // A warm-up exercise (core::warmupTimeline) at `bpm`, played in place
+    // of the song until clearExercise(); the song's changes wait till then.
+    void loadExercise(const core::PracticeTimeline& timeline, double bpm);
+    void clearExercise();
+    [[nodiscard]] bool exercise() const { return m_exercise; }
+
 signals:
+    // Played to the end (not looping): stopped there.
+    void finished();
     void songChanged();
     void positionChanged();
     void playingChanged();
@@ -113,6 +123,8 @@ signals:
 
 private:
     void rebuild();
+    // m_notes, m_chords and m_sections from m_timeline.
+    void publishTimeline();
     void tick();
     [[nodiscard]] double loopStart() const;
     [[nodiscard]] double loopEnd() const;
@@ -132,6 +144,7 @@ private:
     QVariantList m_chords;
     QVariantList m_sections;
     double m_tempo = 120.0;
+    bool m_exercise = false; // a warm-up exercise is loaded in place of the song
     double m_position = 0.0;
     bool m_playing = false;
     bool m_waiting = false;

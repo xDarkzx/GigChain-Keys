@@ -16,6 +16,7 @@ qt_add_qml_module(gigchain_ui
         cpp/SettingsController.h cpp/SettingsController.cpp
         cpp/InputPermission.h cpp/InputPermission.cpp
         cpp/PracticeController.h cpp/PracticeController.cpp
+        cpp/WarmupController.h cpp/WarmupController.cpp
         cpp/HelpLibrary.h cpp/HelpLibrary.cpp
         cpp/StartupProgress.h cpp/StartupProgress.cpp
         cpp/StageQuips.h cpp/StageQuips.cpp
@@ -70,6 +71,9 @@ qt_add_qml_module(gigchain_ui
         NotificationWindow.qml
         ChannelZoneDialog.qml
         KnobDialog.qml
+        KnobLearnMenu.qml
+        WarmupBar.qml
+        WarmupCard.qml
         StageButton.qml
         StageDivider.qml
         StagePanel.qml

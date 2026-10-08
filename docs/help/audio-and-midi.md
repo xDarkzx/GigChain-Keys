@@ -40,20 +40,56 @@ channel that plays it, with its own effects. See
 ## MIDI: where the notes come from
 
 Open **Settings > MIDI**. Your keyboard is listed under **MIDI inputs** as
-soon as it is plugged in. Set it to **Enabled**.
+soon as it is plugged in. Each input **Plays**, gives its **Buttons and
+knobs** only, or is **Off**.
 
-- **Enable only the port your keys play on.** Many keyboards show a second
-  port (for their own control software); leave that one off.
+- **Only the port your keys play on Plays.** Many keyboards show a second
+  port for DAW control (*MIDIIN2 (…)*, *… DAW In*): it is set to **Buttons
+  and knobs** by itself, so its transport buttons work and it never plays a
+  note twice. A controller without keys (a Korg nanoKONTROL, say) can be set
+  to Buttons and knobs too.
 - **Channel:** *All channels* suits almost everyone. Choose one channel only
   if your keyboard sends different zones on different channels.
 - The **MIDI** light in the top bar flashes as notes arrive: a quick way to
   check your keyboard is heard.
 
-### Pedals and pads
+### Your keyboard's buttons: what works by itself
 
-Under **Pedals and pads** you can change songs with your feet: click
-**Learn** beside an action (next song, previous song, panic, tap tempo…),
-then press the pedal, pad or button. Done. See [Perform mode](perform.md).
+Keyboards speak a few common languages for their buttons, and the app
+understands them all without any setup:
+
+| The keyboard sends | Play | Stop | ◀◀ | ▶▶ | Loop / Cycle | Click | Others |
+|---|---|---|---|---|---|---|---|
+| **MIDI Start / Stop** | from the top | stop | | | | | Continue: from where it is |
+| **MMC** (MIDI Machine Control) | from the top | stop | previous part | next part | | | |
+| **Mackie Control** (the *DAW mode* of Korg, M-Audio, Arturia, Novation, Akai and others) | play | stop | previous part (with Shift: previous song) | next part (with Shift: next song) | loop the part | click on/off | Bank ◀ ▶: songs; Channel ◀ ▶: sounds |
+
+Many keyboards send their own numbers instead (a Nektar Impact sends
+controllers 66-69 and 98-100; a nanoKONTROL 41-46). Learn those once, below.
+
+### Pedals, pads and buttons
+
+Under **Pedals and pads** you can teach the app any button, pad or pedal:
+click **Learn** beside an action (**Play the song**, **Stop the song**,
+**Next part**, **Previous part**, **Hold this part**, **Click on / off**,
+next song, previous song, panic, tap tempo…), then press it. Done. What you
+learn is never heard by the instruments. See [Perform mode](perform.md).
+
+### Faders and knobs for the mixer
+
+**Right-click a channel's fader**, its **pan knob** or the **master fader**
+and choose **Learn a keyboard knob…**, then move a knob or fader on your
+keyboard. It now moves that control, in every song: the first strip's fader
+follows it whatever sound is playing, as a controller's eight faders sit
+over eight strips. Right-click again to **Forget** it. For a plugin's own
+settings (a filter, a leslie speed) see [Splits, layers and knobs](splits-layers-knobs.md).
+
+### Expression, dynamics and the other sliders
+
+The mod wheel (CC 1), breath (CC 2), foot pedal (CC 4), volume (CC 7), pan
+(CC 10), expression (CC 11) and sustain (CC 64) go straight to the
+instruments, which use them their own way (an orchestral library's
+dynamics on the mod wheel, expression on CC 11). Nothing to set up.
 
 ### MIDI clock
 
@@ -64,9 +100,8 @@ lead instead. See [Sections, tempo and backing tracks](sections-and-tempo.md).
 ### Starting the song
 
 - **My keyboard's Play and Stop buttons start and stop the song** (on): the
-  transport buttons many keyboards have (they send MIDI Start/Stop or MMC).
-  Play starts the song from the top; Stop stops it. Switch it off if your
-  keyboard sends Start for its own arpeggiator.
+  transport buttons in the table above. Switch it off if your keyboard
+  sends Start for its own arpeggiator.
 - **Pressing the sustain pedal twice quickly starts and stops the song**
   (off): two presses within 0.4 s. Each press still sustains.
 

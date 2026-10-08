@@ -561,6 +561,15 @@ std::vector<Vst3Node::Parameter> Vst3Node::parameters() const
     return list;
 }
 
+std::optional<uint32_t> Vst3Node::controllerParameter(int midiChannel, int controller) const
+{
+    GC_ONLY_MAIN_THREAD();
+    if (midiChannel < 0 || midiChannel >= 16 || controller < 0 || controller >= Vst::kCountCtrlNumber) return std::nullopt;
+    const Vst::ParamID id = m_impl->midiMapping.at(static_cast<std::size_t>(midiChannel)).at(static_cast<std::size_t>(controller));
+    if (id == Vst::kNoParamId) return std::nullopt;
+    return id;
+}
+
 std::optional<uint32_t> Vst3Node::takeTouchedParameter()
 {
     GC_ONLY_MAIN_THREAD();

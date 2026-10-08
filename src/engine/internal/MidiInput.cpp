@@ -45,10 +45,30 @@ uint32_t MidiInput::transportRequestOf(const std::vector<unsigned char>& message
         case 0x01: return transport::kStop;
         case 0x02:
         case 0x03: return transport::kStart;
+        case 0x04: return transport::kNextPart;     // Fast Forward
+        case 0x05: return transport::kPreviousPart; // Rewind
         default: break;
         }
     }
     return 0;
+}
+
+uint32_t MidiInput::mackieRequestOf(uint8_t status, uint8_t note, uint8_t velocity, bool shift) noexcept
+{
+    if ((status & 0xF0) != 0x90 || velocity == 0) return 0;
+    switch (note) {
+    case 0x5E: return transport::kContinue; // Play
+    case 0x5D: return transport::kStop;
+    case 0x5B: return shift ? transport::kPreviousSong : transport::kPreviousPart; // Rewind
+    case 0x5C: return shift ? transport::kNextSong : transport::kNextPart;         // Fast Forward
+    case 0x56: return transport::kLoopPart;                                         // Cycle
+    case 0x59: return transport::kClick;
+    case 0x2E: return transport::kPreviousSong; // Bank left / right
+    case 0x2F: return transport::kNextSong;
+    case 0x30: return transport::kPreviousSound; // Channel left / right
+    case 0x31: return transport::kNextSound;
+    default: return 0;
+    }
 }
 
 std::optional<MidiEvent> parseMidi(std::span<const unsigned char> bytes) noexcept
@@ -111,7 +131,7 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
     for (qsizetype i = 0; i < names.size(); ++i) {
         const QString& name = names.at(i);
         const auto wanted = std::ranges::find_if(ports, [&](const MidiPort& p) { return p.name == name; });
-        if (wanted == ports.end() || !wanted->enabled) {
+        if (wanted == ports.end() || (!wanted->enabled && !wanted->controlsOnly)) {
             qCInfo(lcEngine).noquote() << "MIDI input off:" << name;
             continue;
         }
@@ -119,6 +139,7 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
         port->owner = this;
         port->name = name;
         port->channel = wanted->channel;
+        port->controlsOnly = !wanted->enabled;
         try {
             port->in = std::make_unique<RtMidiIn>();
             port->in->setErrorCallback(
@@ -137,7 +158,9 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
             continue;
         }
         qCInfo(lcEngine).noquote() << "MIDI input opened:" << name
-                                   << (port->channel == 0 ? u"(all channels)"_s : u"(channel %1 only)"_s.arg(port->channel));
+                                   << (port->controlsOnly ? u"(buttons and knobs only)"_s
+                                       : port->channel == 0 ? u"(all channels)"_s
+                                                            : u"(channel %1 only)"_s.arg(port->channel));
         m_ports.push_back(std::move(port));
     }
     return notices;
@@ -195,8 +218,24 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
         default: break;
         }
     }
-    const auto event = parseMidi(*message);
+    auto event = parseMidi(*message);
     if (!event || !passesChannelFilter(event->status, port->channel)) return;
+    // A keyboard's DAW port: Mackie Control's buttons, and the rest for
+    // learned controls only (it never plays).
+    if (port->controlsOnly) {
+        if ((event->status & 0xF0) == 0x90 || (event->status & 0xF0) == 0x80) {
+            constexpr uint8_t kShift = 0x46;
+            if (event->data1 == kShift) port->shift = (event->status & 0xF0) == 0x90 && event->data2 > 0;
+            const uint32_t request = mackieRequestOf(event->status, event->data1, event->data2, port->shift);
+            if (request != 0 && owner.m_transportButtons.load(std::memory_order_relaxed)) {
+                owner.m_transportRequests.fetch_or(request, std::memory_order_acq_rel);
+            }
+            if (request != 0 || event->data1 == kShift) return;
+        }
+        event->controlsOnly = true;
+        if (!port->queue.push(*event)) owner.m_dropped.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
     // The sustain pedal pressed twice quickly: play or stop (it still sustains).
     if ((event->status & 0xF0) == 0xB0 && event->data1 == 64 &&
         port->sustain.change(event->data2 >= 64, nowNs()) && owner.m_sustainDoubleTap.load(std::memory_order_relaxed)) {
@@ -204,8 +243,24 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
     }
     if ((event->status & 0xF0) == 0x90 && event->data2 > 0) {
         port->owner->m_activity.store(true, std::memory_order_relaxed);
+        owner.recordPress(event->data1, event->data2); // (RtMidi's thread, not the audio thread)
     }
     if (!port->queue.push(*event)) port->owner->m_dropped.fetch_add(1, std::memory_order_relaxed);
+}
+
+void MidiInput::recordPress(int note, int velocity)
+{
+    constexpr std::size_t kKept = 1024;
+    const KeyPress press{.note = note, .velocity = velocity, .timeNs = nowNs()};
+    const std::scoped_lock lock(m_pressesLock);
+    if (m_presses.size() >= kKept) m_presses.erase(m_presses.begin());
+    m_presses.push_back(press);
+}
+
+std::vector<KeyPress> MidiInput::takePresses()
+{
+    const std::scoped_lock lock(m_pressesLock);
+    return std::exchange(m_presses, {});
 }
 
 void MidiInput::onClockTick(Port& port)

@@ -18,6 +18,7 @@ ApplicationWindow {
     required property MasterBus masterBus
     required property SettingsController settings
     required property PracticeController practice
+    required property WarmupController warmup
     required property StartupProgress loading
 
     property bool performMode: false
@@ -226,7 +227,8 @@ ApplicationWindow {
         target: root.doc
         function onChannelEditRequested(channel, page) {
             if (page === "knobs") knobDialog.open()
-            else zoneDialog.open()
+            else if (page === "zone") zoneDialog.open()
+            // ("plugin-learn": the Instrument tab learns, see MainArea.)
         }
     }
 
@@ -274,7 +276,7 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+N"; enabled: !root.performMode && !root.typing; onActivated: root.doc.addSong() }
     Shortcut { sequences: [StandardKey.HelpContents, "F1"]; onActivated: root.openHelp("") }
     Shortcut { sequence: "Tab"; enabled: root.keysFree; onActivated: root.toggleMode() }
-    Shortcut { sequence: "Esc"; enabled: root.performMode || root.practiceMode; onActivated: root.editMode() }
+    Shortcut { sequence: "Esc"; enabled: (root.performMode || root.practiceMode) && !learnBanner.visible; onActivated: root.editMode() }
     Shortcut { sequences: [StandardKey.New]; enabled: !root.performMode; onActivated: root.guarded("new") }
     Shortcut { sequences: [StandardKey.Open]; enabled: !root.performMode; onActivated: root.guarded("open") }
     Shortcut { sequences: [StandardKey.Save]; enabled: !root.performMode; onActivated: root.save() }
@@ -402,6 +404,7 @@ ApplicationWindow {
 
             PracticeView {
                 practice: root.practice
+                warmup: root.warmup
                 engineStatus: root.engineStatus
                 doc: root.doc
             }
@@ -475,6 +478,58 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    // Learning a keyboard knob for a fader, a pan or the master: say what
+    // to do until a knob is moved (Esc or Cancel calls it off).
+    Rectangle {
+        id: learnBanner
+        objectName: "knobLearnBanner"
+        // A mixer knob, or a plugin's knob learned from the Instrument tab
+        // (the Knobs dialog says it in its own words).
+        readonly property bool mixer: root.engineStatus.learningMixerKnob >= 0
+        readonly property bool plugin: root.engineStatus.learningMapping && !knobDialog.visible
+        visible: mixer || plugin
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 4 // over the top bar: a plugin's own window (drawn by the plugin) cannot cover it there
+        z: 50
+        width: learnRow.implicitWidth + 32
+        height: 48
+        radius: Theme.radiusCard
+        color: Theme.accentBottom
+        border.color: Theme.outline
+        Row {
+            id: learnRow
+            anchors.centerIn: parent
+            spacing: 16
+            Label {
+                objectName: "knobLearnText"
+                anchors.verticalCenter: parent.verticalCenter
+                text: learnBanner.mixer ? qsTr("MIDI Learn: move a knob or fader on your keyboard…")
+                      : root.engineStatus.learnedParameter === ""
+                        ? qsTr("MIDI Learn: move the knob you want in the plugin…")
+                          + (root.engineStatus.learnedKnob !== "" ? "  (" + root.engineStatus.learnedKnob + ")" : "")
+                        : qsTr("MIDI Learn: %1 — now turn a knob on your keyboard…").arg(root.engineStatus.learnedParameter)
+                color: "white"
+                font.pixelSize: Theme.fontSize + 2
+                font.bold: true
+            }
+            StageButton {
+                objectName: "knobLearnCancel"
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Cancel")
+                onClicked: root.cancelLearning()
+            }
+        }
+    }
+    function cancelLearning() {
+        root.engineStatus.cancelMixerKnobLearn()
+        root.engineStatus.cancelMappingLearn()
+    }
+    Shortcut {
+        sequence: "Esc"
+        enabled: learnBanner.visible
+        onActivated: root.cancelLearning()
     }
 
     // Errors and engine notices: never silent, never in the way.

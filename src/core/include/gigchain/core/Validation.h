@@ -14,6 +14,8 @@ Result<void> validateFileName(const QString& name, const QString& path);
 Result<void> validateSections(const Song& song, const QString& path);
 // The looper's learned keyboard controls.
 Result<void> validateLoopControls(const LoopControls& controls);
+// The mixer's learned keyboard knobs (controllers only).
+Result<void> validateMixerControls(const MixerControls& controls);
 
 // Checks every limit, every range and that all ids are present and unique.
 Result<void> validate(const Setlist& setlist);

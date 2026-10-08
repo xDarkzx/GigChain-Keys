@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <span>
 #include <vector>
@@ -75,6 +76,12 @@ public:
     // Audio thread: moves pending events into `out`, returns how many.
     std::size_t drain(std::span<MidiEvent> out) noexcept;
 
+    // Any thread: a key pressed (the keyboard's, or one played from the
+    // screen), kept with when it came; the most recent 1024. Taken by the
+    // main thread.
+    void recordPress(int note, int velocity);
+    std::vector<KeyPress> takePresses();
+
     // Main thread: whether a note arrived since the last call.
     bool takeActivity() { return m_activity.exchange(false, std::memory_order_relaxed); }
     // Main thread: events dropped because a queue was full, since the last call.
@@ -95,8 +102,12 @@ public:
         m_sustainDoubleTap.store(sustainDoubleTap, std::memory_order_relaxed);
     }
     // Whether `message` (RtMidi's bytes) is a transport request: its
-    // transport::k* flag, else 0. Sysex: MMC Play (deferred too) and Stop.
+    // transport::k* flag, else 0. Sysex: MMC Play (deferred too), Stop,
+    // Fast Forward and Rewind.
     [[nodiscard]] static uint32_t transportRequestOf(const std::vector<unsigned char>& message);
+    // A Mackie Control button pressed (a note-on from a keyboard's DAW
+    // port): its transport::k* flag, else 0. `shift`: Shift is held.
+    [[nodiscard]] static uint32_t mackieRequestOf(uint8_t status, uint8_t note, uint8_t velocity, bool shift) noexcept;
 
 private:
     struct Port
@@ -106,6 +117,9 @@ private:
         MidiInput* owner = nullptr;
         QString name;
         int channel = 0; // 0 = all channels
+        // Not played: its buttons and knobs only (a keyboard's DAW port).
+        bool controlsOnly = false;
+        bool shift = false; // its Mackie Control Shift is held (this port's thread)
         // MIDI clock (RtMidi's thread for this port): the last tick, and the
         // smoothed time between ticks.
         int64_t lastTickNs = 0;
@@ -125,6 +139,9 @@ private:
     std::atomic<uint32_t> m_transportRequests{0};
     std::atomic<bool> m_transportButtons{true};
     std::atomic<bool> m_sustainDoubleTap{false};
+    // Keys pressed, for timing (RtMidi's threads and the main thread add, the main thread takes).
+    std::mutex m_pressesLock;
+    std::vector<KeyPress> m_presses;
 };
 
 // MIDI clock: 24 ticks per quarter note.

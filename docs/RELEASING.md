@@ -42,11 +42,14 @@ The tag is the version with a `v`: `v0.1.0`.
    git push origin main v0.1.0
    ```
 
-   The tag starts the Mac build (`.github/workflows/mac.yml`). When it
-   finishes, download its artifact (`gh run download <run id>`), and rename
+   The tag starts the Mac build (`.github/workflows/mac.yml`) and the Linux
+   build (`.github/workflows/linux.yml`). When they finish, download their
+   artifacts (`gh run download <run id>`), and rename
    `GigChain Keys-<version>-arm64.dmg` to `GigChainKeys-<version>-arm64.dmg`
-   (GitHub turns spaces in release file names into dots).
-6. **Checksums:** put the three files in one folder and write
+   (GitHub turns spaces in release file names into dots). The Linux ones
+   (`GigChainKeys-<version>-x86_64.AppImage`, `gigchain-keys_<version>_amd64.deb`)
+   keep their names.
+6. **Checksums:** put the five files in one folder and write
    `SHA256SUMS.txt` (one `<sha256>  <file name>` line each, as `shasum -a 256`
    writes it):
 
@@ -56,7 +59,7 @@ The tag is the version with a `v`: `v0.1.0`.
        Set-Content -Encoding ascii release\SHA256SUMS.txt
    ```
 
-7. **Publish the release** with the notes from the changelog, the three
+7. **Publish the release** with the notes from the changelog, the five
    files and the checksums:
 
    ```powershell
@@ -65,6 +68,8 @@ The tag is the version with a `v`: `v0.1.0`.
        release\GigChainKeys-0.1.0-x64-setup.exe `
        release\GigChainKeys-0.1.0-x64-portable.zip `
        release\GigChainKeys-0.1.0-arm64.dmg `
+       release\GigChainKeys-0.1.0-x86_64.AppImage `
+       release\gigchain-keys_0.1.0_amd64.deb `
        release\SHA256SUMS.txt
    ```
 

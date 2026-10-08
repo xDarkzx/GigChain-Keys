@@ -10,6 +10,7 @@
 #include "LoopController.h"
 #include "PluginListModel.h"
 #include "PracticeController.h"
+#include "WarmupController.h"
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
 #include "SettingsController.h"
@@ -60,6 +61,7 @@ private:
     SettingsController m_settingsController;
     StartupProgress m_loading; // the loading overlay (after start-up)
     PracticeController m_practice; // the Practice tab (after the document it reads)
+    WarmupController m_warmup;     // its warm-ups (after the player they load)
 };
 
 } // namespace gigchain::ui

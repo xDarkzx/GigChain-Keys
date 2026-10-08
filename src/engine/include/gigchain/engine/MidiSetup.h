@@ -14,7 +14,9 @@ namespace gigchain::engine {
 // The MIDI inputs the user chose in Settings (saved between runs).
 struct MidiSetup
 {
-    QStringList enabled;               // inputs switched on, by name
+    QStringList enabled;               // inputs switched on (they play), by name
+    QStringList controls;              // inputs for their buttons and knobs only (never played)
+    QStringList off;                   // inputs switched off (not even their buttons)
     std::map<QString, int> channels;   // per input: 0 = all channels, 1-16 = only that one
     bool configured = false;           // false: never chosen, use the default
     // MIDI clock: the output it is sent to (empty = not sent), and whether
@@ -47,7 +49,14 @@ struct MidiSetup
 // - chosen: exactly the inputs switched on; anything new stays off.
 // - chosen, but none of them is plugged in (another keyboard at the gig):
 //   the first port, so there is always sound.
+// A playing keyboard's other ports (midiDeviceOf: the same device) are
+// opened for their buttons and knobs only, unless switched off; so are the
+// inputs chosen for that.
 [[nodiscard]] std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSetup& setup);
+// The device a port belongs to, the same for all its ports as each system
+// names them ("Impact GXP61", "MIDIIN2 (Impact GXP61)" on Windows; "... MIDI
+// In" / "... DAW In" on the Mac; "Dev:Dev MIDI 2 24:1" on Linux), lower case.
+[[nodiscard]] QString midiDeviceOf(const QString& port);
 
 // Whether a channel message with this status byte passes an input's channel
 // filter (0 = all channels). Real-time safe.

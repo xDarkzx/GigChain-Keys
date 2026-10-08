@@ -111,6 +111,12 @@ public:
     // auditioning). velocity 0 = note off. Out-of-range values are ignored
     // (logged: channels are 1-16).
     virtual void injectNote(int midiChannel, int note, int velocity) = 0;
+    // A controller (a knob, fader or pedal) as if from the keyboard; out-of-range values are ignored (logged).
+    virtual void injectController(int midiChannel, int controller, int value) = 0;
+    // The keys pressed since the last call (the keyboards that play, and
+    // injectNote), each timed as it came in: for scoring a player's timing
+    // to the millisecond. The most recent 1024 are kept.
+    virtual std::vector<KeyPress> takeKeyPresses() = 0;
 
     // Main thread, regularly (the UI polls ~30 Hz): housekeeping, logging of
     // anything the audio thread counted, device recovery. Returns messages the
@@ -239,6 +245,11 @@ public:
     virtual void setLoopControls(const LoopTriggers& buttons, const SelectorKnob& selector) = 0;
     virtual std::vector<LoopAction> takeLoopActions() = 0;
     virtual SelectorMove takeSelectorMove() = 0;
+    // Keyboard knobs for the app's own controls (AppKnobs: the mixer's
+    // faders and pans), never heard by the instruments, and where each was
+    // last turned to since the previous call.
+    virtual void setAppKnobs(const AppKnobs& knobs) = 0;
+    virtual AppKnobValues takeAppKnobValues() = 0;
     // For learning a knob: the last controller moved, with its value
     // {MIDI channel 1-16, controller, value}, since the previous call.
     virtual std::optional<std::array<int, 3>> takeControllerMove() = 0;

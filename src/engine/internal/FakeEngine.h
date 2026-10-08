@@ -3,6 +3,7 @@
 #include "gigchain/engine/FakeEngineFactory.h"
 #include "gigchain/engine/IEngine.h"
 
+#include <utility>
 #include <vector>
 
 namespace gigchain::engine {
@@ -52,6 +53,8 @@ public:
     bool takeLimiterActivity() override { return false; }
     [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
     void injectNote(int midiChannel, int note, int velocity) override;
+    void injectController(int, int, int) override {} // (the demo has no instruments to hear it)
+    std::vector<KeyPress> takeKeyPresses() override { return std::exchange(m_presses, {}); } // (played on screen)
     std::vector<Notice> poll() override;
     [[nodiscard]] QString statusText() const override;
     [[nodiscard]] std::vector<AudioOutput> audioOutputs() const override;
@@ -210,11 +213,19 @@ public:
     std::vector<LoopAction> takeLoopActions() override { return {}; }
     SelectorMove takeSelectorMove() override { return {}; }
     std::optional<std::array<int, 3>> takeControllerMove() override { return std::nullopt; }
+    void setAppKnobs(const AppKnobs&) override {}
+    AppKnobValues takeAppKnobValues() override
+    {
+        AppKnobValues none{};
+        none.fill(-1);
+        return none;
+    }
 
 private:
     std::vector<ChannelLoop> m_loops;
     SongSections m_sections;
     SongPosition m_position;
+    std::vector<KeyPress> m_presses; // keys played on screen, not yet taken
     double m_tempo = 120.0;
     bool m_click = false;
     MidiActivity m_keyboard; // notes played on screen (the demo has no MIDI input)

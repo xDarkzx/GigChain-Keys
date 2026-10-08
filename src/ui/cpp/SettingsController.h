@@ -47,7 +47,7 @@ class SettingsController : public QObject
     Q_PROPERTY(int bufferFrames READ bufferFrames WRITE setBufferFrames NOTIFY changed)
     Q_PROPERTY(QVariantList bufferSizes READ bufferSizes CONSTANT)
     Q_PROPERTY(double latencyMs READ latencyMs NOTIFY changed)                   // one buffer at the chosen rate
-    Q_PROPERTY(QVariantList midiInputs READ midiInputs NOTIFY changed)            // [{name, enabled, channel}]
+    Q_PROPERTY(QVariantList midiInputs READ midiInputs NOTIFY changed)            // [{name, enabled, mode (setMidiInputMode), channel}]
     Q_PROPERTY(QString running READ running NOTIFY changed)                      // the engine's status line
     Q_PROPERTY(QString error READ error NOTIFY changed)
     // General: open the last setlist on start instead of the start screen.
@@ -138,6 +138,9 @@ public:
     // Probes the devices (ASIO drivers can take a moment) and shows what runs now.
     Q_INVOKABLE void load();
     Q_INVOKABLE void setMidiInputEnabled(const QString& name, bool enabled);
+    // 0: it plays; 1: its buttons and knobs only (a keyboard's DAW port, a
+    // controller); 2: off.
+    Q_INVOKABLE void setMidiInputMode(const QString& name, int mode);
     // 0 = all channels, 1-16 = only that one.
     Q_INVOKABLE void setMidiInputChannel(const QString& name, int channel);
     // While the window is open: picks up keyboards plugged in or pulled out,
