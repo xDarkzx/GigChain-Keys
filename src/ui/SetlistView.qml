@@ -121,10 +121,20 @@ Item {
                         id: renameField
                         visible: false
                         Layout.fillWidth: true
-                        onAccepted: {
+                        // Return or Enter saves it. The key stops here: on a Mac,
+                        // Return is also the list's "rename", which would open it again.
+                        function commit() {
                             if (row.isSong) view.doc.renameSong(row.songIndex, text)
                             else view.doc.renamePatch(row.songIndex, row.patchIndex, text)
                             visible = false
+                        }
+                        Keys.onReturnPressed: (event) => {
+                            event.accepted = true
+                            renameField.commit()
+                        }
+                        Keys.onEnterPressed: (event) => {
+                            event.accepted = true
+                            renameField.commit()
                         }
                         onActiveFocusChanged: if (!activeFocus) visible = false
                         Keys.onEscapePressed: visible = false

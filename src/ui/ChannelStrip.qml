@@ -519,10 +519,20 @@ Rectangle {
                 anchors.fill: parent
                 visible: false
                 font.pixelSize: Theme.smallFontSize
-                onAccepted: {
+                // Return or Enter saves it. The key stops here: on a Mac, Return
+                // is also the mixer's "rename", which would open the field again.
+                function commit() {
                     if (text.trim() !== "" && text.trim() !== strip.name) strip.doc.setChannelName(strip.index, text.trim())
                     visible = false
                     strip.takeKeys()
+                }
+                Keys.onReturnPressed: (event) => {
+                    event.accepted = true
+                    nameField.commit()
+                }
+                Keys.onEnterPressed: (event) => {
+                    event.accepted = true
+                    nameField.commit()
                 }
                 onActiveFocusChanged: if (!activeFocus) visible = false
                 Keys.onEscapePressed: {
