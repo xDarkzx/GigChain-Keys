@@ -671,6 +671,27 @@ private slots:
 
     // Right-click a strip's fader: Learn a keyboard knob; the banner says
     // what to do and Esc calls it off. The master fader too.
+    // The Keyboard zone box: unticking "Sustain pedal" sets the channel not
+    // to take it; ticking it again takes it back.
+    void theZoneBoxSetsWhatAChannelTakes()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"demo.pad"_s, u"Pad"_s));
+        doc.setSelectedChannel(0);
+        QVERIFY(QMetaObject::invokeMethod(&doc, "editChannel", Q_ARG(int, 0), Q_ARG(QString, u"zone"_s)));
+        QQuickWindow* w = window();
+        QTRY_VERIFY(findItem(w->contentItem(), u"takes_sustain"_s) != nullptr);
+        QQuickItem* sustain = findItem(w->contentItem(), u"takes_sustain"_s);
+        QTRY_VERIFY(sustain->isVisible());
+        QVERIFY(sustain->property("checked").toBool());
+        QTest::mouseClick(w, Qt::LeftButton, {}, sustain->mapToScene(QPointF(12, sustain->height() / 2)).toPoint());
+        QTRY_VERIFY(!doc.currentPatch()->channels.at(0).takesSustain);
+        QVERIFY(!sustain->property("checked").toBool());
+        QTest::mouseClick(w, Qt::LeftButton, {}, sustain->mapToScene(QPointF(12, sustain->height() / 2)).toPoint());
+        QTRY_VERIFY(doc.currentPatch()->channels.at(0).takesSustain);
+        settle();
+    }
+
     void aFaderLearnsAKeyboardKnobFromItsMenu()
     {
         ui::DocumentController& doc = m_session->document();

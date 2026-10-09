@@ -127,6 +127,38 @@ class TestRenderGraph : public QObject
     Q_OBJECT
 
 private slots:
+    // A channel set to ignore a pedal or controller does not get it (the pad
+    // that ignores the sustain pedal while the piano holds); the rest, and
+    // other channels, still do.
+    void aChannelIgnoresWhatItIsSetNotToTake()
+    {
+        using namespace midi_filter;
+        const RouteSettings pad{.ignores = kSustain | kPitchBend | kAftertouch};
+        const MidiEvent sustain = cc(0xB0, 64, 127);
+        const MidiEvent expression = cc(0xB1, 11, 90);
+        const MidiEvent modWheel = cc(0xB0, 1, 70);
+        const MidiEvent bend = cc(0xE0, 0, 80);
+        const MidiEvent pressure = cc(0xD0, 60, 0);
+        const MidiEvent keyPressure = cc(0xA0, 60, 50);
+        const MidiEvent volume = cc(0xB0, 7, 100);
+        QVERIFY(!routeEvent(sustain, pad).has_value());
+        QVERIFY(!routeEvent(bend, pad).has_value());
+        QVERIFY(!routeEvent(pressure, pad).has_value());
+        QVERIFY(!routeEvent(keyPressure, pad).has_value());
+        QVERIFY(routeEvent(expression, pad).has_value()); // not ignored
+        QVERIFY(routeEvent(modWheel, pad).has_value());
+        QVERIFY(routeEvent(volume, pad).has_value());       // other controllers always pass
+        QVERIFY(routeEvent(noteOn(60), pad).has_value()); // notes too
+
+        const RouteSettings lead{.ignores = kExpression | kModWheel};
+        QVERIFY(!routeEvent(expression, lead).has_value());
+        QVERIFY(!routeEvent(modWheel, lead).has_value());
+        QVERIFY(routeEvent(sustain, lead).has_value());
+
+        const RouteSettings piano; // takes everything
+        for (const MidiEvent& e : {sustain, expression, modWheel, bend, pressure, keyPressure}) QVERIFY(routeEvent(e, piano).has_value());
+    }
+
     void routerFiltersAndTransposes()
     {
         const RouteSettings split{48, 59, 12, 0};

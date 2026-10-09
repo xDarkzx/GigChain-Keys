@@ -12,6 +12,16 @@ std::optional<MidiEvent> routeEvent(const MidiEvent& event, const RouteSettings&
     const int channel = (event.status & 0x0F) + 1;
     if (route.midiChannel != 0 && channel != route.midiChannel) return std::nullopt;
 
+    if (route.ignores != 0) {
+        using namespace midi_filter;
+        const bool ignored = (type == 0xB0 && event.data1 == 64 && (route.ignores & kSustain) != 0)
+                             || (type == 0xB0 && event.data1 == 11 && (route.ignores & kExpression) != 0)
+                             || (type == 0xB0 && event.data1 == 1 && (route.ignores & kModWheel) != 0)
+                             || (type == 0xE0 && (route.ignores & kPitchBend) != 0)
+                             || ((type == 0xD0 || type == 0xA0) && (route.ignores & kAftertouch) != 0);
+        if (ignored) return std::nullopt;
+    }
+
     const bool isKeyed = type == 0x80 || type == 0x90 || type == 0xA0;
     if (!isKeyed) return event;
 

@@ -39,7 +39,7 @@ Audited again against MainStage 3 on 2026-10-09; still to build, in this order:
 
 | What players need | Status | Where it stands |
 |---|---|---|
-| Per-layer MIDI filters (the pad ignores the sustain pedal, only one layer takes expression) | **Missing** | Every channel takes every controller. |
+| Per-layer MIDI filters (the pad ignores the sustain pedal, only one layer takes expression) | **Done** | Keyboard Zone > Takes: sustain, expression, mod wheel, pitch bend, aftertouch. |
 | Knob pickup (soft takeover) and response curves | **Missing** | A knob jumps the value when first moved; ranges are straight lines. |
 | Bundled sounds | **Partly** | See below. |
 | Outputs: a channel, the click or a stem to its own output (in-ears) | **Missing** | One stereo master out; headphone cue is planned (2). |

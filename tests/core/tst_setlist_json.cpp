@@ -32,6 +32,8 @@ Setlist richSetlist()
     piano.pan = -0.25;
     piano.velocityLow = 20;
     piano.velocityHigh = 90;
+    piano.takesExpression = false;
+    piano.takesAftertouch = false;
     piano.mappings.push_back(ControlMapping{.midiChannel = 1, .controller = 74, .target = -1, .parameter = 4000000000U,
                                             .parameterName = QStringLiteral("Brightness"), .minimum = 0.25, .maximum = 0.8});
     piano.mappings.push_back(ControlMapping{.midiChannel = 0, .controller = 11, .target = 0, .parameter = 12,
@@ -114,6 +116,32 @@ private slots:
         const auto parsed = fromJson(toJson(original));
         QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
         QVERIFY(*parsed == original);
+    }
+
+    // What a channel ignores from the keyboard is kept by name; none is
+    // written when it takes everything (older files: everything); an
+    // unknown name is refused, said.
+    void whatAChannelIgnoresIsKept()
+    {
+        const Setlist original = richSetlist();
+        const QJsonObject channel = QJsonDocument::fromJson(toJson(original)).object().value("songs"_L1).toArray().at(0)
+                                        .toObject().value("patches"_L1).toArray().at(0).toObject()
+                                        .value("channels"_L1).toArray().at(0).toObject();
+        QCOMPARE(channel.value("ignores"_L1).toArray(), (QJsonArray{u"expression"_s, u"aftertouch"_s}));
+
+        const auto taken = fromJson(withFirstChannelField(u"ignores"_s, QJsonArray{u"sustain"_s}));
+        QVERIFY2(taken.has_value(), taken ? "" : qPrintable(taken.error().message));
+        const Channel& pad = taken->songs.at(0).patches.at(0).channels.at(0);
+        QVERIFY(!pad.takesSustain);
+        QVERIFY(pad.takesExpression && pad.takesModWheel && pad.takesPitchBend && pad.takesAftertouch);
+        Setlist plain;
+        plain.songs.push_back(makeSong(u"Plain"_s));
+        plain.songs.front().patches.front().channels.push_back(makeChannel(u"Piano"_s));
+        QVERIFY(!toJson(plain).contains("ignores")); // takes everything: nothing written
+
+        const auto wrong = fromJson(withFirstChannelField(u"ignores"_s, QJsonArray{u"sustian"_s}));
+        QVERIFY(!wrong.has_value());
+        QVERIFY2(wrong.error().message.contains(u"ignores[0]"_s), qPrintable(wrong.error().message));
     }
 
     void pluginSettingsAreOptional()

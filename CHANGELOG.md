@@ -16,6 +16,10 @@ Downloads for every version are on the
   it (a big sampled piano used all night no longer fills the memory once per
   song), and a change to it changes all of them, as MainStage's aliases do.
   **Own copy for this song**, above its window, gives one song its own.
+- **What a channel takes from the keyboard:** in its **Keyboard Zone**, a
+  channel can ignore the sustain pedal, the expression pedal, the mod wheel,
+  pitch bend or aftertouch. Layer a piano and strings, and only the piano
+  holds with the pedal.
 
 ### Fixed
 

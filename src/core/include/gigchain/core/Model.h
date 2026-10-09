@@ -65,6 +65,14 @@ struct Channel
     int midiChannel = 0; // 0 = omni, 1..16 = that channel only
     int velocityLow = 1; // the note-on velocities it plays (a velocity layer)
     int velocityHigh = 127;
+    // The pedals and controllers it takes from the keyboard (MainStage's MIDI
+    // input filter): a pad that ignores the sustain pedal while the piano
+    // holds, say.
+    bool takesSustain = true;    // CC 64
+    bool takesExpression = true; // CC 11
+    bool takesModWheel = true;   // CC 1
+    bool takesPitchBend = true;
+    bool takesAftertouch = true; // channel and key pressure
     std::vector<ControlMapping> mappings;
     // An audio input played through the channel's effects instead of an
     // instrument (a vocal mic, a guitar): 1-based input numbers of the audio

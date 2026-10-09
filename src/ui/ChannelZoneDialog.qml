@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -95,6 +97,34 @@ StageDialog {
                 model: [qsTr("All channels")].concat(Array.from({ length: 16 }, (_, c) => qsTr("Channel %1").arg(c + 1)))
                 currentIndex: dialog.channel.midiChannel
                 onActivated: (i) => dialog.doc.setChannelMidiChannel(dialog.channel.index, i)
+            }
+        }
+        // What it takes from the keyboard: a pad can ignore the sustain
+        // pedal while the piano holds, or only one layer take the expression pedal.
+        SettingsRow {
+            label: qsTr("Takes")
+            Flow {
+                Layout.fillWidth: true
+                spacing: 4
+                Repeater {
+                    // (A fixed list: each box reads its state from the channel, so a tick keeps the boxes.)
+                    model: [
+                        { what: "sustain", text: qsTr("Sustain pedal"), property: "takesSustain" },
+                        { what: "expression", text: qsTr("Expression pedal"), property: "takesExpression" },
+                        { what: "modWheel", text: qsTr("Mod wheel"), property: "takesModWheel" },
+                        { what: "pitchBend", text: qsTr("Pitch bend"), property: "takesPitchBend" },
+                        { what: "aftertouch", text: qsTr("Aftertouch"), property: "takesAftertouch" }
+                    ]
+                    delegate: CheckBox {
+                        id: takes
+                        required property var modelData
+                        objectName: "takes_" + takes.modelData.what
+                        text: takes.modelData.text
+                        checked: dialog.channel[takes.modelData.property]
+                        focusPolicy: Qt.NoFocus
+                        onToggled: dialog.doc.setChannelTakes(dialog.channel.index, takes.modelData.what, takes.checked)
+                    }
+                }
             }
         }
 

@@ -587,7 +587,12 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
                                    .transpose = channel.transpose,
                                    .midiChannel = channel.midiChannel,
                                    .velocityLow = channel.velocityLow,
-                                   .velocityHigh = channel.velocityHigh};
+                                   .velocityHigh = channel.velocityHigh,
+                                   .ignores = (channel.takesSustain ? 0U : midi_filter::kSustain)
+                                              | (channel.takesExpression ? 0U : midi_filter::kExpression)
+                                              | (channel.takesModWheel ? 0U : midi_filter::kModWheel)
+                                              | (channel.takesPitchBend ? 0U : midi_filter::kPitchBend)
+                                              | (channel.takesAftertouch ? 0U : midi_filter::kAftertouch)};
         spec.volumeDb = channel.volumeDb;
         spec.pan = channel.pan;
         spec.mute = channel.mute;

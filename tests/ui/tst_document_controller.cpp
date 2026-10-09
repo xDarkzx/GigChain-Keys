@@ -72,6 +72,26 @@ private slots:
     // An instrument shared between songs (loaded once): a duplicated song
     // shares its original's; another song can add "the same as in another
     // song"; a song can take its own copy, and undo shares it again.
+    // A channel set not to take the sustain pedal: the engine gets it at
+    // once, undo gives it back, a name it does not know is refused.
+    void aChannelIsSetNotToTakeThePedal()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Pad.vst3"_s, u"Pad"_s));
+        QVERIFY(m_doc->setChannelTakes(0, u"sustain"_s, false));
+        QVERIFY(!m_engine->lastPatch.channels.at(0).takesSustain);
+        QVERIFY(m_engine->lastPatch.channels.at(0).takesExpression);
+        QVERIFY(m_doc->isDirty());
+        QVERIFY(m_doc->setChannelTakes(0, u"pitchBend"_s, false));
+        QVERIFY(!m_doc->currentPatch()->channels.at(0).takesPitchBend);
+        QVERIFY(m_doc->undo());
+        QVERIFY(m_doc->currentPatch()->channels.at(0).takesPitchBend);
+        QVERIFY(!m_doc->currentPatch()->channels.at(0).takesSustain);
+
+        QVERIFY(!m_doc->setChannelTakes(0, u"volume"_s, false));
+        QVERIFY(m_doc->lastError().contains(u"volume"_s));
+        QVERIFY(!m_doc->setChannelTakes(4, u"sustain"_s, false)); // no such channel
+    }
+
     void anInstrumentIsSharedBetweenSongs()
     {
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));

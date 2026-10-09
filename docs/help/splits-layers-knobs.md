@@ -68,6 +68,13 @@ These go to every instrument that is playing, as do breath, foot pedal and
 expression (CC 2, 4 and 11). The on-screen keyboard (the
 **Keys** button) shows **Pitch**, **Mod** and **Sus** as they move.
 
+To keep one away from an instrument, open its **Keyboard Zone** (the
+channel's menu) and untick it under **Takes**: **Sustain pedal**,
+**Expression pedal**, **Mod wheel**, **Pitch bend** or **Aftertouch**. The
+classic case is a piano and strings layered together: untick the sustain
+pedal for the strings, and the piano holds while the strings stop when you
+lift your hands. Or let only the lead synth take the pitch bend.
+
 See also: [Instruments and effects](instruments.md) and
 [Sections, tempo and backing tracks](sections-and-tempo.md), which change
 the instruments as the song goes.

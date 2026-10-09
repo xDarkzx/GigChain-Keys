@@ -998,6 +998,24 @@ bool DocumentController::setChannelMidiChannel(int channel, int midiChannel)
     return true;
 }
 
+bool DocumentController::setChannelTakes(int channel, const QString& what, bool takes)
+{
+    bool core::Channel::* field = what == "sustain"_L1      ? &core::Channel::takesSustain
+                                  : what == "expression"_L1 ? &core::Channel::takesExpression
+                                  : what == "modWheel"_L1   ? &core::Channel::takesModWheel
+                                  : what == "pitchBend"_L1  ? &core::Channel::takesPitchBend
+                                  : what == "aftertouch"_L1 ? &core::Channel::takesAftertouch
+                                                            : nullptr;
+    if (field == nullptr) {
+        return report(core::Error{core::ErrorCode::InvalidData, tr("A channel cannot be set to ignore \"%1\"").arg(what)});
+    }
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [field, takes](core::Channel& c) { c.*field = takes; }); !r) {
+        return report(r.error());
+    }
+    commitChannelField(channel, true);
+    return true;
+}
+
 bool DocumentController::setChannelVolume(int channel, double volumeDb)
 {
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [volumeDb](core::Channel& c) { c.volumeDb = volumeDb; });

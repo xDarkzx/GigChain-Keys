@@ -14,6 +14,7 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <utility>
 
 using namespace Qt::StringLiterals;
 
@@ -241,6 +242,23 @@ Channel readChannel(JsonReader& r, const QJsonObject& obj, const QString& path)
                                              limits::kMaxVelocity);
     channel.inputLeft = r.optionalInteger(obj, "inputLeft"_L1, path, 0, limits::kMaxAudioInput, 0);
     channel.inputRight = r.optionalInteger(obj, "inputRight"_L1, path, 0, limits::kMaxAudioInput, 0);
+    // What it does not take from the keyboard (none: all of it).
+    constexpr qsizetype kFilters = 5;
+    const QJsonArray ignores = r.optionalArray(obj, "ignores"_L1, path, kFilters);
+    for (qsizetype i = 0; i < ignores.size() && !r.failed(); ++i) {
+        const QString name = ignores.at(i).toString();
+        bool* takes = name == "sustain"_L1      ? &channel.takesSustain
+                      : name == "expression"_L1 ? &channel.takesExpression
+                      : name == "modWheel"_L1   ? &channel.takesModWheel
+                      : name == "pitchBend"_L1  ? &channel.takesPitchBend
+                      : name == "aftertouch"_L1 ? &channel.takesAftertouch
+                                                : nullptr;
+        if (takes == nullptr) {
+            r.invalid(u"%1.ignores[%2] must be one of sustain, expression, modWheel, pitchBend, aftertouch"_s.arg(path).arg(i));
+            break;
+        }
+        *takes = false;
+    }
     const QJsonArray mappings = r.optionalArray(obj, "mappings"_L1, path, limits::kMaxMappingsPerChannel);
     for (qsizetype i = 0; i < mappings.size() && !r.failed(); ++i) {
         const QString at = u"%1.mappings[%2]"_s.arg(path).arg(i);
@@ -417,7 +435,7 @@ QJsonObject writeChannel(const Channel& channel)
                                     {u"minimum"_s, m.minimum},
                                     {u"maximum"_s, m.maximum}});
     }
-    return QJsonObject{
+    QJsonObject obj{
         {u"id"_s, channel.id.value()},
         {u"name"_s, channel.name},
         {u"instrument"_s, channel.instrument ? QJsonValue(writeSlot(*channel.instrument)) : QJsonValue(QJsonValue::Null)},
@@ -436,6 +454,14 @@ QJsonObject writeChannel(const Channel& channel)
         {u"inputRight"_s, channel.inputRight},
         {u"mappings"_s, mappings},
     };
+    QJsonArray ignores;
+    for (const auto& [takes, name] : {std::pair{channel.takesSustain, u"sustain"_s}, std::pair{channel.takesExpression, u"expression"_s},
+                                      std::pair{channel.takesModWheel, u"modWheel"_s}, std::pair{channel.takesPitchBend, u"pitchBend"_s},
+                                      std::pair{channel.takesAftertouch, u"aftertouch"_s}}) {
+        if (!takes) ignores.append(name);
+    }
+    if (!ignores.isEmpty()) obj.insert(u"ignores"_s, ignores);
+    return obj;
 }
 
 QJsonObject writePatch(const Patch& patch)
