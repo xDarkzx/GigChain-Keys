@@ -111,6 +111,7 @@ Rectangle {
                 tip: qsTr("Copy a song's chords and lyrics from any site or file, then paste (%1)").arg(Theme.keys("Ctrl+V"))
             }
             StageButton {
+                objectName: "importChartButton"
                 text: qsTr("Import file…")
                 visible: !panel.editing
                 onClicked: importDialog.open()

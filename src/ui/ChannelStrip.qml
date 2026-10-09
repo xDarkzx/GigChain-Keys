@@ -475,6 +475,7 @@ Rectangle {
         }
         EffectSlot {
             id: addSlot
+            objectName: "addEffectSlot"
             Layout.fillWidth: true
             text: ""
             onClicked: strip.menu(addEffectMenuComponent).popup(addSlot, 0, addSlot.height)
