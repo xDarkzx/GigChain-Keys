@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EffectWindows.h"
+
 #include "gigchain/core/Model.h"
 
 #include <QObject>
@@ -19,7 +21,6 @@ class IEngine;
 namespace gigchain::ui {
 
 class DocumentController;
-class EffectWindows;
 
 // The master bus's effects (EQ, compressor, limiter plugins on everything).
 // They belong to the rig, not to a setlist: kept in the app's settings with
@@ -36,8 +37,9 @@ class MasterBus : public QObject
     Q_PROPERTY(QVariantList effectBypassed READ effectBypassed NOTIFY effectsChanged)
 
 public:
+    // `bus`: the master's (on everything) or the aux's (fed by the channels' sends).
     MasterBus(engine::IEngine& engine, DocumentController& document, QSettings& settings, EffectWindows& windows,
-              QObject* parent = nullptr);
+              EffectWindows::Bus bus = EffectWindows::Bus::Master, QObject* parent = nullptr);
     ~MasterBus() override;
     MasterBus(const MasterBus&) = delete;
     MasterBus& operator=(const MasterBus&) = delete;
@@ -68,6 +70,10 @@ signals:
 
 private:
     [[nodiscard]] bool validIndex(int effect) const;
+    [[nodiscard]] QString busName() const;     // "master" or "aux", for messages
+    [[nodiscard]] QString settingsKey() const; // where its effects are kept
+    void playInEngine();                       // the engine plays the effects as they are now
+    std::vector<QString> storeStates();        // the effects' settings into m_effects (problems returned)
     // After the list changed: the engine plays it, it is saved.
     void commit();
 
@@ -75,6 +81,7 @@ private:
     DocumentController& m_document;
     QSettings& m_settings;
     EffectWindows& m_windows;
+    EffectWindows::Bus m_bus;
     std::vector<core::PluginSlot> m_effects;
     bool m_edited = false;
 };

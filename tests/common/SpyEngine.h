@@ -118,6 +118,20 @@ public:
         masterEditorRequests.push_back(effect);
         return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Spy effects have no window"));
     }
+    std::vector<core::PluginSlot> auxEffects;
+    void setAuxEffects(const std::vector<core::PluginSlot>& effects) override { auxEffects = effects; }
+    std::vector<QString> storeAuxEffectStates(std::vector<core::PluginSlot>& effects) override
+    {
+        for (auto& slot : effects) slot.state = "spy aux settings: " + slot.pluginId.toUtf8();
+        return {};
+    }
+    bool takeAuxEdits() override { return false; }
+    core::Result<std::unique_ptr<engine::IPluginEditor>> createAuxEffectEditor(int) override
+    {
+        return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Spy effects have no window"));
+    }
+    std::map<QString, double> sends;
+    void setChannelSend(const core::ChannelId& id, double sendDb) override { sends[id.value()] = sendDb; }
     bool limiterOn = true;
     double limiterCeiling = -1.0;
     void setOutputLimiter(bool enabled, double ceilingDb) override

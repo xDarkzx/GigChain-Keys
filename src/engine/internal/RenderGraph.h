@@ -66,6 +66,7 @@ struct StripSpec
     // desk). A pair the device does not have plays in the mix.
     int outputPair = 0;
     MidiEffectSettings midiEffects; // its chord trigger and arpeggiator
+    double sendDb = -96.0;          // its aux send (core::limits::kMinVolumeDb: none)
 };
 
 // Which section of the song is in force during a block: `before` up to the
@@ -94,6 +95,10 @@ public:
 
     // Main thread, while audio runs.
     void setVolumeDb(double volumeDb);
+    // How much of it goes to the aux bus, after its fader (kMinVolumeDb: none). Any thread.
+    void setSendDb(double sendDb);
+    // Audio thread, after render(): its send this block, added to `aux`.
+    void addSend(const AudioBlock& aux) noexcept;
     // -1 (left) .. +1 (right), constant-power law (centre = unity on both sides).
     void setPan(double pan);
     void setMute(bool on) { m_mute.store(on, std::memory_order_relaxed); }
@@ -169,6 +174,8 @@ private:
     std::span<const MidiEvent> effected(std::size_t count, int frames, const TimeInfo& time) noexcept;
     std::atomic<uint64_t> m_droppedEvents{0};
     std::atomic<float> m_gain{1.0F};
+    std::atomic<float> m_send{0.0F}; // the aux send's gain
+    int m_sentFrames = 0;            // audio thread: frames of m_left/m_right this block (for its send)
     std::atomic<float> m_pan{0.0F};
     std::atomic<bool> m_mute{false};
     std::atomic<bool> m_solo{false};
@@ -194,9 +201,12 @@ class RenderGraph
 public:
     // `masterEffects` process the mix, in order, before the master gain.
     // `tails`: strips of earlier patches still ringing out (see ChannelStrip).
+    // `auxEffects`: the aux bus's (a shared reverb), fed by the strips' sends
+    // and played into the mix before the master effects; none: sends are silent.
     RenderGraph(std::vector<StripSpec> specs, double sampleRate, int maxBlock,
                 std::vector<std::shared_ptr<INode>> masterEffects = {},
-                std::vector<std::shared_ptr<ChannelStrip>> tails = {});
+                std::vector<std::shared_ptr<ChannelStrip>> tails = {},
+                std::vector<std::shared_ptr<INode>> auxEffects = {});
 
     // Audio thread. Overwrites `out`. `gate`: the song section in force.
     // `loops`: the loop station (its block begun): strips record into it,
@@ -227,6 +237,9 @@ private:
     std::vector<std::shared_ptr<ChannelStrip>> m_strips;
     std::vector<std::shared_ptr<ChannelStrip>> m_tails;
     std::vector<std::shared_ptr<INode>> m_masterEffects;
+    std::vector<std::shared_ptr<INode>> m_auxEffects;
+    std::vector<float> m_auxLeft; // the aux bus this block (the strips' sends)
+    std::vector<float> m_auxRight;
     double m_sampleRate;
     int m_maxBlock;
     std::atomic<uint64_t> m_oversizedBlocks{0};

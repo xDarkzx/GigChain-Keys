@@ -46,16 +46,18 @@ public:
     // the current patch, above `owner` (the main window). False when it has
     // no window; why is shown in the banner and logged.
     Q_INVOKABLE bool open(int channel, int effect, QWindow* owner);
-    // The same for effect `effect` of the master bus (`masterSlots` as it is now).
-    bool openMaster(int effect, const std::vector<core::PluginSlot>& masterSlots, QWindow* owner);
-    // Closes master windows whose effect is no longer there as it was.
-    void sweepMaster(const std::vector<core::PluginSlot>& masterSlots);
+    // The buses with effects of their own (outside the setlist).
+    enum class Bus : int { Master = 0, Aux = 1 };
+    // The same for effect `effect` of a bus (`busSlots` as it is now).
+    bool openBus(Bus bus, int effect, const std::vector<core::PluginSlot>& busSlots, QWindow* owner);
+    // Closes a bus's windows whose effect is no longer there as it was.
+    void sweepBus(Bus bus, const std::vector<core::PluginSlot>& busSlots);
     Q_INVOKABLE void closeAll();
 
 signals:
     void openCountChanged();
-    // A master effect's window was closed (its settings may have changed).
-    void masterWindowClosed();
+    // A bus effect's window was closed (its settings may have changed): `bus` an EffectWindows::Bus.
+    void busWindowClosed(int bus);
 
 private:
     struct Entry;

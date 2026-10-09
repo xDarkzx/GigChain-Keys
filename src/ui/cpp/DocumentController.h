@@ -244,6 +244,8 @@ public:
     Q_INVOKABLE bool setChannelMidiEffect(int channel, const QString& what, int value);
     Q_INVOKABLE bool setChannelVolume(int channel, double volumeDb);
     Q_INVOKABLE bool setChannelPan(int channel, double pan);
+    // How much of the channel goes to the aux effects (kMinVolumeDb = none).
+    Q_INVOKABLE bool setChannelSend(int channel, double sendDb);
     Q_INVOKABLE bool setChannelMute(int channel, bool mute);
     Q_INVOKABLE bool setChannelSolo(int channel, bool solo);
     // The note-on velocities (1-127) the channel plays: a velocity layer.

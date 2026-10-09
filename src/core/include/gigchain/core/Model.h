@@ -93,6 +93,9 @@ struct Channel
     int arpeggio = 0;   // ArpPattern (0 off)
     int arpRate = 1;    // ArpRate (an eighth)
     int arpOctaves = 1; // 1-3
+    // How much of it goes to the aux bus (a shared reverb or delay), after
+    // its fader: limits::kMinVolumeDb (-96) = none.
+    double auxSendDb = -96.0;
 
     friend bool operator==(const Channel&, const Channel&) = default;
 };

@@ -67,6 +67,7 @@ ChannelStrip::ChannelStrip(StripSpec spec, int maxBlock)
     for (auto& now : m_mappedNow) now.store(-1.0F, std::memory_order_relaxed); // not known until refreshed
     refreshMappedValues();
     setVolumeDb(spec.volumeDb);
+    setSendDb(spec.sendDb);
     setPan(spec.pan);
     m_mute.store(spec.mute, std::memory_order_relaxed);
     m_solo.store(spec.solo, std::memory_order_relaxed);
@@ -76,6 +77,25 @@ void ChannelStrip::setVolumeDb(double volumeDb)
 {
     if (!std::isfinite(volumeDb)) return;
     m_gain.store(dbToGain(volumeDb), std::memory_order_relaxed);
+}
+
+void ChannelStrip::setSendDb(double sendDb)
+{
+    if (!std::isfinite(sendDb)) return;
+    m_send.store(dbToGain(sendDb), std::memory_order_relaxed);
+}
+
+void ChannelStrip::addSend(const AudioBlock& aux) noexcept
+{
+    const float send = m_send.load(std::memory_order_relaxed);
+    if (send <= 0.0F || m_sentFrames <= 0 || aux.frames < m_sentFrames) return;
+    // Its sound after its fader and pan (what mixInto left in its buffers).
+    const auto frames = static_cast<std::size_t>(m_sentFrames);
+    const auto add = [send](float bus, float sample) { return bus + (sample * send); };
+    const std::span<float> left(aux.left, frames);
+    const std::span<float> right(aux.right, frames);
+    std::ranges::transform(left, std::span<const float>(m_left).first(frames), left.begin(), add);
+    std::ranges::transform(right, std::span<const float>(m_right).first(frames), right.begin(), add);
 }
 
 void ChannelStrip::setPan(double pan)
@@ -156,6 +176,7 @@ float ChannelStrip::mixInto(const AudioBlock& mix, float gain, LoopStation* loop
     const float leftGain = gain * static_cast<float>(std::cos(angle) * std::numbers::sqrt2);
     const float rightGain = gain * static_cast<float>(std::sin(angle) * std::numbers::sqrt2);
 
+    m_sentFrames = mix.frames; // its buffers hold this block, faded: its send
     float peak = 0.0F;
     double sumSquares = 0.0;
     // The strip's own buffers (the fader and pan go on them: what is heard
@@ -189,6 +210,7 @@ float ChannelStrip::mixInto(const AudioBlock& mix, float gain, LoopStation* loop
 void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& mix, bool anySolo, const TimeInfo& time,
                           const AudioInputs& inputs, const SectionGate& gate, LoopStation* loops) noexcept
 {
+    m_sentFrames = 0; // nothing to send until it mixes this block
     const uint64_t mask = m_sections.load(std::memory_order_relaxed);
     const bool outside = m_unsectioned.load(std::memory_order_relaxed);
     // Whether this strip plays in `section` (none: as set for outside any
@@ -242,6 +264,7 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
 void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBlock& mix, const TimeInfo& time,
                               LoopStation* loops) noexcept
 {
+    m_sentFrames = 0; // nothing to send until it mixes this block
     if (m_tailDone.load(std::memory_order_relaxed)) return;
     std::size_t routedCount = 0;
     for (const MidiEvent& event : events) {
@@ -274,8 +297,15 @@ void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBloc
 }
 
 RenderGraph::RenderGraph(std::vector<StripSpec> specs, double sampleRate, int maxBlock,
-                         std::vector<std::shared_ptr<INode>> masterEffects, std::vector<std::shared_ptr<ChannelStrip>> tails)
-    : m_tails(std::move(tails)), m_masterEffects(std::move(masterEffects)), m_sampleRate(sampleRate), m_maxBlock(maxBlock)
+                         std::vector<std::shared_ptr<INode>> masterEffects, std::vector<std::shared_ptr<ChannelStrip>> tails,
+                         std::vector<std::shared_ptr<INode>> auxEffects)
+    : m_tails(std::move(tails)),
+      m_masterEffects(std::move(masterEffects)),
+      m_auxEffects(std::move(auxEffects)),
+      m_auxLeft(m_auxEffects.empty() ? 0 : static_cast<std::size_t>(std::max(maxBlock, 0)), 0.0F),
+      m_auxRight(m_auxLeft.size(), 0.0F),
+      m_sampleRate(sampleRate),
+      m_maxBlock(maxBlock)
 {
     m_strips.reserve(specs.size());
     std::ranges::transform(specs, std::back_inserter(m_strips), [maxBlock](StripSpec& spec) {
@@ -305,6 +335,21 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
     }
     for (const auto& tail : m_tails) {
         if (out.frames <= tail->maxBlock()) tail->renderTail(events, blockFor(tail->outputPair()), time, loops);
+    }
+    // The aux bus: every strip's send (tails' too: a reverb tail rings on)
+    // through its effects, into the mix.
+    if (!m_auxEffects.empty()) {
+        const AudioBlock aux{.left = m_auxLeft.data(), .right = m_auxRight.data(), .frames = out.frames};
+        std::fill_n(m_auxLeft.begin(), frames, 0.0F);
+        std::fill_n(m_auxRight.begin(), frames, 0.0F);
+        for (const auto& channel : m_strips) channel->addSend(aux);
+        for (const auto& tail : m_tails) tail->addSend(aux);
+        for (const auto& effect : m_auxEffects) effect->process({}, aux, time);
+        const auto add = [](float mix, float bus) { return mix + bus; };
+        const std::span<float> mixLeft(out.left, frames);
+        const std::span<float> mixRight(out.right, frames);
+        std::ranges::transform(mixLeft, std::span<const float>(m_auxLeft).first(frames), mixLeft.begin(), add);
+        std::ranges::transform(mixRight, std::span<const float>(m_auxRight).first(frames), mixRight.begin(), add);
     }
     // The loops, whatever patch is playing, through the master effects.
     if (loops != nullptr) loops->play(out.left, out.right, out.frames);

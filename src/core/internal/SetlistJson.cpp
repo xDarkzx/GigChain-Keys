@@ -249,6 +249,7 @@ Channel readChannel(JsonReader& r, const QJsonObject& obj, const QString& path)
     channel.arpeggio = r.optionalInteger(obj, "arpeggio"_L1, path, 0, kArpPatternCount - 1, 0);
     channel.arpRate = r.optionalInteger(obj, "arpRate"_L1, path, 0, kArpRateCount - 1, 1);
     channel.arpOctaves = r.optionalInteger(obj, "arpOctaves"_L1, path, 1, kMaxArpOctaves, 1);
+    if (obj.contains("auxSendDb"_L1)) channel.auxSendDb = r.number(obj, "auxSendDb"_L1, path, limits::kMinVolumeDb, limits::kMaxVolumeDb);
     // What it does not take from the keyboard (none: all of it).
     constexpr qsizetype kFilters = 5;
     const QJsonArray ignores = r.optionalArray(obj, "ignores"_L1, path, kFilters);
@@ -491,6 +492,7 @@ QJsonObject writeChannel(const Channel& channel)
     if (channel.arpeggio != 0) obj.insert(u"arpeggio"_s, channel.arpeggio);
     if (channel.arpRate != 1) obj.insert(u"arpRate"_s, channel.arpRate);
     if (channel.arpOctaves != 1) obj.insert(u"arpOctaves"_s, channel.arpOctaves);
+    if (channel.auxSendDb > limits::kMinVolumeDb) obj.insert(u"auxSendDb"_s, channel.auxSendDb);
     return obj;
 }
 

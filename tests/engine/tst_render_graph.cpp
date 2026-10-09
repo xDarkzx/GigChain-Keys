@@ -267,6 +267,43 @@ private slots:
         QCOMPARE(out.left[0], 4.0F); // (1 + 1) * 2, not 1 * 2 + 1
     }
 
+    // A channel's send goes (after its fader) through the aux effects and
+    // comes back into the mix beside the dry sound: none sent, none back; a
+    // muted channel sends nothing; with no aux effects a send changes nothing.
+    void aSendGoesThroughTheAuxEffectsIntoTheMix()
+    {
+        const auto build = [](double sendDb, bool withAux) {
+            StripSpec spec = strip(std::make_shared<HeldNoteNode>(0.5F));
+            spec.sendDb = sendDb;
+            std::vector<StripSpec> specs;
+            specs.push_back(std::move(spec));
+            std::vector<std::shared_ptr<INode>> aux;
+            if (withAux) aux.push_back(std::make_shared<MathEffect>(0.0F, 2.0F)); // the "reverb": x2
+            return std::make_unique<RenderGraph>(std::move(specs), 48000.0, kFrames, std::vector<std::shared_ptr<INode>>{},
+                                                 std::vector<std::shared_ptr<ChannelStrip>>{}, std::move(aux));
+        };
+        const std::array on{noteOn(60)};
+        Output out;
+
+        auto graph = build(0.0, true);
+        graph->render(on, out.block(), 1.0F);
+        QCOMPARE(out.left.front(), 1.5F); // 0.5 dry + 0.5 sent x2
+        QCOMPARE(out.right.back(), 1.5F);
+
+        graph->strip(0)->setSendDb(-96.0); // turned down: dry only
+        graph->render({}, out.block(), 1.0F);
+        QVERIFY(std::abs(out.left.front() - 0.5F) < 1e-4F);
+
+        graph->strip(0)->setSendDb(0.0);
+        graph->strip(0)->setMute(true); // after the fader: muted sends nothing
+        graph->render({}, out.block(), 1.0F);
+        QCOMPARE(out.left.front(), 0.0F);
+
+        auto dry = build(0.0, false);
+        dry->render(on, out.block(), 1.0F);
+        QCOMPARE(out.left.front(), 0.5F);
+    }
+
     void splitsReceiveOnlyTheirNotes()
     {
         auto low = std::make_shared<HeldNoteNode>(0.1F);

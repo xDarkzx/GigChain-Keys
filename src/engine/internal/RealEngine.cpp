@@ -460,7 +460,7 @@ void RealEngine::syncPluginsToDevice()
         qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         return; // plugins stay as they were; the graph skips blocks larger than they expect
     }
-    for (const auto* nodes : {&m_nodes, &m_masterNodes}) {
+    for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes}) {
         for (const auto& [key, node] : *nodes) {
             if (auto prepared = node->prepare(rate, block); !prepared) { // logged by prepare()
                 m_pendingNotices.push_back(Notice::error(prepared.error().message));
@@ -601,6 +601,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
         spec.inputLeft = channel.inputLeft - 1; // 1-based in the setlist, -1 = none
         spec.inputRight = channel.inputRight - 1;
         spec.outputPair = channel.outputPair;
+        spec.sendDb = channel.auxSendDb;
         spec.midiEffects = MidiEffectSettings{.chord = channel.chord,
                                               .arpeggio = channel.arpeggio,
                                               .arpRate = channel.arpRate,
@@ -673,12 +674,8 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     for (const auto& [key, node] : m_nodes) {
         if ((used.count(node.get()) == 0 && !ringing.contains(node.get())) || releasing.contains(node.get())) node->releaseAllNotes();
     }
-    std::vector<std::shared_ptr<INode>> master;
-    for (const QString& key : masterKeys()) {
-        if (const auto it = m_masterNodes.find(key); it != m_masterNodes.end()) master.push_back(it->second);
-    }
-    auto next = std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(), std::move(master),
-                                              std::move(tails));
+    auto next = std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(), busNodes(m_master),
+                                              std::move(tails), busNodes(m_aux));
     applySectionMasks(*next); // before it plays: no moment with the wrong channels taking notes
     applyLoopSlots(*next);
     m_exchange.publish(std::move(next));
@@ -862,50 +859,59 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(cons
     return Vst3Node::createEditor(effects->second.at(static_cast<std::size_t>(effect)));
 }
 
-std::vector<QString> RealEngine::masterKeys() const
+std::vector<QString> RealEngine::busKeys(const EffectsBus& bus)
 {
     std::vector<QString> keys;
     std::map<QString, int> uses;
-    for (const core::PluginSlot& slot : m_masterSlots) {
+    for (const core::PluginSlot& slot : bus.effects) {
         if (slot.bypass) {
             keys.emplace_back();
             continue;
         }
         const int n = uses[slot.pluginId]++;
-        keys.push_back(u"master|fx|"_s + slot.pluginId + u'#' + QString::number(n));
+        keys.push_back(bus.name + u"|fx|"_s + slot.pluginId + u'#' + QString::number(n));
     }
     return keys;
 }
 
-void RealEngine::setMasterEffects(const std::vector<core::PluginSlot>& effects)
+std::vector<std::shared_ptr<INode>> RealEngine::busNodes(const EffectsBus& bus)
+{
+    std::vector<std::shared_ptr<INode>> nodes;
+    for (const QString& key : busKeys(bus)) {
+        if (const auto it = bus.nodes.find(key); it != bus.nodes.end()) nodes.push_back(it->second);
+    }
+    return nodes;
+}
+
+void RealEngine::setBusEffects(EffectsBus& bus, const std::vector<core::PluginSlot>& effects)
 {
     GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
-    m_masterSlots = effects;
-    const std::vector<QString> keys = masterKeys();
     // Take edits made to instances that are going away before they go.
-    (void)takeMasterEdits();
-    m_masterEdited = false;
-    std::erase_if(m_masterNodes, [&](const auto& entry) { return std::ranges::find(keys, entry.first) == keys.end(); });
+    (void)takeBusEdits(bus);
+    bus.effects = effects;
+    bus.edited = false;
+    const std::vector<QString> keys = busKeys(bus);
+    std::erase_if(bus.nodes, [&](const auto& entry) { return std::ranges::find(keys, entry.first) == keys.end(); });
     for (std::size_t i = 0; i < keys.size(); ++i) {
         const QString& key = keys.at(i);
-        if (key.isEmpty() || m_masterNodes.contains(key)) continue;
-        if (auto node = loadWithSettings(m_masterSlots.at(i))) m_masterNodes.emplace(key, std::move(node));
+        if (key.isEmpty() || bus.nodes.contains(key)) continue;
+        if (auto node = loadWithSettings(bus.effects.at(i))) bus.nodes.emplace(key, std::move(node));
     }
     applyPatch(m_song, m_patch); // the graph now plays them
-    qCInfo(lcEngine) << "Master effects:" << m_masterNodes.size() << "loaded in" << timer.elapsed() << "ms";
+    qCInfo(lcEngine).noquote() << "Effects on the" << bus.name << "bus:" << bus.nodes.size() << "loaded in" << timer.elapsed() << "ms";
 }
 
-std::vector<QString> RealEngine::storeMasterEffectStates(std::vector<core::PluginSlot>& effects)
+std::vector<QString> RealEngine::storeBusEffectStates(EffectsBus& bus, std::vector<core::PluginSlot>& effects)
 {
     GC_ONLY_MAIN_THREAD();
     std::vector<QString> problems;
-    const std::vector<QString> keys = masterKeys();
+    const std::vector<QString> keys = busKeys(bus);
     for (std::size_t i = 0; i < effects.size() && i < keys.size(); ++i) {
         core::PluginSlot& effect = effects.at(i);
-        const auto node = m_masterNodes.find(keys.at(i));
-        if (node == m_masterNodes.end() || effect.pluginId != m_masterSlots.at(i).pluginId) continue;
+        const auto node = bus.nodes.find(keys.at(i));
+        if (node == bus.nodes.end() || effect.pluginId != bus.effects.at(i).pluginId) continue;
         auto state = node->second->saveState();
         if (!state) {
             problems.push_back(u"The settings of %1 could not be saved: %2"_s.arg(effect.displayName, state.error().message));
@@ -913,36 +919,48 @@ std::vector<QString> RealEngine::storeMasterEffectStates(std::vector<core::Plugi
             continue;
         }
         effect.state = state->encode();
-        m_masterSlots.at(i).state = effect.state;
+        bus.effects.at(i).state = effect.state;
     }
     return problems;
 }
 
-bool RealEngine::takeMasterEdits()
+bool RealEngine::takeBusEdits(EffectsBus& bus)
 {
     GC_ONLY_MAIN_THREAD();
-    for (const auto& [key, node] : m_masterNodes) {
-        if (node->takeEdited()) m_masterEdited = true;
+    for (const auto& [key, node] : bus.nodes) {
+        if (node->takeEdited()) bus.edited = true;
     }
-    return std::exchange(m_masterEdited, false);
+    return std::exchange(bus.edited, false);
 }
 
-core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createMasterEffectEditor(int effect)
+core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createBusEffectEditor(EffectsBus& bus, int effect)
 {
     GC_ONLY_MAIN_THREAD();
-    const std::vector<QString> keys = masterKeys();
+    const std::vector<QString> keys = busKeys(bus);
     if (effect < 0 || static_cast<std::size_t>(effect) >= keys.size()) {
-        return core::fail(core::ErrorCode::OutOfRange, u"That master effect is no longer there"_s);
+        return core::fail(core::ErrorCode::OutOfRange, u"That %1 effect is no longer there"_s.arg(bus.name));
     }
-    const core::PluginSlot& slot = m_masterSlots.at(static_cast<std::size_t>(effect));
+    const core::PluginSlot& slot = bus.effects.at(static_cast<std::size_t>(effect));
     if (slot.bypass) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
     }
-    const auto node = m_masterNodes.find(keys.at(static_cast<std::size_t>(effect)));
-    if (node == m_masterNodes.end()) {
+    const auto node = bus.nodes.find(keys.at(static_cast<std::size_t>(effect)));
+    if (node == bus.nodes.end()) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
     }
     return Vst3Node::createEditor(node->second);
+}
+
+void RealEngine::setChannelSend(const core::ChannelId& id, double sendDb)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (!std::isfinite(sendDb)) {
+        qCWarning(lcEngine) << "Ignored a send of" << sendDb << "dB";
+        return;
+    }
+    if (RenderGraph* graph = m_exchange.current()) {
+        if (ChannelStrip* strip = graph->findStrip(id)) strip->setSendDb(sendDb);
+    }
 }
 
 void RealEngine::setOutputLimiter(bool enabled, double ceilingDb)
@@ -1136,7 +1154,7 @@ void RealEngine::panic()
     const double rate = m_audio.sampleRate();
     const int block = m_audio.maxBlock();
     m_keyboard.clear(); // every key shown up again
-    for (const auto* nodes : {&m_nodes, &m_masterNodes}) {
+    for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes}) {
         for (const auto& [key, node] : *nodes) {
             node->releaseAllNotes();
             // Deactivate + activate: VST3's reset, clearing voices and tails.
@@ -1151,7 +1169,7 @@ void RealEngine::panic()
             qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         }
     }
-    qCWarning(lcEngine) << "Panic: every sound stopped (" << m_nodes.size() + m_masterNodes.size() << "plugins reset in"
+    qCWarning(lcEngine) << "Panic: every sound stopped (" << m_nodes.size() + m_master.nodes.size() + m_aux.nodes.size() << "plugins reset in"
                         << timer.elapsed() << "ms )";
 }
 

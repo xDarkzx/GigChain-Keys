@@ -1082,6 +1082,17 @@ bool DocumentController::setChannelPan(int channel, double pan)
     return true;
 }
 
+bool DocumentController::setChannelSend(int channel, double sendDb)
+{
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [sendDb](core::Channel& c) { c.auxSendDb = sendDb; }); !r) {
+        return report(r.error());
+    }
+    m_engine.setChannelSend(currentPatch()->channels.at(static_cast<std::size_t>(channel)).id, sendDb);
+    m_coalesceKey = u"send:%1"_s.arg(channel);
+    commitChannelField(channel, false);
+    return true;
+}
+
 bool DocumentController::setChannelMute(int channel, bool mute)
 {
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [mute](core::Channel& c) { c.mute = mute; }); !r) {

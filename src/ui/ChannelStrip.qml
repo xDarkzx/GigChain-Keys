@@ -31,6 +31,7 @@ Rectangle {
     required property int inputLeft
     required property int inputRight
     required property int outputPair // 0 the mix; n the interface's outputs 2n+1-2n+2
+    required property double auxSendDb // to the aux effects; -96 = none
     required property int mappingCount
     required property DocumentController doc
     required property PluginListModel pluginModel
@@ -415,10 +416,18 @@ Rectangle {
             onClicked: strip.menu(addEffectMenuComponent).popup(addSlot, 0, addSlot.height)
         }
 
+        // The send to the aux effects (the Aux strip's reverb or delay).
+        SendKnob {
+            objectName: "sendKnob"
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 2
+            sendDb: strip.auxSendDb
+            onSendMoved: (db) => strip.doc.setChannelSend(strip.index, db)
+        }
+
         PanKnob {
             objectName: "panKnob"
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 2
             pan: strip.pan
             onPanMoved: (v) => strip.doc.setChannelPan(strip.index, v)
             // Right-click: learn the keyboard knob that turns it.
