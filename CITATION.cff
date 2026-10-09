@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use or write about this software, please cite it as below."
+title: "GigChain Keys"
+abstract: "A free, open-source live-performance host for keyboard players: VST3 instruments and effects, setlists, chord charts, a song timeline with live controls, a stage-ready Perform mode and practice warm-ups."
+type: software
+authors:
+  - alias: xDarkzx
+repository-code: "https://github.com/xDarkzx/GigChain-Keys"
+url: "https://github.com/xDarkzx/GigChain-Keys"
+license: GPL-3.0-or-later
+version: 0.3.0
+date-released: 2026-10-08
+keywords:
+  - live performance
+  - keyboard
+  - vst3
+  - setlist
+  - chord charts
+  - midi
