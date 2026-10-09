@@ -3031,7 +3031,7 @@ private slots:
             if (begin(u"06"_s)) {
                 atWord(u"three"_s, 0.1);
                 if (const QQuickItem* stars = shownOne(u"warmupStars"_s)) spot(stars);
-                atWord(u"pass"_s, 0.45);
+                atWord(u"level"_s, 0.45); // ("Pass the level": heard as "past" too)
                 spot(shownOne(u"warmupLevel1"_s) != nullptr ? rectOf(shownOne(u"warmupLevel1"_s)) : QRectF());
                 atWord(u"pushing"_s, 0.75);
                 unspot();
