@@ -3,6 +3,8 @@
 #include "EngineLog.h"
 #include "ExternalMidiOut.h"
 
+#include "gigchain/platform/Timing.h"
+
 #include <array>
 #include <numeric>
 #include <span>
@@ -77,6 +79,8 @@ uint64_t HardwareSender::takeDropped()
 
 void HardwareSender::sendUntilStopped(const std::stop_token& stop)
 {
+    // Its 1 ms waits must be 1 ms (Windows' default is 15.6: late, uneven notes), and it must not wait behind the UI.
+    platform::preciseTimingForThisThread();
     while (!stop.stop_requested()) {
         std::vector<std::shared_ptr<HardwareOut>> outs; // (a synth no channel plays any more is let go at the end)
         {
@@ -84,8 +88,9 @@ void HardwareSender::sendUntilStopped(const std::stop_token& stop)
             outs = m_outs;
         }
         for (const auto& out : outs) sendFrom(*out);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1)); // (1 ms: the timer resolution is raised at start-up)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+    platform::endPreciseTimingForThisThread();
 }
 
 void HardwareSender::sendFrom(HardwareOut& out)
