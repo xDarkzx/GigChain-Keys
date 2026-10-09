@@ -14,8 +14,8 @@ Dial {
     to: 1
     stepSize: 0.02
     focusPolicy: Qt.NoFocus
-    implicitWidth: 34
-    implicitHeight: 34
+    implicitWidth: 38
+    implicitHeight: 38
 
     Binding on value {
         value: knob.pan
@@ -30,50 +30,15 @@ Dial {
         panMoved(clamped)
     }
 
-    background: Item {
-        implicitWidth: 34
-        implicitHeight: 34
-        Rectangle {
-            anchors.fill: parent
-            radius: width / 2
-            color: Theme.knobFace
-            border.color: Theme.knobRing
-            border.width: 2
-        }
-        // The arc from centre to the current position, like Logic's pan ring.
-        Canvas {
-            id: arc
-            anchors.fill: parent
-            property real value: knob.value
-            onValueChanged: requestPaint()
-            onPaint: {
-                const ctx = getContext("2d")
-                ctx.reset()
-                const r = width / 2 - 2
-                const top = -Math.PI / 2
-                const angle = top + value * (Math.PI * 0.75)
-                ctx.strokeStyle = Theme.accentBlue
-                ctx.lineWidth = 3
-                ctx.beginPath()
-                ctx.arc(width / 2, height / 2, r, Math.min(top, angle), Math.max(top, angle))
-                ctx.stroke()
-            }
-        }
+    // A hardware knob whose LEDs light from the centre (Logic's pan ring).
+    background: KnobFace {
+        implicitWidth: 38
+        implicitHeight: 38
+        position: (knob.value + 1) / 2
+        arcFrom: 0.5
+        ledColor: Theme.ledBlue
     }
-
-    handle: Rectangle {
-        x: knob.background.x + knob.background.width / 2 - width / 2
-        y: knob.background.y + 5
-        width: 3
-        height: 10
-        radius: 1.5
-        color: Theme.text
-        transform: Rotation {
-            origin.x: 1.5
-            origin.y: knob.background.height / 2 - 5
-            angle: knob.value * 135
-        }
-    }
+    handle: Item {} // (the face draws its own pointer)
 
     // All the knob's input: the mixer's strip list must not take a sideways drag.
     MouseArea {

@@ -16,8 +16,8 @@ Dial {
     to: 6
     stepSize: 0.5
     focusPolicy: Qt.NoFocus
-    implicitWidth: 26
-    implicitHeight: 26
+    implicitWidth: 32
+    implicitHeight: 32
 
     Binding on value {
         value: Math.max(knob.from, knob.sendDb)
@@ -34,49 +34,16 @@ Dial {
         sendMoved(clamped <= from ? offDb : clamped)
     }
 
-    background: Item {
-        implicitWidth: 26
-        implicitHeight: 26
-        Rectangle {
-            anchors.fill: parent
-            radius: width / 2
-            color: Theme.knobFace
-            border.color: Theme.knobRing
-            border.width: 2
-        }
-        Canvas {
-            anchors.fill: parent
-            property real value: knob.value
-            onValueChanged: requestPaint()
-            onPaint: {
-                const ctx = getContext("2d")
-                ctx.reset()
-                if (knob.off) return
-                const r = width / 2 - 2
-                const start = Math.PI * 0.75 // bottom left, as a level knob
-                const angle = start + knob.position * Math.PI * 1.5
-                ctx.strokeStyle = Theme.accentBlue
-                ctx.lineWidth = 3
-                ctx.beginPath()
-                ctx.arc(width / 2, height / 2, r, start, angle)
-                ctx.stroke()
-            }
-        }
+    // A level knob: its LEDs light from the left, amber as Logic's sends; dark when off.
+    background: KnobFace {
+        implicitWidth: 32
+        implicitHeight: 32
+        position: knob.position
+        arcFrom: 0
+        lit: !knob.off
+        ledColor: Theme.ledAmber
     }
-
-    handle: Rectangle {
-        x: knob.background.x + knob.background.width / 2 - width / 2
-        y: knob.background.y + 4
-        width: 3
-        height: 8
-        radius: 1.5
-        color: knob.off ? Theme.textDim : Theme.text
-        transform: Rotation {
-            origin.x: 1.5
-            origin.y: knob.background.height / 2 - 4
-            angle: -135 + knob.position * 270
-        }
-    }
+    handle: Item {} // (the face draws its own pointer)
 
     // All the knob's input: the mixer's strip list must not take a sideways drag.
     MouseArea {

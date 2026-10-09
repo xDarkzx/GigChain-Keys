@@ -56,13 +56,15 @@ Item {
         width: 20
         height: fader.height - 16
 
-        // groove
+        // groove: a slot cut into the panel (dark, its far edge catching the light)
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
-            width: 4
+            width: 6
             height: parent.height
-            radius: 2
+            radius: 3
             color: Theme.faderGroove
+            border.color: "#000000"
+            Rectangle { x: parent.width - 1; y: 2; width: 1; height: parent.height - 4; color: Theme.bevelLight }
         }
         // 0 dB mark
         Rectangle {
@@ -91,20 +93,40 @@ Item {
             focusPolicy: Qt.NoFocus
             padding: 0
             background: Item {}
-            handle: Rectangle {
-                // the fader cap
+            handle: Item {
+                // The fader cap, as a console's: a shadow under it, brushed
+                // metal with grip ridges, and a white line where it reads.
                 x: (slider.width - width) / 2
                 y: slider.visualPosition * (slider.availableHeight - height)
-                width: 22
-                height: 34
-                radius: 3
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: Theme.faderCapTop }
-                    GradientStop { position: 0.5; color: Theme.faderCapMid }
-                    GradientStop { position: 1.0; color: Theme.faderCapBottom }
+                width: 24
+                height: 38
+                Rectangle { x: 1; y: 3; width: parent.width; height: parent.height; radius: 3; color: Theme.shadow }
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 3
+                    border.color: "#0d0d0e"
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: Theme.faderCapTop }
+                        GradientStop { position: 0.48; color: Theme.faderCapMid }
+                        GradientStop { position: 0.52; color: Theme.faderCapBottom }
+                        GradientStop { position: 1.0; color: Theme.faderCapMid }
+                    }
+                    Rectangle { x: 1; y: 1; width: parent.width - 2; height: 1; color: "#80ffffff" }
+                    // grip ridges above and below the line
+                    Repeater {
+                        model: [6, 9, 12, 25, 28, 31]
+                        delegate: Rectangle {
+                            required property int modelData
+                            x: 4
+                            y: modelData
+                            width: 16
+                            height: 1
+                            color: "#55000000"
+                            Rectangle { y: 1; width: parent.width; height: 1; color: "#30ffffff" }
+                        }
+                    }
+                    Rectangle { anchors.centerIn: parent; width: parent.width - 2; height: 2; color: "#ffffff" }
                 }
-                border.color: "#111"
-                Rectangle { anchors.centerIn: parent; width: parent.width - 4; height: 2; color: "#f0f0f0" }
             }
             onMoved: fader.volumeMoved(value)
             TapHandler {
@@ -113,26 +135,38 @@ Item {
         }
     }
 
-    // meter on the right
+    // meter on the right: LED segments, lit up to the level (green, then
+    // amber near 0 dB, red over it), the unlit ones faintly visible.
     Rectangle {
         id: meter
         x: track.x + track.width + 4
         y: track.y
-        width: 8
+        width: 9
         height: track.height
         radius: 2
         color: Theme.meterBackground
+        border.color: "#000000"
         clip: true
 
-        Rectangle {
-            anchors.bottom: parent.bottom
-            width: parent.width
-            height: parent.height * fader.levelFraction
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: Theme.meterHigh }
-                GradientStop { position: 0.18; color: Theme.meterMid }
-                GradientStop { position: 0.35; color: Theme.meterLow }
-                GradientStop { position: 1.0; color: Theme.meterLow }
+        readonly property int segmentCount: Math.max(8, Math.floor((height - 2) / 3))
+        Column {
+            x: 1
+            y: 1
+            width: parent.width - 2
+            spacing: 1
+            Repeater {
+                model: meter.segmentCount
+                delegate: Rectangle {
+                    required property int index
+                    // From the top: segment 0 is the loudest.
+                    readonly property real at: 1 - (index + 0.5) / meter.segmentCount
+                    readonly property bool lit: at <= fader.levelFraction
+                    readonly property color hue: at > fader.fractionOf(0) ? Theme.meterHigh
+                                                 : at > fader.fractionOf(-9) ? Theme.meterMid : Theme.meterLow
+                    width: meter.width - 2
+                    height: (meter.height - 2) / meter.segmentCount - 1
+                    color: lit ? hue : Qt.rgba(hue.r, hue.g, hue.b, 0.12)
+                }
             }
         }
         Rectangle {

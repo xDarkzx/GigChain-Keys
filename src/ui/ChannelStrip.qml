@@ -388,6 +388,10 @@ Rectangle {
             }
         }
 
+        // The sound: its icon and the instrument (or audio input) it plays.
+        StripSection {
+            Layout.fillWidth: true
+            label: strip.inputLeft > 0 ? qsTr("INPUT") : qsTr("INSTRUMENT")
         // instrument icon
         Rectangle {
             Layout.alignment: Qt.AlignHCenter
@@ -424,7 +428,11 @@ Rectangle {
             }
             onMenuRequested: strip.menu(channelMenuComponent).popup(instrumentSlot, 0, instrumentSlot.height)
         }
+        }
 
+        StripSection {
+            Layout.fillWidth: true
+            label: qsTr("AUDIO FX")
         // effect slots, then one empty slot to add another. The list grows
         // with each effect; past four it scrolls, so the fader keeps its room.
         ListView {
@@ -471,19 +479,25 @@ Rectangle {
             text: ""
             onClicked: strip.menu(addEffectMenuComponent).popup(addSlot, 0, addSlot.height)
         }
+        }
 
-        // The send to the aux effects (the Aux strip's reverb or delay).
+        // The send to the aux effects (the Aux strip's reverb or delay) and the pan, side by side.
+        StripSection {
+            Layout.fillWidth: true
+            label: qsTr("SEND · PAN")
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 2
         SendKnob {
             objectName: "sendKnob"
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 2
+            Layout.alignment: Qt.AlignVCenter
             sendDb: strip.auxSendDb
             onSendMoved: (db) => strip.doc.setChannelSend(strip.index, db)
         }
 
         PanKnob {
             objectName: "panKnob"
-            Layout.alignment: Qt.AlignHCenter
+            Layout.alignment: Qt.AlignVCenter
             pan: strip.pan
             onPanMoved: (v) => strip.doc.setChannelPan(strip.index, v)
             // Right-click: learn the keyboard knob that turns it.
@@ -497,7 +511,13 @@ Rectangle {
                 }
             }
         }
+        }
+        }
 
+        // The level: its readouts, the fader with its meter, mute and solo.
+        StripSection {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         RowLayout {
             Layout.fillWidth: true
             spacing: 2
@@ -553,6 +573,7 @@ Rectangle {
                 activeColor: Theme.soloColor
                 onClicked: strip.doc.setChannelSolo(strip.index, !strip.solo)
             }
+        }
         }
 
         // where it plays, when not the whole keyboard (click to change)
