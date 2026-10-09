@@ -267,6 +267,14 @@ private slots:
         const auto stemOutside = fromJson(QJsonDocument(root).toJson());
         QVERIFY(!stemOutside);
         QVERIFY2(stemOutside.error().message.contains(u"stems[0]"_s), qPrintable(stemOutside.error().message));
+        // A marker without a name neither (editing refuses one too).
+        song = richJson().value(u"songs").toArray().at(0).toObject();
+        song.insert(u"markers", QJsonArray{QJsonObject{{u"name"_s, u"  "_s}, {u"seconds"_s, 12.0}}});
+        songs.replace(0, song);
+        root.insert(u"songs", songs);
+        const auto unnamed = fromJson(QJsonDocument(root).toJson());
+        QVERIFY(!unnamed);
+        QVERIFY2(unnamed.error().message.contains(u"markers[0].name"_s), qPrintable(unnamed.error().message));
     }
 
     void versionThreeFilesOpenWithoutSections()

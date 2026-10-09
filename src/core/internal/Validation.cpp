@@ -215,7 +215,7 @@ Result<void> validateChart(const Song& song, const QString& path)
     for (std::size_t i = 0; i < song.markers.size(); ++i) {
         const TrackMarker& marker = song.markers.at(i);
         const QString at = u"%1.markers[%2]"_s.arg(path).arg(i);
-        if (auto r = validateLength(marker.name, limits::kMaxNameLength, at + ".name"_L1); !r) return r;
+        if (auto r = validateName(marker.name, at + ".name"_L1); !r) return r; // (as editing: not empty)
         if (!std::isfinite(marker.seconds) || marker.seconds < 0.0 || marker.seconds > limits::kMaxTrackSeconds) {
             return fail(ErrorCode::OutOfRange, u"%1.seconds must be between 0 and %2"_s.arg(at).arg(limits::kMaxTrackSeconds));
         }

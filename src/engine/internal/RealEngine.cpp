@@ -1773,20 +1773,26 @@ void RealEngine::setBackingTrack(const QString& path)
 void RealEngine::setBackingStems(const std::vector<BackingStemFile>& stems)
 {
     GC_ONLY_MAIN_THREAD();
+    const std::size_t count = std::min(stems.size(), m_stemGains.size());
     std::vector<QString> paths;
-    for (std::size_t i = 0; i < stems.size() && i < m_stemGains.size(); ++i) {
-        const BackingStemFile& stem = stems.at(i);
-        m_stemGains.at(i).store(stem.mute ? 0.0F : dbToGain(stem.volumeDb), std::memory_order_relaxed);
-        m_stemPairs.at(i).store(std::max(stem.outputPair, 0), std::memory_order_relaxed);
-        paths.push_back(stem.path);
-    }
+    paths.reserve(count);
+    for (std::size_t i = 0; i < count; ++i) paths.push_back(stems.at(i).path);
     if (stems.size() > m_stemGains.size()) {
         m_pendingNotices.push_back(Notice::warning(u"Only the first %1 stems play"_s.arg(m_stemGains.size())));
         qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
     }
-    if (paths == m_stemPaths) return; // a level, mute or output: applied above, nothing to read
-    m_stemPaths = std::move(paths);
-    rereadTracks();
+    // Other files: the old set stops first, so no stem of it plays at the
+    // level or on the outputs of the one now in its place (a loud stem into
+    // the in-ears). The same files: a level, mute or output, at once.
+    if (paths != m_stemPaths) {
+        m_stemPaths = std::move(paths);
+        rereadTracks();
+    }
+    for (std::size_t i = 0; i < count; ++i) {
+        const BackingStemFile& stem = stems.at(i);
+        m_stemGains.at(i).store(stem.mute ? 0.0F : dbToGain(stem.volumeDb), std::memory_order_relaxed);
+        m_stemPairs.at(i).store(std::max(stem.outputPair, 0), std::memory_order_relaxed);
+    }
 }
 
 void RealEngine::rereadTracks()
