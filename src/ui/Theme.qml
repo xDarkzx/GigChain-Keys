@@ -110,7 +110,9 @@ QtObject {
     readonly property color meterLow: "#3fb950"
     readonly property color meterMid: "#e0c526"
     readonly property color meterHigh: "#e5484d"
-    readonly property color performBackground: "#000000"
+    readonly property color performBackground: "#101011" // the surface the deck and the chart sit on
+    readonly property color chartWellTop: "#060607"     // the chart's well: near black, to read from the keys
+    readonly property color chartWellBottom: "#0b0b0c"
 
     // ---- mixer
     readonly property color mixerBackground: "#111112"
