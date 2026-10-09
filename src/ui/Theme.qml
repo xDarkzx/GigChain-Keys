@@ -26,17 +26,50 @@ QtObject {
         return order.filter(m => parts.indexOf(m) >= 0).map(m => symbols[m]).join("") + key
     }
 
-    // ---- surfaces
-    readonly property color background: "#121418"
-    readonly property color panel: "#1b1e23"
-    readonly property color panelRaised: "#252930"
-    readonly property color border: "#353a44"
+    // ---- surfaces: neutral graphite, as MainStage's (not blue-tinted)
+    readonly property color background: "#141414"
+    readonly property color panel: "#1d1d1e"
+    readonly property color panelRaised: "#29292b"
+    readonly property color border: "#3a3a3d"
     // Toolbars and headers: a raised strip, lighter at the top.
-    readonly property color barTop: "#2e333b"
-    readonly property color barBottom: "#1f2228"
+    readonly property color barTop: "#3a3a3d"
+    readonly property color barBottom: "#232325"
     // Panels (side panel, mixer): a gentle fall from top to bottom.
-    readonly property color panelTop: "#20242a"
-    readonly property color panelBottom: "#181a1e"
+    readonly property color panelTop: "#232325"
+    readonly property color panelBottom: "#19191a"
+
+    // ---- hardware: metal caps, LEDs and the displays
+    readonly property color metalLight: "#a9adb3"
+    readonly property color metalMid: "#6c7076"
+    readonly property color metalDark: "#3c3f44"
+    readonly property color metalShine: "#30ffffff"
+    readonly property color knobSkirt: "#141516"
+    readonly property color knobWell: "#0b0b0c"
+    readonly property color knobTick: "#5a5d63"
+    readonly property color knobPointer: "#ffffff"
+    readonly property color ledBlue: "#4aa3ff"
+    readonly property color ledGreen: "#43d36b"
+    readonly property color ledAmber: "#ffb43a"
+    readonly property color ledRed: "#ff4d4f"
+    readonly property color ledOff: "#2a2b2e"
+    // A strip's section: a well set into the strip.
+    readonly property color wellTop: "#151516"
+    readonly property color wellBottom: "#1c1c1e"
+    readonly property color wellBorder: "#070708"
+    readonly property color wellShadow: "#55000000"
+    readonly property color engraved: "#8a8d93" // small labels cut into a panel
+    // Lists (the setlist), as MainStage's: alternating rows, a thin rule.
+    readonly property color listRowEven: "#222224"
+    readonly property color listRowOdd: "#1c1c1e"
+    readonly property color listRowHover: "#2e2e32"
+    readonly property color listRule: "#0e0e0f"
+    // An LCD: dark glass, lit text, a reflection across its top.
+    readonly property color lcdTop: "#1c2733"
+    readonly property color lcdBottom: "#0c1218"
+    readonly property color lcdText: "#d8ecff"
+    readonly property color lcdTextDim: "#7f9bb5"
+    readonly property color lcdAccent: "#6fc3ff"
+    readonly property color lcdGlare: "#14ffffff"
 
     // ---- depth
     readonly property color outline: "#08090b"      // the dark edge round every control and panel
@@ -52,13 +85,13 @@ QtObject {
     readonly property color textDim: "#98a0ad"
     readonly property color textOnAccent: "#ffffff"
 
-    // ---- buttons: a gradient per state
-    readonly property color buttonTop: "#3b4049"
-    readonly property color buttonBottom: "#2a2e35"
-    readonly property color buttonHoverTop: "#474d58"
-    readonly property color buttonHoverBottom: "#31363e"
-    readonly property color buttonDownTop: "#1f2227"
-    readonly property color buttonDownBottom: "#2b2f36"
+    // ---- buttons: a gradient per state (raised grey keys, as MainStage's)
+    readonly property color buttonTop: "#4a4a4e"
+    readonly property color buttonBottom: "#2e2e31"
+    readonly property color buttonHoverTop: "#56565b"
+    readonly property color buttonHoverBottom: "#353539"
+    readonly property color buttonDownTop: "#1e1e20"
+    readonly property color buttonDownBottom: "#2c2c2f"
     readonly property color accentTop: "#5ea0f2"
     readonly property color accentBottom: "#3570c4"
     readonly property color dangerTop: "#f0585d"
@@ -77,21 +110,24 @@ QtObject {
     readonly property color meterLow: "#3fb950"
     readonly property color meterMid: "#e0c526"
     readonly property color meterHigh: "#e5484d"
-    readonly property color performBackground: "#000000"
+    readonly property color performBackground: "#101011" // the surface the deck and the chart sit on
+    readonly property color chartWellTop: "#060607"     // the chart's well: near black, to read from the keys
+    readonly property color chartWellBottom: "#0b0b0c"
 
     // ---- mixer
-    readonly property color mixerBackground: "#15171b"
-    readonly property color stripTop: "#2a2e35"
-    readonly property color stripBottom: "#1e2126"
-    readonly property color stripBackground: "#24272d"
-    readonly property color stripSelected: "#2c3544"
-    readonly property color stripBorder: "#0b0c0e"
-    readonly property color slotBackground: "#31353d"
-    readonly property color slotHover: "#3b4049"
+    readonly property color mixerBackground: "#111112"
+    // Strips: lighter graphite standing on the console, as Logic's, so their dark sections stand out.
+    readonly property color stripTop: "#47474c"
+    readonly property color stripBottom: "#323236"
+    readonly property color stripBackground: "#3a3a3e"
+    readonly property color stripSelected: "#33415a"
+    readonly property color stripBorder: "#0b0b0c"
+    readonly property color slotBackground: "#38383c"
+    readonly property color slotHover: "#444449"
     readonly property color readoutBackground: "#0b0c0e"
     readonly property color readoutText: "#9fe0a8"
-    readonly property color knobFace: "#3a3f47"
-    readonly property color knobRing: "#1b1d21"
+    readonly property color knobFace: "#3a3d42"
+    readonly property color knobRing: "#1b1c1f"
     readonly property color faderGroove: "#0a0b0d"
     readonly property color faderCapTop: "#d4d7dc"
     readonly property color faderCapMid: "#8d9198"
@@ -120,8 +156,8 @@ QtObject {
     readonly property int touchTarget: 48   // Perform's buttons: a fingertip on a touch screen
     readonly property int iconSize: 16
     readonly property int sidePanelWidth: 270
-    readonly property int stripWidth: 88
-    readonly property int mixerHeight: 360
+    readonly property int stripWidth: 100
+    readonly property int mixerHeight: 480 // a whole strip, name plate and all (stripHeight and the mixer's margins)
     readonly property int looperHeight: 88 // the loop station strip over the mixer (its name, its buttons, its gap)
     // A channel strip's fixed height (REAPER/Audacity size): never stretched to the window.
     readonly property int stripHeight: 470

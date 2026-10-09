@@ -19,16 +19,28 @@ Item {
         anchors.fill: parent
         spacing: 0
 
+        // The songs, as MainStage's patch list: rows in a recessed list.
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.margins: Theme.spacing
+            radius: Theme.radius
+            border.color: Theme.wellBorder
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.wellTop }
+                GradientStop { position: 1.0; color: Theme.wellBottom }
+            }
+            Rectangle { x: 1; y: 1; width: parent.width - 2; height: 2; color: Theme.wellShadow }
         ListView {
             id: list
             objectName: "setlistList"
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            anchors.fill: parent
+            anchors.margins: 1
             clip: true
             model: view.setlistModel
             boundsBehavior: Flickable.StopAtBounds
-            spacing: Theme.spacingSmall
-            topMargin: Theme.spacing
+            spacing: 0
+            topMargin: 2
             ScrollBar.vertical: ScrollBar {}
             // (Up and Down choose songs everywhere: Main's shortcuts.)
             keyNavigationEnabled: false
@@ -67,19 +79,19 @@ Item {
                 required property bool isCurrentSong
                 readonly property bool isSong: kind === "song"
 
-                width: ListView.view.width - 2 * Theme.spacing
-                x: Theme.spacing
+                width: ListView.view.width
                 visible: isSong
-                height: isSong ? 42 : 0
-                radius: Theme.radiusCard
-                border.color: isCurrentSong ? Qt.darker(Theme.accentBottom, 1.3) : Theme.outline
+                height: isSong ? 40 : 0
+                // Rows in alternating shades, the current one a lit blue bar (MainStage's list).
+                readonly property color restColor: songIndex % 2 === 0 ? Theme.listRowEven : Theme.listRowOdd
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: row.isCurrentSong ? Theme.accentTop : (hoverArea.hovered ? Theme.buttonHoverTop : Theme.buttonTop) }
-                    GradientStop { position: 1.0; color: row.isCurrentSong ? Theme.accentBottom : (hoverArea.hovered ? Theme.buttonHoverBottom : Theme.buttonBottom) }
+                    GradientStop { position: 0.0; color: row.isCurrentSong ? Theme.accentTop : (hoverArea.hovered ? Theme.listRowHover : row.restColor) }
+                    GradientStop { position: 1.0; color: row.isCurrentSong ? Theme.accentBottom : (hoverArea.hovered ? Theme.listRowHover : row.restColor) }
                 }
                 HoverHandler { id: hoverArea }
-                // The lit top edge.
-                Rectangle { x: 2; y: 1; width: parent.width - 4; height: 1; color: row.isCurrentSong ? "#40ffffff" : Theme.bevelLight }
+                // The current song's LED at its left edge; a thin rule under each row.
+                Rectangle { visible: row.isCurrentSong; width: 3; height: parent.height; color: Theme.lcdAccent }
+                Rectangle { y: parent.height - 1; width: parent.width; height: 1; color: Theme.listRule }
 
                 function startRename() {
                     if (!view.editable) return
@@ -102,11 +114,18 @@ Item {
                     anchors.leftMargin: Theme.spacing
                     anchors.rightMargin: Theme.spacing
                     spacing: Theme.spacing
-                    Label {
-                        text: row.number
-                        color: row.isCurrentSong ? Theme.accentText : Theme.textDim
-                        Layout.preferredWidth: 22
-                        horizontalAlignment: Text.AlignRight
+                    // Its number on a small display, as MainStage numbers patches.
+                    LcdPanel {
+                        Layout.preferredWidth: 26
+                        Layout.preferredHeight: 20
+                        Text {
+                            anchors.centerIn: parent
+                            text: row.number
+                            color: row.isCurrentSong ? Theme.lcdAccent : Theme.lcdTextDim
+                            font.pixelSize: Theme.smallFontSize
+                            font.bold: true
+                            font.family: "Consolas"
+                        }
                     }
                     Label {
                         visible: !renameField.visible
@@ -213,6 +232,7 @@ Item {
                     }
                 }
             }
+        }
         }
 
         StageDivider { Layout.fillWidth: true; visible: view.editable }

@@ -371,7 +371,9 @@ ApplicationWindow {
                     }
                     Mixer {
                         visible: root.mixerOpen
-                        SplitView.preferredHeight: Theme.mixerHeight + (root.loops.stripVisible ? Theme.looperHeight : 0)
+                        // A whole strip, but never more than about half the room (a small screen keeps its chart).
+                        SplitView.preferredHeight: Math.min(Theme.mixerHeight + (root.loops.stripVisible ? Theme.looperHeight : 0),
+                                                            parent.height * 0.55)
                         SplitView.minimumHeight: 240
                         doc: root.doc
                         channelModel: root.channelModel

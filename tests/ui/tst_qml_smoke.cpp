@@ -1049,10 +1049,13 @@ private slots:
         w->requestActivate();
         QVERIFY(QTest::qWaitForWindowExposed(w));
 
+        // The display in the bar's middle: the setlist above, the song and patch under it.
         auto* title = w->findChild<QQuickItem*>(u"windowTitle"_s);
-        QVERIFY(title != nullptr);
+        auto* setlist = w->findChild<QQuickItem*>(u"windowSetlist"_s);
+        QVERIFY(title != nullptr && setlist != nullptr);
         const QString shown = title->property("text").toString();
-        QVERIFY2(shown.contains(m_session->document().displayName()), qPrintable(shown));
+        QVERIFY2(setlist->property("text").toString().contains(m_session->document().displayName()),
+                 qPrintable(setlist->property("text").toString()));
         QVERIFY2(shown.contains(u"Song 1"_s) && shown.contains(u"Patch 1"_s), qPrintable(shown));
         QVERIFY(m_session->document().renameSong(0, u"<b>A & B</b>"_s));
         QTRY_VERIFY2(title->property("text").toString().contains(u"&lt;b&gt;A &amp; B&lt;/b&gt;"_s),

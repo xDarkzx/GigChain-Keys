@@ -246,22 +246,44 @@ ToolBar {
             onClicked: bar.doc.redo()
         }
 
-        // The window's title: the setlist (a dot while unsaved), then where we are.
-        Text {
-            objectName: "windowTitle"
+        // The window's title, as MainStage's display: an LCD in the middle of
+        // the bar with the song and patch playing, the setlist (a dot while
+        // unsaved) above them.
+        Item {
             Layout.fillWidth: true
-            horizontalAlignment: Text.AlignHCenter
-            elide: Text.ElideRight
-            clip: true // (a narrow window: styled text is not always elided, and must not spill over the buttons)
-            textFormat: Text.StyledText
-            color: Theme.text
-            font.pixelSize: Theme.fontSize
-            function escaped(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") }
-            text: {
-                const file = "<font color='" + Theme.textDim + "'>" + (bar.doc.dirty ? "● " : "") + escaped(bar.doc.displayName) + "</font>"
-                const where = bar.doc.hasPatch ? "&nbsp;&nbsp;—&nbsp;&nbsp;<b>" + escaped(bar.doc.currentSongName) + "  ·  "
-                                                 + escaped(bar.doc.currentPatchName) + "</b>" : ""
-                return bar.doc.hasSetlist ? file + where : ""
+            Layout.fillHeight: true
+            LcdPanel {
+                id: titleLcd
+                anchors.centerIn: parent
+                width: Math.min(parent.width - 4, 460)
+                height: 40
+                visible: bar.doc.hasSetlist && width > 80
+                Text {
+                    id: setlistLine
+                    objectName: "windowSetlist"
+                    x: 10
+                    y: 3
+                    width: parent.width - 20
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
+                    text: (bar.doc.dirty ? "● " : "") + bar.doc.displayName
+                    color: Theme.lcdTextDim
+                    font.pixelSize: 10
+                }
+                Text {
+                    objectName: "windowTitle"
+                    x: 10
+                    anchors.top: setlistLine.bottom
+                    width: parent.width - 20
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
+                    textFormat: Text.StyledText
+                    function escaped(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") }
+                    text: bar.doc.hasPatch ? "<b>" + escaped(bar.doc.currentSongName) + "</b>  <font color='" + Theme.lcdAccent + "'>"
+                                             + escaped(bar.doc.currentPatchName) + "</font>" : ""
+                    color: Theme.lcdText
+                    font.pixelSize: 15
+                }
             }
         }
 
@@ -280,12 +302,9 @@ ToolBar {
                                                          + "N next part, Shift+N repeat it, H hold it, Shift+Space stop at its end")
                 onClicked: bar.engineStatus.songPlaying ? bar.doc.stopSong() : bar.doc.playSong()
             }
-            Rectangle {
-                width: 210
+            LcdPanel {
+                width: 160
                 height: Theme.controlHeight
-                radius: Theme.radiusSmall
-                color: Theme.readoutBackground
-                border.color: Theme.outline
                 readonly property var section: bar.engineStatus.songSection >= 0
                                                && bar.engineStatus.songSection < bar.doc.currentSections.length
                                                ? bar.doc.currentSections[bar.engineStatus.songSection] : null
@@ -305,7 +324,7 @@ ToolBar {
                           : bar.engineStatus.songPlaying ? qsTr("%1 · %2/%3").arg(parent.section.name).arg(bar.engineStatus.songBar).arg(bar.engineStatus.songBars)
                                                            + (bar.engineStatus.songQueued !== "" ? "  " + bar.engineStatus.songQueued : "")
                           : parent.section.name
-                    color: bar.engineStatus.songPlaying ? Theme.chord : Theme.readoutText
+                    color: bar.engineStatus.songPlaying ? Theme.chord : Theme.lcdText
                     font.pixelSize: Theme.smallFontSize
                     font.bold: true
                     font.family: "Consolas"
@@ -340,18 +359,15 @@ ToolBar {
                 onClicked: bar.engineStatus.playPauseTrack()
             }
             // Where it is: a recessed display.
-            Rectangle {
+            LcdPanel {
                 width: 96
                 height: Theme.controlHeight
-                radius: Theme.radiusSmall
-                color: Theme.readoutBackground
-                border.color: Theme.outline
                 Text {
                     anchors.centerIn: parent
                     text: bar.engineStatus.trackLoading ? qsTr("Reading…")
                                                         : transport.clock(bar.engineStatus.trackPosition) + " / "
                                                           + transport.clock(bar.engineStatus.trackLength)
-                    color: Theme.readoutText
+                    color: Theme.lcdText
                     font.pixelSize: Theme.smallFontSize
                     font.family: "Consolas"
                 }
@@ -448,14 +464,12 @@ ToolBar {
         Row {
             spacing: -1
             // A recessed display; click it, type a new tempo, Enter (Esc keeps it).
-            Rectangle {
+            LcdPanel {
                 id: tempoField
                 objectName: "tempoField"
                 width: 74
                 height: Theme.controlHeight
-                radius: Theme.radiusSmall
-                color: Theme.readoutBackground
-                border.color: tempoInput.visible ? Theme.accent : Theme.outline
+                border.color: tempoInput.visible ? Theme.accent : "#000000"
                 readonly property string shown: bar.engineStatus.tempo.toFixed(bar.engineStatus.tempo % 1 === 0 ? 0 : 1)
                 Row {
                     anchors.centerIn: parent
@@ -463,7 +477,7 @@ ToolBar {
                     visible: !tempoInput.visible
                     Text {
                         text: tempoField.shown
-                        color: Theme.readoutText
+                        color: Theme.lcdText
                         font.pixelSize: Theme.fontSize
                         font.bold: true
                         font.family: "Consolas"
@@ -471,7 +485,7 @@ ToolBar {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: qsTr("BPM")
-                        color: Theme.textDim
+                        color: Theme.lcdTextDim
                         font.pixelSize: Theme.tinyFontSize
                     }
                 }
@@ -527,40 +541,63 @@ ToolBar {
 
         StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8 }
 
+        // The rig's state on one display: CPU, plugin memory, and the MIDI light.
+        LcdPanel {
+            implicitWidth: stats.implicitWidth + 16
+            implicitHeight: Theme.controlHeight
+        Row {
+            id: stats
+            anchors.centerIn: parent
+            spacing: 10
         StatBox {
             objectName: "cpuBox"
+            anchors.verticalCenter: parent.verticalCenter
             label: qsTr("CPU")
             value: Math.round(bar.engineStatus.cpuLoad * 100) + "%"
             widest: "100%"
-            valueColor: bar.engineStatus.cpuLoad > 0.8 ? Theme.danger : Theme.text
+            labelColor: Theme.lcdTextDim
+            valueColor: bar.engineStatus.cpuLoad > 0.8 ? Theme.ledRed : Theme.lcdText
         }
         StatBox {
             objectName: "ramBox"
+            anchors.verticalCenter: parent.verticalCenter
             // plugin RAM matters live: sample libraries can take gigabytes
             label: qsTr("RAM")
             value: bar.engineStatus.memoryMb >= 1024 ? (bar.engineStatus.memoryMb / 1024).toFixed(1) + " GB"
                                                      : bar.engineStatus.memoryMb + " MB"
             widest: "1023 MB"
+            labelColor: Theme.lcdTextDim
+            valueColor: Theme.lcdText
         }
-        // MIDI light: a lit LED set into the panel.
+        // MIDI light: an LED, lit (and glowing) while notes come in.
         Row {
-            spacing: 6
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 5
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
-                width: 10
-                height: 10
-                radius: 5
-                border.color: Theme.outline
-                color: bar.engineStatus.midiActivity ? Theme.meterLow : "#2a2e35"
+                width: 9
+                height: 9
+                radius: 4.5
+                border.color: "#000000"
+                color: bar.engineStatus.midiActivity ? Theme.ledGreen : Theme.ledOff
+                Rectangle {
+                    visible: bar.engineStatus.midiActivity
+                    anchors.centerIn: parent
+                    width: 17; height: 17; radius: 8.5
+                    color: "transparent"
+                    border.color: Qt.rgba(0.26, 0.83, 0.42, 0.35)
+                    border.width: 3
+                }
             }
-            Label { text: qsTr("MIDI"); color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
+            Text { text: qsTr("MIDI"); color: Theme.lcdTextDim; font.pixelSize: Theme.tinyFontSize; anchors.verticalCenter: parent.verticalCenter }
+        }
+        }
         }
 
         StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8 }
 
         StageButton {
             objectName: "keyboardButton"
-            text: qsTr("Keys")
             visible: !bar.practiceMode // (Practice has its own)
             iconSource: "icons/keyboard.svg"
             checkable: true
@@ -581,25 +618,24 @@ ToolBar {
             onClicked: bar.doc.setPlayMode(one ? 0 : 1)
         }
         StageButton {
-            text: qsTr("Mixer")
             iconSource: "icons/adjustments-horizontal.svg"
             visible: !bar.performMode && !bar.practiceMode
             checkable: true
             checked: bar.mixerOpen
+            tip: qsTr("Show or hide the mixer")
             onClicked: bar.toggleMixer()
         }
         StageButton {
             objectName: "settingsButton"
-            text: qsTr("Settings")
-            tip: qsTr("Audio, MIDI, pedals and plugins (%1)").arg(Theme.keys("Ctrl+,"))
+            iconSource: "icons/settings.svg"
+            tip: qsTr("Settings: audio, MIDI, pedals and plugins (%1)").arg(Theme.keys("Ctrl+,"))
             onClicked: bar.settingsRequested()
         }
         // Help: the user guide, the shortcuts, about the app.
         StageButton {
             objectName: "helpButton"
-            text: qsTr("Help")
             iconSource: "icons/info-circle.svg"
-            tip: qsTr("The user guide (%1)").arg(Theme.keys("F1"))
+            tip: qsTr("Help: the user guide (%1)").arg(Theme.keys("F1"))
             onClicked: helpMenu.popup(0, height)
             StageMenu {
                 id: helpMenu
