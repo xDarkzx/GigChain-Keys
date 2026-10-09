@@ -10,6 +10,12 @@ Downloads for every version are on the
 
 ### Added
 
+- **VST2 plugins:** older and free plugins that only ever came as VST2 now
+  play too, found in the usual VST2 folders (on Windows the one your
+  installers chose, *VSTPlugins*, and the common ones). They load, play, keep
+  their settings and open their own windows like VST3 ones; a plugin
+  installed both ways is taken as VST3. Hosted through our own definitions of
+  the VST2 interface, not Steinberg's (no longer licensed) SDK.
 - **Stems and markers:** a song can play up to eight stems with its backing
   track (right-click it, **Stems…**), locked together, each with its own
   level, mute and outputs: the click and the guide to the in-ears, out of the

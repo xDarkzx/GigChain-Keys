@@ -16,7 +16,7 @@
 #include "SafetyLimiter.h"
 #include "LoopStation.h"
 #include "SongTransport.h"
-#include "Vst3Node.h"
+#include "PluginNode.h"
 
 #include "gigchain/core/PluginSharing.h"
 #include "gigchain/engine/IEngine.h"
@@ -173,7 +173,7 @@ private:
     void render(AudioBlock out, const AudioInputs& inputs) noexcept;
     // The plugin a channel's slot plays in the current patch (target -1 =
     // its instrument), or null.
-    [[nodiscard]] std::shared_ptr<Vst3Node> currentNode(const core::ChannelId& id, int target) const;
+    [[nodiscard]] std::shared_ptr<PluginNode> currentNode(const core::ChannelId& id, int target) const;
     // Main thread: a finished backing-track read becomes the track; a track
     // read for another sample rate is read again.
     void collectBackingTrack(std::vector<Notice>& notices);
@@ -183,11 +183,11 @@ private:
     void readTracks(const std::vector<QString>& paths, double rate) noexcept; // the reader thread's work
     // The plugin instance for a slot, loaded if needed (logged; a failure is
     // reported to the user). `announce`: show the load in the progress UI.
-    std::shared_ptr<Vst3Node> nodeFor(const QString& key, const core::PluginSlot& slot, bool announce);
+    std::shared_ptr<PluginNode> nodeFor(const QString& key, const core::PluginSlot& slot, bool announce);
     // Loads a plugin with its slot's settings (a failure to take them is
     // reported, and it plays at its defaults). nullptr when it cannot load
     // (reported). Loading is not an edit.
-    std::shared_ptr<Vst3Node> loadWithSettings(const core::PluginSlot& slot);
+    std::shared_ptr<PluginNode> loadWithSettings(const core::PluginSlot& slot);
     // Whether `pluginId` (a .vst3 file) is an installed plugin: a file inside
     // the plugin folder or the app's own (followed through "..", links and
     // junctions), read or not (one switched off after a crash still is).
@@ -249,7 +249,7 @@ private:
     PluginLoadGuard m_guard; // plugins that crashed the app while loading
 
     // Main thread: every plugin instance created so far, by channel slot.
-    std::map<QString, std::shared_ptr<Vst3Node>> m_nodes;
+    std::map<QString, std::shared_ptr<PluginNode>> m_nodes;
     // Per instance: the settings it was loaded with or last stored (as the
     // setlist holds them), and whether it was changed since.
     std::map<QString, QByteArray> m_nodeStates;
@@ -272,7 +272,7 @@ private:
     QStringList m_midiOutputs; // the outputs plugged in at the last check
     std::chrono::steady_clock::time_point m_lastMidiCheck{};
     // Main thread: the instrument each channel of the current patch plays.
-    std::map<QString, std::shared_ptr<Vst3Node>> m_currentInstruments;
+    std::map<QString, std::shared_ptr<PluginNode>> m_currentInstruments;
     // A bus's effects (the master's on everything; the aux's, fed by the
     // channels' sends): its slots, their instances (outside any setlist),
     // and whether one was edited since its edits were last taken.
@@ -280,7 +280,7 @@ private:
     {
         QString name; // "master", "aux": its instances' keys, and messages
         std::vector<core::PluginSlot> effects;
-        std::map<QString, std::shared_ptr<Vst3Node>> nodes;
+        std::map<QString, std::shared_ptr<PluginNode>> nodes;
         bool edited = false;
     };
     EffectsBus m_master{.name = QStringLiteral("master"), .effects = {}, .nodes = {}, .edited = false};
@@ -298,7 +298,7 @@ private:
     double m_limiterRate = 0.0; // audio thread: the rate the limiters are set for
     std::atomic<int> m_clickPair{0}; // the click's outputs: 0 the mix, n outputs 2n+1-2n+2
     // ... and its effects, by position (nullptr: switched off or not loaded).
-    std::map<QString, std::vector<std::shared_ptr<Vst3Node>>> m_currentEffects;
+    std::map<QString, std::vector<std::shared_ptr<PluginNode>>> m_currentEffects;
 
     // Audio thread only.
     std::array<MidiEvent, kMaxEventsPerBlock> m_events{};

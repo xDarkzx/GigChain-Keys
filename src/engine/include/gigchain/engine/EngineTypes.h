@@ -18,6 +18,13 @@ enum class PluginKind
     Effect,
 };
 
+// Which plugin standard it is built to (its id, a file, says it too).
+enum class PluginFormat
+{
+    Vst3,
+    Vst2,
+};
+
 struct PluginInfo
 {
     QString id;
@@ -31,6 +38,7 @@ struct PluginInfo
     QString website;
     QString email;
     QString sdkVersion; // the VST3 SDK it was built with, e.g. "VST 3.7.9"
+    PluginFormat format = PluginFormat::Vst3;
 };
 
 // What a long engine job is doing, for a splash screen or loading overlay.

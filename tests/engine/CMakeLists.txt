@@ -17,6 +17,8 @@ if(WIN32)
 endif()
 # ComponentHandler is tested directly: it needs the SDK headers.
 target_link_libraries(tst_vst3_node PRIVATE vst3_host_support)
+gigchain_add_test(tst_vst2_node SOURCES tst_vst2_node.cpp LIBS gigchain::engine)
+target_include_directories(tst_vst2_node PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_audio_device SOURCES tst_audio_device.cpp LIBS gigchain::engine)
 target_include_directories(tst_audio_device PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 # (It stops a stream as a driver does when its device is pulled out.)

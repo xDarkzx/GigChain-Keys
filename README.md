@@ -27,8 +27,8 @@
 ---
 
 **GigChain Keys** is a live-performance host for keyboard players, in the
-spirit of MainStage and Gig Performer. It plays the VST3 instruments and
-effects already on your computer, keeps every song of the night in a
+spirit of MainStage and Gig Performer. It plays the VST3 and VST2 instruments
+and effects already on your computer, keeps every song of the night in a
 **setlist** with its own sounds, shows each song's **chords and lyrics**
 big enough to read from the keys, and turns those chords into notes falling
 onto a keyboard so you can **practise** them.
@@ -116,8 +116,8 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
 ### What you need
 
-- **Instruments:** any VST3 instruments and effects. GigChain Keys finds them
-  in the usual VST3 folders by itself. No instruments yet? These free ones
+- **Instruments:** any VST3 or VST2 instruments and effects. GigChain Keys
+  finds them in the usual plugin folders by itself. No instruments yet? These free ones
   cover pianos, synths and pads:
 
   | Instrument | What it gives you | Get it |
@@ -139,7 +139,7 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
 | | |
 |---|---|
-| 🎹 **Plays your plugins** | Hosts VST3 instruments and effects with their own windows. Every sound in the setlist is loaded up front, so switching songs is instant, and held notes and reverb tails ring on across the change. |
+| 🎹 **Plays your plugins** | Hosts VST3 and VST2 instruments and effects with their own windows. Every sound in the setlist is loaded up front, so switching songs is instant, and held notes and reverb tails ring on across the change. |
 | 🎚️ **A real mixer** | Logic-style channel strips: instrument, effects, pan, fader, meters, mute and solo. An Aux strip for one shared reverb or delay, fed by each channel's Send knob. A master strip with its own effects, and a safety limiter before your speakers. Any channel, the click or a stem can go to outputs of its own (your in-ears, the sound desk). |
 | 🎼 **Splits, layers and knobs** | Key zones, transpose and velocity layers per instrument; a layer can ignore the sustain pedal, expression, mod wheel, pitch bend or aftertouch. A chord trigger and an arpeggiator per channel. Right-click any fader, pan knob or plugin setting and learn a knob, fader or pedal on your keyboard for it; learned knobs pick up where the sound is (no jumps) and can have a curve. One instrument can be shared by many songs, loaded once. |
 | 🎛️ **Hardware synths too** | A song calls up a sound on your hardware synths (Program Change and bank) when it comes up, and any channel can play a synth or sound module from your keyboard, through its split and MIDI effects. |

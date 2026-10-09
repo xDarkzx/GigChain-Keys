@@ -45,9 +45,11 @@ public:
     // process (remembered, not opened again until its file changes); one that
     // hangs is stopped after kScanTimeoutMs (tried again next scan). Empty:
     // read in this process; set but missing: the same, and logged.
+    // `format`: the plugins looked for (VST2: platform::isVst2PluginFile).
     static std::vector<PluginInfo> scan(const QString& folder, const QString& cacheFile = {},
                                         ScanStats* stats = nullptr, const Progress& progress = {},
-                                        const PluginLoadGuard* guard = nullptr, const QString& scanner = {});
+                                        const PluginLoadGuard* guard = nullptr, const QString& scanner = {},
+                                        PluginFormat format = PluginFormat::Vst3);
 
     // The scanner program's work: reads one plugin and writes what it found
     // (or why it could not) to `resultFile`. False, logged, when the file

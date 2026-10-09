@@ -119,6 +119,26 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
                 if (!found) engine->m_plugins.push_back(std::move(plugin));
             }
         }
+        // VST2 plugins (older and free ones often come only as VST2). One
+        // installed both ways is taken as VST3 (its newer, better version).
+        const QStringList vst2 = platform::standardVst2Folders();
+        int vst2Added = 0;
+        for (qsizetype i = 0; i < vst2.size(); ++i) {
+            if (!QFileInfo(vst2.at(i)).isDir()) continue;
+            engine->m_otherPluginFolders << vst2.at(i);
+            const QString cache = options.pluginCacheFile.isEmpty() ? QString() : options.pluginCacheFile + u".vst2-%1"_s.arg(i + 1);
+            for (PluginInfo& plugin : PluginCatalog::scan(vst2.at(i), cache, nullptr, scanProgress, &engine->m_guard,
+                                                          options.pluginScanner, PluginFormat::Vst2)) {
+                const bool found = std::ranges::any_of(engine->m_plugins, [&plugin](const PluginInfo& p) {
+                    return QString::compare(p.name, plugin.name, Qt::CaseInsensitive) == 0
+                           && QString::compare(p.vendor, plugin.vendor, Qt::CaseInsensitive) == 0;
+                });
+                if (found) continue;
+                engine->m_plugins.push_back(std::move(plugin));
+                ++vst2Added;
+            }
+        }
+        qCInfo(lcEngine).noquote() << "VST2 plugins added:" << vst2Added << "(those also installed as VST3 are taken as VST3)";
     }
     // The app's own plugins, unless the same one is installed already.
     if (!options.bundledPluginFolder.isEmpty() && QFileInfo(options.bundledPluginFolder).isDir()) {
@@ -257,7 +277,7 @@ void RealEngine::relinkInstances(const core::Setlist& setlist)
     if (moved > 0) qCInfo(lcEngine) << "Kept" << moved << "loaded plugins for the songs now sharing them (nothing reloaded)";
 }
 
-std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::PluginSlot& slot, bool announce)
+std::shared_ptr<PluginNode> RealEngine::nodeFor(const QString& key, const core::PluginSlot& slot, bool announce)
 {
     GC_ONLY_MAIN_THREAD();
     if (const auto it = m_nodes.find(key); it != m_nodes.end()) return it->second;
@@ -313,7 +333,7 @@ core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QSt
     return core::fail(core::ErrorCode::InvalidData, problem);
 }
 
-std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& slot)
+std::shared_ptr<PluginNode> RealEngine::loadWithSettings(const core::PluginSlot& slot)
 {
     GC_ONLY_MAIN_THREAD();
     if (m_guard.isBlocked(slot.pluginId)) {
@@ -334,15 +354,14 @@ std::shared_ptr<Vst3Node> RealEngine::loadWithSettings(const core::PluginSlot& s
     timer.start();
     // Until it has loaded and taken its settings: a crash here blocks it next start.
     const auto loading = m_guard.loading(slot.pluginId);
-    auto node = Vst3Node::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());
+    auto node = PluginNode::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());
     if (!node) {
-        // Already logged by Vst3Node::load; tell the user too.
+        // Already logged by the plugin's load; tell the user too.
         m_pendingNotices.push_back(Notice::error(u"Could not load %1: %2"_s.arg(slot.displayName, node.error().message)));
         return nullptr;
     }
     if (!slot.state.isEmpty()) {
-        auto state = Vst3Node::State::decode(slot.state);
-        auto restored = state ? (*node)->restoreState(*state) : core::Result<void>(tl::unexpected(state.error()));
+        auto restored = (*node)->restoreEncodedState(slot.state);
         if (!restored) {
             // It still plays, at its defaults; the user needs to know.
             const QString problem = u"%1 could not take its saved settings (%2); it plays with its defaults"_s.arg(
@@ -574,7 +593,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     if (&patch != &m_patch) m_patch = patch;
     callUpExternalSounds(patch);
     m_song = song;
-    std::set<Vst3Node*> used;
+    std::set<PluginNode*> used;
     m_currentInstruments.clear();
     m_currentEffects.clear();
     const std::vector<PlannedSlot> plan = planPatch(song, patch);
@@ -863,7 +882,7 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditor(const core
     if (it == m_currentInstruments.end()) {
         return std::unique_ptr<IPluginEditor>(); // no instrument on this channel (a failed load was already reported)
     }
-    return Vst3Node::createEditor(it->second);
+    return PluginNode::createEditor(it->second);
 }
 
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(const core::ChannelId& id, int effect)
@@ -885,7 +904,7 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(cons
         || !effects->second.at(static_cast<std::size_t>(effect))) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
     }
-    return Vst3Node::createEditor(effects->second.at(static_cast<std::size_t>(effect)));
+    return PluginNode::createEditor(effects->second.at(static_cast<std::size_t>(effect)));
 }
 
 std::vector<QString> RealEngine::busKeys(const EffectsBus& bus)
@@ -941,13 +960,13 @@ std::vector<QString> RealEngine::storeBusEffectStates(EffectsBus& bus, std::vect
         core::PluginSlot& effect = effects.at(i);
         const auto node = bus.nodes.find(keys.at(i));
         if (node == bus.nodes.end() || effect.pluginId != bus.effects.at(i).pluginId) continue;
-        auto state = node->second->saveState();
+        auto state = node->second->saveEncodedState();
         if (!state) {
             problems.push_back(u"The settings of %1 could not be saved: %2"_s.arg(effect.displayName, state.error().message));
             qCWarning(lcEngine).noquote() << problems.back();
             continue;
         }
-        effect.state = state->encode();
+        effect.state = *state;
         bus.effects.at(i).state = effect.state;
     }
     return problems;
@@ -977,7 +996,7 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createBusEffectEditor(E
     if (node == bus.nodes.end()) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
     }
-    return Vst3Node::createEditor(node->second);
+    return PluginNode::createEditor(node->second);
 }
 
 void RealEngine::setChannelSend(const core::ChannelId& id, double sendDb)
@@ -1232,7 +1251,7 @@ std::vector<QString> RealEngine::storePluginStates(core::Setlist& setlist)
         if (const auto it = stored.find(key); it != stored.end()) return it->second;
         const auto node = m_nodes.find(key);
         if (node == m_nodes.end()) return stored[key] = std::nullopt; // not loaded: its slot keeps what it had
-        auto state = node->second->saveState();
+        auto state = node->second->saveEncodedState();
         if (!state) {
             const QString problem =
                 u"The settings of %1 could not be saved: %2"_s.arg(node->second->name(), state.error().message);
@@ -1240,7 +1259,7 @@ std::vector<QString> RealEngine::storePluginStates(core::Setlist& setlist)
             problems.push_back(problem);
             return stored[key] = std::nullopt;
         }
-        return stored[key] = state->encode();
+        return stored[key] = *state;
     };
     for (core::Song& song : setlist.songs) {
         for (core::Patch& patch : song.patches) {
@@ -1718,7 +1737,7 @@ void RealEngine::setClick(bool on, double volumeDb)
     m_click.setOn(on);
 }
 
-std::shared_ptr<Vst3Node> RealEngine::currentNode(const core::ChannelId& id, int target) const
+std::shared_ptr<PluginNode> RealEngine::currentNode(const core::ChannelId& id, int target) const
 {
     if (target < 0) {
         const auto it = m_currentInstruments.find(id.value());
@@ -1736,7 +1755,7 @@ std::vector<PluginParameter> RealEngine::pluginParameters(const core::ChannelId&
     const auto node = currentNode(id, target);
     if (!node) return list;
     std::ranges::transform(node->parameters(), std::back_inserter(list),
-                           [](const Vst3Node::Parameter& p) { return PluginParameter{.id = p.id, .name = p.name}; });
+                           [](const PluginNode::Parameter& p) { return PluginParameter{.id = p.id, .name = p.name}; });
     return list;
 }
 
@@ -1747,8 +1766,8 @@ std::optional<PluginParameter> RealEngine::takeTouchedParameter(const core::Chan
     if (!node) return std::nullopt;
     const std::optional<uint32_t> touched = node->takeTouchedParameter();
     if (!touched) return std::nullopt;
-    const std::vector<Vst3Node::Parameter> listed = node->parameters();
-    const auto found = std::ranges::find_if(listed, [&touched](const Vst3Node::Parameter& p) { return p.id == *touched; });
+    const std::vector<PluginNode::Parameter> listed = node->parameters();
+    const auto found = std::ranges::find_if(listed, [&touched](const PluginNode::Parameter& p) { return p.id == *touched; });
     if (found != listed.end()) return PluginParameter{.id = found->id, .name = found->name};
     return PluginParameter{.id = *touched, .name = u"Parameter %1"_s.arg(*touched)}; // moved, but not listed as automatable
 }
@@ -1924,9 +1943,9 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(c
         return tl::unexpected(installed.error());
     }
     const auto loading = m_guard.loading(pluginId);
-    auto node = Vst3Node::load(pluginId, m_audio.sampleRate(), m_audio.maxBlock());
-    if (!node) return tl::unexpected(node.error()); // logged by Vst3Node::load
-    return Vst3Node::createEditor(*node);
+    auto node = PluginNode::load(pluginId, m_audio.sampleRate(), m_audio.maxBlock());
+    if (!node) return tl::unexpected(node.error()); // logged by the plugin's load
+    return PluginNode::createEditor(*node);
 }
 
 QString RealEngine::statusText() const
