@@ -744,6 +744,7 @@ bool DocumentController::duplicateSong(int song)
     }
     const auto index = core::duplicateSong(m_setlist, song);
     if (!index) return report(index.error());
+    m_engine.relinkInstances(m_setlist); // the original's instruments, now shared: nothing reloads
     commitStructure(core::Cursor{*index, 0}, current);
     return true;
 }
@@ -872,6 +873,7 @@ bool DocumentController::addSharedChannel(int song, int patch, int channel)
     const core::PluginSlot slot = *from.instrument;
     const auto index = core::addChannel(m_setlist, m_cursor, slot);
     if (!index) return report(index.error());
+    m_engine.relinkInstances(m_setlist); // the linked song's instruments keep their loaded instances
     if (auto named = core::updateChannel(m_setlist, m_cursor, *index, [&name](core::Channel& c) { c.name = name; }); !named) {
         reportMessage(named.error().message, Notifications::Warning); // added, under the plugin's name
     }
@@ -895,6 +897,7 @@ bool DocumentController::unshareInstrument(int channel)
     const std::vector<QString> problems = m_engine.storePluginStates(m_setlist); // each logged
     if (!problems.empty()) reportMessage(problems.back(), Notifications::Warning);
     core::unlinkFromSharing(m_setlist.songs.at(static_cast<std::size_t>(m_cursor.song)), shareId);
+    m_engine.relinkInstances(m_setlist); // (the last song sharing it keeps it; a new own copy loads)
     qCInfo(lcUi) << "Channel" << channel + 1 << "has its own copy of its instrument";
     commitChannelField(channel, true); // its own copy loads now (in Edit, not mid-song)
     return true;
@@ -2174,6 +2177,7 @@ bool DocumentController::restore(std::vector<UndoStep>& from, std::vector<UndoSt
     emit structureChanged();
     emit chordInversionsChanged();
     emit mixerControlsChanged();
+    m_engine.relinkInstances(m_setlist); // an undone link or own copy reloads nothing
     setCursor(core::clampCursor(m_setlist, step.cursor), true); // plays it and refreshes every view
     m_committedCursor = m_cursor;
     setDirty(true);

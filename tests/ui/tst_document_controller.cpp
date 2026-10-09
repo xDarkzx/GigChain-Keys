@@ -78,7 +78,10 @@ private slots:
         QVERIFY(m_doc->setChannelName(0, u"Warm Piano"_s));
         m_doc->setSelectedChannel(0);
         QCOMPARE(m_doc->selectedInstrumentSongs(), 1); // its song's own
+        // Each link or unlink keeps the loaded instruments under their new keys (nothing reloads).
+        int relinks = m_engine->relinkCount;
         QVERIFY(m_doc->duplicateSong(0));
+        QCOMPARE(m_engine->relinkCount, ++relinks);
         QVERIFY(m_doc->selectPatch(1, 0));
         m_doc->setSelectedChannel(0);
         QCOMPARE(m_doc->selectedInstrumentSongs(), 2); // the copy plays the same piano
@@ -93,6 +96,7 @@ private slots:
         QCOMPARE(piano.value(u"song"_s).toInt(), 0);
         const int stores = m_engine->storeCount;
         QVERIFY(m_doc->addSharedChannel(0, 0, 0));
+        QCOMPARE(m_engine->relinkCount, ++relinks);
         QCOMPARE(m_engine->storeCount, stores + 1); // its settings as they are now
         QCOMPARE(m_doc->currentPatch()->channels.at(0).name, u"Warm Piano"_s);
         QCOMPARE(m_doc->selectedChannel(), 0);
@@ -103,12 +107,14 @@ private slots:
         // This song takes its own copy; the other two still share theirs.
         QSignalSpy sharing(m_doc.get(), &DocumentController::sharingChanged);
         QVERIFY(m_doc->unshareInstrument(0));
+        QCOMPARE(m_engine->relinkCount, ++relinks);
         QVERIFY(!sharing.isEmpty());
         QCOMPARE(m_doc->selectedInstrumentSongs(), 1);
         const auto& own = m_engine->lastPatch.channels.at(0).instrument;
         QVERIFY(own.has_value() && own->shareId.isEmpty()); // the engine plays its own
         QVERIFY(m_doc->isDirty());
         QVERIFY(m_doc->undo());
+        QCOMPARE(m_engine->relinkCount, ++relinks);
         QCOMPARE(m_doc->selectedInstrumentSongs(), 3);
 
         QVERIFY(!m_doc->addSharedChannel(0, 0, 7)); // no such channel: refused, said

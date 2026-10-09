@@ -50,6 +50,7 @@ public:
     using IEngine::applyPatch;
     void applyPatch(const core::SongId& song, const core::Patch& patch) override;
     void preload(const core::Setlist& setlist) override;
+    void relinkInstances(const core::Setlist& setlist) override;
     void setProgressHandler(LoadProgress handler) override { m_progress = std::move(handler); }
     [[nodiscard]] std::size_t loadedPluginCount() const override { return m_nodes.size(); }
     [[nodiscard]] QStringList blockedPlugins() const override { return m_guard.blocked(); }
@@ -222,7 +223,10 @@ private:
     // Per instance: the settings it was loaded with or last stored (as the
     // setlist holds them), and whether it was changed since.
     std::map<QString, QByteArray> m_nodeStates;
+    std::map<QString, QString> m_nodePlugins; // per instance: its plugin
     std::set<QString> m_editedNodes;
+    // Every slot the setlist plays, by instance key (the first of each).
+    static std::map<QString, const core::PluginSlot*> wantedSlots(const core::Setlist& setlist);
     bool m_unreportedEdit = false;
     // Collects the plugins' edit reports into m_editedNodes.
     void collectEdits();

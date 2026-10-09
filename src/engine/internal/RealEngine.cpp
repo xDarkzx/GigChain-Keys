@@ -176,14 +176,7 @@ void RealEngine::preload(const core::Setlist& setlist)
 {
     GC_ONLY_MAIN_THREAD();
     // Everything the setlist plays, each shared instance once.
-    std::map<QString, const core::PluginSlot*> wanted;
-    for (const core::Song& song : setlist.songs) {
-        for (const core::Patch& patch : song.patches) {
-            // The first of each key is kept (a map insert never replaces).
-            std::ranges::transform(planPatch(song.id, patch), std::inserter(wanted, wanted.end()),
-                                   [](const PlannedSlot& planned) { return std::pair{planned.key, planned.slot}; });
-        }
-    }
+    const std::map<QString, const core::PluginSlot*> wanted = wantedSlots(setlist);
     // Unload what this setlist does not use, and what must load again with
     // the setlist's settings: different from what it plays, or changed since
     // (the sounding graph keeps its own references until it is replaced).
@@ -199,6 +192,7 @@ void RealEngine::preload(const core::Setlist& setlist)
             ++reloads;
         }
         m_nodeStates.erase(entry.first);
+        m_nodePlugins.erase(entry.first);
         m_editedNodes.erase(entry.first);
         return true;
     });
@@ -218,6 +212,48 @@ void RealEngine::preload(const core::Setlist& setlist)
     }
     if (m_progress) m_progress(LoadStage::LoadingSounds, {}, total, total);
     qCInfo(lcEngine) << "Setlist ready:" << total << "plugins in memory, loaded in" << timer.elapsed() << "ms";
+}
+
+std::map<QString, const core::PluginSlot*> RealEngine::wantedSlots(const core::Setlist& setlist)
+{
+    std::map<QString, const core::PluginSlot*> wanted;
+    for (const core::Song& song : setlist.songs) {
+        for (const core::Patch& patch : song.patches) {
+            // The first of each key is kept (a map insert never replaces).
+            std::ranges::transform(planPatch(song.id, patch), std::inserter(wanted, wanted.end()),
+                                   [](const PlannedSlot& planned) { return std::pair{planned.key, planned.slot}; });
+        }
+    }
+    return wanted;
+}
+
+void RealEngine::relinkInstances(const core::Setlist& setlist)
+{
+    GC_ONLY_MAIN_THREAD();
+    const std::map<QString, const core::PluginSlot*> wanted = wantedSlots(setlist);
+    // Instances no slot plays under their key any more: free to move to a
+    // slot of the same plugin whose new key has none (what the player hears
+    // stays; its settings are stored with the setlist on the next save).
+    std::vector<QString> spare;
+    for (const auto& [key, node] : m_nodes) {
+        if (!wanted.contains(key)) spare.push_back(key);
+    }
+    int moved = 0;
+    for (const auto& [key, slot] : wanted) {
+        if (m_nodes.contains(key)) continue;
+        const auto match = std::ranges::find_if(spare, [this, slot](const QString& old) {
+            const auto plugin = m_nodePlugins.find(old);
+            return plugin != m_nodePlugins.end() && plugin->second == slot->pluginId;
+        });
+        if (match == spare.end()) continue; // nothing to move: it loads when played (a song's own copy)
+        m_nodes.emplace(key, m_nodes.extract(*match).mapped());
+        if (auto state = m_nodeStates.extract(*match)) m_nodeStates.emplace(key, std::move(state.mapped()));
+        if (auto plugin = m_nodePlugins.extract(*match)) m_nodePlugins.emplace(key, std::move(plugin.mapped()));
+        if (m_editedNodes.erase(*match) > 0) m_editedNodes.insert(key);
+        spare.erase(match);
+        ++moved;
+    }
+    if (moved > 0) qCInfo(lcEngine) << "Kept" << moved << "loaded plugins for the songs now sharing them (nothing reloaded)";
 }
 
 std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::PluginSlot& slot, bool announce)
@@ -244,6 +280,7 @@ std::shared_ptr<Vst3Node> RealEngine::nodeFor(const QString& key, const core::Pl
     auto node = loadWithSettings(slot);
     if (!node) return nullptr;
     m_nodeStates[key] = slot.state;
+    m_nodePlugins[key] = slot.pluginId;
     m_editedNodes.erase(key);
     m_nodes.emplace(key, node);
     return node;

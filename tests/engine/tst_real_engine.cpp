@@ -5,7 +5,9 @@
 #include "PluginLoadGuard.h"
 #include "RealEngine.h"
 #include "gigchain/core/Chords.h"
+#include "gigchain/core/Editing.h"
 #include "gigchain/core/Limits.h"
+#include "gigchain/core/PluginSharing.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
 #include "TestPlugins.h"
@@ -409,6 +411,62 @@ private slots:
         QCOMPARE(loads, 1);
         engine.preload(setlist);
         QCOMPARE(engine.loadedPluginCount(), std::size_t{2});
+        QVERIFY(engine.poll().empty());
+    }
+
+    // A song whose instrument is loaded gets linked (duplicated, or shared
+    // with another song): the loaded instance is kept under its new key, so
+    // playing either song loads nothing. Without the relink it would load a
+    // second one (the control).
+    void linkingASongKeepsItsLoadedInstrument()
+    {
+        if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+
+        core::Setlist setlist;
+        core::Song ballad = core::makeSong(u"Ballad"_s);
+        core::Channel keys = core::makeChannel(u"Keys"_s);
+        keys.instrument = slot(kSmall, u"Kotelnikov"_s);
+        ballad.patches.at(0).channels = {keys};
+        setlist.songs = {ballad};
+        engine.preload(setlist);
+        engine.applyPatch(setlist.songs.at(0).id, setlist.songs.at(0).patches.at(0));
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
+        int loads = 0;
+        engine.setProgressHandler([&](LoadStage stage, const QString& what, int, int) {
+            if (stage == LoadStage::LoadingSounds && !what.isEmpty()) ++loads;
+        });
+
+        // The control: linked, not relinked, the song loads its instrument again.
+        core::Setlist unrelinked = setlist;
+        core::linkForSharing(unrelinked.songs.at(0));
+        engine.applyPatch(unrelinked.songs.at(0).id, unrelinked.songs.at(0).patches.at(0));
+        QCOMPARE(loads, 1);
+        engine.preload(setlist); // back as it was (the extra one unloaded)
+        engine.applyPatch(setlist.songs.at(0).id, setlist.songs.at(0).patches.at(0));
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
+
+        // Duplicated (linked) and relinked: both songs play the loaded one.
+        loads = 0;
+        QVERIFY(core::duplicateSong(setlist, 0).has_value());
+        engine.relinkInstances(setlist);
+        for (const core::Song& song : setlist.songs) engine.applyPatch(song.id, song.patches.at(0));
+        QCOMPARE(loads, 0);
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
+
+        // The copy takes its own: one more, and undoing it (unlinked back to
+        // the shared one) moves nothing that is still played.
+        core::unlinkFromSharing(setlist.songs.at(1), setlist.songs.at(1).patches.at(0).channels.at(0).instrument.value_or(core::PluginSlot{}).shareId);
+        engine.relinkInstances(setlist);
+        engine.applyPatch(setlist.songs.at(1).id, setlist.songs.at(1).patches.at(0));
+        QCOMPARE(loads, 1);
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{2});
+        engine.applyPatch(setlist.songs.at(0).id, setlist.songs.at(0).patches.at(0));
+        QCOMPARE(loads, 1);
         QVERIFY(engine.poll().empty());
     }
 

@@ -27,6 +27,8 @@ public:
     using engine::IEngine::applyPatch;
     int preloadCount = 0;
     void preload(const core::Setlist&) override { ++preloadCount; }
+    int relinkCount = 0;
+    void relinkInstances(const core::Setlist&) override { ++relinkCount; }
     void setProgressHandler(engine::LoadProgress) override {}
     [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }
     QStringList blocked;
