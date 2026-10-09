@@ -4,6 +4,9 @@
 #include "AudioFile.h"
 #include "GraphExchange.h"
 #include "Metronome.h"
+#include "ExternalMidiOut.h"
+#include "HardwareSender.h"
+#include "PerformanceRecorder.h"
 #include "MidiClockOut.h"
 #include "MidiInput.h"
 #include "MidiMonitor.h"
@@ -76,10 +79,27 @@ public:
     MidiTrigger takeLearnedTrigger() override;
     uint32_t takeTransportRequests() override { return m_midi.takeTransportRequests(); }
     void panic() override;
-    void setMasterEffects(const std::vector<core::PluginSlot>& effects) override;
-    std::vector<QString> storeMasterEffectStates(std::vector<core::PluginSlot>& effects) override;
-    bool takeMasterEdits() override;
-    core::Result<std::unique_ptr<IPluginEditor>> createMasterEffectEditor(int effect) override;
+    void setMasterEffects(const std::vector<core::PluginSlot>& effects) override { setBusEffects(m_master, effects); }
+    std::vector<QString> storeMasterEffectStates(std::vector<core::PluginSlot>& effects) override
+    {
+        return storeBusEffectStates(m_master, effects);
+    }
+    bool takeMasterEdits() override { return takeBusEdits(m_master); }
+    core::Result<std::unique_ptr<IPluginEditor>> createMasterEffectEditor(int effect) override
+    {
+        return createBusEffectEditor(m_master, effect);
+    }
+    void setAuxEffects(const std::vector<core::PluginSlot>& effects) override { setBusEffects(m_aux, effects); }
+    std::vector<QString> storeAuxEffectStates(std::vector<core::PluginSlot>& effects) override
+    {
+        return storeBusEffectStates(m_aux, effects);
+    }
+    bool takeAuxEdits() override { return takeBusEdits(m_aux); }
+    core::Result<std::unique_ptr<IPluginEditor>> createAuxEffectEditor(int effect) override
+    {
+        return createBusEffectEditor(m_aux, effect);
+    }
+    void setChannelSend(const core::ChannelId& id, double sendDb) override;
     void setOutputLimiter(bool enabled, double ceilingDb) override;
     bool takeLimiterActivity() override { return m_limiter.takeActivity(); }
     [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
@@ -127,6 +147,11 @@ public:
     void setAppKnobs(const AppKnobs& knobs) override;
     AppKnobValues takeAppKnobValues() override;
     void setClick(bool on, double volumeDb) override;
+    void setClickOutput(int pair) override;
+    core::Result<void> startRecording(const QString& path) override { return m_recorder.start(path, m_audio.sampleRate()); }
+    core::Result<double> stopRecording() override { return m_recorder.stop(); }
+    [[nodiscard]] bool recording() const override { return m_recorder.recording(); }
+    [[nodiscard]] int outputChannels() const override { return m_audio.outputChannels(); }
     [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
     void setBackingTrack(const QString& path) override;
     void playBackingTrack(bool play) override;
@@ -164,7 +189,6 @@ private:
     [[nodiscard]] bool isInstalledPlugin(const QString& pluginId) const;
     [[nodiscard]] core::Result<void> checkInstalled(const QString& pluginId, const QString& name) const;
     // The instance key of each master effect, by position (empty: switched off).
-    [[nodiscard]] std::vector<QString> masterKeys() const;
     // Every plugin slot of a patch with the key of the instance it plays:
     // song + plugin + its position among the patch's uses of that plugin.
     // Each playing slot and the instance it plays (shared across songs by
@@ -243,13 +267,30 @@ private:
     std::chrono::steady_clock::time_point m_lastMidiCheck{};
     // Main thread: the instrument each channel of the current patch plays.
     std::map<QString, std::shared_ptr<Vst3Node>> m_currentInstruments;
-    // The master bus: its slots, their instances (outside any setlist), and
-    // whether one was edited since the last takeMasterEdits().
-    std::vector<core::PluginSlot> m_masterSlots;
-    std::map<QString, std::shared_ptr<Vst3Node>> m_masterNodes;
-    bool m_masterEdited = false;
+    // A bus's effects (the master's on everything; the aux's, fed by the
+    // channels' sends): its slots, their instances (outside any setlist),
+    // and whether one was edited since its edits were last taken.
+    struct EffectsBus
+    {
+        QString name; // "master", "aux": its instances' keys, and messages
+        std::vector<core::PluginSlot> effects;
+        std::map<QString, std::shared_ptr<Vst3Node>> nodes;
+        bool edited = false;
+    };
+    EffectsBus m_master{.name = QStringLiteral("master"), .effects = {}, .nodes = {}, .edited = false};
+    EffectsBus m_aux{.name = QStringLiteral("aux"), .effects = {}, .nodes = {}, .edited = false};
+    [[nodiscard]] static std::vector<QString> busKeys(const EffectsBus& bus);
+    void setBusEffects(EffectsBus& bus, const std::vector<core::PluginSlot>& effects);
+    static std::vector<QString> storeBusEffectStates(EffectsBus& bus, std::vector<core::PluginSlot>& effects);
+    static bool takeBusEdits(EffectsBus& bus);
+    static core::Result<std::unique_ptr<IPluginEditor>> createBusEffectEditor(EffectsBus& bus, int effect);
+    // The bus's loaded effects, in order (for the graph).
+    [[nodiscard]] static std::vector<std::shared_ptr<INode>> busNodes(const EffectsBus& bus);
     SafetyLimiter m_limiter;
-    double m_limiterRate = 0.0; // audio thread: the rate the limiter is set for
+    // One per pair of the outputs 3 and up (sends: the in-ears, the desk).
+    std::array<SafetyLimiter, (kMaxAudioOutputs - 2) / 2> m_sendLimiters;
+    double m_limiterRate = 0.0; // audio thread: the rate the limiters are set for
+    std::atomic<int> m_clickPair{0}; // the click's outputs: 0 the mix, n outputs 2n+1-2n+2
     // ... and its effects, by position (nullptr: switched off or not loaded).
     std::map<QString, std::vector<std::shared_ptr<Vst3Node>>> m_currentEffects;
 
@@ -314,6 +355,17 @@ private:
     // Audio thread: bar 1 is moved to this sample (-1: nothing to do).
     std::atomic<int64_t> m_barOriginAt{-1};
     MidiClockOut m_clockOut;
+    ExternalMidiOut m_externalOut;      // hardware synths' Program Changes, and their notes
+    // The hardware synths channels play (Channel::midiOutPort), by channel,
+    // output and MIDI channel: kept from patch to patch (a tail's notes end
+    // on the same queue), sent by m_hardwareSender.
+    std::map<QString, std::shared_ptr<HardwareOut>> m_hardwareOuts;
+    HardwareSender m_hardwareSender{m_externalOut};
+    PerformanceRecorder m_recorder;     // the mix to a WAV file, when recording
+    // The patch whose hardware sounds were sent last, and what was sent.
+    std::optional<std::pair<core::PatchId, std::vector<core::ExternalProgram>>> m_calledUp;
+    // A patch just chosen: its hardware sounds (Program Change, bank) to their outputs.
+    void callUpExternalSounds(const core::Patch& patch);
     MidiMonitor m_keyboard; // what is being played, for the on-screen keyboard
 
     // The backing track: read on a worker thread, handed to the audio thread

@@ -141,7 +141,9 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
 
     RtAudio::StreamParameters output;
     output.deviceId = *deviceId;
-    output.nChannels = 2;
+    // Every output it has (up to kMaxAudioOutputs): 1-2 carry the mix, the
+    // others what is sent there (a click for the in-ears, a channel to the desk).
+    output.nChannels = std::clamp(info.outputChannels, 2U, static_cast<unsigned int>(kMaxAudioOutputs));
     output.firstChannel = 0;
     RtAudio::StreamOptions options;
     options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_SCHEDULE_REALTIME | latencyFlags(driver);
@@ -189,8 +191,20 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
         return text;
     };
 
-    if (rt->openStream(&output, input ? &inputParameters : nullptr, RTAUDIO_FLOAT32, rate, &frames, &AudioDevice::callback,
-                       this, &options) != RTAUDIO_NO_ERROR) {
+    m_outputChannels = static_cast<int>(output.nChannels); // read by the callback
+    bool opened = rt->openStream(&output, input ? &inputParameters : nullptr, RTAUDIO_FLOAT32, rate, &frames,
+                                 &AudioDevice::callback, this, &options) == RTAUDIO_NO_ERROR;
+    if (!opened && output.nChannels > 2) {
+        // Some drivers refuse all their outputs at once: the mix alone still plays.
+        qCWarning(lcEngine).noquote() << "Opening" << output.nChannels << "outputs of" << QString::fromStdString(info.name)
+                                      << "failed (" << takeLastError(u"unknown error"_s) << "): opening outputs 1-2 only";
+        output.nChannels = 2;
+        m_outputChannels = 2;
+        opened = rt->openStream(&output, input ? &inputParameters : nullptr, RTAUDIO_FLOAT32, rate, &frames,
+                                &AudioDevice::callback, this, &options) == RTAUDIO_NO_ERROR;
+    }
+    if (!opened) {
+        m_outputChannels = 2;
         return core::fail(core::ErrorCode::DeviceUnavailable,
                           u"Could not open %1%2 (%3): %4"_s.arg(QString::fromStdString(info.name),
                                                                 input ? u" with the inputs of "_s + input->name : QString(),
@@ -441,8 +455,17 @@ int AudioDevice::callback(void* output, void* input, unsigned int frames, double
     if ((status & (RTAUDIO_OUTPUT_UNDERFLOW | RTAUDIO_INPUT_OVERFLOW)) != 0) {
         self->m_underflows.fetch_add(1, std::memory_order_relaxed);
     }
-    // Non-interleaved: [left block][right block], and each input channel's block in turn.
-    const std::span<float> both(static_cast<float*>(output), static_cast<std::size_t>(frames) * 2);
+    // Non-interleaved: [left block][right block][output 3]..., and each input channel's block in turn.
+    const auto outputs = static_cast<std::size_t>(self->m_outputChannels);
+    const std::span<float> allOutputs(static_cast<float*>(output), static_cast<std::size_t>(frames) * outputs);
+    const std::span<float> both = allOutputs.first(static_cast<std::size_t>(frames) * 2);
+    // Outputs 3 and up: silent unless something is sent there.
+    self->m_extraCount = outputs - 2;
+    for (std::size_t c = 2; c < outputs; ++c) {
+        float* block = allOutputs.subspan(c * frames, frames).data();
+        std::fill_n(block, frames, 0.0F);
+        self->m_extraPointers.at(c - 2) = block;
+    }
     AudioInputs inputs;
     if (input != nullptr && self->m_inputChannels > 0) {
         const auto count = static_cast<std::size_t>(self->m_inputChannels);

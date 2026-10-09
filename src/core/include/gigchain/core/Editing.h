@@ -16,6 +16,8 @@ Result<void> renameSong(Setlist& setlist, int songIndex, const QString& name);
 Result<void> renamePatch(Setlist& setlist, Cursor cursor, const QString& name);
 // Every channel of the sound plays together, or only the selected one.
 Result<void> setPatchPlayMode(Setlist& setlist, Cursor cursor, PlayMode mode);
+// The hardware sounds (Program Change, bank) the patch calls up when it comes up.
+Result<void> setExternalPrograms(Setlist& setlist, Cursor cursor, const std::vector<ExternalProgram>& programs);
 // The song's chart (ChordPro). Refused when longer than limits::kMaxChartLength.
 Result<void> setSongChart(Setlist& setlist, int songIndex, const QString& chart);
 // The song's key ("" = not set) and tempo in BPM (0 = not set).

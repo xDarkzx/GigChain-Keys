@@ -39,15 +39,15 @@ Audited again against MainStage 3 on 2026-10-09; still to build, in this order:
 
 | What players need | Status | Where it stands |
 |---|---|---|
-| Per-layer MIDI filters (the pad ignores the sustain pedal, only one layer takes expression) | **Missing** | Every channel takes every controller. |
-| Knob pickup (soft takeover) and response curves | **Missing** | A knob jumps the value when first moved; ranges are straight lines. |
+| Per-layer MIDI filters (the pad ignores the sustain pedal, only one layer takes expression) | **Done** | Keyboard Zone > Takes: sustain, expression, mod wheel, pitch bend, aftertouch. |
+| Knob pickup (soft takeover) and response curves | **Done** | Knobs > Pickup and Curve per learned knob; the mixer's learned fader and pan knobs pick up too. MIDI feedback to motor faders is still to do. |
 | Bundled sounds | **Partly** | See below. |
-| Outputs: a channel, the click or a stem to its own output (in-ears) | **Missing** | One stereo master out; headphone cue is planned (2). |
+| Outputs: a channel, the click or a stem to its own output (in-ears) | **Done** | The click (Settings > Audio) and any channel (mixer > Output) to outputs 3-4 up to 15-16, each pair limited. Stems wait for multi-track backing tracks. |
 | Multi-track backing tracks with markers | **Missing** | One stereo track per song. |
-| MIDI effects: arpeggiator, chord trigger | **Missing** | Transpose and velocity layers only. |
-| External gear: Program Change and MIDI out per patch | **Missing** | MIDI out carries the clock only. |
-| Aux sends (one shared reverb) | **Missing** | Master effects only. |
-| Recording the performance | **Missing** | The loop station records loops only. |
+| MIDI effects: arpeggiator, chord trigger | **Done** | Keyboard Zone > MIDI effects: a chord per key, an arpeggiator on the song's tempo. Scripted MIDI (MainStage's Scripter) is not planned. |
+| External gear: Program Change and MIDI out per patch | **Done** | A song's External Gear: Program Change and bank to up to four synths when it comes up; any channel can play a hardware synth (its keys out on a MIDI output, with its audio input to hear it: MainStage's External Instrument). |
+| Aux sends (one shared reverb) | **Done** | One Aux bus (its effects kept with the rig, beside the master's) fed by each channel's Send knob, after its fader. More than one aux bus is not planned yet. |
+| Recording the performance | **Done** | ● Rec records the mix (after the limiter) to a WAV in the Music folder. Per-channel (multitrack) recording is not planned yet. |
 | A layout of your own (screen controls mirroring the hardware) | **Missing** | A fixed layout. |
 
 **Still open:**

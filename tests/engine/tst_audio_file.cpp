@@ -1,4 +1,5 @@
 #include "AudioFile.h"
+#include "PerformanceRecorder.h"
 
 #include <QDataStream>
 #include <QFile>
@@ -65,6 +66,43 @@ private slots:
         QVERIFY(std::abs(clip->seconds() - 1.0) < 0.01);
         QVERIFY2(std::abs(peak(clip->left) - 0.5F) < 0.03F, qPrintable(QString::number(peak(clip->left))));
         QVERIFY2(std::abs(peak(clip->right) - 0.25F) < 0.03F, qPrintable(QString::number(peak(clip->right))));
+    }
+
+    // A recorded performance comes back out of its WAV as it was played:
+    // the same length, the same samples, the sides apart.
+    void aRecordingPlaysBackAsItWasPlayed()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.filePath(u"gig/recording.wav"_s); // (its folder made for it)
+        PerformanceRecorder recorder;
+        QVERIFY(recorder.start(path, 48000.0).has_value());
+        QVERIFY(recorder.recording());
+        constexpr int kBlock = 256;
+        constexpr int kBlocks = 400; // about 2 s, longer than one write
+        std::vector<float> left(kBlock);
+        std::vector<float> right(kBlock);
+        for (int b = 0; b < kBlocks; ++b) {
+            for (int i = 0; i < kBlock; ++i) {
+                const double t = static_cast<double>((b * kBlock) + i) / 48000.0;
+                left.at(static_cast<std::size_t>(i)) = static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * 440.0 * t));
+                right.at(static_cast<std::size_t>(i)) = -0.25F;
+            }
+            recorder.push(left.data(), right.data(), kBlock);
+        }
+        const auto seconds = recorder.stop();
+        QVERIFY2(seconds.has_value(), seconds ? "" : qPrintable(seconds.error().message));
+        QVERIFY(std::abs(*seconds - (kBlocks * kBlock / 48000.0)) < 1e-9);
+
+        const auto clip = decodeAudioFile(path, 48000.0);
+        QVERIFY2(clip.has_value(), clip ? "" : qPrintable(clip.error().message));
+        QCOMPARE(clip->frames(), static_cast<int64_t>(kBlocks * kBlock));
+        const std::size_t at = 12345;
+        QVERIFY(std::abs(clip->left.at(at) - static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * 440.0 * at / 48000.0))) < 1e-4F);
+        QVERIFY(std::abs(clip->right.at(at) + 0.25F) < 1e-4F);
+
+        // Somewhere it cannot write (inside a file, not a folder): an error that says so.
+        PerformanceRecorder nowhere;
+        QVERIFY(!nowhere.start(path + u"/inside.wav"_s, 48000.0).has_value());
     }
 
     void aMonoFilePlaysOnBothSides()

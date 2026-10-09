@@ -52,7 +52,7 @@ struct EffectWindows::Entry
     std::unique_ptr<engine::IPluginEditor> editor;
     QPointer<QWindow> window;
     double ratio = 1.0;
-    bool master = false;   // an effect of the master bus (channel unused)
+    int bus = -1;          // a bus's effect (EffectWindows::Bus; channel unused), -1 = a channel's
 };
 
 EffectWindows::EffectWindows(engine::IEngine& engine, DocumentController& document, QObject* parent)
@@ -122,24 +122,25 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
     return true;
 }
 
-bool EffectWindows::openMaster(int effect, const std::vector<core::PluginSlot>& masterSlots, QWindow* owner)
+bool EffectWindows::openBus(Bus bus, int effect, const std::vector<core::PluginSlot>& busSlots, QWindow* owner)
 {
     GC_ONLY_MAIN_THREAD();
-    if (effect < 0 || static_cast<std::size_t>(effect) >= masterSlots.size()) {
-        qCWarning(lcUi) << "No effect window: master effect" << effect << "does not exist (" << masterSlots.size() << "effects)";
+    const QString busName = bus == Bus::Master ? tr("Master") : tr("Aux");
+    if (effect < 0 || static_cast<std::size_t>(effect) >= busSlots.size()) {
+        qCWarning(lcUi).noquote() << "No effect window:" << busName << "effect" << effect << "does not exist (" << busSlots.size() << "effects)";
         return false;
     }
-    const core::PluginSlot& slot = masterSlots.at(static_cast<std::size_t>(effect));
+    const core::PluginSlot& slot = busSlots.at(static_cast<std::size_t>(effect));
     for (const auto& entry : m_open) {
-        if (entry->master && entry->effect == effect && entry->pluginId == slot.pluginId) {
+        if (entry->bus == static_cast<int>(bus) && entry->effect == effect && entry->pluginId == slot.pluginId) {
             GC_IF_FAILED(entry->window) { break; } // an open entry always has its window
             entry->window->raise();
             entry->window->requestActivate();
             return true;
         }
     }
-    FreezeWatchdog::mark(u"opening the window of %1 (master)"_s.arg(slot.displayName));
-    auto created = m_engine.createMasterEffectEditor(effect);
+    FreezeWatchdog::mark(u"opening the window of %1 (%2)"_s.arg(slot.displayName, busName));
+    auto created = bus == Bus::Master ? m_engine.createMasterEffectEditor(effect) : m_engine.createAuxEffectEditor(effect);
     if (!created) {
         m_document.reportMessage(created.error().message);
         return false;
@@ -149,11 +150,11 @@ bool EffectWindows::openMaster(int effect, const std::vector<core::PluginSlot>& 
         return false;
     }
     auto entry = std::make_unique<Entry>();
-    entry->master = true;
+    entry->bus = static_cast<int>(bus);
     entry->effect = effect;
     entry->pluginId = slot.pluginId;
     entry->editor = std::move(*created);
-    return show(std::move(entry), tr("%1 — Master").arg(slot.displayName), owner);
+    return show(std::move(entry), tr("%1 — %2").arg(slot.displayName, busName), owner);
 }
 
 bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWindow* owner)
@@ -205,7 +206,7 @@ void EffectWindows::closeAll()
 void EffectWindows::close(Entry& entry)
 {
     GC_ONLY_MAIN_THREAD();
-    const bool master = entry.master;
+    const int bus = entry.bus;
     entry.editor->detach(); // before its window goes
     entry.editor.reset();
     if (entry.window) {
@@ -214,18 +215,18 @@ void EffectWindows::close(Entry& entry)
     }
     std::erase_if(m_open, [&entry](const auto& e) { return e.get() == &entry; });
     emit openCountChanged();
-    if (master) emit masterWindowClosed();
+    if (bus >= 0) emit busWindowClosed(bus);
 }
 
-void EffectWindows::sweepMaster(const std::vector<core::PluginSlot>& masterSlots)
+void EffectWindows::sweepBus(Bus bus, const std::vector<core::PluginSlot>& busSlots)
 {
     GC_ONLY_MAIN_THREAD();
     std::vector<Entry*> gone;
     for (auto& entry : m_open) {
-        if (!entry->master) continue;
-        const bool stillThere = std::cmp_less(entry->effect, masterSlots.size())
-                                && masterSlots.at(static_cast<std::size_t>(entry->effect)).pluginId == entry->pluginId
-                                && !masterSlots.at(static_cast<std::size_t>(entry->effect)).bypass;
+        if (entry->bus != static_cast<int>(bus)) continue;
+        const bool stillThere = std::cmp_less(entry->effect, busSlots.size())
+                                && busSlots.at(static_cast<std::size_t>(entry->effect)).pluginId == entry->pluginId
+                                && !busSlots.at(static_cast<std::size_t>(entry->effect)).bypass;
         if (!stillThere) gone.push_back(entry.get());
     }
     for (Entry* entry : gone) close(*entry);
@@ -237,7 +238,7 @@ void EffectWindows::sweep()
     const core::Patch* patch = m_document.currentPatch();
     std::vector<Entry*> gone;
     for (auto& entry : m_open) {
-        if (entry->master) continue; // the master bus is not in the setlist
+        if (entry->bus >= 0) continue; // the buses are not in the setlist
         const core::Channel* channel = nullptr;
         if (patch != nullptr) {
             for (const core::Channel& c : patch->channels) {

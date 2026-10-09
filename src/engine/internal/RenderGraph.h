@@ -1,9 +1,12 @@
 #pragma once
 
+#include "HardwareOut.h"
 #include "INode.h"
+#include "MidiEffects.h"
 #include "MidiRouter.h"
 
 #include "gigchain/core/Ids.h"
+#include "gigchain/core/KnobPickup.h"
 #include "gigchain/engine/EngineTypes.h"
 
 #include <atomic>
@@ -11,6 +14,7 @@
 #include <cstdint>
 #include <memory>
 #include <span>
+#include <utility>
 #include <vector>
 
 namespace gigchain::engine {
@@ -27,7 +31,18 @@ struct ParameterMapping
     uint32_t parameter = 0;
     double minimum = 0.0; // the parameter's value (0-1) at CC 0...
     double maximum = 1.0; // ... and at CC 127 (may be below minimum: reversed)
+    int curve = 0;        // core::KnobCurve
+    bool pickup = true;   // takes over only once it reaches the parameter (core::KnobPickup)
 };
+
+// Output pair `pair` (1 = outputs 3-4) of the device's outputs 3 and up, or
+// `fallback` (the mix) when the device does not have it. Real-time safe.
+[[nodiscard]] inline AudioBlock sendPair(std::span<float* const> sends, int pair, const AudioBlock& fallback) noexcept
+{
+    if (pair <= 0 || std::cmp_greater(2 * pair, sends.size())) return fallback;
+    const std::span<float* const> two = sends.subspan(static_cast<std::size_t>((2 * pair) - 2), 2);
+    return AudioBlock{.left = two.front(), .right = two.back(), .frames = fallback.frames};
+}
 
 // Everything needed to build one channel strip. Nodes must already be
 // prepared for the graph's sample rate and block size.
@@ -47,6 +62,13 @@ struct StripSpec
     double pan = 0.0;
     bool mute = false;
     bool solo = false;
+    // Where it plays: 0 the mix (outputs 1-2, through the master); n the
+    // device's outputs 2n+1 and 2n+2 directly (3-4, 5-6...: the in-ears, the
+    // desk). A pair the device does not have plays in the mix.
+    int outputPair = 0;
+    MidiEffectSettings midiEffects; // its chord trigger and arpeggiator
+    double sendDb = -96.0;          // its aux send (core::limits::kMinVolumeDb: none)
+    std::shared_ptr<HardwareOut> hardware; // a hardware synth its keys go to (null: none)
 };
 
 // Which section of the song is in force during a block: `before` up to the
@@ -75,6 +97,10 @@ public:
 
     // Main thread, while audio runs.
     void setVolumeDb(double volumeDb);
+    // How much of it goes to the aux bus, after its fader (kMinVolumeDb: none). Any thread.
+    void setSendDb(double sendDb);
+    // Audio thread, after render(): its send this block, added to `aux`.
+    void addSend(const AudioBlock& aux) noexcept;
     // -1 (left) .. +1 (right), constant-power law (centre = unity on both sides).
     void setPan(double pan);
     void setMute(bool on) { m_mute.store(on, std::memory_order_relaxed); }
@@ -94,11 +120,19 @@ public:
     // records is its sound at its fader and pan: what is heard of it.
     void setLoopSlot(int slot) { m_loopSlot.store(slot, std::memory_order_relaxed); }
     [[nodiscard]] int loopSlot() const { return m_loopSlot.load(std::memory_order_relaxed); }
+    [[nodiscard]] int outputPair() const noexcept { return m_outputPair; } // StripSpec::outputPair
+    [[nodiscard]] bool hasMidiEffects() const noexcept { return !m_effected.empty(); }
+    // The hardware synth it plays (null: none), and whether a note it sent there is still held.
+    [[nodiscard]] const std::shared_ptr<HardwareOut>& hardware() const noexcept { return m_hardware; }
+    [[nodiscard]] bool holdsHardwareNotes() const noexcept { return m_hardware && m_hardware->holdsNotes(); }
     // Peak since the last call (then reset), and the most recent block's RMS.
     LevelReading takeLevel();
 
     // Main thread: the nodes this strip plays (instrument first).
     [[nodiscard]] std::vector<const INode*> nodes() const;
+    // Main thread, often: where each mapped parameter is now, for its knob's
+    // pickup (a knob takes over only once it reaches it).
+    void refreshMappedValues();
     // The largest block the strip can render.
     [[nodiscard]] int maxBlock() const { return static_cast<int>(m_left.size()); }
     // Events left out since the last call (its block was full).
@@ -117,6 +151,8 @@ public:
                     LoopStation* loops = nullptr) noexcept;
 
 private:
+    // The node a mapping moves (nullptr: its effect is not there).
+    [[nodiscard]] INode* mappingTarget(const ParameterMapping& m) const noexcept;
     // The strip's sound for this block into m_left/m_right, before its fader.
     void produce(std::span<const MidiEvent> routed, int frames, const TimeInfo& time, const AudioInputs& inputs) noexcept;
     // Puts the strip's fader and pan (at `gain`) on its sound, adds it to
@@ -128,16 +164,28 @@ private:
     std::shared_ptr<INode> m_instrument;
     std::vector<std::shared_ptr<INode>> m_effects;
     std::vector<ParameterMapping> m_mappings;
+    // Per mapping: its parameter's value as the plugin last showed it (main
+    // thread writes; below 0 = not known), and its knob's pickup (audio thread).
+    std::vector<std::atomic<float>> m_mappedNow;
+    std::vector<core::KnobPickup> m_pickups;
     int m_inputLeft = -1;
     int m_inputRight = -1;
     std::vector<float> m_left;
     std::vector<float> m_right;
     std::vector<MidiEvent> m_routed;
+    MidiEffects m_midiEffects;
+    std::vector<MidiEvent> m_effected; // m_routed through the MIDI effects (only when it has some)
+    std::shared_ptr<HardwareOut> m_hardware;
+    // m_routed's first `count`, through the MIDI effects when it has any: what the instrument hears.
+    std::span<const MidiEvent> effected(std::size_t count, int frames, const TimeInfo& time) noexcept;
     std::atomic<uint64_t> m_droppedEvents{0};
     std::atomic<float> m_gain{1.0F};
+    std::atomic<float> m_send{0.0F}; // the aux send's gain
+    int m_sentFrames = 0;            // audio thread: frames of m_left/m_right this block (for its send)
     std::atomic<float> m_pan{0.0F};
     std::atomic<bool> m_mute{false};
     std::atomic<bool> m_solo{false};
+    int m_outputPair = 0;
     std::atomic<uint64_t> m_sections{~uint64_t{0}};
     std::atomic<bool> m_unsectioned{true};
     std::atomic<int> m_loopSlot{-1};
@@ -159,15 +207,20 @@ class RenderGraph
 public:
     // `masterEffects` process the mix, in order, before the master gain.
     // `tails`: strips of earlier patches still ringing out (see ChannelStrip).
+    // `auxEffects`: the aux bus's (a shared reverb), fed by the strips' sends
+    // and played into the mix before the master effects; none: sends are silent.
     RenderGraph(std::vector<StripSpec> specs, double sampleRate, int maxBlock,
                 std::vector<std::shared_ptr<INode>> masterEffects = {},
-                std::vector<std::shared_ptr<ChannelStrip>> tails = {});
+                std::vector<std::shared_ptr<ChannelStrip>> tails = {},
+                std::vector<std::shared_ptr<INode>> auxEffects = {});
 
     // Audio thread. Overwrites `out`. `gate`: the song section in force.
     // `loops`: the loop station (its block begun): strips record into it,
     // and its loops play into the mix before the master effects.
+    // `sends`: the device's outputs 3 and up (added to, never cleared here).
     void render(std::span<const MidiEvent> events, AudioBlock out, float masterGain, const TimeInfo& time = {},
-                const AudioInputs& inputs = {}, const SectionGate& gate = {}, LoopStation* loops = nullptr) noexcept;
+                const AudioInputs& inputs = {}, const SectionGate& gate = {}, LoopStation* loops = nullptr,
+                std::span<float* const> sends = {}) noexcept;
 
     // Main thread lookups for live mixer changes and meters. Non-owning.
     [[nodiscard]] ChannelStrip* strip(std::size_t index);
@@ -190,6 +243,9 @@ private:
     std::vector<std::shared_ptr<ChannelStrip>> m_strips;
     std::vector<std::shared_ptr<ChannelStrip>> m_tails;
     std::vector<std::shared_ptr<INode>> m_masterEffects;
+    std::vector<std::shared_ptr<INode>> m_auxEffects;
+    std::vector<float> m_auxLeft; // the aux bus this block (the strips' sends)
+    std::vector<float> m_auxRight;
     double m_sampleRate;
     int m_maxBlock;
     std::atomic<uint64_t> m_oversizedBlocks{0};

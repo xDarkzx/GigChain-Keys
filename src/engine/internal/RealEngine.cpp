@@ -460,7 +460,7 @@ void RealEngine::syncPluginsToDevice()
         qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         return; // plugins stay as they were; the graph skips blocks larger than they expect
     }
-    for (const auto* nodes : {&m_nodes, &m_masterNodes}) {
+    for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes}) {
         for (const auto& [key, node] : *nodes) {
             if (auto prepared = node->prepare(rate, block); !prepared) { // logged by prepare()
                 m_pendingNotices.push_back(Notice::error(prepared.error().message));
@@ -571,6 +571,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     QElapsedTimer timer;
     timer.start();
     if (&patch != &m_patch) m_patch = patch;
+    callUpExternalSounds(patch);
     m_song = song;
     std::set<Vst3Node*> used;
     m_currentInstruments.clear();
@@ -578,6 +579,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     const std::vector<PlannedSlot> plan = planPatch(song, patch);
     std::vector<StripSpec> specs;
     specs.reserve(patch.channels.size());
+    std::set<const HardwareOut*> hardwareUsed; // the synths the new patch's channels play
     for (std::size_t c = 0; c < patch.channels.size(); ++c) {
         const core::Channel& channel = patch.channels.at(c);
         StripSpec spec;
@@ -587,13 +589,31 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
                                    .transpose = channel.transpose,
                                    .midiChannel = channel.midiChannel,
                                    .velocityLow = channel.velocityLow,
-                                   .velocityHigh = channel.velocityHigh};
+                                   .velocityHigh = channel.velocityHigh,
+                                   .ignores = (channel.takesSustain ? 0U : midi_filter::kSustain)
+                                              | (channel.takesExpression ? 0U : midi_filter::kExpression)
+                                              | (channel.takesModWheel ? 0U : midi_filter::kModWheel)
+                                              | (channel.takesPitchBend ? 0U : midi_filter::kPitchBend)
+                                              | (channel.takesAftertouch ? 0U : midi_filter::kAftertouch)};
         spec.volumeDb = channel.volumeDb;
         spec.pan = channel.pan;
         spec.mute = channel.mute;
         spec.solo = channel.solo;
         spec.inputLeft = channel.inputLeft - 1; // 1-based in the setlist, -1 = none
         spec.inputRight = channel.inputRight - 1;
+        spec.outputPair = channel.outputPair;
+        spec.sendDb = channel.auxSendDb;
+        if (!channel.midiOutPort.isEmpty()) {
+            const QString key = u"%1|%2|%3"_s.arg(channel.id.value(), channel.midiOutPort).arg(channel.midiOutChannel);
+            std::shared_ptr<HardwareOut>& out = m_hardwareOuts[key];
+            if (!out) out = std::make_shared<HardwareOut>(channel.midiOutPort, channel.midiOutChannel);
+            spec.hardware = out;
+            hardwareUsed.insert(out.get());
+        }
+        spec.midiEffects = MidiEffectSettings{.chord = channel.chord,
+                                              .arpeggio = channel.arpeggio,
+                                              .arpRate = channel.arpRate,
+                                              .arpOctaves = channel.arpOctaves};
         std::map<int, int> effectAt; // the channel's effect position -> its place in the strip (switched-off ones are left out)
         for (const PlannedSlot& planned : plan) {
             if (std::cmp_not_equal(planned.channel, c)) continue;
@@ -626,7 +646,9 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
                                                      .target = target,
                                                      .parameter = m.parameter,
                                                      .minimum = m.minimum,
-                                                     .maximum = m.maximum});
+                                                     .maximum = m.maximum,
+                                                     .curve = m.curve,
+                                                     .pickup = m.pickup});
         }
         specs.push_back(std::move(spec));
     }
@@ -638,29 +660,43 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     const std::set<const INode*> playing(used.begin(), used.end());
     std::vector<std::shared_ptr<ChannelStrip>> tails;
     std::set<const INode*> ringing;
+    std::set<const INode*> releasing; // instruments whose old strip's MIDI effects made notes
     if (const std::shared_ptr<RenderGraph>& previous = m_exchange.currentShared()) {
         for (const auto* strips : {&previous->strips(), &previous->tails()}) {
             for (const auto& strip : *strips) {
                 const std::vector<const INode*> nodes = strip->nodes();
                 const bool shared = std::ranges::any_of(nodes, [&playing](const INode* n) { return playing.contains(n); });
-                if (strip->tailDone() || shared || nodes.empty() || tails.size() >= kMaxTails) continue;
+                // A strip whose MIDI effects made notes (a chord's, an arpeggio's), going
+                // while its instrument plays on: its notes go too (its effects' state does
+                // not carry over, so nothing else would end them).
+                if (shared && strip->hasMidiEffects() && !nodes.empty()) releasing.insert(nodes.front());
+                // A hardware synth's notes held when the patch changes end with their keys
+                // (unless the new patch plays that synth from the same channel: it ends them).
+                const bool synthHeld = strip->holdsHardwareNotes() && !hardwareUsed.contains(strip->hardware().get());
+                if (strip->tailDone() || shared || (nodes.empty() && !synthHeld) || tails.size() >= kMaxTails) continue;
                 tails.push_back(strip);
                 ringing.insert(nodes.begin(), nodes.end());
             }
         }
     }
+    // The synths still played, by the new patch or its tails; the rest are let go.
+    std::set<const HardwareOut*> hardwareKept = hardwareUsed;
+    for (const auto& tail : tails) {
+        if (tail->hardware()) hardwareKept.insert(tail->hardware().get());
+    }
+    std::erase_if(m_hardwareOuts, [&hardwareKept](const auto& entry) { return !hardwareKept.contains(entry.second.get()); });
+    std::vector<std::shared_ptr<HardwareOut>> synths;
+    synths.reserve(m_hardwareOuts.size());
+    for (const auto& [key, out] : m_hardwareOuts) synths.push_back(out);
+    m_hardwareSender.setOuts(std::move(synths));
 
     // Instruments leaving the sound (and not ringing out) release their
     // notes, so they do not hang when the patch comes back.
     for (const auto& [key, node] : m_nodes) {
-        if (used.count(node.get()) == 0 && !ringing.contains(node.get())) node->releaseAllNotes();
+        if ((used.count(node.get()) == 0 && !ringing.contains(node.get())) || releasing.contains(node.get())) node->releaseAllNotes();
     }
-    std::vector<std::shared_ptr<INode>> master;
-    for (const QString& key : masterKeys()) {
-        if (const auto it = m_masterNodes.find(key); it != m_masterNodes.end()) master.push_back(it->second);
-    }
-    auto next = std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(), std::move(master),
-                                              std::move(tails));
+    auto next = std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(), busNodes(m_master),
+                                              std::move(tails), busNodes(m_aux));
     applySectionMasks(*next); // before it plays: no moment with the wrong channels taking notes
     applyLoopSlots(*next);
     m_exchange.publish(std::move(next));
@@ -774,13 +810,28 @@ std::vector<Notice> RealEngine::poll()
         qCWarning(lcEngine).noquote() << notices.back().text;
         m_clockOut.close(); // choosing the output again in Settings restarts it
     }
-    // Knobs mapped to parameters: shown in the plugins' own windows.
+    if (m_recorder.takeFailed()) {
+        notices.push_back(Notice::error(u"Recording stopped: the recording could not be written (is the disk full?): %1"_s.arg(m_recorder.filePath())));
+        (void)m_recorder.stop(); // finishes what was written; its problem is in the notice above
+    }
+    // Knobs mapped to parameters: shown in the plugins' own windows, and
+    // where each parameter is now, for the knobs' pickup.
     for (const auto& [key, node] : m_nodes) node->showParameterChanges();
+    if (const RenderGraph* graph = m_exchange.current()) {
+        for (const auto& strip : graph->strips()) strip->refreshMappedValues();
+    }
     std::ranges::move(m_pendingNotices, std::back_inserter(notices));
     m_pendingNotices.clear();
 
     if (const uint64_t dropped = m_midi.takeDropped() + m_droppedInjected.exchange(0); dropped > 0) {
         qCWarning(lcEngine) << "Dropped" << dropped << "MIDI events (input queue full)";
+    }
+    for (const QString& problem : m_hardwareSender.takeProblems()) {
+        qCWarning(lcEngine).noquote() << problem;
+        notices.push_back(Notice::warning(problem));
+    }
+    if (const uint64_t dropped = m_hardwareSender.takeDropped(); dropped > 0) {
+        qCWarning(lcEngine) << "Left out" << dropped << "messages to hardware synths (their output was down, or too many at once)";
     }
     if (m_midi.takeActivity()) m_midiSeen.store(true, std::memory_order_relaxed);
     else m_midiSeen.store(false, std::memory_order_relaxed);
@@ -836,50 +887,59 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(cons
     return Vst3Node::createEditor(effects->second.at(static_cast<std::size_t>(effect)));
 }
 
-std::vector<QString> RealEngine::masterKeys() const
+std::vector<QString> RealEngine::busKeys(const EffectsBus& bus)
 {
     std::vector<QString> keys;
     std::map<QString, int> uses;
-    for (const core::PluginSlot& slot : m_masterSlots) {
+    for (const core::PluginSlot& slot : bus.effects) {
         if (slot.bypass) {
             keys.emplace_back();
             continue;
         }
         const int n = uses[slot.pluginId]++;
-        keys.push_back(u"master|fx|"_s + slot.pluginId + u'#' + QString::number(n));
+        keys.push_back(bus.name + u"|fx|"_s + slot.pluginId + u'#' + QString::number(n));
     }
     return keys;
 }
 
-void RealEngine::setMasterEffects(const std::vector<core::PluginSlot>& effects)
+std::vector<std::shared_ptr<INode>> RealEngine::busNodes(const EffectsBus& bus)
+{
+    std::vector<std::shared_ptr<INode>> nodes;
+    for (const QString& key : busKeys(bus)) {
+        if (const auto it = bus.nodes.find(key); it != bus.nodes.end()) nodes.push_back(it->second);
+    }
+    return nodes;
+}
+
+void RealEngine::setBusEffects(EffectsBus& bus, const std::vector<core::PluginSlot>& effects)
 {
     GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
-    m_masterSlots = effects;
-    const std::vector<QString> keys = masterKeys();
     // Take edits made to instances that are going away before they go.
-    (void)takeMasterEdits();
-    m_masterEdited = false;
-    std::erase_if(m_masterNodes, [&](const auto& entry) { return std::ranges::find(keys, entry.first) == keys.end(); });
+    (void)takeBusEdits(bus);
+    bus.effects = effects;
+    bus.edited = false;
+    const std::vector<QString> keys = busKeys(bus);
+    std::erase_if(bus.nodes, [&](const auto& entry) { return std::ranges::find(keys, entry.first) == keys.end(); });
     for (std::size_t i = 0; i < keys.size(); ++i) {
         const QString& key = keys.at(i);
-        if (key.isEmpty() || m_masterNodes.contains(key)) continue;
-        if (auto node = loadWithSettings(m_masterSlots.at(i))) m_masterNodes.emplace(key, std::move(node));
+        if (key.isEmpty() || bus.nodes.contains(key)) continue;
+        if (auto node = loadWithSettings(bus.effects.at(i))) bus.nodes.emplace(key, std::move(node));
     }
     applyPatch(m_song, m_patch); // the graph now plays them
-    qCInfo(lcEngine) << "Master effects:" << m_masterNodes.size() << "loaded in" << timer.elapsed() << "ms";
+    qCInfo(lcEngine).noquote() << "Effects on the" << bus.name << "bus:" << bus.nodes.size() << "loaded in" << timer.elapsed() << "ms";
 }
 
-std::vector<QString> RealEngine::storeMasterEffectStates(std::vector<core::PluginSlot>& effects)
+std::vector<QString> RealEngine::storeBusEffectStates(EffectsBus& bus, std::vector<core::PluginSlot>& effects)
 {
     GC_ONLY_MAIN_THREAD();
     std::vector<QString> problems;
-    const std::vector<QString> keys = masterKeys();
+    const std::vector<QString> keys = busKeys(bus);
     for (std::size_t i = 0; i < effects.size() && i < keys.size(); ++i) {
         core::PluginSlot& effect = effects.at(i);
-        const auto node = m_masterNodes.find(keys.at(i));
-        if (node == m_masterNodes.end() || effect.pluginId != m_masterSlots.at(i).pluginId) continue;
+        const auto node = bus.nodes.find(keys.at(i));
+        if (node == bus.nodes.end() || effect.pluginId != bus.effects.at(i).pluginId) continue;
         auto state = node->second->saveState();
         if (!state) {
             problems.push_back(u"The settings of %1 could not be saved: %2"_s.arg(effect.displayName, state.error().message));
@@ -887,42 +947,58 @@ std::vector<QString> RealEngine::storeMasterEffectStates(std::vector<core::Plugi
             continue;
         }
         effect.state = state->encode();
-        m_masterSlots.at(i).state = effect.state;
+        bus.effects.at(i).state = effect.state;
     }
     return problems;
 }
 
-bool RealEngine::takeMasterEdits()
+bool RealEngine::takeBusEdits(EffectsBus& bus)
 {
     GC_ONLY_MAIN_THREAD();
-    for (const auto& [key, node] : m_masterNodes) {
-        if (node->takeEdited()) m_masterEdited = true;
+    for (const auto& [key, node] : bus.nodes) {
+        if (node->takeEdited()) bus.edited = true;
     }
-    return std::exchange(m_masterEdited, false);
+    return std::exchange(bus.edited, false);
 }
 
-core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createMasterEffectEditor(int effect)
+core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createBusEffectEditor(EffectsBus& bus, int effect)
 {
     GC_ONLY_MAIN_THREAD();
-    const std::vector<QString> keys = masterKeys();
+    const std::vector<QString> keys = busKeys(bus);
     if (effect < 0 || static_cast<std::size_t>(effect) >= keys.size()) {
-        return core::fail(core::ErrorCode::OutOfRange, u"That master effect is no longer there"_s);
+        return core::fail(core::ErrorCode::OutOfRange, u"That %1 effect is no longer there"_s.arg(bus.name));
     }
-    const core::PluginSlot& slot = m_masterSlots.at(static_cast<std::size_t>(effect));
+    const core::PluginSlot& slot = bus.effects.at(static_cast<std::size_t>(effect));
     if (slot.bypass) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
     }
-    const auto node = m_masterNodes.find(keys.at(static_cast<std::size_t>(effect)));
-    if (node == m_masterNodes.end()) {
+    const auto node = bus.nodes.find(keys.at(static_cast<std::size_t>(effect)));
+    if (node == bus.nodes.end()) {
         return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
     }
     return Vst3Node::createEditor(node->second);
+}
+
+void RealEngine::setChannelSend(const core::ChannelId& id, double sendDb)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (!std::isfinite(sendDb)) {
+        qCWarning(lcEngine) << "Ignored a send of" << sendDb << "dB";
+        return;
+    }
+    if (RenderGraph* graph = m_exchange.current()) {
+        if (ChannelStrip* strip = graph->findStrip(id)) strip->setSendDb(sendDb);
+    }
 }
 
 void RealEngine::setOutputLimiter(bool enabled, double ceilingDb)
 {
     m_limiter.setEnabled(enabled);
     m_limiter.setCeilingDb(ceilingDb);
+    for (SafetyLimiter& send : m_sendLimiters) {
+        send.setEnabled(enabled);
+        send.setCeilingDb(ceilingDb);
+    }
     qCInfo(lcEngine) << "Safety limiter" << (enabled ? "on at" : "off (ceiling") << ceilingDb << "dB";
 }
 
@@ -1106,7 +1182,8 @@ void RealEngine::panic()
     const double rate = m_audio.sampleRate();
     const int block = m_audio.maxBlock();
     m_keyboard.clear(); // every key shown up again
-    for (const auto* nodes : {&m_nodes, &m_masterNodes}) {
+    m_hardwareSender.allNotesOff(); // the hardware synths too
+    for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes}) {
         for (const auto& [key, node] : *nodes) {
             node->releaseAllNotes();
             // Deactivate + activate: VST3's reset, clearing voices and tails.
@@ -1121,7 +1198,7 @@ void RealEngine::panic()
             qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         }
     }
-    qCWarning(lcEngine) << "Panic: every sound stopped (" << m_nodes.size() + m_masterNodes.size() << "plugins reset in"
+    qCWarning(lcEngine) << "Panic: every sound stopped (" << m_nodes.size() + m_master.nodes.size() + m_aux.nodes.size() << "plugins reset in"
                         << timer.elapsed() << "ms )";
 }
 
@@ -1599,6 +1676,41 @@ double RealEngine::tempo() const
     return m_tempo.load(std::memory_order_relaxed);
 }
 
+void RealEngine::callUpExternalSounds(const core::Patch& patch)
+{
+    GC_ONLY_MAIN_THREAD();
+    // Once per patch chosen (or its hardware sounds changed): a rebuild of the
+    // same patch (a device change, a fader) must not send the synths their
+    // sound again mid-song.
+    if (m_calledUp && m_calledUp->first == patch.id && m_calledUp->second == patch.externalPrograms) return;
+    m_calledUp = std::pair{patch.id, patch.externalPrograms};
+    for (const core::ExternalProgram& sound : patch.externalPrograms) {
+        const auto channel = static_cast<unsigned char>(std::clamp(sound.midiChannel, 1, 16) - 1);
+        const auto send = [this, &sound](std::initializer_list<unsigned char> bytes) {
+            const std::vector<unsigned char> message(bytes);
+            if (auto sent = m_externalOut.send(sound.port, message); !sent) {
+                m_pendingNotices.push_back(Notice::warning(sent.error().message)); // logged by send
+                return false;
+            }
+            return true;
+        };
+        // Bank select (MSB, LSB) first, then the program: the synth needs them in that order.
+        if (sound.bank >= 0 && (!send({static_cast<unsigned char>(0xB0 | channel), 0, static_cast<unsigned char>((sound.bank >> 7) & 0x7F)})
+                                || !send({static_cast<unsigned char>(0xB0 | channel), 32, static_cast<unsigned char>(sound.bank & 0x7F)}))) {
+            continue;
+        }
+        if (send({static_cast<unsigned char>(0xC0 | channel), static_cast<unsigned char>(std::clamp(sound.program, 0, 127))})) {
+            qCInfo(lcEngine).noquote() << "Called up program" << sound.program + 1 << "on" << sound.port << "channel" << channel + 1;
+        }
+    }
+}
+
+void RealEngine::setClickOutput(int pair)
+{
+    m_clickPair.store(std::max(pair, 0), std::memory_order_relaxed);
+    qCInfo(lcEngine) << "The click plays on" << (pair <= 0 ? u"the mix (1-2)"_s : u"outputs %1-%2"_s.arg((2 * pair) + 1).arg((2 * pair) + 2));
+}
+
 void RealEngine::setClick(bool on, double volumeDb)
 {
     m_click.setVolumeDb(volumeDb);
@@ -1814,9 +1926,11 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     m_loops.beginBlock(m_samplePosition, out.frames, bars);
 
     const float masterGain = m_masterGain.load(std::memory_order_relaxed);
+    const std::span<float* const> sends = m_audio.extraOutputs(); // outputs 3 and up, silent so far
     RenderGraph* graph = m_exchange.acquire();
     if (graph != nullptr) {
-        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs, gate, &m_loops);
+        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs, gate, &m_loops,
+                      sends);
     } else {
         std::fill_n(out.left, out.frames, 0.0F);
         std::fill_n(out.right, out.frames, 0.0F);
@@ -1857,8 +1971,9 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     m_track.release();
 
     // The click, on top of everything (not through the master fader: it
-    // still counts in when the band is muted).
-    m_click.process(out, time);
+    // still counts in when the band is muted); on outputs of its own when
+    // sent there (the in-ears only, not the audience).
+    m_click.process(sendPair(sends, m_clickPair.load(std::memory_order_relaxed), out), time);
 
     m_samplePosition += static_cast<int64_t>(frames);
     if (rate > 0.0) m_ppq += static_cast<double>(frames) * bpm / 60.0 / rate;
@@ -1866,9 +1981,15 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     // The safety limiter: last before the output.
     if (rate != m_limiterRate) {
         m_limiter.setSampleRate(rate);
+        for (SafetyLimiter& send : m_sendLimiters) send.setSampleRate(rate);
         m_limiterRate = rate;
     }
     m_limiter.process(out);
+    m_recorder.push(out.left, out.right, out.frames); // what the audience hears, when recording
+    // The other outputs, each pair through its own limiter (ears are on them).
+    for (std::size_t pair = 0; ((2 * pair) + 2) <= sends.size() && pair < m_sendLimiters.size(); ++pair) {
+        m_sendLimiters.at(pair).process(sendPair(sends, static_cast<int>(pair) + 1, out));
+    }
 
     // The master meter: what leaves the app.
     float peak = 0.0F;

@@ -15,6 +15,7 @@ Rectangle {
     required property EngineStatus engineStatus
     property EffectWindows effectWindows: null
     property MasterBus masterBus: null
+    property MasterBus auxBus: null // the shared effects the Send knobs feed
     property LoopController loops: null
     // Channels may be removed from the computer keyboard (false on stage).
     property bool editable: true
@@ -150,6 +151,7 @@ Rectangle {
                 pluginModel: mixer.pluginModel
                 effectWindows: mixer.effectWindows
                 inputChannels: mixer.engineStatus.audioInputChannels
+                outputChannels: mixer.engineStatus.audioOutputChannels
             }
             footer: Item {
                 width: Theme.stripWidth + 8
@@ -221,6 +223,63 @@ Rectangle {
                         text: qsTr("No inputs open: choose an input device in Settings > Audio")
                         enabled: false
                     }
+                }
+            }
+        }
+
+        // Aux strip: the rig's shared effects (a reverb, a delay) that each
+        // channel's Send knob feeds; what comes back is mixed in before the
+        // master. Kept with the rig, as the master's.
+        Rectangle {
+            id: auxStrip
+            objectName: "auxStrip"
+            visible: mixer.auxBus !== null
+            Layout.alignment: Qt.AlignTop
+            Layout.preferredHeight: Math.min(strips.height, Theme.stripHeight)
+            Layout.preferredWidth: Theme.stripWidth
+            radius: Theme.radiusCard
+            border.color: Theme.stripBorder
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Theme.stripTop }
+                GradientStop { position: 1.0; color: Theme.stripBottom }
+            }
+            Rectangle { x: 3; y: 1; width: parent.width - 6; height: 1; color: Theme.bevelLight }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 4
+                spacing: 3
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 3; radius: 1.5; color: Theme.accentBlue }
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: qsTr("AUX")
+                    color: Theme.textDim
+                    font.pixelSize: Theme.tinyFontSize
+                    font.bold: true
+                    font.letterSpacing: 2
+                }
+                BusEffectList {
+                    objectName: "auxEffects"
+                    Layout.fillWidth: true
+                    bus: mixer.auxBus
+                    pluginModel: mixer.pluginModel
+                    addHint: qsTr("Add a shared effect (reverb, delay). Turn up a channel's Send knob to feed it.")
+                }
+                Item { Layout.fillHeight: true }
+                Text {
+                    Layout.fillWidth: true
+                    text: qsTr("Fed by the channels' Send knobs")
+                    color: Theme.textDim
+                    font.pixelSize: Theme.tinyFontSize
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: 4
+                    text: qsTr("Aux")
+                    color: Theme.text
+                    font.pixelSize: Theme.smallFontSize
                 }
             }
         }

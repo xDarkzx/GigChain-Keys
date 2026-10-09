@@ -58,6 +58,7 @@ private:
     EditorService m_editorService;
     EffectWindows m_effectWindows;
     MasterBus m_masterBus; // after the windows it opens
+    MasterBus m_auxBus;    // the effects the channels' sends feed
     SettingsController m_settingsController;
     StartupProgress m_loading; // the loading overlay (after start-up)
     PracticeController m_practice; // the Practice tab (after the document it reads)

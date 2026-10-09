@@ -48,6 +48,9 @@ inline constexpr int kMaxVelocity = 127;
 inline constexpr int kMaxMappingsPerChannel = 32;
 inline constexpr int kMaxController = 127;
 inline constexpr int kMaxAudioInput = 64; // 1-based input numbers; 0 = none
+inline constexpr int kMaxOutputPair = 7;  // a channel's outputs: 0 the mix, 1-7 = outputs 3-4 ... 15-16
+inline constexpr int kMaxExternalPrograms = 4; // hardware sounds a patch calls up
+inline constexpr int kMaxBank = 16383;         // bank select, MSB and LSB
 inline constexpr double kMinVolumeDb = -96.0;
 inline constexpr double kMaxVolumeDb = 12.0;
 inline constexpr double kMinPan = -1.0;

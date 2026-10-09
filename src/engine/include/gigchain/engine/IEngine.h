@@ -193,6 +193,24 @@ public:
     [[nodiscard]] virtual double tempo() const = 0;
     // The click on every beat (accented on the bar), at `volumeDb` (<= 0).
     virtual void setClick(bool on, double volumeDb) = 0;
+    // Where the click plays: 0 the mix; n the device's outputs 2n+1 and 2n+2
+    // (the in-ears only). A pair the device does not have: the mix.
+    virtual void setClickOutput(int pair) = 0;
+    // The aux bus (a shared reverb or delay the channels send to), as the
+    // master's effects: kept with the rig, not the setlist.
+    virtual void setAuxEffects(const std::vector<core::PluginSlot>& effects) = 0;
+    virtual std::vector<QString> storeAuxEffectStates(std::vector<core::PluginSlot>& effects) = 0;
+    virtual bool takeAuxEdits() = 0;
+    virtual core::Result<std::unique_ptr<IPluginEditor>> createAuxEffectEditor(int effect) = 0;
+    // A channel's send to it, live (dB; core::limits::kMinVolumeDb: none).
+    virtual void setChannelSend(const core::ChannelId& id, double sendDb) = 0;
+    // Recording the performance: what the audience hears (the mix) to a WAV
+    // file. A file that cannot be written is an error; stopping gives its seconds.
+    virtual core::Result<void> startRecording(const QString& path) = 0;
+    virtual core::Result<double> stopRecording() = 0;
+    [[nodiscard]] virtual bool recording() const = 0;
+    // The outputs the audio device has open (2: only the mix's, 1-2).
+    [[nodiscard]] virtual int outputChannels() const = 0;
     [[nodiscard]] virtual bool clickOn() const = 0;
 
     // Beats per bar and the beat's note value (6/8: 6, 8), for plugins, the

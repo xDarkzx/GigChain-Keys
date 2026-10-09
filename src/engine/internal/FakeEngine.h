@@ -86,6 +86,24 @@ public:
     }
     [[nodiscard]] double tempo() const override { return m_tempo; }
     void setClick(bool on, double) override { m_click = on; }
+    void setClickOutput(int) override {}
+    void setAuxEffects(const std::vector<core::PluginSlot>& effects) override { m_auxEffects = effects; }
+    std::vector<QString> storeAuxEffectStates(std::vector<core::PluginSlot>&) override { return {}; }
+    bool takeAuxEdits() override { return false; }
+    core::Result<std::unique_ptr<IPluginEditor>> createAuxEffectEditor(int) override
+    {
+        return std::unique_ptr<IPluginEditor>(); // demo plugins have no editors
+    }
+    void setChannelSend(const core::ChannelId&, double) override {}
+    // (The demo makes no sound: nothing to record.)
+    core::Result<void> startRecording(const QString&) override
+    {
+        return core::fail(core::ErrorCode::DeviceUnavailable, QStringLiteral("Nothing to record: running without sound"));
+    }
+    core::Result<double> stopRecording() override { return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Not recording")); }
+    [[nodiscard]] bool recording() const override { return false; }
+    // (As an 8-output interface, so the output choices can be seen and tested.)
+    [[nodiscard]] int outputChannels() const override { return 8; }
     [[nodiscard]] bool clickOn() const override { return m_click; }
     // The demo "reads" any track at once, as three minutes long.
     void setBackingTrack(const QString& path) override
@@ -258,6 +276,7 @@ private:
     double m_masterDb = 0.0;
     bool m_masterMuted = false;
     std::vector<core::PluginSlot> m_masterEffects;
+    std::vector<core::PluginSlot> m_auxEffects;
     AudioSetup m_setup{.driver = AudioDriver::System, .device = QStringLiteral("Demo output"), .sampleRate = 48000,
                        .bufferFrames = 256, .inputDevice = {}};
     MidiSetup m_midiSetup;

@@ -45,6 +45,8 @@ qt_add_qml_module(gigchain_ui
         ChannelStrip.qml
         Mixer.qml
         PanKnob.qml
+        SendKnob.qml
+        BusEffectList.qml
         VolumeFader.qml
         StageMenu.qml
         StageComboBox.qml
@@ -70,6 +72,7 @@ qt_add_qml_module(gigchain_ui
         PerformView.qml
         NotificationWindow.qml
         ChannelZoneDialog.qml
+        ExternalGearDialog.qml
         KnobDialog.qml
         KnobLearnMenu.qml
         WarmupBar.qml

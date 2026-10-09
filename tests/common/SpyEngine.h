@@ -118,6 +118,20 @@ public:
         masterEditorRequests.push_back(effect);
         return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Spy effects have no window"));
     }
+    std::vector<core::PluginSlot> auxEffects;
+    void setAuxEffects(const std::vector<core::PluginSlot>& effects) override { auxEffects = effects; }
+    std::vector<QString> storeAuxEffectStates(std::vector<core::PluginSlot>& effects) override
+    {
+        for (auto& slot : effects) slot.state = "spy aux settings: " + slot.pluginId.toUtf8();
+        return {};
+    }
+    bool takeAuxEdits() override { return false; }
+    core::Result<std::unique_ptr<engine::IPluginEditor>> createAuxEffectEditor(int) override
+    {
+        return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Spy effects have no window"));
+    }
+    std::map<QString, double> sends;
+    void setChannelSend(const core::ChannelId& id, double sendDb) override { sends[id.value()] = sendDb; }
     bool limiterOn = true;
     double limiterCeiling = -1.0;
     void setOutputLimiter(bool enabled, double ceilingDb) override
@@ -228,6 +242,22 @@ public:
         clickVolume = volumeDb;
     }
     [[nodiscard]] bool clickOn() const override { return click; }
+    int clickPair = 0;
+    void setClickOutput(int pair) override { clickPair = pair; }
+    QString recordingTo; // empty: not recording
+    core::Result<void> startRecording(const QString& path) override
+    {
+        recordingTo = path;
+        return {};
+    }
+    core::Result<double> stopRecording() override
+    {
+        recordingTo.clear();
+        return 12.5;
+    }
+    [[nodiscard]] bool recording() const override { return !recordingTo.isEmpty(); }
+    int outputs = 8; // an 8-output interface
+    [[nodiscard]] int outputChannels() const override { return outputs; }
     engine::BackingTrackState track;
     std::vector<QString> trackRequests;
     void setBackingTrack(const QString& path) override

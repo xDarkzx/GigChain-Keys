@@ -67,6 +67,8 @@ public:
         if (parameterCount < parameters.size()) parameters.at(parameterCount++) = {id, value};
     }
     [[nodiscard]] bool holdsNotes() const noexcept override { return m_held > 0; }
+    [[nodiscard]] double parameterValue(uint32_t) const override { return shown; }
+    double shown = -1.0; // every parameter's value as the plugin shows it (below 0: not known)
     std::vector<MidiEvent> received; // test-only; reserved before render
     std::array<std::pair<uint32_t, double>, 16> parameters{}; // the first 16 parameter changes
     std::size_t parameterCount = 0;
@@ -127,6 +129,38 @@ class TestRenderGraph : public QObject
     Q_OBJECT
 
 private slots:
+    // A channel set to ignore a pedal or controller does not get it (the pad
+    // that ignores the sustain pedal while the piano holds); the rest, and
+    // other channels, still do.
+    void aChannelIgnoresWhatItIsSetNotToTake()
+    {
+        using namespace midi_filter;
+        const RouteSettings pad{.ignores = kSustain | kPitchBend | kAftertouch};
+        const MidiEvent sustain = cc(0xB0, 64, 127);
+        const MidiEvent expression = cc(0xB1, 11, 90);
+        const MidiEvent modWheel = cc(0xB0, 1, 70);
+        const MidiEvent bend = cc(0xE0, 0, 80);
+        const MidiEvent pressure = cc(0xD0, 60, 0);
+        const MidiEvent keyPressure = cc(0xA0, 60, 50);
+        const MidiEvent volume = cc(0xB0, 7, 100);
+        QVERIFY(!routeEvent(sustain, pad).has_value());
+        QVERIFY(!routeEvent(bend, pad).has_value());
+        QVERIFY(!routeEvent(pressure, pad).has_value());
+        QVERIFY(!routeEvent(keyPressure, pad).has_value());
+        QVERIFY(routeEvent(expression, pad).has_value()); // not ignored
+        QVERIFY(routeEvent(modWheel, pad).has_value());
+        QVERIFY(routeEvent(volume, pad).has_value());       // other controllers always pass
+        QVERIFY(routeEvent(noteOn(60), pad).has_value()); // notes too
+
+        const RouteSettings lead{.ignores = kExpression | kModWheel};
+        QVERIFY(!routeEvent(expression, lead).has_value());
+        QVERIFY(!routeEvent(modWheel, lead).has_value());
+        QVERIFY(routeEvent(sustain, lead).has_value());
+
+        const RouteSettings piano; // takes everything
+        for (const MidiEvent& e : {sustain, expression, modWheel, bend, pressure, keyPressure}) QVERIFY(routeEvent(e, piano).has_value());
+    }
+
     void routerFiltersAndTransposes()
     {
         const RouteSettings split{48, 59, 12, 0};
@@ -231,6 +265,81 @@ private slots:
         const MidiEvent events[] = {noteOn(60)};
         graph.render(events, out.block(), 1.0F);
         QCOMPARE(out.left[0], 4.0F); // (1 + 1) * 2, not 1 * 2 + 1
+    }
+
+    // A channel's send goes (after its fader) through the aux effects and
+    // comes back into the mix beside the dry sound: none sent, none back; a
+    // muted channel sends nothing; with no aux effects a send changes nothing.
+    void aSendGoesThroughTheAuxEffectsIntoTheMix()
+    {
+        const auto build = [](double sendDb, bool withAux) {
+            StripSpec spec = strip(std::make_shared<HeldNoteNode>(0.5F));
+            spec.sendDb = sendDb;
+            std::vector<StripSpec> specs;
+            specs.push_back(std::move(spec));
+            std::vector<std::shared_ptr<INode>> aux;
+            if (withAux) aux.push_back(std::make_shared<MathEffect>(0.0F, 2.0F)); // the "reverb": x2
+            return std::make_unique<RenderGraph>(std::move(specs), 48000.0, kFrames, std::vector<std::shared_ptr<INode>>{},
+                                                 std::vector<std::shared_ptr<ChannelStrip>>{}, std::move(aux));
+        };
+        const std::array on{noteOn(60)};
+        Output out;
+
+        auto graph = build(0.0, true);
+        graph->render(on, out.block(), 1.0F);
+        QCOMPARE(out.left.front(), 1.5F); // 0.5 dry + 0.5 sent x2
+        QCOMPARE(out.right.back(), 1.5F);
+
+        graph->strip(0)->setSendDb(-96.0); // turned down: dry only
+        graph->render({}, out.block(), 1.0F);
+        QVERIFY(std::abs(out.left.front() - 0.5F) < 1e-4F);
+
+        graph->strip(0)->setSendDb(0.0);
+        graph->strip(0)->setMute(true); // after the fader: muted sends nothing
+        graph->render({}, out.block(), 1.0F);
+        QCOMPARE(out.left.front(), 0.0F);
+
+        auto dry = build(0.0, false);
+        dry->render(on, out.block(), 1.0F);
+        QCOMPARE(out.left.front(), 0.5F);
+    }
+
+    // A channel playing a hardware synth sends its keys (split and
+    // transposed) on the synth's MIDI channel. Muted, it starts no notes but
+    // still ends the one held, so nothing hangs on the synth.
+    void aHardwareSynthGetsTheKeysOnItsChannelAndNothingHangs()
+    {
+        const auto synth = std::make_shared<HardwareOut>(u"Synth"_s, 3);
+        StripSpec spec = strip(nullptr, RouteSettings{.keyLow = 48, .keyHigh = 72, .transpose = 12});
+        spec.hardware = synth;
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+        const auto sent = [&synth] {
+            std::vector<MidiEvent> all;
+            MidiEvent e;
+            while (synth->pop(e)) all.push_back(e);
+            return all;
+        };
+
+        const std::array keys{noteOn(60), noteOn(30), cc(0xB0, 1, 64)}; // 30: outside its split
+        graph.render(keys, out.block(), 1.0F);
+        const std::vector<MidiEvent> first = sent();
+        QCOMPARE(first.size(), std::size_t{2});
+        QCOMPARE(int(first.front().status), 0x92); // on channel 3
+        QCOMPARE(int(first.front().data1), 72);    // transposed an octave
+        QCOMPARE(int(first.back().status), 0xB2);
+        QVERIFY(synth->holdsNotes());
+
+        graph.strip(0)->setMute(true);
+        const std::array more{noteOn(62), MidiEvent{.status = 0x80, .data1 = 60, .data2 = 0, .sampleOffset = 0}};
+        graph.render(more, out.block(), 1.0F);
+        const std::vector<MidiEvent> second = sent();
+        QCOMPARE(second.size(), std::size_t{1}); // the held note's end, not the new note
+        QCOMPARE(int(second.front().status), 0x82);
+        QCOMPARE(int(second.front().data1), 72);
+        QVERIFY(!synth->holdsNotes());
     }
 
     void splitsReceiveOnlyTheirNotes()
@@ -346,6 +455,87 @@ private slots:
         // Only the unmapped mod wheel reached the instrument as MIDI.
         QCOMPARE(synth->received.size(), std::size_t{2});
         QCOMPARE(int(synth->received.at(1).data1), 1);
+    }
+
+    // Pickup: a knob far from where the parameter is (0.8) moves nothing
+    // until it reaches or passes it, then follows; without pickup it jumps
+    // at once. A curve shapes the knob's travel (gentle start: half way is a quarter).
+    void aKnobPicksItsParameterUpAndFollowsItsCurve()
+    {
+        auto synth = std::make_shared<HeldNoteNode>(0.1F);
+        synth->shown = 0.8;
+        StripSpec spec = strip(synth);
+        spec.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 74, .target = -1, .parameter = 1,
+                                                 .minimum = 0.0, .maximum = 1.0, .curve = 0, .pickup = true});
+        spec.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 11, .target = -1, .parameter = 2,
+                                                 .minimum = 0.0, .maximum = 1.0, .curve = 1, .pickup = false});
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+
+        const std::array below{cc(0xB0, 74, 10), cc(0xB0, 74, 60)}; // turned up, still below 0.8
+        graph.render(below, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{0}); // nothing jumped
+        const std::array past{cc(0xB0, 74, 115), cc(0xB0, 74, 127)}; // past 0.8: taken over, then follows
+        graph.render(past, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{2});
+        QVERIFY(std::abs(synth->parameters.at(0).second - (115 / 127.0)) < 1e-9);
+        QVERIFY(std::abs(synth->parameters.at(1).second - 1.0) < 1e-9);
+
+        // No pickup, a gentle start: the pedal half way down moves it at once, to a quarter.
+        const std::array pedal{cc(0xB0, 11, 64)};
+        graph.render(pedal, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{3});
+        QCOMPARE(synth->parameters.at(2).first, uint32_t{2});
+        QVERIFY(std::abs(synth->parameters.at(2).second - ((64 / 127.0) * (64 / 127.0))) < 1e-9);
+
+        // A new sound (a new graph) picks up again from where the parameter is.
+        synth->shown = 0.2;
+        std::vector<StripSpec> again;
+        StripSpec next = strip(synth);
+        next.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 74, .target = -1, .parameter = 1,
+                                                 .minimum = 0.0, .maximum = 1.0, .curve = 0, .pickup = true});
+        again.push_back(std::move(next));
+        RenderGraph second(std::move(again), 48000.0, kFrames);
+        const std::array high{cc(0xB0, 74, 127)};
+        second.render(high, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{3}); // far above 0.2: not yet
+        const std::array near{cc(0xB0, 74, 26)}; // 0.205: there
+        second.render(near, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{4});
+    }
+
+    // A channel sent to outputs 3-4 plays there (not in the mix the audience
+    // hears) while the others play in the mix; sent to a pair the interface
+    // does not have, it plays in the mix rather than nowhere.
+    void aChannelSentToItsOwnOutputsPlaysThereNotInTheMix()
+    {
+        auto piano = std::make_shared<HeldNoteNode>(0.25F);
+        auto guide = std::make_shared<HeldNoteNode>(0.5F);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(piano));
+        StripSpec sent = strip(guide);
+        sent.outputPair = 1;
+        specs.push_back(std::move(sent));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+
+        std::vector<float> out3(kFrames, 0.0F);
+        std::vector<float> out4(kFrames, 0.0F);
+        const std::array<float*, 2> sends{out3.data(), out4.data()};
+        Output mix;
+        const std::array notes{noteOn(60)};
+        graph.render(notes, mix.block(), 1.0F, {}, {}, {}, nullptr, sends);
+        // The piano alone, as a strip plays it (fader and pan as set): the level to compare with.
+        const float one = mix.left.at(10);
+        QVERIFY(one > 0.0F);
+        QVERIFY(std::abs(out3.at(10) - (2.0F * one)) < 1e-5F); // the guide (twice as loud) on 3-4 only
+        QVERIFY(std::abs(out4.at(10) - (2.0F * one)) < 1e-5F);
+
+        // An interface with only 1-2: everything in the mix.
+        Output only;
+        graph.render(notes, only.block(), 1.0F);
+        QVERIFY(std::abs(only.left.at(10) - (3.0F * one)) < 1e-5F);
     }
 
     void anInputChannelPlaysTheAudioInput()

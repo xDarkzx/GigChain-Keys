@@ -72,6 +72,41 @@ private slots:
     // An instrument shared between songs (loaded once): a duplicated song
     // shares its original's; another song can add "the same as in another
     // song"; a song can take its own copy, and undo shares it again.
+    // External gear: the sound's hardware programs reach the engine (which
+    // sends them); an entry with no output or a program past 128 is refused, said.
+    void aSoundCallsUpItsHardwareSynths()
+    {
+        QVERIFY(m_doc->setExternalPrograms({QVariantMap{{u"port"_s, u"Nord"_s}, {u"midiChannel"_s, 2}, {u"program"_s, 41}, {u"bank"_s, -1}}}));
+        QCOMPARE(m_engine->lastPatch.externalPrograms.size(), std::size_t{1});
+        QCOMPARE(m_engine->lastPatch.externalPrograms.front().program, 41);
+        QCOMPARE(m_doc->externalPrograms().front().toMap().value(u"port"_s).toString(), u"Nord"_s);
+        QVERIFY(m_doc->isDirty());
+        QVERIFY(!m_doc->setExternalPrograms({QVariantMap{{u"port"_s, u""_s}, {u"program"_s, 1}}}));
+        QVERIFY(m_doc->lastError().contains(u"MIDI output"_s));
+        QVERIFY(!m_doc->setExternalPrograms({QVariantMap{{u"port"_s, u"Nord"_s}, {u"program"_s, 200}}}));
+        QCOMPARE(m_doc->externalPrograms().size(), 1); // unchanged
+    }
+
+    // A channel set not to take the sustain pedal: the engine gets it at
+    // once, undo gives it back, a name it does not know is refused.
+    void aChannelIsSetNotToTakeThePedal()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Pad.vst3"_s, u"Pad"_s));
+        QVERIFY(m_doc->setChannelTakes(0, u"sustain"_s, false));
+        QVERIFY(!m_engine->lastPatch.channels.at(0).takesSustain);
+        QVERIFY(m_engine->lastPatch.channels.at(0).takesExpression);
+        QVERIFY(m_doc->isDirty());
+        QVERIFY(m_doc->setChannelTakes(0, u"pitchBend"_s, false));
+        QVERIFY(!m_doc->currentPatch()->channels.at(0).takesPitchBend);
+        QVERIFY(m_doc->undo());
+        QVERIFY(m_doc->currentPatch()->channels.at(0).takesPitchBend);
+        QVERIFY(!m_doc->currentPatch()->channels.at(0).takesSustain);
+
+        QVERIFY(!m_doc->setChannelTakes(0, u"volume"_s, false));
+        QVERIFY(m_doc->lastError().contains(u"volume"_s));
+        QVERIFY(!m_doc->setChannelTakes(4, u"sustain"_s, false)); // no such channel
+    }
+
     void anInstrumentIsSharedBetweenSongs()
     {
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));
@@ -974,6 +1009,18 @@ private slots:
         QCOMPARE(m_doc->mappings(0).size(), 1);
         QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"parameterName"_s).toString(), u"Drive"_s);
         QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"targetName"_s).toString(), u"Spy Piano"_s);
+        // A curve and pickup, per knob: straight and picking up until changed.
+        QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"curve"_s).toInt(), 0);
+        QVERIFY(m_doc->mappings(0).at(0).toMap().value(u"pickup"_s).toBool());
+        QVERIFY(m_doc->setMappingCurve(0, 0, 1));
+        QVERIFY(m_doc->setMappingPickup(0, 0, false));
+        QCOMPARE(m_engine->lastPatch.channels.at(0).mappings.at(0).curve, 1);
+        QVERIFY(!m_engine->lastPatch.channels.at(0).mappings.at(0).pickup);
+        QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"curve"_s).toInt(), 1);
+        QVERIFY(!m_doc->setMappingCurve(0, 0, 3)); // no such curve: refused, said
+        QVERIFY(!m_doc->setMappingPickup(0, 5, true)); // no such knob
+        QVERIFY(m_doc->undo());
+        QVERIFY(m_doc->mappings(0).at(0).toMap().value(u"pickup"_s).toBool());
         QVERIFY(m_doc->setMappingRange(0, 0, 0.25, 0.75));
         QCOMPARE(m_engine->lastPatch.channels.at(0).mappings.at(0).maximum, 0.75);
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"must be between 0 and 1"_s));
@@ -1368,15 +1415,29 @@ private slots:
         status.poll();
         QCOMPARE(m_doc->mixerKnobName(pan2), u"CC 10 (channel 2)"_s);
 
-        // The knobs move what they were learned for.
-        m_engine->appKnobValues.at(volume1) = 127;
+        // The knobs move what they were learned for, once they pick it up:
+        // a knob turned up from the bottom leaves the fader (at 0 dB) alone
+        // until it gets there, then takes it over: no jump on stage.
+        m_engine->appKnobValues.at(volume1) = 20;
         m_engine->appKnobValues.at(pan2) = 0;
         status.poll();
+        QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, 0.0);
+        QCOMPARE(m_doc->currentPatch()->channels.at(1).pan, 0.0);
+        m_engine->appKnobValues.at(volume1) = 127; // past the fader: taken over
+        m_engine->appKnobValues.at(pan2) = 64;      // at the pan: taken over
+        status.poll();
         QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, 12.0);
+        m_engine->appKnobValues.at(pan2) = 0;
+        status.poll();
         QCOMPARE(m_doc->currentPatch()->channels.at(1).pan, -1.0);
         m_engine->appKnobValues.at(volume1) = 0;
         status.poll();
         QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, -60.0);
+        // The fader moved with the mouse: the knob (still at the bottom) picks it up again, no jump.
+        QVERIFY(m_doc->setChannelVolume(0, 0.0));
+        m_engine->appKnobValues.at(volume1) = 5;
+        status.poll();
+        QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, 0.0);
 
         // One knob, one job: CC 7 learned for the master leaves the strip.
         status.learnMixerKnob(0);
@@ -1384,6 +1445,8 @@ private slots:
         status.poll();
         QCOMPARE(m_doc->mixerKnobName(0), u"CC 7 (channel 1)"_s);
         QVERIFY(m_doc->mixerKnobName(volume1).isEmpty());
+        m_engine->appKnobValues.at(0) = 106; // where the master is (0 dB): taken over
+        status.poll();
         m_engine->appKnobValues.at(0) = 0;
         status.poll();
         QCOMPARE(status.masterVolumeDb(), -60.0);

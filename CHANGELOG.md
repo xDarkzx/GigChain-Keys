@@ -16,6 +16,36 @@ Downloads for every version are on the
   it (a big sampled piano used all night no longer fills the memory once per
   song), and a change to it changes all of them, as MainStage's aliases do.
   **Own copy for this song**, above its window, gives one song its own.
+- **What a channel takes from the keyboard:** in its **Keyboard Zone**, a
+  channel can ignore the sustain pedal, the expression pedal, the mod wheel,
+  pitch bend or aftertouch. Layer a piano and strings, and only the piano
+  holds with the pedal.
+- **Knobs that don't jump:** a learned knob (in a plugin, or a fader or pan)
+  takes over only once it reaches the setting (pickup), so the sound never
+  jumps when you first touch it after a song change. Each learned knob can
+  also have a curve: straight, gentle start (for expression pedals) or quick
+  start.
+- **More outputs:** with an interface that has more than two outputs, send
+  the click to a pair of its own (your in-ears, never the audience), and any
+  channel to its own outputs (a guide or a pad to the sound desk). Each pair
+  has the safety limiter.
+- **Chord trigger and arpeggiator:** per channel (Keyboard Zone > MIDI
+  effects), one key can play a chord (major, minor, power, sus, seventh,
+  octaves), and held keys can play as an arpeggio (up, down, up and down, as
+  played; 1/4 to 1/16 at the song's tempo, up to 3 octaves).
+- **Hardware synths:** a song can call up a sound on up to four hardware
+  synths (Program Change and bank select on their MIDI outputs) when it comes
+  up: right-click the song, **External Gear…**.
+- **Record the gig:** **● Rec** in the toolbar records what the audience
+  hears to a WAV file in your Music folder.
+- **One shared reverb (aux send):** the mixer's **Aux** strip holds effects
+  every channel can share (one reverb, one delay, loaded once). Each
+  channel's **Send** knob, above its pan, sets how much of it goes there;
+  each song keeps its own send levels.
+- **Play a hardware synth from a channel:** right-click a strip, **Play
+  Hardware Synth**: its keys go out to the synth on a MIDI output, through
+  the channel's split, transpose and MIDI effects. Add the synth's audio
+  input to the same channel to hear it through the mixer.
 
 ### Fixed
 

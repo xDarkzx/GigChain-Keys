@@ -3,6 +3,8 @@
 #include <QUrl>
 
 #include "gigchain/core/Chart.h"
+#include "gigchain/core/KnobPickup.h"
+#include "gigchain/core/MidiEffects.h"
 #include "gigchain/core/Limits.h"
 
 #include <cmath>
@@ -127,6 +129,16 @@ Result<void> validateChannel(const Channel& channel, const QString& path)
     }
     if (auto r = checkRange(channel.inputLeft, 0, limits::kMaxAudioInput, path + ".inputLeft"_L1); !r) return r;
     if (auto r = checkRange(channel.inputRight, 0, limits::kMaxAudioInput, path + ".inputRight"_L1); !r) return r;
+    if (auto r = checkRange(channel.outputPair, 0, limits::kMaxOutputPair, path + ".outputPair"_L1); !r) return r;
+    if (auto r = checkRange(channel.chord, 0, kChordTriggerCount - 1, path + ".chord"_L1); !r) return r;
+    if (auto r = checkRange(channel.arpeggio, 0, kArpPatternCount - 1, path + ".arpeggio"_L1); !r) return r;
+    if (auto r = checkRange(channel.arpRate, 0, kArpRateCount - 1, path + ".arpRate"_L1); !r) return r;
+    if (auto r = checkRange(channel.arpOctaves, 1, kMaxArpOctaves, path + ".arpOctaves"_L1); !r) return r;
+    if (!std::isfinite(channel.auxSendDb) || channel.auxSendDb < limits::kMinVolumeDb || channel.auxSendDb > limits::kMaxVolumeDb) {
+        return fail(ErrorCode::OutOfRange, u"%1.auxSendDb must be between %2 and %3 dB"_s.arg(path).arg(limits::kMinVolumeDb).arg(limits::kMaxVolumeDb));
+    }
+    if (auto r = validateLength(channel.midiOutPort, limits::kMaxNameLength, path + ".midiOutPort"_L1); !r) return r;
+    if (auto r = checkRange(channel.midiOutChannel, 1, 16, path + ".midiOutChannel"_L1); !r) return r;
     if (channel.inputLeft == 0 && channel.inputRight != 0) {
         return fail(ErrorCode::InvalidData, u"%1.inputRight needs inputLeft"_s.arg(path));
     }
@@ -147,6 +159,7 @@ Result<void> validateChannel(const Channel& channel, const QString& path)
             return fail(ErrorCode::OutOfRange, u"%1 range must be between 0 and 1"_s.arg(at));
         }
         if (auto r = validateLength(m.parameterName, limits::kMaxNameLength, at + ".parameterName"_L1); !r) return r;
+        if (auto r = checkRange(m.curve, 0, kKnobCurveCount - 1, at + ".curve"_L1); !r) return r;
     }
     return {};
 }
@@ -328,6 +341,17 @@ Result<void> validate(const Setlist& setlist)
                 const QString channelPath = u"%1.channels[%2]"_s.arg(patchPath).arg(c);
                 if (auto r = validateChannel(patch.channels.at(c), channelPath); !r) return r;
                 if (auto r = unique(patch.channels.at(c).id.value(), channelPath + ".id"_L1); !r) return r;
+            }
+            if (patch.externalPrograms.size() > static_cast<std::size_t>(limits::kMaxExternalPrograms)) {
+                return fail(ErrorCode::LimitExceeded, u"%1 calls up more than %2 hardware sounds"_s.arg(patchPath).arg(limits::kMaxExternalPrograms));
+            }
+            for (std::size_t e = 0; e < patch.externalPrograms.size(); ++e) {
+                const ExternalProgram& sent = patch.externalPrograms.at(e);
+                const QString at = u"%1.externalPrograms[%2]"_s.arg(patchPath).arg(e);
+                if (auto r = validateLength(sent.port, limits::kMaxNameLength, at + ".port"_L1); !r) return r;
+                if (auto r = checkRange(sent.midiChannel, 1, 16, at + ".midiChannel"_L1); !r) return r;
+                if (auto r = checkRange(sent.program, 0, 127, at + ".program"_L1); !r) return r;
+                if (auto r = checkRange(sent.bank, -1, limits::kMaxBank, at + ".bank"_L1); !r) return r;
             }
         }
     }

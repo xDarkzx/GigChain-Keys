@@ -108,6 +108,13 @@ public:
     [[nodiscard]] int playMode() const;
     // An undo step; the engine plays it at once.
     Q_INVOKABLE bool setPlayMode(int mode);
+    // External gear: the hardware sounds the current sound calls up when it
+    // comes up, [{port, midiChannel (1-16), program (0-127), bank (-1 none)}];
+    // set, they are sent at once (to hear the choice).
+    Q_INVOKABLE QVariantList externalPrograms() const;
+    Q_INVOKABLE bool setExternalPrograms(const QVariantList& programs);
+    // The MIDI outputs there are now (for external gear).
+    Q_INVOKABLE QStringList midiOutputs() const;
     // Why channel `index` of the current sound would not sound if played now
     // ("" = it plays): muted, another soloed, not in the section in force,
     // another selected (one at a time), no instrument loaded.
@@ -226,8 +233,22 @@ public:
     Q_INVOKABLE bool setChannelKeyRange(int channel, int low, int high);
     Q_INVOKABLE bool setChannelTranspose(int channel, int semitones);
     Q_INVOKABLE bool setChannelMidiChannel(int channel, int midiChannel);
+    // Whether the channel takes "sustain", "expression", "modWheel",
+    // "pitchBend" or "aftertouch" from the keyboard (a pad that ignores the
+    // sustain pedal while the piano holds).
+    Q_INVOKABLE bool setChannelTakes(int channel, const QString& what, bool takes);
+    // Where the channel plays: 0 the mix; n the interface's outputs 2n+1-2n+2.
+    Q_INVOKABLE bool setChannelOutput(int channel, int pair);
+    // A hardware synth the channel plays: its keys go out on the MIDI output
+    // `port` (empty: none) on `midiChannel` (1-16).
+    Q_INVOKABLE bool setChannelMidiOut(int channel, const QString& port, int midiChannel);
+    // The channel's MIDI effects: "chord" (core::ChordTrigger), "arpeggio"
+    // (core::ArpPattern, 0 off), "arpRate" (core::ArpRate), "arpOctaves" (1-3).
+    Q_INVOKABLE bool setChannelMidiEffect(int channel, const QString& what, int value);
     Q_INVOKABLE bool setChannelVolume(int channel, double volumeDb);
     Q_INVOKABLE bool setChannelPan(int channel, double pan);
+    // How much of the channel goes to the aux effects (kMinVolumeDb = none).
+    Q_INVOKABLE bool setChannelSend(int channel, double sendDb);
     Q_INVOKABLE bool setChannelMute(int channel, bool mute);
     Q_INVOKABLE bool setChannelSolo(int channel, bool solo);
     // The note-on velocities (1-127) the channel plays: a velocity layer.
@@ -243,6 +264,10 @@ public:
                                 const QString& parameterName);
     Q_INVOKABLE bool removeMapping(int channel, int mapping);
     Q_INVOKABLE bool setMappingRange(int channel, int mapping, double minimum, double maximum);
+    // How the knob's travel is shaped: 0 straight, 1 gentle start, 2 quick start (core::KnobCurve).
+    Q_INVOKABLE bool setMappingCurve(int channel, int mapping, int curve);
+    // Pickup: the knob takes the parameter over only once it reaches it (no jump on stage).
+    Q_INVOKABLE bool setMappingPickup(int channel, int mapping, bool pickup);
     // For the knob editor: [{midiChannel, controller, target, targetName, parameter, parameterName, minimum, maximum}].
     Q_INVOKABLE QVariantList mappings(int channel) const;
     // Opens a channel's editor ("zone": keys, velocity, transpose, MIDI
@@ -374,6 +399,8 @@ signals:
 
 private:
     bool report(const core::Error& error);
+    // One knob mapping of the channel changed (or a missing one reported).
+    bool updateMapping(int channel, int mapping, const std::function<void(core::ControlMapping&)>& change);
     // A chart edit's result into the current song (or its reason reported).
     bool applyChartEdit(const core::Result<QString>& edited, const QString& coalesceKey);
     void setCursor(core::Cursor to, bool force = false);

@@ -25,7 +25,7 @@ StageDialog {
     }
 
     title: qsTr("Knobs: %1").arg(dialog.channel.name)
-    width: 620
+    width: 860
     height: Math.min(600, (parent ? parent.height : 600) - 32)
 
     onAboutToShow: {
@@ -86,6 +86,23 @@ StageDialog {
                     second.value: Math.max(mappingRow.modelData.minimum, mappingRow.modelData.maximum)
                     first.onMoved: dialog.doc.setMappingRange(dialog.channel.index, mappingRow.index, first.value, second.value)
                     second.onMoved: dialog.doc.setMappingRange(dialog.channel.index, mappingRow.index, first.value, second.value)
+                }
+                // How the knob's travel feels (an expression pedal wants a gentle start).
+                StageComboBox {
+                    objectName: "mappingCurve"
+                    implicitWidth: 120
+                    model: [qsTr("Straight"), qsTr("Gentle start"), qsTr("Quick start")]
+                    currentIndex: mappingRow.modelData.curve
+                    onActivated: (i) => dialog.doc.setMappingCurve(dialog.channel.index, mappingRow.index, i)
+                }
+                // Pickup: the knob takes over only once it reaches the setting, so nothing jumps.
+                CheckBox {
+                    id: pickupBox
+                    objectName: "mappingPickup"
+                    text: qsTr("Pickup")
+                    checked: mappingRow.modelData.pickup
+                    focusPolicy: Qt.NoFocus
+                    onToggled: dialog.doc.setMappingPickup(dialog.channel.index, mappingRow.index, pickupBox.checked)
                 }
                 StageButton {
                     iconSource: "icons/x.svg"

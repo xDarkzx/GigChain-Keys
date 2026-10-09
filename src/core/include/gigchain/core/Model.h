@@ -42,6 +42,10 @@ struct ControlMapping
     QString parameterName; // as the plugin names it, for showing
     double minimum = 0.0;  // the parameter (0-1) at the controller's lowest...
     double maximum = 1.0;  // ... and highest position (below minimum: reversed)
+    int curve = 0;         // how its travel is shaped (core::KnobCurve: straight, gentle or quick start)
+    // It takes the parameter over only once it reaches it (no jump on stage,
+    // KnobPickup.h); false: the parameter follows it at once.
+    bool pickup = true;
 
     friend bool operator==(const ControlMapping&, const ControlMapping&) = default;
 };
@@ -65,12 +69,39 @@ struct Channel
     int midiChannel = 0; // 0 = omni, 1..16 = that channel only
     int velocityLow = 1; // the note-on velocities it plays (a velocity layer)
     int velocityHigh = 127;
+    // The pedals and controllers it takes from the keyboard (MainStage's MIDI
+    // input filter): a pad that ignores the sustain pedal while the piano
+    // holds, say.
+    bool takesSustain = true;    // CC 64
+    bool takesExpression = true; // CC 11
+    bool takesModWheel = true;   // CC 1
+    bool takesPitchBend = true;
+    bool takesAftertouch = true; // channel and key pressure
     std::vector<ControlMapping> mappings;
     // An audio input played through the channel's effects instead of an
     // instrument (a vocal mic, a guitar): 1-based input numbers of the audio
     // interface, 0 = none. Mono when only `inputLeft` is set.
     int inputLeft = 0;
     int inputRight = 0;
+    // Where it plays: 0 the mix (outputs 1-2, through the master); n the
+    // interface's outputs 2n+1 and 2n+2 directly (3-4, 5-6...): a pad to
+    // the desk, a guide to the in-ears.
+    int outputPair = 0;
+    // Its MIDI effects (MidiEffects.h): one key plays a chord; held keys
+    // play as an arpeggio on the song's tempo.
+    int chord = 0;      // ChordTrigger
+    int arpeggio = 0;   // ArpPattern (0 off)
+    int arpRate = 1;    // ArpRate (an eighth)
+    int arpOctaves = 1; // 1-3
+    // How much of it goes to the aux bus (a shared reverb or delay), after
+    // its fader: limits::kMinVolumeDb (-96) = none.
+    double auxSendDb = -96.0;
+    // A hardware synth it plays (MainStage's External Instrument): its keys,
+    // after the split, transpose and MIDI effects, go out on the MIDI output
+    // named `midiOutPort` on `midiOutChannel` (1-16). Empty: none. Hear the
+    // synth by giving the channel its audio input too.
+    QString midiOutPort;
+    int midiOutChannel = 1;
 
     friend bool operator==(const Channel&, const Channel&) = default;
 };
@@ -83,12 +114,25 @@ enum class PlayMode : int {
     Selected, // only the selected channel (one instrument at a time, chosen live)
 };
 
+// A hardware synth's sound chosen with the patch: a Program Change (and bank
+// select) sent to a MIDI output when the patch comes up.
+struct ExternalProgram
+{
+    QString port;        // the MIDI output's name
+    int midiChannel = 1; // 1-16
+    int program = 0;     // 0-127 (shown as 1-128)
+    int bank = -1;       // 0-16383 (bank select MSB and LSB), -1 = none
+
+    friend bool operator==(const ExternalProgram&, const ExternalProgram&) = default;
+};
+
 struct Patch
 {
     PatchId id;
     QString name;
     std::vector<Channel> channels;
     PlayMode playMode = PlayMode::All;
+    std::vector<ExternalProgram> externalPrograms; // hardware sounds it calls up (at most limits::kMaxExternalPrograms)
 
     friend bool operator==(const Patch&, const Patch&) = default;
 };

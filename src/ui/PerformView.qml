@@ -30,6 +30,7 @@ Rectangle {
     property SettingsController settings: null
     property EffectWindows effectWindows: null
     property MasterBus masterBus: null
+    property MasterBus auxBus: null
     property LoopController loops: null
 
     // "Add lyrics & chords": to the chart editor.
@@ -386,6 +387,7 @@ Rectangle {
             engineStatus: perform.engineStatus
             effectWindows: perform.effectWindows
             masterBus: perform.masterBus
+            auxBus: perform.auxBus
             loops: perform.loops
         }
     }

@@ -16,6 +16,7 @@ ApplicationWindow {
     required property EditorService editorService
     required property EffectWindows effectWindows
     required property MasterBus masterBus
+    property MasterBus auxBus: null // the shared effects the channels' Send knobs feed
     required property SettingsController settings
     required property PracticeController practice
     required property WarmupController warmup
@@ -378,6 +379,7 @@ ApplicationWindow {
                         engineStatus: root.engineStatus
                         effectWindows: root.effectWindows
                         masterBus: root.masterBus
+                        auxBus: root.auxBus
                         loops: root.loops
                     }
                 }
@@ -399,6 +401,7 @@ ApplicationWindow {
                 sidePanelOpen: root.sidePanelOpen
                 effectWindows: root.effectWindows
                 masterBus: root.masterBus
+                auxBus: root.auxBus
                 loops: root.loops
             }
 

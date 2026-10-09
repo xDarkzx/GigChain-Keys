@@ -442,6 +442,15 @@ bool Vst3Node::holdsNotes() const noexcept
     return m_impl->heldNotes.any();
 }
 
+double Vst3Node::parameterValue(uint32_t id) const
+{
+    GC_ONLY_MAIN_THREAD();
+    const Impl& impl = *m_impl;
+    if (!impl.controller) return -1.0;
+    // (An unknown id reads as the plugin answers it; knobs map known ones.)
+    return std::clamp(impl.controller->getParamNormalized(static_cast<Vst::ParamID>(id)), 0.0, 1.0);
+}
+
 void Vst3Node::showParameterChanges()
 {
     GC_ONLY_MAIN_THREAD();

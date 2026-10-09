@@ -6,6 +6,8 @@
 #include "gigchain/core/ChartEdit.h"
 #include "gigchain/core/Checks.h"
 #include "gigchain/core/Chords.h"
+#include "gigchain/core/KnobPickup.h"
+#include "gigchain/core/MidiEffects.h"
 #include "gigchain/core/PluginSharing.h"
 #include "gigchain/core/Practice.h"
 #include "gigchain/core/SongMap.h"
@@ -998,6 +1000,79 @@ bool DocumentController::setChannelMidiChannel(int channel, int midiChannel)
     return true;
 }
 
+bool DocumentController::setChannelTakes(int channel, const QString& what, bool takes)
+{
+    bool core::Channel::* field = what == "sustain"_L1      ? &core::Channel::takesSustain
+                                  : what == "expression"_L1 ? &core::Channel::takesExpression
+                                  : what == "modWheel"_L1   ? &core::Channel::takesModWheel
+                                  : what == "pitchBend"_L1  ? &core::Channel::takesPitchBend
+                                  : what == "aftertouch"_L1 ? &core::Channel::takesAftertouch
+                                                            : nullptr;
+    if (field == nullptr) {
+        return report(core::Error{core::ErrorCode::InvalidData, tr("A channel cannot be set to ignore \"%1\"").arg(what)});
+    }
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [field, takes](core::Channel& c) { c.*field = takes; }); !r) {
+        return report(r.error());
+    }
+    commitChannelField(channel, true);
+    return true;
+}
+
+bool DocumentController::setChannelMidiEffect(int channel, const QString& what, int value)
+{
+    struct Field
+    {
+        int core::Channel::* member;
+        int low;
+        int high;
+    };
+    const auto make = [](int core::Channel::* member, int low, int high) {
+        return std::optional(Field{.member = member, .low = low, .high = high});
+    };
+    const std::optional<Field> field = what == "chord"_L1        ? make(&core::Channel::chord, 0, core::kChordTriggerCount - 1)
+                                       : what == "arpeggio"_L1   ? make(&core::Channel::arpeggio, 0, core::kArpPatternCount - 1)
+                                       : what == "arpRate"_L1    ? make(&core::Channel::arpRate, 0, core::kArpRateCount - 1)
+                                       : what == "arpOctaves"_L1 ? make(&core::Channel::arpOctaves, 1, core::kMaxArpOctaves)
+                                                                 : std::nullopt;
+    if (!field) return report(core::Error{core::ErrorCode::InvalidData, tr("A channel has no MIDI effect \"%1\"").arg(what)});
+    if (value < field->low || value > field->high) {
+        return report(core::Error{core::ErrorCode::OutOfRange,
+                                  tr("%1 must be between %2 and %3").arg(what).arg(field->low).arg(field->high)});
+    }
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [&field, value](core::Channel& c) { c.*(field->member) = value; });
+        !r) {
+        return report(r.error());
+    }
+    commitChannelField(channel, true);
+    return true;
+}
+
+bool DocumentController::setChannelOutput(int channel, int pair)
+{
+    if (pair < 0 || pair > core::limits::kMaxOutputPair) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("There are no outputs %1-%2").arg((2 * pair) + 1).arg((2 * pair) + 2)});
+    }
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [pair](core::Channel& c) { c.outputPair = pair; }); !r) {
+        return report(r.error());
+    }
+    commitChannelField(channel, true);
+    return true;
+}
+
+bool DocumentController::setChannelMidiOut(int channel, const QString& port, int midiChannel)
+{
+    if (midiChannel < 1 || midiChannel > 16) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("There is no MIDI channel %1 (1 to 16)").arg(midiChannel)});
+    }
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [&port, midiChannel](core::Channel& c) {
+        c.midiOutPort = port;
+        c.midiOutChannel = midiChannel;
+    });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true);
+    return true;
+}
+
 bool DocumentController::setChannelVolume(int channel, double volumeDb)
 {
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [volumeDb](core::Channel& c) { c.volumeDb = volumeDb; });
@@ -1017,6 +1092,17 @@ bool DocumentController::setChannelPan(int channel, double pan)
     }
     m_engine.setChannelPan(currentPatch()->channels.at(static_cast<std::size_t>(channel)).id, pan);
     m_coalesceKey = u"pan:%1"_s.arg(channel);
+    commitChannelField(channel, false);
+    return true;
+}
+
+bool DocumentController::setChannelSend(int channel, double sendDb)
+{
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [sendDb](core::Channel& c) { c.auxSendDb = sendDb; }); !r) {
+        return report(r.error());
+    }
+    m_engine.setChannelSend(currentPatch()->channels.at(static_cast<std::size_t>(channel)).id, sendDb);
+    m_coalesceKey = u"send:%1"_s.arg(channel);
     commitChannelField(channel, false);
     return true;
 }
@@ -1132,6 +1218,33 @@ bool DocumentController::setMappingRange(int channel, int mapping, double minimu
     return true;
 }
 
+bool DocumentController::setMappingCurve(int channel, int mapping, int curve)
+{
+    if (curve < 0 || curve >= core::kKnobCurveCount) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("There is no knob curve %1").arg(curve)});
+    }
+    return updateMapping(channel, mapping, [curve](core::ControlMapping& m) { m.curve = curve; });
+}
+
+bool DocumentController::setMappingPickup(int channel, int mapping, bool pickup)
+{
+    return updateMapping(channel, mapping, [pickup](core::ControlMapping& m) { m.pickup = pickup; });
+}
+
+bool DocumentController::updateMapping(int channel, int mapping, const std::function<void(core::ControlMapping&)>& change)
+{
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size()) || mapping < 0 ||
+        std::cmp_greater_equal(mapping, patch->channels.at(static_cast<std::size_t>(channel)).mappings.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That knob mapping does not exist")});
+    }
+    auto r = core::updateChannel(m_setlist, m_cursor, channel,
+                                 [mapping, &change](core::Channel& c) { change(c.mappings.at(static_cast<std::size_t>(mapping))); });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true);
+    return true;
+}
+
 QVariantList DocumentController::mappings(int channel) const
 {
     QVariantList list;
@@ -1145,7 +1258,8 @@ QVariantList DocumentController::mappings(int channel) const
         list << QVariantMap{{u"midiChannel"_s, m.midiChannel}, {u"controller"_s, m.controller},
                             {u"target"_s, m.target},           {u"targetName"_s, targetName},
                             {u"parameter"_s, m.parameter},     {u"parameterName"_s, m.parameterName},
-                            {u"minimum"_s, m.minimum},         {u"maximum"_s, m.maximum}};
+                            {u"minimum"_s, m.minimum},         {u"maximum"_s, m.maximum},
+                            {u"curve"_s, m.curve},             {u"pickup"_s, m.pickup}};
     }
     return list;
 }
@@ -1670,6 +1784,39 @@ int DocumentController::playMode() const
 {
     const core::Patch* patch = currentPatch();
     return patch != nullptr ? static_cast<int>(patch->playMode) : static_cast<int>(core::PlayMode::All);
+}
+
+QVariantList DocumentController::externalPrograms() const
+{
+    QVariantList list;
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr) return list;
+    for (const core::ExternalProgram& p : patch->externalPrograms) {
+        list << QVariantMap{{u"port"_s, p.port}, {u"midiChannel"_s, p.midiChannel}, {u"program"_s, p.program}, {u"bank"_s, p.bank}};
+    }
+    return list;
+}
+
+bool DocumentController::setExternalPrograms(const QVariantList& programs)
+{
+    std::vector<core::ExternalProgram> list;
+    for (const QVariant& item : programs) {
+        const QVariantMap m = item.toMap();
+        list.push_back(core::ExternalProgram{.port = m.value(u"port"_s).toString(),
+                                             .midiChannel = m.value(u"midiChannel"_s, 1).toInt(),
+                                             .program = m.value(u"program"_s, 0).toInt(),
+                                             .bank = m.value(u"bank"_s, -1).toInt()});
+    }
+    if (auto r = core::setExternalPrograms(m_setlist, m_cursor, list); !r) return report(r.error());
+    setDirty(true);
+    applyCurrentPatchToEngine(); // sent now: the player hears the synth's new sound
+    emit currentChanged();
+    return true;
+}
+
+QStringList DocumentController::midiOutputs() const
+{
+    return m_engine.midiOutputs();
 }
 
 bool DocumentController::setPlayMode(int mode)

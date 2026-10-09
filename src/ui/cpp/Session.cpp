@@ -15,7 +15,8 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_loops(engine, m_document, settings),
       m_editorService(engine, m_document),
       m_effectWindows(engine, m_document),
-      m_masterBus(engine, m_document, settings, m_effectWindows),
+      m_masterBus(engine, m_document, settings, m_effectWindows, EffectWindows::Bus::Master),
+      m_auxBus(engine, m_document, settings, m_effectWindows, EffectWindows::Bus::Aux),
       m_settingsController(engine, m_document, settings),
       m_practice(engine, m_document),
       m_warmup(engine, m_practice, settings)
@@ -25,8 +26,10 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_loops, &LoopController::poll);
     // The rig's master effects load with the app (behind the splash).
     m_masterBus.load();
+    m_auxBus.load();
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_masterBus, [this, &engine] {
         if (engine.takeMasterEdits()) m_masterBus.noteEdited();
+        if (engine.takeAuxEdits()) m_auxBus.noteEdited();
     });
     // An audio input from the last session: may the app hear it (the Mac asks)?
     m_settingsController.checkInputPermission();
@@ -45,6 +48,7 @@ QVariantMap Session::initialProperties()
         {u"editorService"_s, QVariant::fromValue(&m_editorService)},
         {u"effectWindows"_s, QVariant::fromValue(&m_effectWindows)},
         {u"masterBus"_s, QVariant::fromValue(&m_masterBus)},
+        {u"auxBus"_s, QVariant::fromValue(&m_auxBus)},
         {u"settings"_s, QVariant::fromValue(&m_settingsController)},
         {u"loading"_s, QVariant::fromValue(&m_loading)},
         {u"practice"_s, QVariant::fromValue(&m_practice)},

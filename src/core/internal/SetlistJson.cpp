@@ -3,6 +3,8 @@
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/Chart.h"
 
+#include "gigchain/core/KnobPickup.h"
+#include "gigchain/core/MidiEffects.h"
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/Validation.h"
 
@@ -14,6 +16,7 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <utility>
 
 using namespace Qt::StringLiterals;
 
@@ -241,6 +244,31 @@ Channel readChannel(JsonReader& r, const QJsonObject& obj, const QString& path)
                                              limits::kMaxVelocity);
     channel.inputLeft = r.optionalInteger(obj, "inputLeft"_L1, path, 0, limits::kMaxAudioInput, 0);
     channel.inputRight = r.optionalInteger(obj, "inputRight"_L1, path, 0, limits::kMaxAudioInput, 0);
+    channel.outputPair = r.optionalInteger(obj, "outputPair"_L1, path, 0, limits::kMaxOutputPair, 0);
+    channel.chord = r.optionalInteger(obj, "chord"_L1, path, 0, kChordTriggerCount - 1, 0);
+    channel.arpeggio = r.optionalInteger(obj, "arpeggio"_L1, path, 0, kArpPatternCount - 1, 0);
+    channel.arpRate = r.optionalInteger(obj, "arpRate"_L1, path, 0, kArpRateCount - 1, 1);
+    channel.arpOctaves = r.optionalInteger(obj, "arpOctaves"_L1, path, 1, kMaxArpOctaves, 1);
+    if (obj.contains("auxSendDb"_L1)) channel.auxSendDb = r.number(obj, "auxSendDb"_L1, path, limits::kMinVolumeDb, limits::kMaxVolumeDb);
+    channel.midiOutPort = r.optionalString(obj, "midiOutPort"_L1, path, limits::kMaxNameLength);
+    channel.midiOutChannel = r.optionalInteger(obj, "midiOutChannel"_L1, path, 1, 16, 1);
+    // What it does not take from the keyboard (none: all of it).
+    constexpr qsizetype kFilters = 5;
+    const QJsonArray ignores = r.optionalArray(obj, "ignores"_L1, path, kFilters);
+    for (qsizetype i = 0; i < ignores.size() && !r.failed(); ++i) {
+        const QString name = ignores.at(i).toString();
+        bool* takes = name == "sustain"_L1      ? &channel.takesSustain
+                      : name == "expression"_L1 ? &channel.takesExpression
+                      : name == "modWheel"_L1   ? &channel.takesModWheel
+                      : name == "pitchBend"_L1  ? &channel.takesPitchBend
+                      : name == "aftertouch"_L1 ? &channel.takesAftertouch
+                                                : nullptr;
+        if (takes == nullptr) {
+            r.invalid(u"%1.ignores[%2] must be one of sustain, expression, modWheel, pitchBend, aftertouch"_s.arg(path).arg(i));
+            break;
+        }
+        *takes = false;
+    }
     const QJsonArray mappings = r.optionalArray(obj, "mappings"_L1, path, limits::kMaxMappingsPerChannel);
     for (qsizetype i = 0; i < mappings.size() && !r.failed(); ++i) {
         const QString at = u"%1.mappings[%2]"_s.arg(path).arg(i);
@@ -252,7 +280,10 @@ Channel readChannel(JsonReader& r, const QJsonObject& obj, const QString& path)
             .parameter = static_cast<quint32>(r.number(m, "parameter"_L1, at, 0.0, 4294967295.0)),
             .parameterName = r.string(m, "parameterName"_L1, at, limits::kMaxNameLength),
             .minimum = r.number(m, "minimum"_L1, at, 0.0, 1.0),
-            .maximum = r.number(m, "maximum"_L1, at, 0.0, 1.0)});
+            .maximum = r.number(m, "maximum"_L1, at, 0.0, 1.0),
+            // Added after 0.3.0: straight, and picking up, when absent.
+            .curve = r.optionalInteger(m, "curve"_L1, at, 0, kKnobCurveCount - 1, 0),
+            .pickup = !m.contains("pickup"_L1) || r.boolean(m, "pickup"_L1, at)});
     }
     return channel;
 }
@@ -266,6 +297,17 @@ Patch readPatch(JsonReader& r, const QJsonObject& obj, const QString& path)
     for (qsizetype i = 0; i < channels.size() && !r.failed(); ++i) {
         const QString channelPath = u"%1.channels[%2]"_s.arg(path).arg(i);
         patch.channels.push_back(readChannel(r, r.object(channels.at(i), channelPath), channelPath));
+    }
+    // Hardware sounds it calls up (absent: none).
+    const QJsonArray external = r.optionalArray(obj, "externalPrograms"_L1, path, limits::kMaxExternalPrograms);
+    for (qsizetype i = 0; i < external.size() && !r.failed(); ++i) {
+        const QString at = u"%1.externalPrograms[%2]"_s.arg(path).arg(i);
+        const QJsonObject e = r.object(external.at(i), at);
+        patch.externalPrograms.push_back(ExternalProgram{
+            .port = r.string(e, "port"_L1, at, limits::kMaxNameLength),
+            .midiChannel = r.integer(e, "midiChannel"_L1, at, 1, 16),
+            .program = r.integer(e, "program"_L1, at, 0, 127),
+            .bank = r.optionalInteger(e, "bank"_L1, at, -1, limits::kMaxBank, -1)});
     }
     // "all" (every channel together) or "selected"; absent in older files: all.
     if (!r.failed() && obj.contains("playMode"_L1)) {
@@ -409,15 +451,18 @@ QJsonObject writeChannel(const Channel& channel)
     }
     QJsonArray mappings;
     for (const ControlMapping& m : channel.mappings) {
-        mappings.append(QJsonObject{{u"midiChannel"_s, m.midiChannel},
-                                    {u"controller"_s, m.controller},
-                                    {u"target"_s, m.target},
-                                    {u"parameter"_s, static_cast<double>(m.parameter)},
-                                    {u"parameterName"_s, m.parameterName},
-                                    {u"minimum"_s, m.minimum},
-                                    {u"maximum"_s, m.maximum}});
+        QJsonObject mapping{{u"midiChannel"_s, m.midiChannel},
+                            {u"controller"_s, m.controller},
+                            {u"target"_s, m.target},
+                            {u"parameter"_s, static_cast<double>(m.parameter)},
+                            {u"parameterName"_s, m.parameterName},
+                            {u"minimum"_s, m.minimum},
+                            {u"maximum"_s, m.maximum}};
+        if (m.curve != 0) mapping.insert(u"curve"_s, m.curve);
+        if (!m.pickup) mapping.insert(u"pickup"_s, false);
+        mappings.append(mapping);
     }
-    return QJsonObject{
+    QJsonObject obj{
         {u"id"_s, channel.id.value()},
         {u"name"_s, channel.name},
         {u"instrument"_s, channel.instrument ? QJsonValue(writeSlot(*channel.instrument)) : QJsonValue(QJsonValue::Null)},
@@ -436,6 +481,23 @@ QJsonObject writeChannel(const Channel& channel)
         {u"inputRight"_s, channel.inputRight},
         {u"mappings"_s, mappings},
     };
+    QJsonArray ignores;
+    for (const auto& [takes, name] : {std::pair{channel.takesSustain, u"sustain"_s}, std::pair{channel.takesExpression, u"expression"_s},
+                                      std::pair{channel.takesModWheel, u"modWheel"_s}, std::pair{channel.takesPitchBend, u"pitchBend"_s},
+                                      std::pair{channel.takesAftertouch, u"aftertouch"_s}}) {
+        if (!takes) ignores.append(name);
+    }
+    if (!ignores.isEmpty()) obj.insert(u"ignores"_s, ignores);
+    if (channel.outputPair != 0) obj.insert(u"outputPair"_s, channel.outputPair);
+    if (channel.chord != 0) obj.insert(u"chord"_s, channel.chord);
+    // (Its rate and octaves are kept while it is off: turned on again, it plays as it was set.)
+    if (channel.arpeggio != 0) obj.insert(u"arpeggio"_s, channel.arpeggio);
+    if (channel.arpRate != 1) obj.insert(u"arpRate"_s, channel.arpRate);
+    if (channel.arpOctaves != 1) obj.insert(u"arpOctaves"_s, channel.arpOctaves);
+    if (channel.auxSendDb > limits::kMinVolumeDb) obj.insert(u"auxSendDb"_s, channel.auxSendDb);
+    if (!channel.midiOutPort.isEmpty()) obj.insert(u"midiOutPort"_s, channel.midiOutPort);
+    if (channel.midiOutChannel != 1) obj.insert(u"midiOutChannel"_s, channel.midiOutChannel);
+    return obj;
 }
 
 QJsonObject writePatch(const Patch& patch)
@@ -444,10 +506,20 @@ QJsonObject writePatch(const Patch& patch)
     for (const Channel& channel : patch.channels) {
         channels.append(writeChannel(channel));
     }
-    return QJsonObject{{u"id"_s, patch.id.value()},
-                       {u"name"_s, patch.name},
-                       {u"channels"_s, channels},
-                       {u"playMode"_s, patch.playMode == PlayMode::Selected ? u"selected"_s : u"all"_s}};
+    QJsonObject obj{{u"id"_s, patch.id.value()},
+                    {u"name"_s, patch.name},
+                    {u"channels"_s, channels},
+                    {u"playMode"_s, patch.playMode == PlayMode::Selected ? u"selected"_s : u"all"_s}};
+    if (!patch.externalPrograms.empty()) {
+        QJsonArray external;
+        for (const ExternalProgram& e : patch.externalPrograms) {
+            QJsonObject item{{u"port"_s, e.port}, {u"midiChannel"_s, e.midiChannel}, {u"program"_s, e.program}};
+            if (e.bank >= 0) item.insert(u"bank"_s, e.bank);
+            external.append(item);
+        }
+        obj.insert(u"externalPrograms"_s, external);
+    }
+    return obj;
 }
 
 QJsonObject writeSong(const Song& song)
