@@ -431,6 +431,38 @@ private slots:
         QCOMPARE(synth->parameterCount, std::size_t{4});
     }
 
+    // A channel sent to outputs 3-4 plays there (not in the mix the audience
+    // hears) while the others play in the mix; sent to a pair the interface
+    // does not have, it plays in the mix rather than nowhere.
+    void aChannelSentToItsOwnOutputsPlaysThereNotInTheMix()
+    {
+        auto piano = std::make_shared<HeldNoteNode>(0.25F);
+        auto guide = std::make_shared<HeldNoteNode>(0.5F);
+        std::vector<StripSpec> specs;
+        specs.push_back(strip(piano));
+        StripSpec sent = strip(guide);
+        sent.outputPair = 1;
+        specs.push_back(std::move(sent));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+
+        std::vector<float> out3(kFrames, 0.0F);
+        std::vector<float> out4(kFrames, 0.0F);
+        const std::array<float*, 2> sends{out3.data(), out4.data()};
+        Output mix;
+        const std::array notes{noteOn(60)};
+        graph.render(notes, mix.block(), 1.0F, {}, {}, {}, nullptr, sends);
+        // The piano alone, as a strip plays it (fader and pan as set): the level to compare with.
+        const float one = mix.left.at(10);
+        QVERIFY(one > 0.0F);
+        QVERIFY(std::abs(out3.at(10) - (2.0F * one)) < 1e-5F); // the guide (twice as loud) on 3-4 only
+        QVERIFY(std::abs(out4.at(10) - (2.0F * one)) < 1e-5F);
+
+        // An interface with only 1-2: everything in the mix.
+        Output only;
+        graph.render(notes, only.block(), 1.0F);
+        QVERIFY(std::abs(only.left.at(10) - (3.0F * one)) < 1e-5F);
+    }
+
     void anInputChannelPlaysTheAudioInput()
     {
         StripSpec spec;

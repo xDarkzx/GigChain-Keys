@@ -30,6 +30,22 @@ limiter catches the peak so the PA (and the audience's ears) are safe. The
 **LIM** light on the master strip lights when it is working; if it is often
 lit, turn something down.
 
+### More outputs: the click in your ears, a channel to the desk
+
+With an audio interface that has more than two outputs, everything you hear
+still comes out of outputs **1-2** (the mix). Two things can go elsewhere:
+
+- **The click:** **Settings > Audio > Outputs > Click to**, choose a pair
+  (say **Outputs 3-4**) and plug your in-ear monitors there. The click counts
+  you in and keeps time in your ears; the audience never hears it.
+- **A channel:** right-click it in the mixer, **Output**, and pick a pair: a
+  guide track or a pad to its own channel on the sound desk. A channel sent
+  there plays with its own fader, not through the master. The strip shows
+  where it goes (**Out 3-4**).
+
+Every pair has the safety limiter too. A pair the interface does not have
+(another interface plugged in) plays in the mix until that one is back.
+
 ### A microphone or a guitar
 
 Under **Audio inputs**, choose the device your mic or guitar is plugged into.

@@ -40,11 +40,11 @@ Audited again against MainStage 3 on 2026-10-09; still to build, in this order:
 | What players need | Status | Where it stands |
 |---|---|---|
 | Per-layer MIDI filters (the pad ignores the sustain pedal, only one layer takes expression) | **Done** | Keyboard Zone > Takes: sustain, expression, mod wheel, pitch bend, aftertouch. |
-| Knob pickup (soft takeover) and response curves | **Missing** | A knob jumps the value when first moved; ranges are straight lines. |
+| Knob pickup (soft takeover) and response curves | **Done** | Knobs > Pickup and Curve per learned knob; the mixer's learned fader and pan knobs pick up too. MIDI feedback to motor faders is still to do. |
 | Bundled sounds | **Partly** | See below. |
-| Outputs: a channel, the click or a stem to its own output (in-ears) | **Missing** | One stereo master out; headphone cue is planned (2). |
+| Outputs: a channel, the click or a stem to its own output (in-ears) | **Done** | The click (Settings > Audio) and any channel (mixer > Output) to outputs 3-4 up to 15-16, each pair limited. Stems wait for multi-track backing tracks. |
 | Multi-track backing tracks with markers | **Missing** | One stereo track per song. |
-| MIDI effects: arpeggiator, chord trigger | **Missing** | Transpose and velocity layers only. |
+| MIDI effects: arpeggiator, chord trigger | **Done** | Keyboard Zone > MIDI effects: a chord per key, an arpeggiator on the song's tempo. Scripted MIDI (MainStage's Scripter) is not planned. |
 | External gear: Program Change and MIDI out per patch | **Missing** | MIDI out carries the clock only. |
 | Aux sends (one shared reverb) | **Missing** | Master effects only. |
 | Recording the performance | **Missing** | The loop station records loops only. |

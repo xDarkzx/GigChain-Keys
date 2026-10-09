@@ -36,6 +36,21 @@ Right-click a channel strip and choose **Keyboard Zone…**.
 
 The strip then shows where it plays, for example *C2–B3 +12*.
 
+## Chords and arpeggios from one key
+
+In a channel's **Keyboard Zone**, under **MIDI effects**:
+
+- **One key plays:** a major, minor, power (fifth and octave), sus2, sus4 or
+  seventh chord, or octaves, built on the key you press. Big stabs and
+  pads from one finger.
+- **Arpeggiator:** hold keys and they play one after another, **Up**,
+  **Down**, **Up and down** or **As played**, every **1/4**, **1/8**,
+  **1/8 triplet** or **1/16** at the song's tempo, over **1 to 3 octaves**.
+  The first note plays as you press; the rest land on the beat. Let go and it
+  stops.
+
+Both together arpeggiate the chord. They are kept per sound, like the zone.
+
 ## Velocity layers
 
 Two channels on the **same keys** with different **How hard (velocity
@@ -58,6 +73,15 @@ keyboard. Done. Or choose **Knobs…** to pick the setting from a list:
 **Mapped knobs** lists what each knob moves; **✕** removes one. Knobs are kept
 per song, so the same knob can be a filter in one song and a leslie speed in
 the next.
+
+Each knob there also has:
+
+- **A curve:** **Straight**, **Gentle start** (fine control at the bottom,
+  the way an expression pedal should feel) or **Quick start**.
+- **Pickup** (on unless you turn it off): when you change song, the knob on
+  your keyboard is rarely where the setting is. With pickup, turning it
+  changes nothing until it reaches the setting, then it takes over, so the
+  sound never jumps. The mixer's learned fader and pan knobs pick up too.
 
 A channel's **fader** and **pan**, and the **master**, learn a knob from
 their own right-click menu (see [Sound and your keyboard](audio-and-midi.md)).

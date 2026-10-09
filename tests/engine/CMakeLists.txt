@@ -2,6 +2,8 @@ gigchain_add_test(tst_fake_engine SOURCES tst_fake_engine.cpp LIBS gigchain::eng
 # White-box tests of engine internals.
 gigchain_add_test(tst_render_graph SOURCES tst_render_graph.cpp LIBS gigchain::engine)
 target_include_directories(tst_render_graph PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_test(tst_midi_effects SOURCES tst_midi_effects.cpp LIBS gigchain::engine)
+target_include_directories(tst_midi_effects PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_loop_station SOURCES tst_loop_station.cpp LIBS gigchain::engine)
 target_include_directories(tst_loop_station PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_song_transport SOURCES tst_song_transport.cpp LIBS gigchain::engine)

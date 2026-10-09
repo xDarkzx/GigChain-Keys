@@ -228,6 +228,10 @@ public:
         clickVolume = volumeDb;
     }
     [[nodiscard]] bool clickOn() const override { return click; }
+    int clickPair = 0;
+    void setClickOutput(int pair) override { clickPair = pair; }
+    int outputs = 8; // an 8-output interface
+    [[nodiscard]] int outputChannels() const override { return outputs; }
     engine::BackingTrackState track;
     std::vector<QString> trackRequests;
     void setBackingTrack(const QString& path) override

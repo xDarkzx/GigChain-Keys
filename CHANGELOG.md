@@ -20,6 +20,19 @@ Downloads for every version are on the
   channel can ignore the sustain pedal, the expression pedal, the mod wheel,
   pitch bend or aftertouch. Layer a piano and strings, and only the piano
   holds with the pedal.
+- **Knobs that don't jump:** a learned knob (in a plugin, or a fader or pan)
+  takes over only once it reaches the setting (pickup), so the sound never
+  jumps when you first touch it after a song change. Each learned knob can
+  also have a curve: straight, gentle start (for expression pedals) or quick
+  start.
+- **More outputs:** with an interface that has more than two outputs, send
+  the click to a pair of its own (your in-ears, never the audience), and any
+  channel to its own outputs (a guide or a pad to the sound desk). Each pair
+  has the safety limiter.
+- **Chord trigger and arpeggiator:** per channel (Keyboard Zone > MIDI
+  effects), one key can play a chord (major, minor, power, sus, seventh,
+  octaves), and held keys can play as an arpeggio (up, down, up and down, as
+  played; 1/4 to 1/16 at the song's tempo, up to 3 octaves).
 
 ### Fixed
 
