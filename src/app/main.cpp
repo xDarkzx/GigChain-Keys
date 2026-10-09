@@ -154,6 +154,8 @@ int runApp(int argc, char** argv)
     if (auto real = engine::createRealEngine(engineOptions)) {
         engine = std::move(*real);
     } else {
+        // No audio at all: open anyway with the silent demo engine, so the
+        // setlist and charts can still be read and edited (said on screen below).
         engineProblem = real.error().message;
         qCWarning(lcApp).noquote() << "Real engine unavailable, running the demo engine:" << engineProblem;
         engine = engine::createFakeEngine();

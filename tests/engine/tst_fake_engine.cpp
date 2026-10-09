@@ -32,6 +32,34 @@ class TestFakeEngine : public QObject
     Q_OBJECT
 
 private slots:
+    // A knob turned (as if from the keyboard) is the one MIDI Learn takes,
+    // and once learned for the mixer it moves that control; out-of-range
+    // values are ignored.
+    void aTurnedKnobIsLearnedAndMovesItsControl()
+    {
+        const auto engine = engine::createFakeEngine();
+        QVERIFY(!engine->takeMovedController());
+        engine->injectController(1, 21, 90);
+        const auto moved = engine->takeMovedController();
+        QVERIFY(moved.has_value());
+        QCOMPARE(*moved, (std::pair{1, 21}));
+        QVERIFY(!engine->takeMovedController()); // taken once
+
+        engine::AppKnobs knobs{};
+        knobs.at(1) = engine::MidiTrigger{.kind = engine::MidiTrigger::ControlChange, .channel = 0, .number = 21}; // strip 1's volume
+        engine->setAppKnobs(knobs);
+        engine->injectController(1, 21, 64);
+        engine->injectController(2, 21, 100); // another channel: not this knob
+        engine::AppKnobValues values = engine->takeAppKnobValues();
+        QCOMPARE(values.at(1), 64);
+        QCOMPARE(values.at(0), -1);
+        QCOMPARE(engine->takeAppKnobValues().at(1), -1); // taken once
+
+        engine->injectController(17, 21, 10);
+        engine->injectController(1, 21, 128);
+        QCOMPARE(engine->takeAppKnobValues().at(1), -1);
+    }
+
     void offersInstrumentsAndEffectsWithUniqueIds()
     {
         const auto engine = engine::createFakeEngine();

@@ -3,11 +3,15 @@
 #include "gigchain/engine/FakeEngineFactory.h"
 #include "gigchain/engine/IEngine.h"
 
+#include <optional>
 #include <utility>
 #include <vector>
 
 namespace gigchain::engine {
 
+// The demo engine, for tests and as a no-sound safety net: see
+// FakeEngineFactory.h for why it exists. It plays nothing; the app's sound
+// comes from RealEngine. "Fake" here is the testing word for a stand-in.
 class FakeEngine final : public IEngine
 {
 public:
@@ -53,7 +57,8 @@ public:
     bool takeLimiterActivity() override { return false; }
     [[nodiscard]] bool masterMuted() const override { return m_masterMuted; }
     void injectNote(int midiChannel, int note, int velocity) override;
-    void injectController(int, int, int) override {} // (the demo has no instruments to hear it)
+    // (The demo has no instruments to hear it; a knob learned for the mixer moves it.)
+    void injectController(int midiChannel, int controller, int value) override;
     std::vector<KeyPress> takeKeyPresses() override { return std::exchange(m_presses, {}); } // (played on screen)
     std::vector<Notice> poll() override;
     [[nodiscard]] QString statusText() const override;
@@ -97,7 +102,7 @@ public:
         return {{.id = 1, .name = QStringLiteral("Cutoff")}, {.id = 2, .name = QStringLiteral("Resonance")}};
     }
     std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId&, int) override { return std::nullopt; }
-    std::optional<std::pair<int, int>> takeMovedController() override { return std::nullopt; } // no MIDI input
+    std::optional<std::pair<int, int>> takeMovedController() override { return std::exchange(m_moved, std::nullopt); }
     [[nodiscard]] std::vector<AudioInputDevice> audioInputDevices() const override
     {
         return {{.driver = AudioDriver::System, .name = QStringLiteral("Demo input"), .channels = 2}};
@@ -213,15 +218,22 @@ public:
     std::vector<LoopAction> takeLoopActions() override { return {}; }
     SelectorMove takeSelectorMove() override { return {}; }
     std::optional<std::array<int, 3>> takeControllerMove() override { return std::nullopt; }
-    void setAppKnobs(const AppKnobs&) override {}
+    void setAppKnobs(const AppKnobs& knobs) override { m_appKnobs = knobs; }
     AppKnobValues takeAppKnobValues() override
     {
         AppKnobValues none{};
         none.fill(-1);
-        return none;
+        return std::exchange(m_appKnobValues, none);
     }
 
 private:
+    std::optional<std::pair<int, int>> m_moved; // the last controller injected (channel 1-16, number), not yet taken
+    AppKnobs m_appKnobs{};
+    AppKnobValues m_appKnobValues = [] {
+        AppKnobValues none{};
+        none.fill(-1);
+        return none;
+    }();
     std::vector<ChannelLoop> m_loops;
     SongSections m_sections;
     SongPosition m_position;

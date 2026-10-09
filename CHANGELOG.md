@@ -8,6 +8,12 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Fixed
+
+- **The toolbar on a narrower screen:** the setlist's name no longer runs
+  over the Panic and Undo buttons when the window is less than about 1,700
+  pixels wide.
+
 ## [0.3.0] - 2026-10-08 (alpha)
 
 ### Linux

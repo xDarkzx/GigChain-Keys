@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit's automatic review of pull requests (free for public repositories).
+# The project's rules are in CONTRIBUTING.md; these point the review at them.
+language: en-GB
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!docs/images/**"
+    - "!branding/**"
+    - "!**/*.png"
+    - "!**/*.svg"
+  path_instructions:
+    - path: "src/**"
+      instructions: |
+        C++20 with Qt 6. Check especially:
+        - Errors are never swallowed: every failure is returned with its
+          precise cause (core::Result<T>) and logged.
+        - Only src/engine/internal includes the VST3 SDK, RtAudio or RtMidi;
+          the UI talks to IEngine alone.
+        - The audio thread never allocates, locks or logs.
+        - The product's name comes from gigchain::branding, never typed in.
+    - path: "src/ui/**/*.qml"
+      instructions: |
+        QML for a live-performance app used on stage and on touch screens:
+        controls must be big enough for a finger, and nothing should be easy
+        to knock by accident during a song.
+    - path: "tests/**"
+      instructions: |
+        Qt Test suites. A test should fail without the change it covers and
+        check real behaviour, not a mock's.
+    - path: "docs/help/**"
+      instructions: |
+        The user guide, built into the app: plain words for musicians, no
+        jargon, British spelling.
+chat:
+  auto_reply: true

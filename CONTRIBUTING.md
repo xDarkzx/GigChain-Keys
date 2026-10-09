@@ -35,7 +35,22 @@ Tests that need real hardware or installed plugins (an audio device, a MIDI
 keyboard, Arturia Piano V2, …) skip themselves when those are missing. CI runs
 without them, so run the full suite on your own machine before opening a PR.
 
-All tests must pass before a PR is merged.
+The UI tests run against the **demo engine** (`createFakeEngine`): a silent
+stand-in for the real engine, with a fixed list of demo instruments, meters
+that move, and notes and knobs that a test can play as if from a keyboard.
+It needs no sound card, MIDI keyboard or plugins, so the tests run the same
+way everywhere, CI included. The app itself always plays through the real
+engine; it falls back to the demo engine only when no audio device can be
+opened at all, and then says on screen that it is running without sound.
+
+Two tests make pictures instead of checking, and skip unless asked:
+`GIGCHAIN_README_SHOTS=<folder>` retakes the README's screenshots, and
+`GIGCHAIN_DEMO_VIDEO=<folder>` records the demo video's scenes (the
+`demoVideo` test in `tests/ui/tst_qml_smoke.cpp` lists the files it needs).
+
+All tests must pass before a PR is merged. Each pull request also gets an
+automatic review from [CodeRabbit](https://coderabbit.ai) (its settings are
+in `.coderabbit.yaml`); a maintainer still decides.
 
 ## Code rules
 

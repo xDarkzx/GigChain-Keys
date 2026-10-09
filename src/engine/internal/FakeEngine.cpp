@@ -1,4 +1,8 @@
+// The demo engine: a silent stand-in for RealEngine, used by the tests and
+// when no audio device can be opened. See FakeEngineFactory.h for why.
 #include "FakeEngine.h"
+
+#include "EngineLog.h"
 
 #include "gigchain/core/Branding.h"
 
@@ -153,6 +157,20 @@ void FakeEngine::injectNote(int, int note, int velocity)
         const auto now = std::chrono::steady_clock::now().time_since_epoch();
         m_presses.push_back(KeyPress{.note = note, .velocity = velocity,
                                      .timeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count()});
+    }
+}
+
+void FakeEngine::injectController(int midiChannel, int controller, int value)
+{
+    if (midiChannel < 1 || midiChannel > 16 || controller < 0 || controller > 127 || value < 0 || value > 127) {
+        qCWarning(lcEngine) << "Ignored a controller out of range: channel" << midiChannel << "controller" << controller << "value" << value;
+        return;
+    }
+    m_moved = std::pair{midiChannel, controller};
+    const MidiTrigger knob{.kind = MidiTrigger::ControlChange, .channel = static_cast<uint8_t>(midiChannel - 1),
+                           .number = static_cast<uint8_t>(controller)};
+    for (std::size_t i = 0; i < m_appKnobs.size(); ++i) {
+        if (m_appKnobs.at(i) == knob) m_appKnobValues.at(i) = value;
     }
 }
 

@@ -242,6 +242,7 @@ ToolBar {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
+            clip: true // (a narrow window: styled text is not always elided, and must not spill over the buttons)
             textFormat: Text.StyledText
             color: Theme.text
             font.pixelSize: Theme.fontSize
