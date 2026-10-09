@@ -193,6 +193,11 @@ public:
     [[nodiscard]] virtual double tempo() const = 0;
     // The click on every beat (accented on the bar), at `volumeDb` (<= 0).
     virtual void setClick(bool on, double volumeDb) = 0;
+    // Where the click plays: 0 the mix; n the device's outputs 2n+1 and 2n+2
+    // (the in-ears only). A pair the device does not have: the mix.
+    virtual void setClickOutput(int pair) = 0;
+    // The outputs the audio device has open (2: only the mix's, 1-2).
+    [[nodiscard]] virtual int outputChannels() const = 0;
     [[nodiscard]] virtual bool clickOn() const = 0;
 
     // Beats per bar and the beat's note value (6/8: 6, 8), for plugins, the

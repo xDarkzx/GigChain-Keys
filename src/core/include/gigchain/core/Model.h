@@ -83,6 +83,16 @@ struct Channel
     // interface, 0 = none. Mono when only `inputLeft` is set.
     int inputLeft = 0;
     int inputRight = 0;
+    // Where it plays: 0 the mix (outputs 1-2, through the master); n the
+    // interface's outputs 2n+1 and 2n+2 directly (3-4, 5-6...): a pad to
+    // the desk, a guide to the in-ears.
+    int outputPair = 0;
+    // Its MIDI effects (MidiEffects.h): one key plays a chord; held keys
+    // play as an arpeggio on the song's tempo.
+    int chord = 0;      // ChordTrigger
+    int arpeggio = 0;   // ArpPattern (0 off)
+    int arpRate = 1;    // ArpRate (an eighth)
+    int arpOctaves = 1; // 1-3
 
     friend bool operator==(const Channel&, const Channel&) = default;
 };

@@ -599,6 +599,11 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
         spec.solo = channel.solo;
         spec.inputLeft = channel.inputLeft - 1; // 1-based in the setlist, -1 = none
         spec.inputRight = channel.inputRight - 1;
+        spec.outputPair = channel.outputPair;
+        spec.midiEffects = MidiEffectSettings{.chord = channel.chord,
+                                              .arpeggio = channel.arpeggio,
+                                              .arpRate = channel.arpRate,
+                                              .arpOctaves = channel.arpOctaves};
         std::map<int, int> effectAt; // the channel's effect position -> its place in the strip (switched-off ones are left out)
         for (const PlannedSlot& planned : plan) {
             if (std::cmp_not_equal(planned.channel, c)) continue;
@@ -934,6 +939,10 @@ void RealEngine::setOutputLimiter(bool enabled, double ceilingDb)
 {
     m_limiter.setEnabled(enabled);
     m_limiter.setCeilingDb(ceilingDb);
+    for (SafetyLimiter& send : m_sendLimiters) {
+        send.setEnabled(enabled);
+        send.setCeilingDb(ceilingDb);
+    }
     qCInfo(lcEngine) << "Safety limiter" << (enabled ? "on at" : "off (ceiling") << ceilingDb << "dB";
 }
 
@@ -1610,6 +1619,12 @@ double RealEngine::tempo() const
     return m_tempo.load(std::memory_order_relaxed);
 }
 
+void RealEngine::setClickOutput(int pair)
+{
+    m_clickPair.store(std::max(pair, 0), std::memory_order_relaxed);
+    qCInfo(lcEngine) << "The click plays on" << (pair <= 0 ? u"the mix (1-2)"_s : u"outputs %1-%2"_s.arg((2 * pair) + 1).arg((2 * pair) + 2));
+}
+
 void RealEngine::setClick(bool on, double volumeDb)
 {
     m_click.setVolumeDb(volumeDb);
@@ -1825,9 +1840,11 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     m_loops.beginBlock(m_samplePosition, out.frames, bars);
 
     const float masterGain = m_masterGain.load(std::memory_order_relaxed);
+    const std::span<float* const> sends = m_audio.extraOutputs(); // outputs 3 and up, silent so far
     RenderGraph* graph = m_exchange.acquire();
     if (graph != nullptr) {
-        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs, gate, &m_loops);
+        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs, gate, &m_loops,
+                      sends);
     } else {
         std::fill_n(out.left, out.frames, 0.0F);
         std::fill_n(out.right, out.frames, 0.0F);
@@ -1868,8 +1885,9 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     m_track.release();
 
     // The click, on top of everything (not through the master fader: it
-    // still counts in when the band is muted).
-    m_click.process(out, time);
+    // still counts in when the band is muted); on outputs of its own when
+    // sent there (the in-ears only, not the audience).
+    m_click.process(sendPair(sends, m_clickPair.load(std::memory_order_relaxed), out), time);
 
     m_samplePosition += static_cast<int64_t>(frames);
     if (rate > 0.0) m_ppq += static_cast<double>(frames) * bpm / 60.0 / rate;
@@ -1877,9 +1895,14 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     // The safety limiter: last before the output.
     if (rate != m_limiterRate) {
         m_limiter.setSampleRate(rate);
+        for (SafetyLimiter& send : m_sendLimiters) send.setSampleRate(rate);
         m_limiterRate = rate;
     }
     m_limiter.process(out);
+    // The other outputs, each pair through its own limiter (ears are on them).
+    for (std::size_t pair = 0; ((2 * pair) + 2) <= sends.size() && pair < m_sendLimiters.size(); ++pair) {
+        m_sendLimiters.at(pair).process(sendPair(sends, static_cast<int>(pair) + 1, out));
+    }
 
     // The master meter: what leaves the app.
     float peak = 0.0F;

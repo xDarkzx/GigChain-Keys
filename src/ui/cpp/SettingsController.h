@@ -59,6 +59,11 @@ class SettingsController : public QObject
     Q_PROPERTY(bool limiterEnabled READ limiterEnabled WRITE setLimiterEnabled NOTIFY changed)
     Q_PROPERTY(double limiterCeilingDb READ limiterCeilingDb WRITE setLimiterCeilingDb NOTIFY changed)
     Q_PROPERTY(QVariantList limiterCeilings READ limiterCeilings CONSTANT)
+    // Where the click plays: 0 the mix, n the interface's outputs 2n+1-2n+2
+    // (the in-ears only, not the audience).
+    Q_PROPERTY(int clickOutput READ clickOutput WRITE setClickOutput NOTIFY changed)
+    // The output choices the interface open now has: ["Main mix (1-2)", "Outputs 3-4", ...].
+    Q_PROPERTY(QStringList outputChoices READ outputChoices NOTIFY changed)
     // Plugins: those that crashed the app while loading, switched off: [{path, name}].
     Q_PROPERTY(QVariantList blockedPlugins READ blockedPlugins NOTIFY changed)
     // MIDI: pedals/pads that switch songs: [{action, label, trigger ("" = not set)}].
@@ -112,6 +117,9 @@ public:
     [[nodiscard]] double limiterCeilingDb() const { return m_limiterCeilingDb; }
     void setLimiterCeilingDb(double ceilingDb);
     [[nodiscard]] static QVariantList limiterCeilings();
+    [[nodiscard]] int clickOutput() const { return m_clickOutput; }
+    [[nodiscard]] QStringList outputChoices() const;
+    void setClickOutput(int pair);
     [[nodiscard]] QVariantList blockedPlugins() const;
     [[nodiscard]] QVariantList controls() const;
     [[nodiscard]] int learning() const { return m_learning; }
@@ -182,6 +190,7 @@ private:
     bool m_controlsTouched = false; // changed on the MIDI page since load()
     bool m_limiterOn = true;
     double m_limiterCeilingDb = -1.0;
+    int m_clickOutput = 0;
     QString m_running;
     QString m_error;
     std::vector<engine::AudioInputDevice> m_inputs;

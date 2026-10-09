@@ -84,6 +84,8 @@ class EngineStatus : public QObject
     Q_PROPERTY(QString learnedParameter READ learnedParameter NOTIFY mappingLearnChanged)
     // Audio input channels open now (0: no input device chosen in Settings).
     Q_PROPERTY(int audioInputChannels READ audioInputChannels NOTIFY statusChanged)
+    // The interface's outputs open (2: only the mix's, 1-2).
+    Q_PROPERTY(int audioOutputChannels READ audioOutputChannels NOTIFY statusChanged)
     // The on-screen keyboard: how hard each key (0-127) is held (0 = up),
     // the pitch bend (-1..1, 0 = centre), mod wheel (0..1) and sustain pedal.
     Q_PROPERTY(QVariantList keyVelocities READ keyVelocities NOTIFY keyboardChanged)
@@ -161,6 +163,7 @@ public:
     Q_INVOKABLE void cancelMixerKnobLearn();
     [[nodiscard]] int learningMixerKnob() const { return m_learnKnobSlot; }
     [[nodiscard]] int audioInputChannels() const { return m_audioInputs; }
+    [[nodiscard]] int audioOutputChannels() const { return m_audioOutputs; }
     [[nodiscard]] QVariantList keyVelocities() const;
     [[nodiscard]] double pitchBend() const { return (m_keyboard.pitchBend - 8192) / 8192.0; }
     [[nodiscard]] double modWheel() const { return m_keyboard.modWheel / 127.0; }
@@ -210,6 +213,7 @@ private:
     QString m_statusText;
 
     int m_audioInputs = 0;
+    int m_audioOutputs = 2;
     engine::MidiActivity m_keyboard;
     double m_tempo = 120.0;
     bool m_clickOn = false;

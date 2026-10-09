@@ -127,6 +127,8 @@ public:
     void setAppKnobs(const AppKnobs& knobs) override;
     AppKnobValues takeAppKnobValues() override;
     void setClick(bool on, double volumeDb) override;
+    void setClickOutput(int pair) override;
+    [[nodiscard]] int outputChannels() const override { return m_audio.outputChannels(); }
     [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
     void setBackingTrack(const QString& path) override;
     void playBackingTrack(bool play) override;
@@ -249,7 +251,10 @@ private:
     std::map<QString, std::shared_ptr<Vst3Node>> m_masterNodes;
     bool m_masterEdited = false;
     SafetyLimiter m_limiter;
-    double m_limiterRate = 0.0; // audio thread: the rate the limiter is set for
+    // One per pair of the outputs 3 and up (sends: the in-ears, the desk).
+    std::array<SafetyLimiter, (kMaxAudioOutputs - 2) / 2> m_sendLimiters;
+    double m_limiterRate = 0.0; // audio thread: the rate the limiters are set for
+    std::atomic<int> m_clickPair{0}; // the click's outputs: 0 the mix, n outputs 2n+1-2n+2
     // ... and its effects, by position (nullptr: switched off or not loaded).
     std::map<QString, std::vector<std::shared_ptr<Vst3Node>>> m_currentEffects;
 

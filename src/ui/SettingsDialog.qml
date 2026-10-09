@@ -182,6 +182,27 @@ StageDialog {
                                 color: Theme.textDim
                             }
                         }
+                        SettingsSection { title: qsTr("Outputs") }
+                        SettingsRow {
+                            label: qsTr("Click to")
+                            StageComboBox {
+                                objectName: "clickOutputBox"
+                                implicitWidth: 260
+                                model: dialog.settings.outputChoices
+                                currentIndex: dialog.settings.clickOutput
+                                onActivated: (i) => dialog.settings.clickOutput = i
+                            }
+                        }
+                        Label {
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            text: qsTr("With an interface that has more than two outputs, send the click to a pair of its own "
+                                       + "(your in-ears) so the audience never hears it. Each channel can go to its own "
+                                       + "outputs too: right-click it in the mixer > Output.")
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
                         SettingsSection { title: qsTr("Safety limiter") }
                         CheckBox {
                             objectName: "limiterEnabled"

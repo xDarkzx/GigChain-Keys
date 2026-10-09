@@ -11,6 +11,7 @@ add_library(gigchain_engine STATIC
     internal/INode.h
     internal/MidiRouter.h
     internal/MidiRouter.cpp
+    internal/MidiEffects.cpp
     internal/RenderGraph.h
     internal/RenderGraph.cpp
     internal/LoopStation.h

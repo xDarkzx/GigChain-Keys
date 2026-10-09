@@ -1,6 +1,7 @@
 #pragma once
 
 #include "INode.h"
+#include "MidiEffects.h"
 #include "MidiRouter.h"
 
 #include "gigchain/core/Ids.h"
@@ -12,6 +13,7 @@
 #include <cstdint>
 #include <memory>
 #include <span>
+#include <utility>
 #include <vector>
 
 namespace gigchain::engine {
@@ -32,6 +34,15 @@ struct ParameterMapping
     bool pickup = true;   // takes over only once it reaches the parameter (core::KnobPickup)
 };
 
+// Output pair `pair` (1 = outputs 3-4) of the device's outputs 3 and up, or
+// `fallback` (the mix) when the device does not have it. Real-time safe.
+[[nodiscard]] inline AudioBlock sendPair(std::span<float* const> sends, int pair, const AudioBlock& fallback) noexcept
+{
+    if (pair <= 0 || std::cmp_greater(2 * pair, sends.size())) return fallback;
+    const std::span<float* const> two = sends.subspan(static_cast<std::size_t>((2 * pair) - 2), 2);
+    return AudioBlock{.left = two.front(), .right = two.back(), .frames = fallback.frames};
+}
+
 // Everything needed to build one channel strip. Nodes must already be
 // prepared for the graph's sample rate and block size.
 struct StripSpec
@@ -50,6 +61,11 @@ struct StripSpec
     double pan = 0.0;
     bool mute = false;
     bool solo = false;
+    // Where it plays: 0 the mix (outputs 1-2, through the master); n the
+    // device's outputs 2n+1 and 2n+2 directly (3-4, 5-6...: the in-ears, the
+    // desk). A pair the device does not have plays in the mix.
+    int outputPair = 0;
+    MidiEffectSettings midiEffects; // its chord trigger and arpeggiator
 };
 
 // Which section of the song is in force during a block: `before` up to the
@@ -97,6 +113,7 @@ public:
     // records is its sound at its fader and pan: what is heard of it.
     void setLoopSlot(int slot) { m_loopSlot.store(slot, std::memory_order_relaxed); }
     [[nodiscard]] int loopSlot() const { return m_loopSlot.load(std::memory_order_relaxed); }
+    [[nodiscard]] int outputPair() const noexcept { return m_outputPair; } // StripSpec::outputPair
     // Peak since the last call (then reset), and the most recent block's RMS.
     LevelReading takeLevel();
 
@@ -145,11 +162,16 @@ private:
     std::vector<float> m_left;
     std::vector<float> m_right;
     std::vector<MidiEvent> m_routed;
+    MidiEffects m_midiEffects;
+    std::vector<MidiEvent> m_effected; // m_routed through the MIDI effects (only when it has some)
+    // m_routed's first `count`, through the MIDI effects when it has any: what the instrument hears.
+    std::span<const MidiEvent> effected(std::size_t count, int frames, const TimeInfo& time) noexcept;
     std::atomic<uint64_t> m_droppedEvents{0};
     std::atomic<float> m_gain{1.0F};
     std::atomic<float> m_pan{0.0F};
     std::atomic<bool> m_mute{false};
     std::atomic<bool> m_solo{false};
+    int m_outputPair = 0;
     std::atomic<uint64_t> m_sections{~uint64_t{0}};
     std::atomic<bool> m_unsectioned{true};
     std::atomic<int> m_loopSlot{-1};
@@ -178,8 +200,10 @@ public:
     // Audio thread. Overwrites `out`. `gate`: the song section in force.
     // `loops`: the loop station (its block begun): strips record into it,
     // and its loops play into the mix before the master effects.
+    // `sends`: the device's outputs 3 and up (added to, never cleared here).
     void render(std::span<const MidiEvent> events, AudioBlock out, float masterGain, const TimeInfo& time = {},
-                const AudioInputs& inputs = {}, const SectionGate& gate = {}, LoopStation* loops = nullptr) noexcept;
+                const AudioInputs& inputs = {}, const SectionGate& gate = {}, LoopStation* loops = nullptr,
+                std::span<float* const> sends = {}) noexcept;
 
     // Main thread lookups for live mixer changes and meters. Non-owning.
     [[nodiscard]] ChannelStrip* strip(std::size_t index);

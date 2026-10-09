@@ -78,6 +78,7 @@ QVariant ChannelModel::data(const QModelIndex& index, int role) const
     case VelocityHighRole: return channel->velocityHigh;
     case InputLeftRole: return channel->inputLeft;
     case InputRightRole: return channel->inputRight;
+    case OutputPairRole: return channel->outputPair;
     case MappingCountRole: return static_cast<int>(channel->mappings.size());
     case PeakRole: return row < m_levels.size() ? m_levels.at(row).peak : 0.0F;
     case RmsRole: return row < m_levels.size() ? m_levels.at(row).rms : 0.0F;
@@ -125,7 +126,7 @@ QHash<int, QByteArray> ChannelModel::roleNames() const
         {RmsRole, "rms"},             {SelectedRole, "selected"},    {PanRole, "pan"},
         {IconRole, "icon"},           {ColorRole, "color"},          {OfficialIconRole, "officialIcon"},
         {VelocityLowRole, "velocityLow"}, {VelocityHighRole, "velocityHigh"}, {InputLeftRole, "inputLeft"},
-        {InputRightRole, "inputRight"},   {MappingCountRole, "mappingCount"},
+        {InputRightRole, "inputRight"},   {MappingCountRole, "mappingCount"}, {OutputPairRole, "outputPair"},
     };
 }
 

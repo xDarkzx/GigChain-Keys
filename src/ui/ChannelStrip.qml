@@ -30,6 +30,7 @@ Rectangle {
     required property int velocityHigh
     required property int inputLeft
     required property int inputRight
+    required property int outputPair // 0 the mix; n the interface's outputs 2n+1-2n+2
     required property int mappingCount
     required property DocumentController doc
     required property PluginListModel pluginModel
@@ -37,6 +38,7 @@ Rectangle {
     property EffectWindows effectWindows: null
     // Audio input channels open now (for "Play Audio Input").
     property int inputChannels: 0
+    property int outputChannels: 2 // the interface's outputs open
     // Renamed here (not on stage).
     property bool editable: true
     // For learning keyboard knobs (right-click on the fader or the pan).
@@ -63,6 +65,7 @@ Rectangle {
         if (transpose !== 0) parts.push((transpose > 0 ? "+" : "") + transpose)
         if (velocityLow > 1 || velocityHigh < 127) parts.push(qsTr("vel %1–%2").arg(velocityLow).arg(velocityHigh))
         if (mappingCount > 0) parts.push(mappingCount === 1 ? qsTr("1 knob") : qsTr("%1 knobs").arg(mappingCount))
+        if (outputPair > 0) parts.push(qsTr("Out %1-%2").arg(2 * outputPair + 1).arg(2 * outputPair + 2))
         return parts.join(" · ")
     }
 
@@ -184,6 +187,34 @@ Rectangle {
                 text: qsTr("MIDI Learn the volume…")
                 enabled: strip.engineStatus !== null && strip.volumeKnobSlot >= 0
                 onTriggered: strip.engineStatus.learnMixerKnob(strip.volumeKnobSlot)
+            }
+            // Where it plays: the mix, or outputs of its own (the desk, the in-ears).
+            StageMenu {
+                id: outputMenu
+                objectName: "outputMenu"
+                title: qsTr("Output")
+                Instantiator {
+                    model: {
+                        const list = [{ pair: 0, text: qsTr("Main mix (1-2)") }]
+                        for (let p = 1; 2 * p + 2 <= strip.outputChannels && p <= 7; ++p)
+                            list.push({ pair: p, text: qsTr("Outputs %1-%2").arg(2 * p + 1).arg(2 * p + 2) })
+                        if (strip.outputPair > 0 && 2 * strip.outputPair + 2 > strip.outputChannels)
+                            list.push({ pair: strip.outputPair,
+                                        text: qsTr("Outputs %1-%2 (not on this interface)").arg(2 * strip.outputPair + 1).arg(2 * strip.outputPair + 2) })
+                        return list
+                    }
+                    delegate: StageMenuItem {
+                        id: outputItem
+                        required property var modelData
+                        objectName: "outputChoice"
+                        text: outputItem.modelData.text
+                        checkable: true
+                        checked: strip.outputPair === outputItem.modelData.pair
+                        onTriggered: strip.doc.setChannelOutput(strip.index, outputItem.modelData.pair)
+                    }
+                    onObjectAdded: (index, object) => outputMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => outputMenu.removeItem(object)
+                }
             }
             StageMenu {
                 id: inputMenu

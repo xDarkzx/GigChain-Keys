@@ -4,6 +4,7 @@
 
 #include "gigchain/core/Chart.h"
 #include "gigchain/core/KnobPickup.h"
+#include "gigchain/core/MidiEffects.h"
 #include "gigchain/core/Limits.h"
 
 #include <cmath>
@@ -128,6 +129,11 @@ Result<void> validateChannel(const Channel& channel, const QString& path)
     }
     if (auto r = checkRange(channel.inputLeft, 0, limits::kMaxAudioInput, path + ".inputLeft"_L1); !r) return r;
     if (auto r = checkRange(channel.inputRight, 0, limits::kMaxAudioInput, path + ".inputRight"_L1); !r) return r;
+    if (auto r = checkRange(channel.outputPair, 0, limits::kMaxOutputPair, path + ".outputPair"_L1); !r) return r;
+    if (auto r = checkRange(channel.chord, 0, kChordTriggerCount - 1, path + ".chord"_L1); !r) return r;
+    if (auto r = checkRange(channel.arpeggio, 0, kArpPatternCount - 1, path + ".arpeggio"_L1); !r) return r;
+    if (auto r = checkRange(channel.arpRate, 0, kArpRateCount - 1, path + ".arpRate"_L1); !r) return r;
+    if (auto r = checkRange(channel.arpOctaves, 1, kMaxArpOctaves, path + ".arpOctaves"_L1); !r) return r;
     if (channel.inputLeft == 0 && channel.inputRight != 0) {
         return fail(ErrorCode::InvalidData, u"%1.inputRight needs inputLeft"_s.arg(path));
     }

@@ -59,8 +59,11 @@ ChannelStrip::ChannelStrip(StripSpec spec, int maxBlock)
       m_inputRight(spec.inputRight),
       m_left(static_cast<std::size_t>(maxBlock), 0.0F),
       m_right(static_cast<std::size_t>(maxBlock), 0.0F),
-      m_routed(static_cast<std::size_t>(kMaxStripEventsPerBlock))
+      m_routed(static_cast<std::size_t>(kMaxStripEventsPerBlock)),
+      m_midiEffects(spec.midiEffects),
+      m_effected(spec.midiEffects.any() ? static_cast<std::size_t>(kMaxStripEventsPerBlock) : 0)
 {
+    m_outputPair = std::max(spec.outputPair, 0);
     for (auto& now : m_mappedNow) now.store(-1.0F, std::memory_order_relaxed); // not known until refreshed
     refreshMappedValues();
     setVolumeDb(spec.volumeDb);
@@ -92,6 +95,14 @@ std::vector<const INode*> ChannelStrip::nodes() const
     if (m_instrument) all.push_back(m_instrument.get());
     std::ranges::transform(m_effects, std::back_inserter(all), [](const auto& effect) { return effect.get(); });
     return all;
+}
+
+std::span<const MidiEvent> ChannelStrip::effected(std::size_t count, int frames, const TimeInfo& time) noexcept
+{
+    const std::span<const MidiEvent> routed(m_routed.data(), count);
+    if (m_effected.empty()) return routed; // no MIDI effects
+    const std::size_t made = m_midiEffects.process(routed, m_effected, frames, time);
+    return {m_effected.data(), made};
 }
 
 INode* ChannelStrip::mappingTarget(const ParameterMapping& m) const noexcept
@@ -221,7 +232,7 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
         m_routed.at(routedCount++) = *routed; // room checked above
     }
     if (dropped > 0) m_droppedEvents.fetch_add(dropped, std::memory_order_relaxed);
-    produce(std::span<const MidiEvent>(m_routed.data(), routedCount), mix.frames, time, inputs);
+    produce(effected(routedCount, mix.frames, time), mix.frames, time, inputs);
 
     // Silenced strips still process so instruments and effect tails keep state.
     const bool audible = !m_mute.load(std::memory_order_relaxed) && (!anySolo || m_solo.load(std::memory_order_relaxed));
@@ -243,7 +254,8 @@ void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBloc
         }
         m_routed.at(routedCount++) = *routed; // room checked above
     }
-    produce(std::span<const MidiEvent>(m_routed.data(), routedCount), mix.frames, time, {});
+    // (Through its MIDI effects too: a chord's other notes and an arpeggio end with the keys.)
+    produce(effected(routedCount, mix.frames, time), mix.frames, time, {});
     const float gain = m_mute.load(std::memory_order_relaxed) ? 0.0F : m_gain.load(std::memory_order_relaxed);
     const float peak = mixInto(mix, gain, loops);
 
@@ -272,7 +284,8 @@ RenderGraph::RenderGraph(std::vector<StripSpec> specs, double sampleRate, int ma
 }
 
 void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, float masterGain, const TimeInfo& time,
-                         const AudioInputs& inputs, const SectionGate& gate, LoopStation* loops) noexcept
+                         const AudioInputs& inputs, const SectionGate& gate, LoopStation* loops,
+                         std::span<float* const> sends) noexcept
 {
     const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
     std::fill_n(out.left, frames, 0.0F);
@@ -283,12 +296,15 @@ void RenderGraph::render(std::span<const MidiEvent> events, AudioBlock out, floa
     }
     if (out.frames <= 0) return;
 
+    // A strip sent to outputs of its own plays there directly (its fader, not
+    // the master's); a pair the device does not have: the mix.
+    const auto blockFor = [&out, &sends](int pair) { return sendPair(sends, pair, out); };
     const bool anySolo = std::ranges::any_of(m_strips, [](const auto& s) { return s->solo(); });
     for (const auto& channel : m_strips) {
-        channel->render(events, out, anySolo, time, inputs, gate, loops);
+        channel->render(events, blockFor(channel->outputPair()), anySolo, time, inputs, gate, loops);
     }
     for (const auto& tail : m_tails) {
-        if (out.frames <= tail->maxBlock()) tail->renderTail(events, out, time, loops);
+        if (out.frames <= tail->maxBlock()) tail->renderTail(events, blockFor(tail->outputPair()), time, loops);
     }
     // The loops, whatever patch is playing, through the master effects.
     if (loops != nullptr) loops->play(out.left, out.right, out.frames);

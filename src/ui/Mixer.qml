@@ -150,6 +150,7 @@ Rectangle {
                 pluginModel: mixer.pluginModel
                 effectWindows: mixer.effectWindows
                 inputChannels: mixer.engineStatus.audioInputChannels
+                outputChannels: mixer.engineStatus.audioOutputChannels
             }
             footer: Item {
                 width: Theme.stripWidth + 8

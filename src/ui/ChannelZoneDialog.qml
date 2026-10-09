@@ -128,6 +128,47 @@ StageDialog {
             }
         }
 
+        // MIDI effects: one key plays a chord; held keys play as an arpeggio on the song's tempo.
+        StageDivider { Layout.fillWidth: true; Layout.leftMargin: 20; Layout.rightMargin: 20 }
+        SettingsSection { title: qsTr("MIDI effects") }
+        SettingsRow {
+            label: qsTr("One key plays")
+            StageComboBox {
+                objectName: "chordBox"
+                implicitWidth: 200
+                model: [qsTr("Just the key"), qsTr("A major chord"), qsTr("A minor chord"), qsTr("A power chord (5th + octave)"),
+                        qsTr("Octaves"), qsTr("A sus2 chord"), qsTr("A sus4 chord"), qsTr("A seventh chord")]
+                currentIndex: dialog.channel.chord
+                onActivated: (i) => dialog.doc.setChannelMidiEffect(dialog.channel.index, "chord", i)
+            }
+        }
+        SettingsRow {
+            label: qsTr("Arpeggiator")
+            StageComboBox {
+                objectName: "arpeggioBox"
+                implicitWidth: 140
+                model: [qsTr("Off"), qsTr("Up"), qsTr("Down"), qsTr("Up and down"), qsTr("As played")]
+                currentIndex: dialog.channel.arpeggio
+                onActivated: (i) => dialog.doc.setChannelMidiEffect(dialog.channel.index, "arpeggio", i)
+            }
+            StageComboBox {
+                objectName: "arpRateBox"
+                implicitWidth: 120
+                enabled: dialog.channel.arpeggio > 0
+                model: [qsTr("1/4"), qsTr("1/8"), qsTr("1/8 triplet"), qsTr("1/16")]
+                currentIndex: dialog.channel.arpRate
+                onActivated: (i) => dialog.doc.setChannelMidiEffect(dialog.channel.index, "arpRate", i)
+            }
+            StageComboBox {
+                objectName: "arpOctavesBox"
+                implicitWidth: 120
+                enabled: dialog.channel.arpeggio > 0
+                model: [qsTr("1 octave"), qsTr("2 octaves"), qsTr("3 octaves")]
+                currentIndex: dialog.channel.arpOctaves - 1
+                onActivated: (i) => dialog.doc.setChannelMidiEffect(dialog.channel.index, "arpOctaves", i + 1)
+            }
+        }
+
         StageDivider { Layout.fillWidth: true; Layout.topMargin: 4 }
         RowLayout {
             Layout.fillWidth: true

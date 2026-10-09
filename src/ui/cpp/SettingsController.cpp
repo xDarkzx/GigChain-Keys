@@ -2,6 +2,7 @@
 
 #include "DocumentController.h"
 
+#include "gigchain/core/Limits.h"
 #include "gigchain/engine/IEngine.h"
 #include "gigchain/platform/Audio.h"
 
@@ -43,6 +44,12 @@ const QString kSustainDoubleTapKey = u"midi/sustainDoubleTap"_s;
 const QString kMidiNamesKey = u"midi/names"_s;
 constexpr int kMidiNames = 2;
 const QString kLimiterKey = u"master/limiter"_s;
+const QString kClickOutputKey = u"audio/clickOutput"_s;
+
+int savedClickOutput(const QSettings& settings)
+{
+    return std::clamp(settings.value(kClickOutputKey, 0).toInt(), 0, core::limits::kMaxOutputPair);
+}
 const QString kChartSizeKey = u"perform/chartTextSize"_s;
 constexpr double kDefaultChartSize = 1.7;
 constexpr double kSmallestChartSize = 1.0;
@@ -107,6 +114,7 @@ SettingsController::SettingsController(engine::IEngine& engine, DocumentControll
     m_engine.setControlTriggers(savedControls(m_settings));
     // The limiter protects the sound desk from the first note.
     m_engine.setOutputLimiter(m_settings.value(kLimiterKey, true).toBool(), savedCeiling(m_settings));
+    m_engine.setClickOutput(savedClickOutput(m_settings));
 }
 
 engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
@@ -164,6 +172,7 @@ void SettingsController::load()
     m_reopenLast = m_settings.value(DocumentController::reopenLastSetlistKey(), false).toBool();
     m_limiterOn = m_settings.value(kLimiterKey, true).toBool();
     m_limiterCeilingDb = savedCeiling(m_settings);
+    m_clickOutput = savedClickOutput(m_settings);
     m_controls = savedControls(m_settings);
     m_learning = -1;
     m_inputs = m_engine.audioInputDevices();
@@ -221,6 +230,26 @@ void SettingsController::setSustainDoubleTap(bool on)
     if (on == m_sustainDoubleTap) return;
     m_sustainDoubleTap = on;
     m_midiTouched = true;
+    emit changed();
+}
+
+QStringList SettingsController::outputChoices() const
+{
+    QStringList choices{tr("Main mix (1-2)")};
+    const int pairs = std::min(m_engine.outputChannels() / 2 - 1, core::limits::kMaxOutputPair);
+    for (int pair = 1; pair <= pairs; ++pair) choices << tr("Outputs %1-%2").arg((2 * pair) + 1).arg((2 * pair) + 2);
+    // A choice saved with a bigger interface stays listed (it plays in the mix until that one is back).
+    for (int pair = pairs + 1; pair <= m_clickOutput; ++pair) {
+        choices << tr("Outputs %1-%2 (not on this interface)").arg((2 * pair) + 1).arg((2 * pair) + 2);
+    }
+    return choices;
+}
+
+void SettingsController::setClickOutput(int pair)
+{
+    const int clamped = std::clamp(pair, 0, core::limits::kMaxOutputPair);
+    if (m_clickOutput == clamped) return;
+    m_clickOutput = clamped;
     emit changed();
 }
 
@@ -548,6 +577,7 @@ void SettingsController::resetToDefaults()
     m_reopenLast = false;
     m_limiterOn = true;
     m_limiterCeilingDb = kDefaultCeilingDb;
+    m_clickOutput = 0;
     m_controls = {};
     m_learning = -1;
     m_controlsTouched = true;
@@ -619,6 +649,8 @@ bool SettingsController::apply()
 
     m_settings.setValue(DocumentController::reopenLastSetlistKey(), m_reopenLast);
     m_engine.setOutputLimiter(m_limiterOn, m_limiterCeilingDb);
+    m_engine.setClickOutput(m_clickOutput);
+    m_settings.setValue(kClickOutputKey, m_clickOutput);
     if (m_controlsTouched) {
         m_engine.setControlTriggers(m_controls);
         QVariantList packed;

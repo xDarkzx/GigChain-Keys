@@ -9,6 +9,7 @@
 #include <QString>
 
 #include <array>
+#include <span>
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -51,6 +52,8 @@ using RenderCallback = std::function<void(AudioBlock, const AudioInputs&)>;
 
 // The most input channels read from one device.
 inline constexpr int kMaxAudioInputs = 16;
+// The most output channels opened on one device (1-2 the mix, the rest sends).
+inline constexpr int kMaxAudioOutputs = 16;
 
 // A stereo output stream (first two channels) on one device, and optionally
 // the inputs of a device of the same driver (duplex), wrapping RtAudio. The
@@ -119,6 +122,14 @@ public:
     [[nodiscard]] unsigned int requestedSampleRate() const { return m_requestedRate; }
     [[nodiscard]] unsigned int requestedBufferFrames() const { return m_requestedFrames; }
     [[nodiscard]] int maxBlock() const { return m_maxBlock; }
+    // The outputs opened (2 when only the mix's).
+    [[nodiscard]] int outputChannels() const { return m_outputChannels; }
+    // Audio thread, inside the render callback only: outputs 3 and up for
+    // this block (silent until something is added to them).
+    [[nodiscard]] std::span<float* const> extraOutputs() const noexcept
+    {
+        return std::span<float* const>(m_extraPointers.data(), m_extraCount);
+    }
     [[nodiscard]] QString deviceName() const { return m_choice.name; }
     [[nodiscard]] AudioApi api() const { return m_choice.api; }
     [[nodiscard]] double latencyMs() const { return m_latencyMs; }
@@ -152,6 +163,9 @@ private:
     std::optional<DeviceChoice> m_requestedInput;
     int m_inputChannels = 0;
     std::array<const float*, kMaxAudioInputs> m_inputPointers{}; // audio thread
+    int m_outputChannels = 2; // opened (set before the stream runs)
+    std::array<float*, kMaxAudioOutputs - 2> m_extraPointers{}; // audio thread: outputs 3 and up, this block
+    std::size_t m_extraCount = 0;
     unsigned int m_requestedFrames = 256;
     unsigned int m_requestedRate = 0; // 0 = the device's own
     double m_sampleRate = 0.0;

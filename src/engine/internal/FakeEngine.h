@@ -86,6 +86,9 @@ public:
     }
     [[nodiscard]] double tempo() const override { return m_tempo; }
     void setClick(bool on, double) override { m_click = on; }
+    void setClickOutput(int) override {}
+    // (As an 8-output interface, so the output choices can be seen and tested.)
+    [[nodiscard]] int outputChannels() const override { return 8; }
     [[nodiscard]] bool clickOn() const override { return m_click; }
     // The demo "reads" any track at once, as three minutes long.
     void setBackingTrack(const QString& path) override

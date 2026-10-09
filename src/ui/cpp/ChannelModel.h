@@ -54,6 +54,7 @@ public:
         InputLeftRole,  // 1-based audio input the channel plays, 0 = none (an instrument channel)
         InputRightRole, // 0 = mono
         MappingCountRole, // keyboard knobs mapped to its plugins' parameters
+        OutputPairRole,   // 0 the mix; n = the interface's outputs 2n+1-2n+2
     };
     Q_ENUM(Role)
 

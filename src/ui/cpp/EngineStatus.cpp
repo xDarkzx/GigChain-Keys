@@ -469,9 +469,11 @@ void EngineStatus::poll()
     const QString status = m_engine.statusText();
     const double memory = readMemoryMb();
     const int inputs = m_engine.audioInputChannels();
+    const int outputs = m_engine.outputChannels();
     if (cpu != m_cpuLoad || midi != m_midiActivity || status != m_statusText || memory != m_memoryMb ||
-        inputs != m_audioInputs) {
+        inputs != m_audioInputs || outputs != m_audioOutputs) {
         m_audioInputs = inputs;
+        m_audioOutputs = outputs;
         m_cpuLoad = cpu;
         m_memoryMb = memory;
         m_midiActivity = midi;

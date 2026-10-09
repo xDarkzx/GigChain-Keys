@@ -4,6 +4,7 @@
 #include "gigchain/core/Chart.h"
 
 #include "gigchain/core/KnobPickup.h"
+#include "gigchain/core/MidiEffects.h"
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/Validation.h"
 
@@ -243,6 +244,11 @@ Channel readChannel(JsonReader& r, const QJsonObject& obj, const QString& path)
                                              limits::kMaxVelocity);
     channel.inputLeft = r.optionalInteger(obj, "inputLeft"_L1, path, 0, limits::kMaxAudioInput, 0);
     channel.inputRight = r.optionalInteger(obj, "inputRight"_L1, path, 0, limits::kMaxAudioInput, 0);
+    channel.outputPair = r.optionalInteger(obj, "outputPair"_L1, path, 0, limits::kMaxOutputPair, 0);
+    channel.chord = r.optionalInteger(obj, "chord"_L1, path, 0, kChordTriggerCount - 1, 0);
+    channel.arpeggio = r.optionalInteger(obj, "arpeggio"_L1, path, 0, kArpPatternCount - 1, 0);
+    channel.arpRate = r.optionalInteger(obj, "arpRate"_L1, path, 0, kArpRateCount - 1, 1);
+    channel.arpOctaves = r.optionalInteger(obj, "arpOctaves"_L1, path, 1, kMaxArpOctaves, 1);
     // What it does not take from the keyboard (none: all of it).
     constexpr qsizetype kFilters = 5;
     const QJsonArray ignores = r.optionalArray(obj, "ignores"_L1, path, kFilters);
@@ -468,6 +474,13 @@ QJsonObject writeChannel(const Channel& channel)
         if (!takes) ignores.append(name);
     }
     if (!ignores.isEmpty()) obj.insert(u"ignores"_s, ignores);
+    if (channel.outputPair != 0) obj.insert(u"outputPair"_s, channel.outputPair);
+    if (channel.chord != 0) obj.insert(u"chord"_s, channel.chord);
+    if (channel.arpeggio != 0) {
+        obj.insert(u"arpeggio"_s, channel.arpeggio);
+        obj.insert(u"arpRate"_s, channel.arpRate);
+        obj.insert(u"arpOctaves"_s, channel.arpOctaves);
+    }
     return obj;
 }
 

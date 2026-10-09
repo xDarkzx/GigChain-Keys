@@ -7,6 +7,7 @@
 #include "gigchain/core/Checks.h"
 #include "gigchain/core/Chords.h"
 #include "gigchain/core/KnobPickup.h"
+#include "gigchain/core/MidiEffects.h"
 #include "gigchain/core/PluginSharing.h"
 #include "gigchain/core/Practice.h"
 #include "gigchain/core/SongMap.h"
@@ -1011,6 +1012,47 @@ bool DocumentController::setChannelTakes(int channel, const QString& what, bool 
         return report(core::Error{core::ErrorCode::InvalidData, tr("A channel cannot be set to ignore \"%1\"").arg(what)});
     }
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [field, takes](core::Channel& c) { c.*field = takes; }); !r) {
+        return report(r.error());
+    }
+    commitChannelField(channel, true);
+    return true;
+}
+
+bool DocumentController::setChannelMidiEffect(int channel, const QString& what, int value)
+{
+    struct Field
+    {
+        int core::Channel::* member;
+        int low;
+        int high;
+    };
+    const auto make = [](int core::Channel::* member, int low, int high) {
+        return std::optional(Field{.member = member, .low = low, .high = high});
+    };
+    const std::optional<Field> field = what == "chord"_L1        ? make(&core::Channel::chord, 0, core::kChordTriggerCount - 1)
+                                       : what == "arpeggio"_L1   ? make(&core::Channel::arpeggio, 0, core::kArpPatternCount - 1)
+                                       : what == "arpRate"_L1    ? make(&core::Channel::arpRate, 0, core::kArpRateCount - 1)
+                                       : what == "arpOctaves"_L1 ? make(&core::Channel::arpOctaves, 1, core::kMaxArpOctaves)
+                                                                 : std::nullopt;
+    if (!field) return report(core::Error{core::ErrorCode::InvalidData, tr("A channel has no MIDI effect \"%1\"").arg(what)});
+    if (value < field->low || value > field->high) {
+        return report(core::Error{core::ErrorCode::OutOfRange,
+                                  tr("%1 must be between %2 and %3").arg(what).arg(field->low).arg(field->high)});
+    }
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [&field, value](core::Channel& c) { c.*(field->member) = value; });
+        !r) {
+        return report(r.error());
+    }
+    commitChannelField(channel, true);
+    return true;
+}
+
+bool DocumentController::setChannelOutput(int channel, int pair)
+{
+    if (pair < 0 || pair > core::limits::kMaxOutputPair) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("There are no outputs %1-%2").arg((2 * pair) + 1).arg((2 * pair) + 2)});
+    }
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [pair](core::Channel& c) { c.outputPair = pair; }); !r) {
         return report(r.error());
     }
     commitChannelField(channel, true);

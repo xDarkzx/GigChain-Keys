@@ -35,6 +35,11 @@ class SelectedChannel : public QObject
     Q_PROPERTY(bool takesModWheel READ takesModWheel NOTIFY changed)
     Q_PROPERTY(bool takesPitchBend READ takesPitchBend NOTIFY changed)
     Q_PROPERTY(bool takesAftertouch READ takesAftertouch NOTIFY changed)
+    // Its MIDI effects (DocumentController::setChannelMidiEffect).
+    Q_PROPERTY(int chord READ chord NOTIFY changed)
+    Q_PROPERTY(int arpeggio READ arpeggio NOTIFY changed)
+    Q_PROPERTY(int arpRate READ arpRate NOTIFY changed)
+    Q_PROPERTY(int arpOctaves READ arpOctaves NOTIFY changed)
     // 1-based audio input it plays (0 = an instrument channel); right 0 = mono.
     Q_PROPERTY(int inputLeft READ inputLeft NOTIFY changed)
     Q_PROPERTY(int inputRight READ inputRight NOTIFY changed)
@@ -59,6 +64,10 @@ public:
     [[nodiscard]] bool takesModWheel() const { return takes(&core::Channel::takesModWheel); }
     [[nodiscard]] bool takesPitchBend() const { return takes(&core::Channel::takesPitchBend); }
     [[nodiscard]] bool takesAftertouch() const { return takes(&core::Channel::takesAftertouch); }
+    [[nodiscard]] int chord() const { return field(&core::Channel::chord, 0); }
+    [[nodiscard]] int arpeggio() const { return field(&core::Channel::arpeggio, 0); }
+    [[nodiscard]] int arpRate() const { return field(&core::Channel::arpRate, 1); }
+    [[nodiscard]] int arpOctaves() const { return field(&core::Channel::arpOctaves, 1); }
     [[nodiscard]] int inputLeft() const;
     [[nodiscard]] int inputRight() const;
 
@@ -71,6 +80,11 @@ private:
     {
         const core::Channel* c = channel();
         return c == nullptr || c->*field; // (no channel: everything, as a new one)
+    }
+    [[nodiscard]] int field(int core::Channel::* member, int fallback) const
+    {
+        const core::Channel* c = channel();
+        return c != nullptr ? c->*member : fallback;
     }
 
     const DocumentController& m_document;
