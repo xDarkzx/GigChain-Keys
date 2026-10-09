@@ -18,6 +18,7 @@ ExternalMidiOut::~ExternalMidiOut() = default;
 
 core::Result<void> ExternalMidiOut::send(const QString& port, std::span<const unsigned char> bytes)
 {
+    const std::scoped_lock lock(m_mutex);
     auto it = m_open.find(port);
     if (it == m_open.end()) {
         const QStringList ports = MidiClockOut::listPorts();

@@ -57,6 +57,18 @@ you can hear it while you choose. Up to four synths per song.
 If the synth is not plugged in, the app says so and carries on; the sound
 goes out next time the song comes up with it there.
 
+### Playing a hardware synth from your keyboard
+
+A channel can play a synth (or a sound module with no keys of its own)
+instead of, or as well as, a plugin. Right-click its strip, **Play Hardware
+Synth**, and choose the synth's MIDI output, then **On MIDI Channel** if the
+synth listens on another channel than 1. The channel's split, transpose,
+velocity range, pedal choices, chord trigger and arpeggiator all apply: a
+module can take the left hand while a plugin plays the right. To hear the
+synth through the app (its effects, its fader, the aux reverb, the
+recording), give the same channel its audio input with **Play Audio Input**.
+Muting the channel stops new notes; **Panic** also stops the synths.
+
 ## Undo
 
 Every change to the setlist can be undone with **Ctrl+Z** and redone with

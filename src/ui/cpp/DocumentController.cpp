@@ -1059,6 +1059,20 @@ bool DocumentController::setChannelOutput(int channel, int pair)
     return true;
 }
 
+bool DocumentController::setChannelMidiOut(int channel, const QString& port, int midiChannel)
+{
+    if (midiChannel < 1 || midiChannel > 16) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("There is no MIDI channel %1 (1 to 16)").arg(midiChannel)});
+    }
+    auto r = core::updateChannel(m_setlist, m_cursor, channel, [&port, midiChannel](core::Channel& c) {
+        c.midiOutPort = port;
+        c.midiOutChannel = midiChannel;
+    });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true);
+    return true;
+}
+
 bool DocumentController::setChannelVolume(int channel, double volumeDb)
 {
     if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [volumeDb](core::Channel& c) { c.volumeDb = volumeDb; });

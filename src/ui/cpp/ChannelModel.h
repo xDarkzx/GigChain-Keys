@@ -56,6 +56,8 @@ public:
         MappingCountRole, // keyboard knobs mapped to its plugins' parameters
         OutputPairRole,   // 0 the mix; n = the interface's outputs 2n+1-2n+2
         AuxSendDbRole,    // how much goes to the aux effects (kMinVolumeDb = none)
+        MidiOutPortRole,  // the hardware synth it plays ("" none)
+        MidiOutChannelRole, // ... on this MIDI channel (1-16)
     };
     Q_ENUM(Role)
 

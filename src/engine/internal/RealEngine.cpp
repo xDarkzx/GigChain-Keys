@@ -579,6 +579,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     const std::vector<PlannedSlot> plan = planPatch(song, patch);
     std::vector<StripSpec> specs;
     specs.reserve(patch.channels.size());
+    std::set<const HardwareOut*> hardwareUsed; // the synths the new patch's channels play
     for (std::size_t c = 0; c < patch.channels.size(); ++c) {
         const core::Channel& channel = patch.channels.at(c);
         StripSpec spec;
@@ -602,6 +603,13 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
         spec.inputRight = channel.inputRight - 1;
         spec.outputPair = channel.outputPair;
         spec.sendDb = channel.auxSendDb;
+        if (!channel.midiOutPort.isEmpty()) {
+            const QString key = u"%1|%2|%3"_s.arg(channel.id.value(), channel.midiOutPort).arg(channel.midiOutChannel);
+            std::shared_ptr<HardwareOut>& out = m_hardwareOuts[key];
+            if (!out) out = std::make_shared<HardwareOut>(channel.midiOutPort, channel.midiOutChannel);
+            spec.hardware = out;
+            hardwareUsed.insert(out.get());
+        }
         spec.midiEffects = MidiEffectSettings{.chord = channel.chord,
                                               .arpeggio = channel.arpeggio,
                                               .arpRate = channel.arpRate,
@@ -662,12 +670,25 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
                 // while its instrument plays on: its notes go too (its effects' state does
                 // not carry over, so nothing else would end them).
                 if (shared && strip->hasMidiEffects() && !nodes.empty()) releasing.insert(nodes.front());
-                if (strip->tailDone() || shared || nodes.empty() || tails.size() >= kMaxTails) continue;
+                // A hardware synth's notes held when the patch changes end with their keys
+                // (unless the new patch plays that synth from the same channel: it ends them).
+                const bool synthHeld = strip->holdsHardwareNotes() && !hardwareUsed.contains(strip->hardware().get());
+                if (strip->tailDone() || shared || (nodes.empty() && !synthHeld) || tails.size() >= kMaxTails) continue;
                 tails.push_back(strip);
                 ringing.insert(nodes.begin(), nodes.end());
             }
         }
     }
+    // The synths still played, by the new patch or its tails; the rest are let go.
+    std::set<const HardwareOut*> hardwareKept = hardwareUsed;
+    for (const auto& tail : tails) {
+        if (tail->hardware()) hardwareKept.insert(tail->hardware().get());
+    }
+    std::erase_if(m_hardwareOuts, [&hardwareKept](const auto& entry) { return !hardwareKept.contains(entry.second.get()); });
+    std::vector<std::shared_ptr<HardwareOut>> synths;
+    synths.reserve(m_hardwareOuts.size());
+    for (const auto& [key, out] : m_hardwareOuts) synths.push_back(out);
+    m_hardwareSender.setOuts(std::move(synths));
 
     // Instruments leaving the sound (and not ringing out) release their
     // notes, so they do not hang when the patch comes back.
@@ -804,6 +825,13 @@ std::vector<Notice> RealEngine::poll()
 
     if (const uint64_t dropped = m_midi.takeDropped() + m_droppedInjected.exchange(0); dropped > 0) {
         qCWarning(lcEngine) << "Dropped" << dropped << "MIDI events (input queue full)";
+    }
+    for (const QString& problem : m_hardwareSender.takeProblems()) {
+        qCWarning(lcEngine).noquote() << problem;
+        notices.push_back(Notice::warning(problem));
+    }
+    if (const uint64_t dropped = m_hardwareSender.takeDropped(); dropped > 0) {
+        qCWarning(lcEngine) << "Left out" << dropped << "messages to hardware synths (their output was down, or too many at once)";
     }
     if (m_midi.takeActivity()) m_midiSeen.store(true, std::memory_order_relaxed);
     else m_midiSeen.store(false, std::memory_order_relaxed);
@@ -1154,6 +1182,7 @@ void RealEngine::panic()
     const double rate = m_audio.sampleRate();
     const int block = m_audio.maxBlock();
     m_keyboard.clear(); // every key shown up again
+    m_hardwareSender.allNotesOff(); // the hardware synths too
     for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes}) {
         for (const auto& [key, node] : *nodes) {
             node->releaseAllNotes();

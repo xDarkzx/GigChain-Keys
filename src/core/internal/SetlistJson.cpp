@@ -250,6 +250,8 @@ Channel readChannel(JsonReader& r, const QJsonObject& obj, const QString& path)
     channel.arpRate = r.optionalInteger(obj, "arpRate"_L1, path, 0, kArpRateCount - 1, 1);
     channel.arpOctaves = r.optionalInteger(obj, "arpOctaves"_L1, path, 1, kMaxArpOctaves, 1);
     if (obj.contains("auxSendDb"_L1)) channel.auxSendDb = r.number(obj, "auxSendDb"_L1, path, limits::kMinVolumeDb, limits::kMaxVolumeDb);
+    channel.midiOutPort = r.optionalString(obj, "midiOutPort"_L1, path, limits::kMaxNameLength);
+    channel.midiOutChannel = r.optionalInteger(obj, "midiOutChannel"_L1, path, 1, 16, 1);
     // What it does not take from the keyboard (none: all of it).
     constexpr qsizetype kFilters = 5;
     const QJsonArray ignores = r.optionalArray(obj, "ignores"_L1, path, kFilters);
@@ -493,6 +495,8 @@ QJsonObject writeChannel(const Channel& channel)
     if (channel.arpRate != 1) obj.insert(u"arpRate"_s, channel.arpRate);
     if (channel.arpOctaves != 1) obj.insert(u"arpOctaves"_s, channel.arpOctaves);
     if (channel.auxSendDb > limits::kMinVolumeDb) obj.insert(u"auxSendDb"_s, channel.auxSendDb);
+    if (!channel.midiOutPort.isEmpty()) obj.insert(u"midiOutPort"_s, channel.midiOutPort);
+    if (channel.midiOutChannel != 1) obj.insert(u"midiOutChannel"_s, channel.midiOutChannel);
     return obj;
 }
 

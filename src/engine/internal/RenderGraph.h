@@ -1,5 +1,6 @@
 #pragma once
 
+#include "HardwareOut.h"
 #include "INode.h"
 #include "MidiEffects.h"
 #include "MidiRouter.h"
@@ -67,6 +68,7 @@ struct StripSpec
     int outputPair = 0;
     MidiEffectSettings midiEffects; // its chord trigger and arpeggiator
     double sendDb = -96.0;          // its aux send (core::limits::kMinVolumeDb: none)
+    std::shared_ptr<HardwareOut> hardware; // a hardware synth its keys go to (null: none)
 };
 
 // Which section of the song is in force during a block: `before` up to the
@@ -120,6 +122,9 @@ public:
     [[nodiscard]] int loopSlot() const { return m_loopSlot.load(std::memory_order_relaxed); }
     [[nodiscard]] int outputPair() const noexcept { return m_outputPair; } // StripSpec::outputPair
     [[nodiscard]] bool hasMidiEffects() const noexcept { return !m_effected.empty(); }
+    // The hardware synth it plays (null: none), and whether a note it sent there is still held.
+    [[nodiscard]] const std::shared_ptr<HardwareOut>& hardware() const noexcept { return m_hardware; }
+    [[nodiscard]] bool holdsHardwareNotes() const noexcept { return m_hardware && m_hardware->holdsNotes(); }
     // Peak since the last call (then reset), and the most recent block's RMS.
     LevelReading takeLevel();
 
@@ -170,6 +175,7 @@ private:
     std::vector<MidiEvent> m_routed;
     MidiEffects m_midiEffects;
     std::vector<MidiEvent> m_effected; // m_routed through the MIDI effects (only when it has some)
+    std::shared_ptr<HardwareOut> m_hardware;
     // m_routed's first `count`, through the MIDI effects when it has any: what the instrument hears.
     std::span<const MidiEvent> effected(std::size_t count, int frames, const TimeInfo& time) noexcept;
     std::atomic<uint64_t> m_droppedEvents{0};

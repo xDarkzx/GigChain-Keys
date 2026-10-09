@@ -6,6 +6,7 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <span>
 
 namespace rt::midi {
@@ -16,7 +17,8 @@ namespace gigchain::engine {
 
 // Messages to hardware on MIDI outputs (a sound's Program Change to an
 // external synth). Each output opens the first time something goes to it
-// and stays open. Main thread.
+// and stays open. Any thread (one at a time: a hardware synth's notes come
+// from the engine's sender thread, its Program Changes from the main thread).
 class ExternalMidiOut
 {
 public:
@@ -33,6 +35,7 @@ public:
     core::Result<void> send(const QString& port, std::span<const unsigned char> bytes);
 
 private:
+    std::mutex m_mutex; // guards m_open
     std::map<QString, std::unique_ptr<rt::midi::RtMidiOut>> m_open;
 };
 

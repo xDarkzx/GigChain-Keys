@@ -5,6 +5,7 @@
 #include "GraphExchange.h"
 #include "Metronome.h"
 #include "ExternalMidiOut.h"
+#include "HardwareSender.h"
 #include "PerformanceRecorder.h"
 #include "MidiClockOut.h"
 #include "MidiInput.h"
@@ -354,7 +355,12 @@ private:
     // Audio thread: bar 1 is moved to this sample (-1: nothing to do).
     std::atomic<int64_t> m_barOriginAt{-1};
     MidiClockOut m_clockOut;
-    ExternalMidiOut m_externalOut;      // hardware synths' Program Changes
+    ExternalMidiOut m_externalOut;      // hardware synths' Program Changes, and their notes
+    // The hardware synths channels play (Channel::midiOutPort), by channel,
+    // output and MIDI channel: kept from patch to patch (a tail's notes end
+    // on the same queue), sent by m_hardwareSender.
+    std::map<QString, std::shared_ptr<HardwareOut>> m_hardwareOuts;
+    HardwareSender m_hardwareSender{m_externalOut};
     PerformanceRecorder m_recorder;     // the mix to a WAV file, when recording
     // The patch whose hardware sounds were sent last, and what was sent.
     std::optional<std::pair<core::PatchId, std::vector<core::ExternalProgram>>> m_calledUp;

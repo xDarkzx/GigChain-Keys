@@ -61,7 +61,8 @@ ChannelStrip::ChannelStrip(StripSpec spec, int maxBlock)
       m_right(static_cast<std::size_t>(maxBlock), 0.0F),
       m_routed(static_cast<std::size_t>(kMaxStripEventsPerBlock)),
       m_midiEffects(spec.midiEffects),
-      m_effected(spec.midiEffects.any() ? static_cast<std::size_t>(kMaxStripEventsPerBlock) : 0)
+      m_effected(spec.midiEffects.any() ? static_cast<std::size_t>(kMaxStripEventsPerBlock) : 0),
+      m_hardware(std::move(spec.hardware))
 {
     m_outputPair = std::max(spec.outputPair, 0);
     for (auto& now : m_mappedNow) now.store(-1.0F, std::memory_order_relaxed); // not known until refreshed
@@ -254,10 +255,12 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
         m_routed.at(routedCount++) = *routed; // room checked above
     }
     if (dropped > 0) m_droppedEvents.fetch_add(dropped, std::memory_order_relaxed);
-    produce(effected(routedCount, mix.frames, time), mix.frames, time, inputs);
-
     // Silenced strips still process so instruments and effect tails keep state.
     const bool audible = !m_mute.load(std::memory_order_relaxed) && (!anySolo || m_solo.load(std::memory_order_relaxed));
+    const std::span<const MidiEvent> heard = effected(routedCount, mix.frames, time);
+    if (m_hardware) m_hardware->push(heard, audible); // a silenced strip starts no notes on the synth either
+    produce(heard, mix.frames, time, inputs);
+
     atomicMax(m_peak, mixInto(mix, audible ? m_gain.load(std::memory_order_relaxed) : 0.0F, loops));
 }
 
@@ -278,13 +281,15 @@ void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBloc
         m_routed.at(routedCount++) = *routed; // room checked above
     }
     // (Through its MIDI effects too: a chord's other notes and an arpeggio end with the keys.)
-    produce(effected(routedCount, mix.frames, time), mix.frames, time, {});
+    const std::span<const MidiEvent> heard = effected(routedCount, mix.frames, time);
+    if (m_hardware) m_hardware->push(heard, false); // the synth's held notes end with their keys
+    produce(heard, mix.frames, time, {});
     const float gain = m_mute.load(std::memory_order_relaxed) ? 0.0F : m_gain.load(std::memory_order_relaxed);
     const float peak = mixInto(mix, gain, loops);
 
     // Done after a second of silence with nothing held, or when it has
     // droned on long after every key was let go.
-    if (m_instrument && m_instrument->holdsNotes()) {
+    if ((m_instrument && m_instrument->holdsNotes()) || holdsHardwareNotes()) {
         m_quietSamples = 0;
         m_releasedSamples = 0;
         return;

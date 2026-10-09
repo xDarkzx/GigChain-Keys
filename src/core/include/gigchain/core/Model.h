@@ -96,6 +96,12 @@ struct Channel
     // How much of it goes to the aux bus (a shared reverb or delay), after
     // its fader: limits::kMinVolumeDb (-96) = none.
     double auxSendDb = -96.0;
+    // A hardware synth it plays (MainStage's External Instrument): its keys,
+    // after the split, transpose and MIDI effects, go out on the MIDI output
+    // named `midiOutPort` on `midiOutChannel` (1-16). Empty: none. Hear the
+    // synth by giving the channel its audio input too.
+    QString midiOutPort;
+    int midiOutChannel = 1;
 
     friend bool operator==(const Channel&, const Channel&) = default;
 };

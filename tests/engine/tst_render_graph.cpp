@@ -304,6 +304,44 @@ private slots:
         QCOMPARE(out.left.front(), 0.5F);
     }
 
+    // A channel playing a hardware synth sends its keys (split and
+    // transposed) on the synth's MIDI channel. Muted, it starts no notes but
+    // still ends the one held, so nothing hangs on the synth.
+    void aHardwareSynthGetsTheKeysOnItsChannelAndNothingHangs()
+    {
+        const auto synth = std::make_shared<HardwareOut>(u"Synth"_s, 3);
+        StripSpec spec = strip(nullptr, RouteSettings{.keyLow = 48, .keyHigh = 72, .transpose = 12});
+        spec.hardware = synth;
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+        const auto sent = [&synth] {
+            std::vector<MidiEvent> all;
+            MidiEvent e;
+            while (synth->pop(e)) all.push_back(e);
+            return all;
+        };
+
+        const std::array keys{noteOn(60), noteOn(30), cc(0xB0, 1, 64)}; // 30: outside its split
+        graph.render(keys, out.block(), 1.0F);
+        const std::vector<MidiEvent> first = sent();
+        QCOMPARE(first.size(), std::size_t{2});
+        QCOMPARE(int(first.front().status), 0x92); // on channel 3
+        QCOMPARE(int(first.front().data1), 72);    // transposed an octave
+        QCOMPARE(int(first.back().status), 0xB2);
+        QVERIFY(synth->holdsNotes());
+
+        graph.strip(0)->setMute(true);
+        const std::array more{noteOn(62), MidiEvent{.status = 0x80, .data1 = 60, .data2 = 0, .sampleOffset = 0}};
+        graph.render(more, out.block(), 1.0F);
+        const std::vector<MidiEvent> second = sent();
+        QCOMPARE(second.size(), std::size_t{1}); // the held note's end, not the new note
+        QCOMPARE(int(second.front().status), 0x82);
+        QCOMPARE(int(second.front().data1), 72);
+        QVERIFY(!synth->holdsNotes());
+    }
+
     void splitsReceiveOnlyTheirNotes()
     {
         auto low = std::make_shared<HeldNoteNode>(0.1F);

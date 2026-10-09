@@ -42,6 +42,10 @@ Downloads for every version are on the
   every channel can share (one reverb, one delay, loaded once). Each
   channel's **Send** knob, above its pan, sets how much of it goes there;
   each song keeps its own send levels.
+- **Play a hardware synth from a channel:** right-click a strip, **Play
+  Hardware Synth**: its keys go out to the synth on a MIDI output, through
+  the channel's split, transpose and MIDI effects. Add the synth's audio
+  input to the same channel to hear it through the mixer.
 
 ### Fixed
 

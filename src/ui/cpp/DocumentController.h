@@ -239,6 +239,9 @@ public:
     Q_INVOKABLE bool setChannelTakes(int channel, const QString& what, bool takes);
     // Where the channel plays: 0 the mix; n the interface's outputs 2n+1-2n+2.
     Q_INVOKABLE bool setChannelOutput(int channel, int pair);
+    // A hardware synth the channel plays: its keys go out on the MIDI output
+    // `port` (empty: none) on `midiChannel` (1-16).
+    Q_INVOKABLE bool setChannelMidiOut(int channel, const QString& port, int midiChannel);
     // The channel's MIDI effects: "chord" (core::ChordTrigger), "arpeggio"
     // (core::ArpPattern, 0 off), "arpRate" (core::ArpRate), "arpOctaves" (1-3).
     Q_INVOKABLE bool setChannelMidiEffect(int channel, const QString& what, int value);

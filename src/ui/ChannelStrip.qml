@@ -32,6 +32,8 @@ Rectangle {
     required property int inputRight
     required property int outputPair // 0 the mix; n the interface's outputs 2n+1-2n+2
     required property double auxSendDb // to the aux effects; -96 = none
+    required property string midiOutPort // the hardware synth it plays ("" none)
+    required property int midiOutChannel
     required property int mappingCount
     required property DocumentController doc
     required property PluginListModel pluginModel
@@ -67,6 +69,7 @@ Rectangle {
         if (velocityLow > 1 || velocityHigh < 127) parts.push(qsTr("vel %1–%2").arg(velocityLow).arg(velocityHigh))
         if (mappingCount > 0) parts.push(mappingCount === 1 ? qsTr("1 knob") : qsTr("%1 knobs").arg(mappingCount))
         if (outputPair > 0) parts.push(qsTr("Out %1-%2").arg(2 * outputPair + 1).arg(2 * outputPair + 2))
+        if (midiOutPort !== "") parts.push(qsTr("→ %1 ch %2").arg(midiOutPort).arg(midiOutChannel))
         return parts.join(" · ")
     }
 
@@ -245,6 +248,59 @@ Rectangle {
                     visible: strip.inputChannels === 0
                     text: qsTr("No inputs open: choose an input device in Settings > Audio")
                     enabled: false
+                }
+            }
+            // A hardware synth it plays: its keys out on a MIDI output (give
+            // the channel the synth's audio input above to hear it).
+            StageMenu {
+                id: midiOutMenu
+                objectName: "midiOutMenu"
+                title: qsTr("Play Hardware Synth")
+                property var ports: []
+                onAboutToShow: {
+                    const list = strip.doc.midiOutputs()
+                    if (strip.midiOutPort !== "" && list.indexOf(strip.midiOutPort) < 0) list.push(strip.midiOutPort)
+                    ports = list
+                }
+                StageMenuItem {
+                    text: qsTr("None")
+                    checkable: true
+                    checked: strip.midiOutPort === ""
+                    onTriggered: strip.doc.setChannelMidiOut(strip.index, "", strip.midiOutChannel)
+                }
+                Instantiator {
+                    model: midiOutMenu.ports
+                    delegate: StageMenuItem {
+                        required property string modelData
+                        text: modelData
+                        checkable: true
+                        checked: strip.midiOutPort === modelData
+                        onTriggered: strip.doc.setChannelMidiOut(strip.index, modelData, strip.midiOutChannel)
+                    }
+                    onObjectAdded: (i, object) => midiOutMenu.insertItem(i + 1, object)
+                    onObjectRemoved: (i, object) => midiOutMenu.removeItem(object)
+                }
+                StageMenuItem {
+                    visible: midiOutMenu.ports.length === 0
+                    text: qsTr("No MIDI outputs: plug the synth in (USB or a MIDI interface)")
+                    enabled: false
+                }
+                StageMenu {
+                    id: midiOutChannelMenu
+                    title: qsTr("On MIDI Channel")
+                    enabled: strip.midiOutPort !== ""
+                    Instantiator {
+                        model: 16
+                        delegate: StageMenuItem {
+                            required property int index
+                            text: index + 1
+                            checkable: true
+                            checked: strip.midiOutChannel === index + 1
+                            onTriggered: strip.doc.setChannelMidiOut(strip.index, strip.midiOutPort, index + 1)
+                        }
+                        onObjectAdded: (i, object) => midiOutChannelMenu.insertItem(i, object)
+                        onObjectRemoved: (i, object) => midiOutChannelMenu.removeItem(object)
+                    }
                 }
             }
             EffectPickerMenu {
