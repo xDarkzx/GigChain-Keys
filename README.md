@@ -140,8 +140,9 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 | | |
 |---|---|
 | 🎹 **Plays your plugins** | Hosts VST3 instruments and effects with their own windows. Every sound in the setlist is loaded up front, so switching songs is instant, and held notes and reverb tails ring on across the change. |
-| 🎚️ **A real mixer** | Logic-style channel strips: instrument, effects, pan, fader, meters, mute and solo. A master strip with its own effects, and a safety limiter before your speakers. |
-| 🎼 **Splits, layers and knobs** | Key zones, transpose and velocity layers per instrument. Right-click any fader, pan knob or plugin setting and learn a knob, fader or pedal on your keyboard for it. Expression, mod wheel, breath and sustain go straight to the instruments. |
+| 🎚️ **A real mixer** | Logic-style channel strips: instrument, effects, pan, fader, meters, mute and solo. An Aux strip for one shared reverb or delay, fed by each channel's Send knob. A master strip with its own effects, and a safety limiter before your speakers. Any channel, the click or a stem can go to outputs of its own (your in-ears, the sound desk). |
+| 🎼 **Splits, layers and knobs** | Key zones, transpose and velocity layers per instrument; a layer can ignore the sustain pedal, expression, mod wheel, pitch bend or aftertouch. A chord trigger and an arpeggiator per channel. Right-click any fader, pan knob or plugin setting and learn a knob, fader or pedal on your keyboard for it; learned knobs pick up where the sound is (no jumps) and can have a curve. One instrument can be shared by many songs, loaded once. |
+| 🎛️ **Hardware synths too** | A song calls up a sound on your hardware synths (Program Change and bank) when it comes up, and any channel can play a synth or sound module from your keyboard, through its split and MIDI effects. |
 | 🎛️ **Works with your keyboard** | Its Play, Stop, ◀◀ ▶▶, Loop and Click buttons work by themselves when it speaks MIDI Start/Stop, MMC or Mackie Control (the DAW mode of Korg nanoKONTROL, M-Audio, Arturia, Novation, Akai…); any other button is learned in one press. |
 | 📜 **Setlists** | All the night's songs in one file, in order. Change songs with the keyboard, a pedal or a pad. Undo for every edit. |
 | 📝 **Chord charts** | Paste a song from any chord website and each chord lands on its word. Edit it where you read it, like cells: a chord box over every word to type into, words changed in place, chords dragged from word to word. |
@@ -152,7 +153,7 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 | 🔁 **Loop station** | Record a loop of any instrument, in time with the song, and layer on top: street-performer style, from buttons on your keyboard. |
 | 🎓 **Practice mode** | The song's chords fall onto a keyboard as glowing notes, YouTube-piano style. *Listen*, *Play along*, or *Wait for me*, slowed down and looped. The left hand plays the bass, an octave, root and fifth or the full chord; the right hand smooth, in root position or in your chosen inversions. |
 | 🔥 **Warm-ups** | A daily warm-up at your level (Beginner, Intermediate, Pro): each exercise right hand, left hand, then both, the finger to use on every note. Every run scored (notes, timing, evenness, hands together) with one tip; three clean runs raise the tempo, and passing a level opens the next. |
-| 🥁 **Tempo, click and backing tracks** | A tempo per song, tap tempo, a click, MIDI clock in and out, and a backing track (WAV, MP3, FLAC…) per song. |
+| 🥁 **Tempo, click and backing tracks** | A tempo per song, tap tempo, a click, MIDI clock in and out, and a backing track (WAV, MP3, FLAC…) per song with up to eight stems, each on its own outputs, and markers to jump to. **● Rec** records the gig as the audience hears it. |
 | 🛟 **Built not to fail** | Plugins are scanned in a separate process; a plugin that crashes while loading is switched off next time; an unplugged keyboard or audio interface comes back by itself. |
 
 <p align="center">
