@@ -3,6 +3,7 @@
 #include "gigchain/engine/FakeEngineFactory.h"
 #include "gigchain/engine/IEngine.h"
 
+#include <algorithm>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -112,8 +113,13 @@ public:
         m_track = BackingTrackState{.path = path, .loading = false, .loaded = !path.isEmpty(), .playing = false,
                                     .position = 0.0, .length = path.isEmpty() ? 0.0 : 180.0};
     }
+    void setBackingStems(const std::vector<BackingStemFile>&) override {}
     void playBackingTrack(bool play) override { m_track.playing = play && m_track.loaded; }
     void rewindBackingTrack() override { m_track.position = 0.0; }
+    void seekBackingTrack(double seconds) override
+    {
+        if (m_track.loaded) m_track.position = std::clamp(seconds, 0.0, m_track.length);
+    }
     void setBackingTrackVolume(double) override {}
     [[nodiscard]] BackingTrackState backingTrack() const override { return m_track; }
     [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId&, int) const override

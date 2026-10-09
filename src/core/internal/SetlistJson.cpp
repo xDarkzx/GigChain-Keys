@@ -350,6 +350,23 @@ Song readSong(JsonReader& r, const QJsonObject& obj, const QString& path)
         song.attachments.push_back(attachments.at(i).toString());
     }
     song.backingTrack = r.optionalString(obj, "backingTrack"_L1, path, limits::kMaxFileNameLength); // format 3
+    const QJsonArray stems = r.optionalArray(obj, "stems"_L1, path, limits::kMaxStems);
+    for (qsizetype i = 0; i < stems.size() && !r.failed(); ++i) {
+        const QString at = u"%1.stems[%2]"_s.arg(path).arg(i);
+        const QJsonObject stem = r.object(stems.at(i), at);
+        song.stems.push_back(BackingStem{
+            .file = r.string(stem, "file"_L1, at, limits::kMaxFileNameLength),
+            .volumeDb = stem.contains("volumeDb"_L1) ? r.number(stem, "volumeDb"_L1, at, limits::kMinVolumeDb, limits::kMaxVolumeDb) : 0.0,
+            .mute = stem.contains("mute"_L1) && r.boolean(stem, "mute"_L1, at),
+            .outputPair = r.optionalInteger(stem, "outputPair"_L1, at, 0, limits::kMaxOutputPair, 0)});
+    }
+    const QJsonArray markers = r.optionalArray(obj, "markers"_L1, path, limits::kMaxTrackMarkers);
+    for (qsizetype i = 0; i < markers.size() && !r.failed(); ++i) {
+        const QString at = u"%1.markers[%2]"_s.arg(path).arg(i);
+        const QJsonObject marker = r.object(markers.at(i), at);
+        song.markers.push_back(TrackMarker{.name = r.string(marker, "name"_L1, at, limits::kMaxNameLength),
+                                           .seconds = r.number(marker, "seconds"_L1, at, 0.0, limits::kMaxTrackSeconds)});
+    }
 
     // Format 4.
     if (const QString time = r.optionalString(obj, "timeSignature"_L1, path, 8); !time.isEmpty()) {
@@ -546,7 +563,7 @@ QJsonObject writeSong(const Song& song)
     for (const auto& [chord, inversion] : song.chordInversions) inversions.insert(chord, inversion);
     QJsonArray flow;
     for (const SectionRef& part : song.flow) flow.append(QJsonObject{{u"name"_s, part.name}, {u"occurrence"_s, part.occurrence}});
-    return QJsonObject{{u"id"_s, song.id.value()},
+    QJsonObject obj{{u"id"_s, song.id.value()},
                        {u"name"_s, song.name},
                        {u"chordInversions"_s, inversions},
                        {u"flow"_s, flow},
@@ -563,6 +580,23 @@ QJsonObject writeSong(const Song& song)
                        {u"loopSync"_s, song.loopSync},
                        {u"loopBars"_s, song.loopBars},
                        {u"sections"_s, sections}};
+    if (!song.stems.empty()) {
+        QJsonArray stems;
+        for (const BackingStem& stem : song.stems) {
+            QJsonObject item{{u"file"_s, stem.file}};
+            if (stem.volumeDb != 0.0) item.insert(u"volumeDb"_s, stem.volumeDb);
+            if (stem.mute) item.insert(u"mute"_s, true);
+            if (stem.outputPair != 0) item.insert(u"outputPair"_s, stem.outputPair);
+            stems.append(item);
+        }
+        obj.insert(u"stems"_s, stems);
+    }
+    if (!song.markers.empty()) {
+        QJsonArray markers;
+        for (const TrackMarker& marker : song.markers) markers.append(QJsonObject{{u"name"_s, marker.name}, {u"seconds"_s, marker.seconds}});
+        obj.insert(u"markers"_s, markers);
+    }
+    return obj;
 }
 
 } // namespace

@@ -54,6 +54,9 @@ Setlist richSetlist()
     song.links.push_back(SongLink{QStringLiteral("Chords"), QStringLiteral("https://tabs.example/cafe")});
     song.attachments.push_back(QStringLiteral("cafe-chords.pdf"));
     song.backingTrack = QStringLiteral("cafe backing.mp3");
+    song.stems = {BackingStem{.file = QStringLiteral("cafe click.wav"), .volumeDb = -6.5, .mute = false, .outputPair = 1},
+                  BackingStem{.file = QStringLiteral("cafe guide.wav"), .volumeDb = 0.0, .mute = true, .outputPair = 0}};
+    song.markers = {TrackMarker{.name = QStringLiteral("Chorus 2"), .seconds = 92.25}};
     song.timeNumerator = 6;
     song.timeDenominator = 8;
     song.switchEarly = true;
@@ -256,6 +259,22 @@ private slots:
         songs.replace(0, song);
         root.insert(u"songs", songs);
         QVERIFY(!fromJson(QJsonDocument(root).toJson()));
+        // A stem neither.
+        song = richJson().value(u"songs").toArray().at(0).toObject();
+        song.insert(u"stems", QJsonArray{QJsonObject{{u"file"_s, u"../../secrets/evil.wav"_s}}});
+        songs.replace(0, song);
+        root.insert(u"songs", songs);
+        const auto stemOutside = fromJson(QJsonDocument(root).toJson());
+        QVERIFY(!stemOutside);
+        QVERIFY2(stemOutside.error().message.contains(u"stems[0]"_s), qPrintable(stemOutside.error().message));
+        // A marker without a name neither (editing refuses one too).
+        song = richJson().value(u"songs").toArray().at(0).toObject();
+        song.insert(u"markers", QJsonArray{QJsonObject{{u"name"_s, u"  "_s}, {u"seconds"_s, 12.0}}});
+        songs.replace(0, song);
+        root.insert(u"songs", songs);
+        const auto unnamed = fromJson(QJsonDocument(root).toJson());
+        QVERIFY(!unnamed);
+        QVERIFY2(unnamed.error().message.contains(u"markers[0].name"_s), qPrintable(unnamed.error().message));
     }
 
     void versionThreeFilesOpenWithoutSections()

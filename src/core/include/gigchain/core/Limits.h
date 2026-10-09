@@ -50,6 +50,9 @@ inline constexpr int kMaxController = 127;
 inline constexpr int kMaxAudioInput = 64; // 1-based input numbers; 0 = none
 inline constexpr int kMaxOutputPair = 7;  // a channel's outputs: 0 the mix, 1-7 = outputs 3-4 ... 15-16
 inline constexpr int kMaxExternalPrograms = 4; // hardware sounds a patch calls up
+inline constexpr int kMaxStems = 8;            // a song's backing tracks besides its main one
+inline constexpr int kMaxTrackMarkers = 64;    // places marked in a song's backing track
+inline constexpr double kMaxTrackSeconds = 20.0 * 60.0; // the longest backing track read
 inline constexpr int kMaxBank = 16383;         // bank select, MSB and LSB
 inline constexpr double kMinVolumeDb = -96.0;
 inline constexpr double kMaxVolumeDb = 12.0;

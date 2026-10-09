@@ -73,8 +73,8 @@ core::Result<std::unique_ptr<IEngine>> createQuietEngine()
     return createRealEngine(options);
 }
 
-// A mono 48 kHz WAV of a 0.5 sine, `frames` long.
-bool writeSineWav(const QString& path, quint32 frames)
+// A mono 48 kHz WAV of a sine at `amplitude`, `frames` long.
+bool writeSineWav(const QString& path, quint32 frames, double amplitude = 0.5)
 {
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly)) return false;
@@ -87,7 +87,7 @@ bool writeSineWav(const QString& path, quint32 frames)
     out.writeRawData("data", 4);
     out << frames * 2;
     for (quint32 i = 0; i < frames; ++i) {
-        out << static_cast<qint16>(std::lround(0.5 * 32767.0 * std::sin(2.0 * std::numbers::pi * 440.0 * i / 48000.0)));
+        out << static_cast<qint16>(std::lround(amplitude * 32767.0 * std::sin(2.0 * std::numbers::pi * 440.0 * i / 48000.0)));
     }
     return out.status() == QDataStream::Ok;
 }
@@ -860,22 +860,7 @@ private slots:
         // Half a second of a 0.5 sine.
         const QTemporaryDir dir;
         const QString path = dir.filePath(u"backing.wav"_s);
-        {
-            QFile file(path);
-            QVERIFY(file.open(QIODevice::WriteOnly));
-            QDataStream out(&file);
-            out.setByteOrder(QDataStream::LittleEndian);
-            const quint32 frames = 24000;
-            out.writeRawData("RIFF", 4);
-            out << quint32{36 + (frames * 2)};
-            out.writeRawData("WAVEfmt ", 8);
-            out << quint32{16} << quint16{1} << quint16{1} << quint32{48000} << quint32{96000} << quint16{2} << quint16{16};
-            out.writeRawData("data", 4);
-            out << frames * 2;
-            for (quint32 i = 0; i < frames; ++i) {
-                out << static_cast<qint16>(std::lround(0.5 * 32767.0 * std::sin(2.0 * std::numbers::pi * 440.0 * i / 48000.0)));
-            }
-        }
+        QVERIFY(writeSineWav(path, 24000));
         engine.setBackingTrack(path);
         for (int i = 0; i < 300 && !engine.backingTrack().loaded; ++i) pump(engine, 10);
         const BackingTrackState ready = engine.backingTrack();
@@ -908,6 +893,47 @@ private slots:
             if (!reported) std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         QVERIFY(reported);
+    }
+
+    // A stem plays locked to the track: the set lasts as long as its longest
+    // file, a marker jumps both, and muting a stem is heard at once without
+    // reading anything again.
+    void stemsPlayLockedToTheTrackAndMuteAtOnce()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.applyPatch(core::makePatch(u"Empty"_s));
+        engine.setMasterVolume(-60.0);
+
+        const QTemporaryDir dir;
+        const QString track = dir.filePath(u"track.wav"_s); // half a second
+        const QString stem = dir.filePath(u"stem.wav"_s);   // a whole second, quieter
+        QVERIFY(writeSineWav(track, 24000, 0.5));
+        QVERIFY(writeSineWav(stem, 48000, 0.25));
+        engine.setBackingTrack(track);
+        engine.setBackingStems({BackingStemFile{.path = stem, .volumeDb = 0.0, .mute = false, .outputPair = 0}});
+        QVERIFY2(waitUntil(engine, [&engine] { return engine.backingTrack().loaded; }, 3000), "the track and stem were not read");
+        QVERIFY2(std::abs(engine.backingTrack().length - 1.0) < 0.02, qPrintable(QString::number(engine.backingTrack().length)));
+
+        // To 0.6 s: the track has ended there, the stem plays on alone.
+        engine.seekBackingTrack(0.6);
+        engine.playBackingTrack(true);
+        (void)engine.masterLevel();
+        const float stemOnly = loudestUntilAbove(engine, [&engine] { return engine.masterLevel().peak; }, 0.0002F);
+        QVERIFY2(std::abs(stemOnly - 0.00025F) < 0.00005F, qPrintable(QString::number(stemOnly))); // 0.25 at -60 dB
+        QVERIFY(engine.backingTrack().position >= 0.6);
+
+        // Muted: silent at once, still loaded and playing (nothing read again).
+        engine.setBackingStems({BackingStemFile{.path = stem, .volumeDb = 0.0, .mute = true, .outputPair = 0}});
+        QVERIFY(!engine.backingTrack().loading);
+        pump(engine, 60); // (a block already playing finishes)
+        (void)engine.masterLevel();
+        pump(engine, 100);
+        QCOMPARE(engine.masterLevel().peak, 0.0F);
+        QVERIFY(engine.backingTrack().playing);
+        engine.playBackingTrack(false);
     }
 
     void aHeldChordRingsOnAcrossAPatchChange()

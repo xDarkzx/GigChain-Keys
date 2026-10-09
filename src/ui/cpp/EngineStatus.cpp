@@ -182,6 +182,12 @@ void EngineStatus::rewindTrack()
     pollTransport();
 }
 
+void EngineStatus::seekTrack(double seconds)
+{
+    m_engine.seekBackingTrack(seconds);
+    pollTransport();
+}
+
 void EngineStatus::pollTransport()
 {
     const double bpm = m_engine.tempo();

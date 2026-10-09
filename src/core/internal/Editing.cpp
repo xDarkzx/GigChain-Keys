@@ -388,6 +388,45 @@ Result<void> setSongBackingTrack(Setlist& setlist, int songIndex, const QString&
     return {};
 }
 
+Result<void> setSongStems(Setlist& setlist, int songIndex, const std::vector<BackingStem>& stems)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (stems.size() > static_cast<std::size_t>(limits::kMaxStems)) {
+        return fail(ErrorCode::LimitExceeded, u"A song can have at most %1 stems"_s.arg(limits::kMaxStems));
+    }
+    for (const BackingStem& stem : stems) {
+        if (auto valid = validateFileName(stem.file, u"A stem"_s); !valid) return valid;
+        if (!std::isfinite(stem.volumeDb) || stem.volumeDb < limits::kMinVolumeDb || stem.volumeDb > limits::kMaxVolumeDb) {
+            return fail(ErrorCode::OutOfRange, u"A stem's level must be between %1 and %2 dB"_s.arg(limits::kMinVolumeDb).arg(limits::kMaxVolumeDb));
+        }
+        if (stem.outputPair < 0 || stem.outputPair > limits::kMaxOutputPair) {
+            return fail(ErrorCode::OutOfRange, u"There are no outputs %1-%2"_s.arg((2 * stem.outputPair) + 1).arg((2 * stem.outputPair) + 2));
+        }
+    }
+    setlist.songs.at(toIndex(songIndex)).stems = stems;
+    return {};
+}
+
+Result<void> setSongMarkers(Setlist& setlist, int songIndex, std::vector<TrackMarker> markers)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (markers.size() > static_cast<std::size_t>(limits::kMaxTrackMarkers)) {
+        return fail(ErrorCode::LimitExceeded, u"A song can have at most %1 markers"_s.arg(limits::kMaxTrackMarkers));
+    }
+    for (TrackMarker& marker : markers) {
+        marker.name = marker.name.trimmed();
+        if (marker.name.isEmpty() || marker.name.size() > limits::kMaxNameLength) {
+            return fail(ErrorCode::InvalidData, u"A marker needs a name of 1 to %1 characters"_s.arg(limits::kMaxNameLength));
+        }
+        if (!std::isfinite(marker.seconds) || marker.seconds < 0.0 || marker.seconds > limits::kMaxTrackSeconds) {
+            return fail(ErrorCode::OutOfRange, u"A marker must be within the first %1 minutes"_s.arg(limits::kMaxTrackSeconds / 60.0));
+        }
+    }
+    std::ranges::stable_sort(markers, {}, &TrackMarker::seconds); // in the track's order
+    setlist.songs.at(toIndex(songIndex)).markers = std::move(markers);
+    return {};
+}
+
 Result<void> removeChannel(Setlist& setlist, Cursor cursor, int channelIndex)
 {
     Patch* patch = patchAt(setlist, cursor);

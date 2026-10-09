@@ -61,6 +61,10 @@ Result<void> movePatch(Setlist& setlist, int songIndex, int from, int to);
 // The song's backing track: a plain file name in the setlist's folder, or
 // "" for none.
 Result<void> setSongBackingTrack(Setlist& setlist, int songIndex, const QString& fileName);
+// The song's stems (files in the setlist's folder, with their levels and outputs).
+Result<void> setSongStems(Setlist& setlist, int songIndex, const std::vector<BackingStem>& stems);
+// The song's markers (names trimmed; kept in the track's order).
+Result<void> setSongMarkers(Setlist& setlist, int songIndex, std::vector<TrackMarker> markers);
 
 // New channel named after the instrument. Returns its index.
 Result<int> addChannel(Setlist& setlist, Cursor cursor, const PluginSlot& instrument);

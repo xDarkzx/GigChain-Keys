@@ -118,6 +118,17 @@ struct KeyPress
     bool operator==(const KeyPress&) const = default;
 };
 
+// A stem played with the backing track (core::BackingStem, its file found).
+struct BackingStemFile
+{
+    QString path;
+    double volumeDb = 0.0;
+    bool mute = false;
+    int outputPair = 0; // 0 the mix; n the device's outputs 2n+1-2n+2 (not through the master fader)
+
+    bool operator==(const BackingStemFile&) const = default;
+};
+
 // The song's backing track as it plays now.
 struct BackingTrackState
 {

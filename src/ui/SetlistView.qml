@@ -188,6 +188,14 @@ Item {
                         }
                     }
                     StageMenuItem {
+                        objectName: "stemsItem"
+                        text: qsTr("Stems…")
+                        onTriggered: {
+                            view.doc.selectPatch(row.songIndex, 0)
+                            stemsDialog.open()
+                        }
+                    }
+                    StageMenuItem {
                         text: qsTr("Remove Backing Track")
                         enabled: row.isCurrentSong && view.doc.songBackingTrack !== ""
                         onTriggered: view.doc.setSongBackingTrack(row.songIndex, "")
@@ -302,6 +310,11 @@ Item {
 
     ExternalGearDialog {
         id: externalGear
+        doc: view.doc
+    }
+
+    StemsDialog {
+        id: stemsDialog
         doc: view.doc
     }
 
