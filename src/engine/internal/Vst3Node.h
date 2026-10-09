@@ -48,6 +48,7 @@ public:
     // Main thread, regularly: parameters set by mapped knobs, shown in the
     // plugin's own window (the sound changed already, on the audio thread).
     void showParameterChanges();
+    [[nodiscard]] double parameterValue(uint32_t id) const override; // main thread
 
     // Main thread: the plugin's parameters a knob can be mapped to (those it
     // marks automatable), as {id, name}.

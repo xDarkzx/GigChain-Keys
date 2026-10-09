@@ -247,6 +247,10 @@ public:
                                 const QString& parameterName);
     Q_INVOKABLE bool removeMapping(int channel, int mapping);
     Q_INVOKABLE bool setMappingRange(int channel, int mapping, double minimum, double maximum);
+    // How the knob's travel is shaped: 0 straight, 1 gentle start, 2 quick start (core::KnobCurve).
+    Q_INVOKABLE bool setMappingCurve(int channel, int mapping, int curve);
+    // Pickup: the knob takes the parameter over only once it reaches it (no jump on stage).
+    Q_INVOKABLE bool setMappingPickup(int channel, int mapping, bool pickup);
     // For the knob editor: [{midiChannel, controller, target, targetName, parameter, parameterName, minimum, maximum}].
     Q_INVOKABLE QVariantList mappings(int channel) const;
     // Opens a channel's editor ("zone": keys, velocity, transpose, MIDI
@@ -378,6 +382,8 @@ signals:
 
 private:
     bool report(const core::Error& error);
+    // One knob mapping of the channel changed (or a missing one reported).
+    bool updateMapping(int channel, int mapping, const std::function<void(core::ControlMapping&)>& change);
     // A chart edit's result into the current song (or its reason reported).
     bool applyChartEdit(const core::Result<QString>& edited, const QString& coalesceKey);
     void setCursor(core::Cursor to, bool force = false);

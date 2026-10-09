@@ -53,12 +53,16 @@ ChannelStrip::ChannelStrip(StripSpec spec, int maxBlock)
       m_instrument(std::move(spec.instrument)),
       m_effects(std::move(spec.effects)),
       m_mappings(std::move(spec.mappings)),
+      m_mappedNow(m_mappings.size()),
+      m_pickups(m_mappings.size()),
       m_inputLeft(spec.inputLeft),
       m_inputRight(spec.inputRight),
       m_left(static_cast<std::size_t>(maxBlock), 0.0F),
       m_right(static_cast<std::size_t>(maxBlock), 0.0F),
       m_routed(static_cast<std::size_t>(kMaxStripEventsPerBlock))
 {
+    for (auto& now : m_mappedNow) now.store(-1.0F, std::memory_order_relaxed); // not known until refreshed
+    refreshMappedValues();
     setVolumeDb(spec.volumeDb);
     setPan(spec.pan);
     m_mute.store(spec.mute, std::memory_order_relaxed);
@@ -88,6 +92,22 @@ std::vector<const INode*> ChannelStrip::nodes() const
     if (m_instrument) all.push_back(m_instrument.get());
     std::ranges::transform(m_effects, std::back_inserter(all), [](const auto& effect) { return effect.get(); });
     return all;
+}
+
+INode* ChannelStrip::mappingTarget(const ParameterMapping& m) const noexcept
+{
+    if (m.target < 0) return m_instrument.get();
+    return std::cmp_less(m.target, m_effects.size()) ? m_effects.at(static_cast<std::size_t>(m.target)).get() : nullptr;
+}
+
+void ChannelStrip::refreshMappedValues()
+{
+    for (std::size_t i = 0; i < m_mappings.size(); ++i) {
+        const ParameterMapping& m = m_mappings.at(i);
+        const INode* target = mappingTarget(m);
+        const double now = target != nullptr ? target->parameterValue(m.parameter) : -1.0;
+        m_mappedNow.at(i).store(static_cast<float>(now), std::memory_order_relaxed);
+    }
 }
 
 void ChannelStrip::produce(std::span<const MidiEvent> routed, int frames, const TimeInfo& time,
@@ -179,16 +199,16 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
         bool mapped = false;
         if ((event.status & 0xF0) == 0xB0) {
             const int channel = (event.status & 0x0F) + 1;
-            for (const ParameterMapping& m : m_mappings) {
+            for (std::size_t i = 0; i < m_mappings.size(); ++i) {
+                const ParameterMapping& m = m_mappings.at(i);
                 if (std::cmp_not_equal(m.controller, event.data1) || (m.midiChannel != 0 && m.midiChannel != channel)) continue;
-                INode* target = m.target < 0 ? m_instrument.get()
-                                : std::cmp_less(m.target, m_effects.size())
-                                    ? m_effects.at(static_cast<std::size_t>(m.target)).get()
-                                    : nullptr;
+                INode* target = mappingTarget(m);
                 if (target == nullptr) continue;
-                const double value = m.minimum + ((m.maximum - m.minimum) * event.data2 / 127.0);
-                target->queueParameter(m.parameter, value, event.sampleOffset);
                 mapped = true;
+                const double value = m.minimum + ((m.maximum - m.minimum) * core::shapeKnob(event.data2, m.curve));
+                // With pickup, a knob that is not where the parameter is moves nothing until it gets there.
+                if (m.pickup && !m_pickups.at(i).take(value, m_mappedNow.at(i).load(std::memory_order_relaxed))) continue;
+                target->queueParameter(m.parameter, value, event.sampleOffset);
             }
         }
         if (mapped) continue;

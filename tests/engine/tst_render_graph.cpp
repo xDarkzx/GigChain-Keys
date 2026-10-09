@@ -67,6 +67,8 @@ public:
         if (parameterCount < parameters.size()) parameters.at(parameterCount++) = {id, value};
     }
     [[nodiscard]] bool holdsNotes() const noexcept override { return m_held > 0; }
+    [[nodiscard]] double parameterValue(uint32_t) const override { return shown; }
+    double shown = -1.0; // every parameter's value as the plugin shows it (below 0: not known)
     std::vector<MidiEvent> received; // test-only; reserved before render
     std::array<std::pair<uint32_t, double>, 16> parameters{}; // the first 16 parameter changes
     std::size_t parameterCount = 0;
@@ -378,6 +380,55 @@ private slots:
         // Only the unmapped mod wheel reached the instrument as MIDI.
         QCOMPARE(synth->received.size(), std::size_t{2});
         QCOMPARE(int(synth->received.at(1).data1), 1);
+    }
+
+    // Pickup: a knob far from where the parameter is (0.8) moves nothing
+    // until it reaches or passes it, then follows; without pickup it jumps
+    // at once. A curve shapes the knob's travel (gentle start: half way is a quarter).
+    void aKnobPicksItsParameterUpAndFollowsItsCurve()
+    {
+        auto synth = std::make_shared<HeldNoteNode>(0.1F);
+        synth->shown = 0.8;
+        StripSpec spec = strip(synth);
+        spec.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 74, .target = -1, .parameter = 1,
+                                                 .minimum = 0.0, .maximum = 1.0, .curve = 0, .pickup = true});
+        spec.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 11, .target = -1, .parameter = 2,
+                                                 .minimum = 0.0, .maximum = 1.0, .curve = 1, .pickup = false});
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+
+        const std::array below{cc(0xB0, 74, 10), cc(0xB0, 74, 60)}; // turned up, still below 0.8
+        graph.render(below, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{0}); // nothing jumped
+        const std::array past{cc(0xB0, 74, 115), cc(0xB0, 74, 127)}; // past 0.8: taken over, then follows
+        graph.render(past, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{2});
+        QVERIFY(std::abs(synth->parameters.at(0).second - (115 / 127.0)) < 1e-9);
+        QVERIFY(std::abs(synth->parameters.at(1).second - 1.0) < 1e-9);
+
+        // No pickup, a gentle start: the pedal half way down moves it at once, to a quarter.
+        const std::array pedal{cc(0xB0, 11, 64)};
+        graph.render(pedal, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{3});
+        QCOMPARE(synth->parameters.at(2).first, uint32_t{2});
+        QVERIFY(std::abs(synth->parameters.at(2).second - ((64 / 127.0) * (64 / 127.0))) < 1e-9);
+
+        // A new sound (a new graph) picks up again from where the parameter is.
+        synth->shown = 0.2;
+        std::vector<StripSpec> again;
+        StripSpec next = strip(synth);
+        next.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 74, .target = -1, .parameter = 1,
+                                                 .minimum = 0.0, .maximum = 1.0, .curve = 0, .pickup = true});
+        again.push_back(std::move(next));
+        RenderGraph second(std::move(again), 48000.0, kFrames);
+        const std::array high{cc(0xB0, 74, 127)};
+        second.render(high, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{3}); // far above 0.2: not yet
+        const std::array near{cc(0xB0, 74, 26)}; // 0.205: there
+        second.render(near, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{4});
     }
 
     void anInputChannelPlaysTheAudioInput()

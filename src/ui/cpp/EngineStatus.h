@@ -1,7 +1,9 @@
 #pragma once
 
 #include "gigchain/core/Ids.h"
+#include "gigchain/core/KnobPickup.h"
 #include "gigchain/engine/EngineTypes.h"
+#include "gigchain/engine/MidiControl.h"
 
 #include <QElapsedTimer>
 #include <QObject>
@@ -10,6 +12,7 @@
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
+#include <array>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -219,6 +222,10 @@ private:
     int m_learnChannel = -1;
     int m_learnTarget = -1;
     int m_learnKnobSlot = -1; // learning a mixer knob for this slot
+    // The learned mixer knobs' pickup (a knob takes over a fader only once
+    // it reaches it), fresh for each sound.
+    std::array<core::KnobPickup, engine::kAppKnobCount> m_knobPickups{};
+    std::optional<core::PatchId> m_knobPickupsFor;
     std::optional<std::pair<int, int>> m_learnedKnob;
     std::optional<engine::PluginParameter> m_learnedParameter;
 };

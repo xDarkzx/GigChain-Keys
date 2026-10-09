@@ -4,6 +4,7 @@
 #include "MidiRouter.h"
 
 #include "gigchain/core/Ids.h"
+#include "gigchain/core/KnobPickup.h"
 #include "gigchain/engine/EngineTypes.h"
 
 #include <atomic>
@@ -27,6 +28,8 @@ struct ParameterMapping
     uint32_t parameter = 0;
     double minimum = 0.0; // the parameter's value (0-1) at CC 0...
     double maximum = 1.0; // ... and at CC 127 (may be below minimum: reversed)
+    int curve = 0;        // core::KnobCurve
+    bool pickup = true;   // takes over only once it reaches the parameter (core::KnobPickup)
 };
 
 // Everything needed to build one channel strip. Nodes must already be
@@ -99,6 +102,9 @@ public:
 
     // Main thread: the nodes this strip plays (instrument first).
     [[nodiscard]] std::vector<const INode*> nodes() const;
+    // Main thread, often: where each mapped parameter is now, for its knob's
+    // pickup (a knob takes over only once it reaches it).
+    void refreshMappedValues();
     // The largest block the strip can render.
     [[nodiscard]] int maxBlock() const { return static_cast<int>(m_left.size()); }
     // Events left out since the last call (its block was full).
@@ -117,6 +123,8 @@ public:
                     LoopStation* loops = nullptr) noexcept;
 
 private:
+    // The node a mapping moves (nullptr: its effect is not there).
+    [[nodiscard]] INode* mappingTarget(const ParameterMapping& m) const noexcept;
     // The strip's sound for this block into m_left/m_right, before its fader.
     void produce(std::span<const MidiEvent> routed, int frames, const TimeInfo& time, const AudioInputs& inputs) noexcept;
     // Puts the strip's fader and pan (at `gain`) on its sound, adds it to
@@ -128,6 +136,10 @@ private:
     std::shared_ptr<INode> m_instrument;
     std::vector<std::shared_ptr<INode>> m_effects;
     std::vector<ParameterMapping> m_mappings;
+    // Per mapping: its parameter's value as the plugin last showed it (main
+    // thread writes; below 0 = not known), and its knob's pickup (audio thread).
+    std::vector<std::atomic<float>> m_mappedNow;
+    std::vector<core::KnobPickup> m_pickups;
     int m_inputLeft = -1;
     int m_inputRight = -1;
     std::vector<float> m_left;

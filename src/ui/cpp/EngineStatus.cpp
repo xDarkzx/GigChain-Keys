@@ -350,15 +350,32 @@ void EngineStatus::pollMixerKnobs()
     const engine::AppKnobValues values = m_engine.takeAppKnobValues();
     const core::Patch* patch = m_document.currentPatch();
     const int channels = patch != nullptr ? static_cast<int>(patch->channels.size()) : 0;
+    // A new sound: each knob picks its fader up again (the faders are the new sound's).
+    const std::optional<core::PatchId> sound = patch != nullptr ? std::optional(patch->id) : std::nullopt;
+    if (sound != m_knobPickupsFor) {
+        m_knobPickups.fill({});
+        m_knobPickupsFor = sound;
+    }
+    // Fader and pan, as the knob's travel (0-1).
+    const auto faderAt = [](double volumeDb) { return std::clamp((volumeDb + 60.0) / 72.0, 0.0, 1.0); };
     for (int slot = 0; slot < engine::kAppKnobCount; ++slot) {
         const int value = values.at(static_cast<std::size_t>(slot));
         if (value < 0) continue;
+        const int strip = slot <= kStrips ? slot - 1 : slot - 1 - kStrips;
+        if (slot > 0 && strip >= channels) continue;
+        const core::Channel* channel = slot > 0 && patch != nullptr ? &patch->channels.at(static_cast<std::size_t>(strip)) : nullptr;
+        if (slot > 0 && channel == nullptr) continue;
+        const double now = channel == nullptr ? faderAt(masterVolumeDb())
+                           : slot <= kStrips ? faderAt(channel->volumeDb)
+                                             : (channel->pan + 1.0) / 2.0;
+        // It moves the fader only once it gets to where the fader is: no jump.
+        if (!m_knobPickups.at(static_cast<std::size_t>(slot)).take(value / 127.0, now)) continue;
         if (slot == 0) {
             setMasterVolumeDb(volumeOf(value));
         } else if (slot <= kStrips) {
-            if (slot - 1 < channels) (void)m_document.setChannelVolume(slot - 1, volumeOf(value));
-        } else if (slot - 1 - kStrips < channels) {
-            (void)m_document.setChannelPan(slot - 1 - kStrips, std::clamp((value - 64) / 63.0, -1.0, 1.0));
+            (void)m_document.setChannelVolume(strip, volumeOf(value));
+        } else {
+            (void)m_document.setChannelPan(strip, std::clamp((value - 64) / 63.0, -1.0, 1.0));
         }
     }
 }

@@ -42,6 +42,10 @@ struct ControlMapping
     QString parameterName; // as the plugin names it, for showing
     double minimum = 0.0;  // the parameter (0-1) at the controller's lowest...
     double maximum = 1.0;  // ... and highest position (below minimum: reversed)
+    int curve = 0;         // how its travel is shaped (core::KnobCurve: straight, gentle or quick start)
+    // It takes the parameter over only once it reaches it (no jump on stage,
+    // KnobPickup.h); false: the parameter follows it at once.
+    bool pickup = true;
 
     friend bool operator==(const ControlMapping&, const ControlMapping&) = default;
 };

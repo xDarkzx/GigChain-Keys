@@ -35,7 +35,8 @@ Setlist richSetlist()
     piano.takesExpression = false;
     piano.takesAftertouch = false;
     piano.mappings.push_back(ControlMapping{.midiChannel = 1, .controller = 74, .target = -1, .parameter = 4000000000U,
-                                            .parameterName = QStringLiteral("Brightness"), .minimum = 0.25, .maximum = 0.8});
+                                            .parameterName = QStringLiteral("Brightness"), .minimum = 0.25, .maximum = 0.8,
+                                            .curve = 1, .pickup = false});
     piano.mappings.push_back(ControlMapping{.midiChannel = 0, .controller = 11, .target = 0, .parameter = 12,
                                             .parameterName = QStringLiteral("Gain"), .minimum = 1.0, .maximum = 0.0});
     Channel empty = makeChannel(QStringLiteral("Spare"));

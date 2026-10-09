@@ -994,6 +994,18 @@ private slots:
         QCOMPARE(m_doc->mappings(0).size(), 1);
         QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"parameterName"_s).toString(), u"Drive"_s);
         QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"targetName"_s).toString(), u"Spy Piano"_s);
+        // A curve and pickup, per knob: straight and picking up until changed.
+        QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"curve"_s).toInt(), 0);
+        QVERIFY(m_doc->mappings(0).at(0).toMap().value(u"pickup"_s).toBool());
+        QVERIFY(m_doc->setMappingCurve(0, 0, 1));
+        QVERIFY(m_doc->setMappingPickup(0, 0, false));
+        QCOMPARE(m_engine->lastPatch.channels.at(0).mappings.at(0).curve, 1);
+        QVERIFY(!m_engine->lastPatch.channels.at(0).mappings.at(0).pickup);
+        QCOMPARE(m_doc->mappings(0).at(0).toMap().value(u"curve"_s).toInt(), 1);
+        QVERIFY(!m_doc->setMappingCurve(0, 0, 3)); // no such curve: refused, said
+        QVERIFY(!m_doc->setMappingPickup(0, 5, true)); // no such knob
+        QVERIFY(m_doc->undo());
+        QVERIFY(m_doc->mappings(0).at(0).toMap().value(u"pickup"_s).toBool());
         QVERIFY(m_doc->setMappingRange(0, 0, 0.25, 0.75));
         QCOMPARE(m_engine->lastPatch.channels.at(0).mappings.at(0).maximum, 0.75);
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"must be between 0 and 1"_s));
@@ -1388,11 +1400,20 @@ private slots:
         status.poll();
         QCOMPARE(m_doc->mixerKnobName(pan2), u"CC 10 (channel 2)"_s);
 
-        // The knobs move what they were learned for.
-        m_engine->appKnobValues.at(volume1) = 127;
+        // The knobs move what they were learned for, once they pick it up:
+        // a knob turned up from the bottom leaves the fader (at 0 dB) alone
+        // until it gets there, then takes it over: no jump on stage.
+        m_engine->appKnobValues.at(volume1) = 20;
         m_engine->appKnobValues.at(pan2) = 0;
         status.poll();
+        QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, 0.0);
+        QCOMPARE(m_doc->currentPatch()->channels.at(1).pan, 0.0);
+        m_engine->appKnobValues.at(volume1) = 127; // past the fader: taken over
+        m_engine->appKnobValues.at(pan2) = 64;      // at the pan: taken over
+        status.poll();
         QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, 12.0);
+        m_engine->appKnobValues.at(pan2) = 0;
+        status.poll();
         QCOMPARE(m_doc->currentPatch()->channels.at(1).pan, -1.0);
         m_engine->appKnobValues.at(volume1) = 0;
         status.poll();
@@ -1404,6 +1425,8 @@ private slots:
         status.poll();
         QCOMPARE(m_doc->mixerKnobName(0), u"CC 7 (channel 1)"_s);
         QVERIFY(m_doc->mixerKnobName(volume1).isEmpty());
+        m_engine->appKnobValues.at(0) = 106; // where the master is (0 dB): taken over
+        status.poll();
         m_engine->appKnobValues.at(0) = 0;
         status.poll();
         QCOMPARE(status.masterVolumeDb(), -60.0);

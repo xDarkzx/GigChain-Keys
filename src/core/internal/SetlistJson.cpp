@@ -3,6 +3,7 @@
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/Chart.h"
 
+#include "gigchain/core/KnobPickup.h"
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/Validation.h"
 
@@ -270,7 +271,10 @@ Channel readChannel(JsonReader& r, const QJsonObject& obj, const QString& path)
             .parameter = static_cast<quint32>(r.number(m, "parameter"_L1, at, 0.0, 4294967295.0)),
             .parameterName = r.string(m, "parameterName"_L1, at, limits::kMaxNameLength),
             .minimum = r.number(m, "minimum"_L1, at, 0.0, 1.0),
-            .maximum = r.number(m, "maximum"_L1, at, 0.0, 1.0)});
+            .maximum = r.number(m, "maximum"_L1, at, 0.0, 1.0),
+            // Added after 0.3.0: straight, and picking up, when absent.
+            .curve = r.optionalInteger(m, "curve"_L1, at, 0, kKnobCurveCount - 1, 0),
+            .pickup = !m.contains("pickup"_L1) || r.boolean(m, "pickup"_L1, at)});
     }
     return channel;
 }
@@ -427,13 +431,16 @@ QJsonObject writeChannel(const Channel& channel)
     }
     QJsonArray mappings;
     for (const ControlMapping& m : channel.mappings) {
-        mappings.append(QJsonObject{{u"midiChannel"_s, m.midiChannel},
-                                    {u"controller"_s, m.controller},
-                                    {u"target"_s, m.target},
-                                    {u"parameter"_s, static_cast<double>(m.parameter)},
-                                    {u"parameterName"_s, m.parameterName},
-                                    {u"minimum"_s, m.minimum},
-                                    {u"maximum"_s, m.maximum}});
+        QJsonObject mapping{{u"midiChannel"_s, m.midiChannel},
+                            {u"controller"_s, m.controller},
+                            {u"target"_s, m.target},
+                            {u"parameter"_s, static_cast<double>(m.parameter)},
+                            {u"parameterName"_s, m.parameterName},
+                            {u"minimum"_s, m.minimum},
+                            {u"maximum"_s, m.maximum}};
+        if (m.curve != 0) mapping.insert(u"curve"_s, m.curve);
+        if (!m.pickup) mapping.insert(u"pickup"_s, false);
+        mappings.append(mapping);
     }
     QJsonObject obj{
         {u"id"_s, channel.id.value()},

@@ -631,7 +631,9 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
                                                      .target = target,
                                                      .parameter = m.parameter,
                                                      .minimum = m.minimum,
-                                                     .maximum = m.maximum});
+                                                     .maximum = m.maximum,
+                                                     .curve = m.curve,
+                                                     .pickup = m.pickup});
         }
         specs.push_back(std::move(spec));
     }
@@ -779,8 +781,12 @@ std::vector<Notice> RealEngine::poll()
         qCWarning(lcEngine).noquote() << notices.back().text;
         m_clockOut.close(); // choosing the output again in Settings restarts it
     }
-    // Knobs mapped to parameters: shown in the plugins' own windows.
+    // Knobs mapped to parameters: shown in the plugins' own windows, and
+    // where each parameter is now, for the knobs' pickup.
     for (const auto& [key, node] : m_nodes) node->showParameterChanges();
+    if (const RenderGraph* graph = m_exchange.current()) {
+        for (const auto& strip : graph->strips()) strip->refreshMappedValues();
+    }
     std::ranges::move(m_pendingNotices, std::back_inserter(notices));
     m_pendingNotices.clear();
 

@@ -6,6 +6,7 @@
 #include "gigchain/core/ChartEdit.h"
 #include "gigchain/core/Checks.h"
 #include "gigchain/core/Chords.h"
+#include "gigchain/core/KnobPickup.h"
 #include "gigchain/core/PluginSharing.h"
 #include "gigchain/core/Practice.h"
 #include "gigchain/core/SongMap.h"
@@ -1150,6 +1151,33 @@ bool DocumentController::setMappingRange(int channel, int mapping, double minimu
     return true;
 }
 
+bool DocumentController::setMappingCurve(int channel, int mapping, int curve)
+{
+    if (curve < 0 || curve >= core::kKnobCurveCount) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("There is no knob curve %1").arg(curve)});
+    }
+    return updateMapping(channel, mapping, [curve](core::ControlMapping& m) { m.curve = curve; });
+}
+
+bool DocumentController::setMappingPickup(int channel, int mapping, bool pickup)
+{
+    return updateMapping(channel, mapping, [pickup](core::ControlMapping& m) { m.pickup = pickup; });
+}
+
+bool DocumentController::updateMapping(int channel, int mapping, const std::function<void(core::ControlMapping&)>& change)
+{
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size()) || mapping < 0 ||
+        std::cmp_greater_equal(mapping, patch->channels.at(static_cast<std::size_t>(channel)).mappings.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That knob mapping does not exist")});
+    }
+    auto r = core::updateChannel(m_setlist, m_cursor, channel,
+                                 [mapping, &change](core::Channel& c) { change(c.mappings.at(static_cast<std::size_t>(mapping))); });
+    if (!r) return report(r.error());
+    commitChannelField(channel, true);
+    return true;
+}
+
 QVariantList DocumentController::mappings(int channel) const
 {
     QVariantList list;
@@ -1163,7 +1191,8 @@ QVariantList DocumentController::mappings(int channel) const
         list << QVariantMap{{u"midiChannel"_s, m.midiChannel}, {u"controller"_s, m.controller},
                             {u"target"_s, m.target},           {u"targetName"_s, targetName},
                             {u"parameter"_s, m.parameter},     {u"parameterName"_s, m.parameterName},
-                            {u"minimum"_s, m.minimum},         {u"maximum"_s, m.maximum}};
+                            {u"minimum"_s, m.minimum},         {u"maximum"_s, m.maximum},
+                            {u"curve"_s, m.curve},             {u"pickup"_s, m.pickup}};
     }
     return list;
 }

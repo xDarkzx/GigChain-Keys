@@ -67,6 +67,9 @@ public:
     // the next process() call. For knobs mapped to a parameter. Nodes without
     // parameters ignore it.
     virtual void queueParameter(uint32_t /*id*/, double /*value*/, int32_t /*sampleOffset*/) noexcept {}
+    // Main thread: a parameter's value now (0-1) as the plugin shows it;
+    // below 0 when it is not known (no such parameter, no parameters).
+    [[nodiscard]] virtual double parameterValue(uint32_t /*id*/) const { return -1.0; }
     // Audio thread: true while the node holds notes (keys or sustain not yet released).
     [[nodiscard]] virtual bool holdsNotes() const noexcept { return false; }
 

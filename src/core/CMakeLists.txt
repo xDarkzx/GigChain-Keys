@@ -21,6 +21,7 @@ add_library(gigchain_core STATIC
     internal/Chart.cpp
     include/gigchain/core/ChartEdit.h
     internal/ChartEdit.cpp
+    include/gigchain/core/KnobPickup.h
     include/gigchain/core/PluginSharing.h
     internal/PluginSharing.cpp
     include/gigchain/core/Practice.h

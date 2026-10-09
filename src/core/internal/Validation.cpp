@@ -3,6 +3,7 @@
 #include <QUrl>
 
 #include "gigchain/core/Chart.h"
+#include "gigchain/core/KnobPickup.h"
 #include "gigchain/core/Limits.h"
 
 #include <cmath>
@@ -147,6 +148,7 @@ Result<void> validateChannel(const Channel& channel, const QString& path)
             return fail(ErrorCode::OutOfRange, u"%1 range must be between 0 and 1"_s.arg(at));
         }
         if (auto r = validateLength(m.parameterName, limits::kMaxNameLength, at + ".parameterName"_L1); !r) return r;
+        if (auto r = checkRange(m.curve, 0, kKnobCurveCount - 1, at + ".curve"_L1); !r) return r;
     }
     return {};
 }
