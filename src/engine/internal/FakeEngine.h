@@ -233,7 +233,7 @@ public:
         // (Started now when it has just begun playing: loops() counts from here.)
         const auto now = std::ranges::find_if(m_loops, [&channel](const ChannelLoop& l) { return l.channel == channel; });
         const bool going = now != m_loops.end() && (now->state == LoopState::Playing || now->state == LoopState::Overdubbing);
-        if (going && !m_loopStarted.contains(channel.value())) m_loopStarted[channel.value()] = std::chrono::steady_clock::now();
+        if (going && !m_loopStarted.contains(channel.value())) m_loopStarted[channel.value()] = m_clock();
         if (!going) m_loopStarted.erase(channel.value());
     }
     void setLoopSync(bool) override {}
@@ -255,12 +255,12 @@ public:
     [[nodiscard]] std::vector<ChannelLoop> loops() const override
     {
         std::vector<ChannelLoop> now = m_loops;
-        const auto clock = std::chrono::steady_clock::now();
+        const double clock = m_clock();
         for (ChannelLoop& loop : now) {
             if (loop.state != LoopState::Playing && loop.state != LoopState::Overdubbing) continue;
             const auto started = m_loopStarted.find(loop.channel.value());
             if (started == m_loopStarted.end() || loop.bars <= 0) continue;
-            const double seconds = std::chrono::duration<double>(clock - started->second).count();
+            const double seconds = clock - started->second;
             const double bars = seconds * m_tempo / 60.0 / 4.0; // (4/4)
             loop.progress = std::fmod(bars, loop.bars) / loop.bars;
             loop.bar = 1 + static_cast<int>(std::fmod(bars, loop.bars));
@@ -289,7 +289,7 @@ private:
         return none;
     }();
     std::vector<ChannelLoop> m_loops;
-    std::map<QString, std::chrono::steady_clock::time_point> m_loopStarted; // when each playing loop began
+    std::map<QString, double> m_loopStarted; // when each playing loop began (m_clock's seconds)
     SongSections m_sections;
     SongPosition m_position;
     std::vector<KeyPress> m_presses; // keys played on screen, not yet taken

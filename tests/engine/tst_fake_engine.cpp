@@ -154,6 +154,22 @@ private slots:
         clock.now = 1.0;
         QVERIFY(!engine->midiActivity());
     }
+
+    // A playing loop goes round at the tempo, timed by the engine's clock:
+    // at 120 bpm a 4-bar loop is 8 seconds, so 3 seconds in it is in bar 2.
+    void aPlayingLoopGoesRoundByTheClock()
+    {
+        ManualClock clock;
+        const auto engine = engine::createFakeEngine([&clock] { return clock.now; });
+        engine->setTempo(120.0);
+        const core::ChannelId piano = core::makeChannel(u"Piano"_s).id;
+        engine->loopCommand(piano, engine::LoopCommand::Record);
+        engine->loopCommand(piano, engine::LoopCommand::Record); // closes it: playing
+        QCOMPARE(engine->loops().at(0).bar, 1);
+        clock.now += 3.0;
+        QCOMPARE(engine->loops().at(0).bar, 2);
+        QVERIFY(std::abs(engine->loops().at(0).progress - 3.0 / 8.0) < 1e-9);
+    }
 };
 
 QTEST_GUILESS_MAIN(TestFakeEngine)
