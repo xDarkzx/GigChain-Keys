@@ -58,6 +58,11 @@ QtObject {
     readonly property color wellBorder: "#070708"
     readonly property color wellShadow: "#55000000"
     readonly property color engraved: "#8a8d93" // small labels cut into a panel
+    // Lists (the setlist), as MainStage's: alternating rows, a thin rule.
+    readonly property color listRowEven: "#222224"
+    readonly property color listRowOdd: "#1c1c1e"
+    readonly property color listRowHover: "#2e2e32"
+    readonly property color listRule: "#0e0e0f"
     // An LCD: dark glass, lit text, a reflection across its top.
     readonly property color lcdTop: "#1c2733"
     readonly property color lcdBottom: "#0c1218"

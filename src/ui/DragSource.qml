@@ -17,8 +17,15 @@ MouseArea {
 
     anchors.fill: parent
     acceptedButtons: Qt.LeftButton | Qt.RightButton
-    preventStealing: true
-    drag.target: dragEnabled ? ghost : null
+    // A mouse drags; a finger scrolls the list it is in. A mouse is over the
+    // row before it presses (a finger never is), so the drag is kept from the
+    // list only then: decided before the press, as it must be.
+    HoverHandler {
+        id: mouseOver
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+    }
+    preventStealing: mouseOver.hovered
+    drag.target: dragEnabled && mouseOver.hovered ? ghost : null
     drag.threshold: 8
 
     onPressed: (mouse) => {
