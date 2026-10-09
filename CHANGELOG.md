@@ -38,6 +38,10 @@ Downloads for every version are on the
   up: right-click the song, **External Gear…**.
 - **Record the gig:** **● Rec** in the toolbar records what the audience
   hears to a WAV file in your Music folder.
+- **One shared reverb (aux send):** the mixer's **Aux** strip holds effects
+  every channel can share (one reverb, one delay, loaded once). Each
+  channel's **Send** knob, above its pan, sets how much of it goes there;
+  each song keeps its own send levels.
 
 ### Fixed
 

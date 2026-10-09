@@ -46,7 +46,7 @@ Audited again against MainStage 3 on 2026-10-09; still to build, in this order:
 | Multi-track backing tracks with markers | **Missing** | One stereo track per song. |
 | MIDI effects: arpeggiator, chord trigger | **Done** | Keyboard Zone > MIDI effects: a chord per key, an arpeggiator on the song's tempo. Scripted MIDI (MainStage's Scripter) is not planned. |
 | External gear: Program Change and MIDI out per patch | **Done** | A song's External Gear: Program Change and bank to up to four synths when it comes up. Playing a hardware synth from a channel (MIDI out of the keys) is still to do. |
-| Aux sends (one shared reverb) | **Missing** | Master effects only. |
+| Aux sends (one shared reverb) | **Done** | One Aux bus (its effects kept with the rig, beside the master's) fed by each channel's Send knob, after its fader. More than one aux bus is not planned yet. |
 | Recording the performance | **Done** | ● Rec records the mix (after the limiter) to a WAV in the Music folder. Per-channel (multitrack) recording is not planned yet. |
 | A layout of your own (screen controls mirroring the hardware) | **Missing** | A fixed layout. |
 

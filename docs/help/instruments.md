@@ -81,6 +81,17 @@ Each channel strip, top to bottom:
 **Right-click anywhere on the strip** for the channel menu: **Keyboard Zone…**,
 **Knobs…**, **Play Audio Input**, **Replace Instrument**, **Remove Channel**.
 
+## The Aux strip: one shared reverb
+
+Left of the master, the **Aux** strip holds effects that channels share:
+put one reverb (or a delay) there instead of one on every channel. Each
+channel's small **Send** knob, above its pan, sets how much of that channel
+goes to it: all the way left is off, then up to +6 dB. The send comes after
+the channel's fader, so a muted or faded channel sends less too. What the
+Aux effects give back is mixed in before the master (set the reverb to 100%
+wet). Like the master's, the Aux effects are kept with your rig; the send
+levels are saved with each song.
+
 ## The master strip
 
 At the right end of the mixer, the **Master** strip is everything together.
