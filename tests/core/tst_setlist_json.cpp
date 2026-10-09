@@ -19,7 +19,8 @@ Setlist richSetlist()
     Channel piano = makeChannel(QStringLiteral("Piano"));
     piano.instrument = PluginSlot{.pluginId = QStringLiteral("fake.grand-piano"), .displayName = QStringLiteral("Grand Piano"),
                                   .bypass = false,
-                                  .state = QByteArray("GCS1\x00\x01\xff binary sound settings", 30)}; // opaque to core
+                                  .state = QByteArray("GCS1\x00\x01\xff binary sound settings", 30), // opaque to core
+                                  .shareId = QStringLiteral("5f0c-shared-piano")};
     piano.effects.push_back(
         PluginSlot{.pluginId = QStringLiteral("fake.eq"), .displayName = QStringLiteral("Channel EQ"), .bypass = true, .state = {}});
     piano.volumeDb = -6.5;
@@ -123,6 +124,11 @@ private slots:
         const auto& instrument = parsed->songs.at(0).patches.at(0).channels.at(0).instrument;
         if (!instrument) QFAIL("the instrument was lost");
         QVERIFY(instrument->state.isEmpty()); // the plugin's defaults
+        QVERIFY(instrument->shareId.isEmpty()); // its song's own (older files too)
+        // Written only when set, and a wrong type is refused.
+        QVERIFY(!toJson(*parsed).contains("shareId"));
+        slot.insert(u"shareId"_s, 7);
+        QVERIFY(!fromJson(withFirstChannelField(u"instrument"_s, slot)).has_value());
     }
 
     void rejectsBrokenPluginSettings()

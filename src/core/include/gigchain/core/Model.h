@@ -23,6 +23,10 @@ struct PluginSlot
     // engine stored them when the setlist was saved; opaque here. Empty: the
     // plugin's defaults.
     QByteArray state;
+    // Slots with the same share id (and plugin) in different songs play one
+    // loaded instance, and a change to it changes all of them: MainStage's
+    // channel strip aliases (PluginSharing.h). Empty: the slot's own song's.
+    QString shareId;
 
     friend bool operator==(const PluginSlot&, const PluginSlot&) = default;
 };

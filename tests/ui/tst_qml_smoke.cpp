@@ -717,6 +717,32 @@ private slots:
         QTRY_VERIFY(!status->property("learningMapping").toBool());
     }
 
+    // The mixer's "+ Instrument" offers the other songs' instruments ("Same
+    // as in another song"); choosing one adds it to this song, shared.
+    void anotherSongsInstrumentIsAddedFromTheMixer()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
+        QVERIFY(doc.setChannelName(0, u"Warm Piano"_s));
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.selectPatch(1, 0));
+        settle();
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        click(u"addInstrumentChannel"_s);
+        // (A submenu's entries are on screen only while it is open: found by name.)
+        QObject* root = m_qml->rootObjects().value(0);
+        QTRY_VERIFY(!root->findChildren<QObject*>(u"sharedInstrument"_s).isEmpty());
+        QObject* entry = root->findChildren<QObject*>(u"sharedInstrument"_s).front();
+        QVERIFY2(entry->property("text").toString().contains(u"Warm Piano"_s), qPrintable(entry->property("text").toString()));
+        QVERIFY(QMetaObject::invokeMethod(entry, "triggered"));
+        QTRY_COMPARE(doc.currentPatch()->channels.size(), std::size_t{1});
+        QCOMPARE(doc.currentPatch()->channels.at(0).name, u"Warm Piano"_s);
+        QCOMPARE(doc.selectedInstrumentSongs(), 2);
+        settle();
+    }
+
     // A−/A+ in the Perform view change the chart's size, kept for next time.
     void theStageChartGrowsAndShrinks()
     {

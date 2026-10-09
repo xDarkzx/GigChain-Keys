@@ -45,6 +45,9 @@ class DocumentController : public QObject
     Q_PROPERTY(int currentPatchNumber READ currentPatchNumber NOTIFY currentChanged)
     Q_PROPERTY(QString nextPatchLabel READ nextPatchLabel NOTIFY currentChanged)
     Q_PROPERTY(int selectedChannel READ selectedChannel WRITE setSelectedChannel NOTIFY selectedChannelChanged)
+    // How many songs play the selected channel's instrument (one shared,
+    // loaded once: a change to it changes all of them); 0 = no instrument.
+    Q_PROPERTY(int selectedInstrumentSongs READ selectedInstrumentSongs NOTIFY sharingChanged)
     // The current sound's play mode: 0 every instrument together (layers),
     // 1 only the selected channel (one at a time). Sections set up override it.
     Q_PROPERTY(int playMode READ playMode NOTIFY playModeChanged)
@@ -207,6 +210,16 @@ public:
     Q_INVOKABLE bool removeEffect(int channel, int effect);
     // A bypassed effect stays in the chain but is not played.
     Q_INVOKABLE bool setEffectBypass(int channel, int effect, bool bypass);
+    // Sharing an instrument between songs (MainStage's aliases): loaded once,
+    // a change to it changes every song that plays it.
+    // The instruments of the other songs: [{song, patch, channel, name, plugin, songName}], one per instrument.
+    Q_INVOKABLE QVariantList otherSongsInstruments() const;
+    // Adds a channel to the current sound playing that instrument (shared).
+    Q_INVOKABLE bool addSharedChannel(int song, int patch, int channel);
+    // This song's channel takes its own copy of a shared instrument (with
+    // its settings as they are now), to change it alone.
+    Q_INVOKABLE bool unshareInstrument(int channel);
+    [[nodiscard]] int selectedInstrumentSongs() const;
     Q_INVOKABLE bool replaceEffect(int channel, int effect, const QString& pluginId, const QString& name);
     Q_INVOKABLE bool setChannelInstrument(int channel, const QString& pluginId, const QString& name);
     Q_INVOKABLE bool setChannelName(int channel, const QString& name);
@@ -357,6 +370,7 @@ signals:
     void loopControlsChanged();
     void mixerControlsChanged();
     void channelEditRequested(int channel, const QString& page);
+    void sharingChanged(); // which songs share the selected channel's instrument may have changed
 
 private:
     bool report(const core::Error& error);

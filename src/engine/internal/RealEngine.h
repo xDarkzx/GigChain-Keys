@@ -14,6 +14,7 @@
 #include "SongTransport.h"
 #include "Vst3Node.h"
 
+#include "gigchain/core/PluginSharing.h"
 #include "gigchain/engine/IEngine.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
@@ -165,14 +166,13 @@ private:
     [[nodiscard]] std::vector<QString> masterKeys() const;
     // Every plugin slot of a patch with the key of the instance it plays:
     // song + plugin + its position among the patch's uses of that plugin.
-    struct PlannedSlot
+    // Each playing slot and the instance it plays (shared across songs by
+    // its share id: core/PluginSharing.h).
+    using PlannedSlot = core::PluginUse;
+    static std::vector<PlannedSlot> planPatch(const core::SongId& song, const core::Patch& patch)
     {
-        QString key;
-        const core::PluginSlot* slot = nullptr;
-        int channel = 0;
-        int effect = -1; // -1 = the channel's instrument
-    };
-    static std::vector<PlannedSlot> planPatch(const core::SongId& song, const core::Patch& patch);
+        return core::pluginUses(song, patch);
+    }
     core::Result<void> openAudio(const AudioSetup& setup);
     // After the device changed rate or block size: with audio paused, every
     // plugin is re-prepared and the patch rebuilt for the new size.

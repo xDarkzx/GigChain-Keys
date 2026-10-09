@@ -49,6 +49,22 @@ Rectangle {
                 text: qsTr("Click MIDI Learn, move a knob in the plugin, then turn a knob on your keyboard.")
                 visible: !area.engineStatus.learningMapping
             }
+            // The same instrument with the same settings in several songs is
+            // loaded once: a change here changes them all, unless this song
+            // takes its own copy.
+            Label {
+                objectName: "instrumentSharing"
+                visible: area.doc.selectedInstrumentSongs > 1
+                color: Theme.accent
+                text: qsTr("Shared by %n songs: changes apply to all", "", area.doc.selectedInstrumentSongs)
+            }
+            StageButton {
+                objectName: "instrumentOwnCopy"
+                visible: area.doc.selectedInstrumentSongs > 1
+                text: qsTr("Own copy for this song")
+                tip: qsTr("Give this song a copy of its own, to change it without changing the other songs (uses more memory)")
+                onClicked: area.doc.unshareInstrument(area.doc.selectedChannel)
+            }
         }
 
         Item {

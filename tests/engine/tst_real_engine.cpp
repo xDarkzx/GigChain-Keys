@@ -359,6 +359,59 @@ private slots:
         QVERIFY(engine.poll().empty());
     }
 
+    // An instrument shared by several songs (linked, as MainStage's aliases)
+    // is loaded once: a big piano in twenty songs must not fill the memory
+    // twenty times. Songs switch without loading; its settings, stored, go to
+    // every song; a song that takes its own copy loads one of its own.
+    void anInstrumentSharedBySongsIsLoadedOnce()
+    {
+        if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+
+        core::Setlist setlist;
+        for (const QString& name : {u"Ballad"_s, u"Funk"_s, u"Blues"_s}) {
+            core::Song song = core::makeSong(name);
+            core::Channel channel = core::makeChannel(u"Keys"_s);
+            core::PluginSlot keys = slot(kSmall, u"Kotelnikov"_s);
+            keys.shareId = u"the-keys"_s;
+            channel.instrument = keys;
+            song.patches.at(0).channels = {channel};
+            setlist.songs.push_back(song);
+        }
+        // The first song's (only) channel's instrument.
+        const auto keysOf = [](core::Song& song) -> core::PluginSlot& { return song.patches.at(0).channels.at(0).instrument.value(); };
+        engine.preload(setlist);
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
+        // Applying a song announces only a plugin it has to load.
+        int loads = 0;
+        engine.setProgressHandler([&](LoadStage stage, const QString& what, int, int) {
+            if (stage == LoadStage::LoadingSounds && !what.isEmpty()) ++loads;
+        });
+        for (const core::Song& song : setlist.songs) engine.applyPatch(song.id, song.patches.at(0));
+        QCOMPARE(loads, 0); // switching songs loads nothing
+
+        QVERIFY(engine.storePluginStates(setlist).empty());
+        const QByteArray stored = keysOf(setlist.songs.at(0)).state;
+        QVERIFY(!stored.isEmpty());
+        for (core::Song& song : setlist.songs) QCOMPARE(keysOf(song).state, stored);
+        engine.preload(setlist); // opened again: still one
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
+
+        // The third song takes its own copy (loaded when it is applied, in Edit).
+        loads = 0;
+        keysOf(setlist.songs.at(2)).shareId.clear();
+        engine.applyPatch(setlist.songs.at(2).id, setlist.songs.at(2).patches.at(0));
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{2});
+        QCOMPARE(loads, 1);
+        engine.preload(setlist);
+        QCOMPARE(engine.loadedPluginCount(), std::size_t{2});
+        QVERIFY(engine.poll().empty());
+    }
+
     void pluginSettingsAreStoredAndComeBack()
     {
         if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");

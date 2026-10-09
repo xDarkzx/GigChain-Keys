@@ -172,34 +172,6 @@ RealEngine::~RealEngine()
     });
 }
 
-std::vector<RealEngine::PlannedSlot> RealEngine::planPatch(const core::SongId& song, const core::Patch& patch)
-{
-    std::vector<PlannedSlot> plan;
-    std::map<QString, int> uses; // plugin id -> how many times this patch used it so far
-    const auto keyFor = [&](const QString& role, const QString& pluginId) {
-        const int n = uses[role + pluginId]++;
-        return song.value() + u'|' + role + u'|' + pluginId + u'#' + QString::number(n);
-    };
-    for (std::size_t c = 0; c < patch.channels.size(); ++c) {
-        const core::Channel& channel = patch.channels.at(c);
-        if (channel.instrument) {
-            plan.push_back(PlannedSlot{.key = keyFor(u"i"_s, channel.instrument->pluginId),
-                                       .slot = &*channel.instrument,
-                                       .channel = static_cast<int>(c),
-                                       .effect = -1});
-        }
-        for (std::size_t e = 0; e < channel.effects.size(); ++e) {
-            const core::PluginSlot& effect = channel.effects.at(e);
-            if (effect.bypass) continue;
-            plan.push_back(PlannedSlot{.key = keyFor(u"fx"_s, effect.pluginId),
-                                       .slot = &effect,
-                                       .channel = static_cast<int>(c),
-                                       .effect = static_cast<int>(e)});
-        }
-    }
-    return plan;
-}
-
 void RealEngine::preload(const core::Setlist& setlist)
 {
     GC_ONLY_MAIN_THREAD();

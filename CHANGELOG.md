@@ -8,6 +8,15 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **One instrument for many songs:** the mixer's **Instrument** slot offers
+  **Same as in another song**, and a duplicated song shares its original's
+  instruments. A shared instrument is loaded once, however many songs play
+  it (a big sampled piano used all night no longer fills the memory once per
+  song), and a change to it changes all of them, as MainStage's aliases do.
+  **Own copy for this song**, above its window, gives one song its own.
+
 ### Fixed
 
 - **The toolbar on a narrower screen:** the setlist's name no longer runs

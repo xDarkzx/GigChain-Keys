@@ -2,6 +2,7 @@
 
 #include "gigchain/core/Chart.h"
 #include "gigchain/core/Limits.h"
+#include "gigchain/core/PluginSharing.h"
 #include "gigchain/core/SongMap.h"
 
 #include <cmath>
@@ -258,6 +259,9 @@ Result<int> duplicateSong(Setlist& setlist, int songIndex)
     if (setlist.songs.size() >= toIndex(limits::kMaxSongs)) {
         return fail(ErrorCode::LimitExceeded, u"A setlist can hold at most %1 songs"_s.arg(limits::kMaxSongs));
     }
+    // The copy plays the same instruments (loaded once, changed together),
+    // until it takes its own copy of one.
+    linkForSharing(setlist.songs.at(toIndex(songIndex)));
     Song copy = withFreshIds(setlist.songs.at(toIndex(songIndex)));
     copy.name = copyName(copy.name);
     setlist.songs.insert(setlist.songs.begin() + songIndex + 1, std::move(copy));

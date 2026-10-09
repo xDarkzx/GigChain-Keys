@@ -69,6 +69,55 @@ private slots:
         QVERIFY(m_doc->addSong());
     }
 
+    // An instrument shared between songs (loaded once): a duplicated song
+    // shares its original's; another song can add "the same as in another
+    // song"; a song can take its own copy, and undo shares it again.
+    void anInstrumentIsSharedBetweenSongs()
+    {
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s));
+        QVERIFY(m_doc->setChannelName(0, u"Warm Piano"_s));
+        m_doc->setSelectedChannel(0);
+        QCOMPARE(m_doc->selectedInstrumentSongs(), 1); // its song's own
+        QVERIFY(m_doc->duplicateSong(0));
+        QVERIFY(m_doc->selectPatch(1, 0));
+        m_doc->setSelectedChannel(0);
+        QCOMPARE(m_doc->selectedInstrumentSongs(), 2); // the copy plays the same piano
+
+        // A third song, empty: the other songs' instruments, one each (the shared piano once).
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->selectPatch(2, 0));
+        const QVariantList others = m_doc->otherSongsInstruments();
+        QCOMPARE(others.size(), 1);
+        const QVariantMap piano = others.front().toMap();
+        QCOMPARE(piano.value(u"name"_s).toString(), u"Warm Piano"_s);
+        QCOMPARE(piano.value(u"song"_s).toInt(), 0);
+        const int stores = m_engine->storeCount;
+        QVERIFY(m_doc->addSharedChannel(0, 0, 0));
+        QCOMPARE(m_engine->storeCount, stores + 1); // its settings as they are now
+        QCOMPARE(m_doc->currentPatch()->channels.at(0).name, u"Warm Piano"_s);
+        QCOMPARE(m_doc->selectedChannel(), 0);
+        QCOMPARE(m_doc->selectedInstrumentSongs(), 3);
+        const auto& added = m_engine->lastPatch.channels.at(0).instrument;
+        QVERIFY(added.has_value() && added->state.startsWith("spy settings")); // its settings as they were
+
+        // This song takes its own copy; the other two still share theirs.
+        QSignalSpy sharing(m_doc.get(), &DocumentController::sharingChanged);
+        QVERIFY(m_doc->unshareInstrument(0));
+        QVERIFY(!sharing.isEmpty());
+        QCOMPARE(m_doc->selectedInstrumentSongs(), 1);
+        const auto& own = m_engine->lastPatch.channels.at(0).instrument;
+        QVERIFY(own.has_value() && own->shareId.isEmpty()); // the engine plays its own
+        QVERIFY(m_doc->isDirty());
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->selectedInstrumentSongs(), 3);
+
+        QVERIFY(!m_doc->addSharedChannel(0, 0, 7)); // no such channel: refused, said
+        QVERIFY(!m_doc->lastError().isEmpty());
+        QVERIFY(!m_doc->unshareInstrument(9));
+        m_doc->setSelectedChannel(-1);
+        QCOMPARE(m_doc->selectedInstrumentSongs(), 0);
+    }
+
     void startsWithNoSetlistAndNothingInIt()
     {
         DocumentController fresh(*m_engine, *m_settings);

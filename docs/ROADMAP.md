@@ -33,6 +33,22 @@ rely on come before the new ideas below. First audited against the code on
 | Plugin formats | **Partly** | VST3 only. Gig Performer also hosts VST2 (many older Windows plugins); an open-source VST2 host needs care, since Steinberg no longer licenses the VST2 SDK. |
 | Charts (chords and lyrics on screen) | **Ahead** | Built in; neither rival has them. |
 | Master effects, meters, limiter | **Done** | |
+| One instrument for many songs (MainStage's aliases) | **Done** | **Same as in another song** and duplicated songs share one loaded instrument; **Own copy for this song** splits one off. |
+
+Audited again against MainStage 3 on 2026-10-09; still to build, in this order:
+
+| What players need | Status | Where it stands |
+|---|---|---|
+| Per-layer MIDI filters (the pad ignores the sustain pedal, only one layer takes expression) | **Missing** | Every channel takes every controller. |
+| Knob pickup (soft takeover) and response curves | **Missing** | A knob jumps the value when first moved; ranges are straight lines. |
+| Bundled sounds | **Partly** | See below. |
+| Outputs: a channel, the click or a stem to its own output (in-ears) | **Missing** | One stereo master out; headphone cue is planned (2). |
+| Multi-track backing tracks with markers | **Missing** | One stereo track per song. |
+| MIDI effects: arpeggiator, chord trigger | **Missing** | Transpose and velocity layers only. |
+| External gear: Program Change and MIDI out per patch | **Missing** | MIDI out carries the clock only. |
+| Aux sends (one shared reverb) | **Missing** | Master effects only. |
+| Recording the performance | **Missing** | The loop station records loops only. |
+| A layout of your own (screen controls mirroring the hardware) | **Missing** | A fixed layout. |
 
 **Still open:**
 - **Bundled sounds:** which open-source instruments ship (e.g. Surge XT and

@@ -44,6 +44,21 @@ song.
   **Hide from list** (bring hidden ones back in **Settings > Plugins**).
 - **Details** shows the maker, version, where it is installed and its website.
 
+## The same instrument in several songs
+
+A piano you use all night needs loading only once. Click the empty
+**Instrument** slot after the last channel, choose **Same as in another
+song**, and pick it: this song now plays that very instrument, with its
+preset and settings. **Duplicate** a song and the copy shares its
+instruments the same way.
+
+A shared instrument uses its memory once however many songs play it, which
+matters for big sampled pianos and orchestras. Above its window the app says
+**Shared by 3 songs: changes apply to all**: a change you make to it is heard
+in every one of those songs. To change it for this song alone, click **Own
+copy for this song**; the song then gets a copy of its own (it loads a
+second one, so it uses more memory). **Undo** shares it again.
+
 ## Two instruments at once
 
 Add a second channel and both play together: a piano with strings under it,

@@ -209,6 +209,7 @@ PluginSlot readSlot(JsonReader& r, const QJsonObject& obj, const QString& path)
     slot.displayName = r.string(obj, "displayName"_L1, path, limits::kMaxNameLength);
     slot.bypass = r.boolean(obj, "bypass"_L1, path);
     slot.state = r.optionalBytes(obj, "state"_L1, path, limits::kMaxPluginStateBytes);
+    if (obj.contains("shareId"_L1)) slot.shareId = r.string(obj, "shareId"_L1, path, limits::kMaxIdLength);
     return slot;
 }
 
@@ -396,6 +397,7 @@ QJsonObject writeSlot(const PluginSlot& slot)
         {u"bypass"_s, slot.bypass},
     };
     if (!slot.state.isEmpty()) obj.insert(u"state"_s, QString::fromLatin1(slot.state.toBase64()));
+    if (!slot.shareId.isEmpty()) obj.insert(u"shareId"_s, slot.shareId);
     return obj;
 }
 
