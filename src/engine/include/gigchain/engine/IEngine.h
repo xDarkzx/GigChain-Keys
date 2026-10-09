@@ -42,6 +42,12 @@ public:
     // never loads anything mid-show, and unloads plugins it no longer uses.
     // Progress goes to the progress handler.
     virtual void preload(const core::Setlist& setlist) = 0;
+    // The setlist's slots were linked or unlinked for sharing (a song
+    // duplicated, an instrument shared or given its own copy): each loaded
+    // instance is kept under its slots' new key, so nothing loads again
+    // (only a new own copy will). Call it after storing the plugins'
+    // settings into the setlist (storePluginStates).
+    virtual void relinkInstances(const core::Setlist& setlist) = 0;
     virtual void setProgressHandler(LoadProgress handler) = 0;
 
     // Plugin settings (preset, knobs, loaded sounds), for saving: each loaded

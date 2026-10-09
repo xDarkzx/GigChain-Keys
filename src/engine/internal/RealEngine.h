@@ -14,6 +14,7 @@
 #include "SongTransport.h"
 #include "Vst3Node.h"
 
+#include "gigchain/core/PluginSharing.h"
 #include "gigchain/engine/IEngine.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
@@ -49,6 +50,7 @@ public:
     using IEngine::applyPatch;
     void applyPatch(const core::SongId& song, const core::Patch& patch) override;
     void preload(const core::Setlist& setlist) override;
+    void relinkInstances(const core::Setlist& setlist) override;
     void setProgressHandler(LoadProgress handler) override { m_progress = std::move(handler); }
     [[nodiscard]] std::size_t loadedPluginCount() const override { return m_nodes.size(); }
     [[nodiscard]] QStringList blockedPlugins() const override { return m_guard.blocked(); }
@@ -165,14 +167,13 @@ private:
     [[nodiscard]] std::vector<QString> masterKeys() const;
     // Every plugin slot of a patch with the key of the instance it plays:
     // song + plugin + its position among the patch's uses of that plugin.
-    struct PlannedSlot
+    // Each playing slot and the instance it plays (shared across songs by
+    // its share id: core/PluginSharing.h).
+    using PlannedSlot = core::PluginUse;
+    static std::vector<PlannedSlot> planPatch(const core::SongId& song, const core::Patch& patch)
     {
-        QString key;
-        const core::PluginSlot* slot = nullptr;
-        int channel = 0;
-        int effect = -1; // -1 = the channel's instrument
-    };
-    static std::vector<PlannedSlot> planPatch(const core::SongId& song, const core::Patch& patch);
+        return core::pluginUses(song, patch);
+    }
     core::Result<void> openAudio(const AudioSetup& setup);
     // After the device changed rate or block size: with audio paused, every
     // plugin is re-prepared and the patch rebuilt for the new size.
@@ -222,7 +223,10 @@ private:
     // Per instance: the settings it was loaded with or last stored (as the
     // setlist holds them), and whether it was changed since.
     std::map<QString, QByteArray> m_nodeStates;
+    std::map<QString, QString> m_nodePlugins; // per instance: its plugin
     std::set<QString> m_editedNodes;
+    // Every slot the setlist plays, by instance key (the first of each).
+    static std::map<QString, const core::PluginSlot*> wantedSlots(const core::Setlist& setlist);
     bool m_unreportedEdit = false;
     // Collects the plugins' edit reports into m_editedNodes.
     void collectEdits();

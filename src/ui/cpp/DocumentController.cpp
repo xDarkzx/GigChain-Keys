@@ -6,6 +6,7 @@
 #include "gigchain/core/ChartEdit.h"
 #include "gigchain/core/Checks.h"
 #include "gigchain/core/Chords.h"
+#include "gigchain/core/PluginSharing.h"
 #include "gigchain/core/Practice.h"
 #include "gigchain/core/SongMap.h"
 
@@ -58,6 +59,12 @@ DocumentController::DocumentController(engine::IEngine& engine, QSettings& setti
     connect(this, &DocumentController::currentChanged, this, &DocumentController::chartChanged);
     connect(this, &DocumentController::currentChanged, this, &DocumentController::chordInversionsChanged);
     connect(this, &DocumentController::currentChanged, this, &DocumentController::playModeChanged);
+    // Which songs share the selected instrument follows the selection and the channels.
+    for (const auto changed : {&DocumentController::currentChanged, &DocumentController::structureChanged,
+                               &DocumentController::channelsChanged, &DocumentController::selectedChannelChanged}) {
+        connect(this, changed, this, &DocumentController::sharingChanged);
+    }
+    connect(this, &DocumentController::channelUpdated, this, &DocumentController::sharingChanged);
     resetSelectedChannel();
     applyCurrentPatchToEngine();
 }
@@ -737,6 +744,7 @@ bool DocumentController::duplicateSong(int song)
     }
     const auto index = core::duplicateSong(m_setlist, song);
     if (!index) return report(index.error());
+    m_engine.relinkInstances(m_setlist); // the original's instruments, now shared: nothing reloads
     commitStructure(core::Cursor{*index, 0}, current);
     return true;
 }
@@ -821,6 +829,89 @@ bool DocumentController::removeEffect(int channel, int effect)
     if (auto r = core::removeEffect(m_setlist, m_cursor, channel, effect); !r) return report(r.error());
     commitChannelField(channel, true);
     return true;
+}
+
+QVariantList DocumentController::otherSongsInstruments() const
+{
+    QVariantList list;
+    std::set<QString> listed; // one entry per instance
+    const core::Song* current = currentSong();
+    for (std::size_t s = 0; s < m_setlist.songs.size(); ++s) {
+        const core::Song& song = m_setlist.songs.at(s);
+        if (current != nullptr && song.id == current->id) continue;
+        for (std::size_t p = 0; p < song.patches.size(); ++p) {
+            for (const core::PluginUse& use : core::pluginUses(song.id, song.patches.at(p))) {
+                if (use.effect >= 0 || !listed.insert(use.key).second) continue;
+                list.append(QVariantMap{{u"song"_s, static_cast<int>(s)},
+                                        {u"patch"_s, static_cast<int>(p)},
+                                        {u"channel"_s, use.channel},
+                                        {u"name"_s, song.patches.at(p).channels.at(static_cast<std::size_t>(use.channel)).name},
+                                        {u"plugin"_s, use.slot->displayName},
+                                        {u"songName"_s, song.name}});
+            }
+        }
+    }
+    return list;
+}
+
+bool DocumentController::addSharedChannel(int song, int patch, int channel)
+{
+    const core::Patch* source = core::patchAt(m_setlist, core::Cursor{song, patch});
+    if (source == nullptr || channel < 0 || std::cmp_greater_equal(channel, source->channels.size())
+        || !source->channels.at(static_cast<std::size_t>(channel)).instrument) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That instrument does not exist")});
+    }
+    // Its settings as they are now, and a link the copy shares (loaded once).
+    const std::vector<QString> problems = m_engine.storePluginStates(m_setlist); // each logged
+    if (!problems.empty()) reportMessage(problems.back(), Notifications::Warning);
+    core::linkForSharing(m_setlist.songs.at(static_cast<std::size_t>(song)));
+    const core::Channel& from = m_setlist.songs.at(static_cast<std::size_t>(song))
+                                    .patches.at(static_cast<std::size_t>(patch))
+                                    .channels.at(static_cast<std::size_t>(channel));
+    const QString name = from.name;
+    GC_IF_FAILED(from.instrument.has_value()) { return false; } // checked above
+    const core::PluginSlot slot = *from.instrument;
+    const auto index = core::addChannel(m_setlist, m_cursor, slot);
+    if (!index) return report(index.error());
+    m_engine.relinkInstances(m_setlist); // the linked song's instruments keep their loaded instances
+    if (auto named = core::updateChannel(m_setlist, m_cursor, *index, [&name](core::Channel& c) { c.name = name; }); !named) {
+        reportMessage(named.error().message, Notifications::Warning); // added, under the plugin's name
+    }
+    qCInfo(lcUi).noquote() << "Added" << name << "shared with song" << song + 1;
+    commitChannels(*index);
+    emit channelAdded(*index);
+    return true;
+}
+
+bool DocumentController::unshareInstrument(int channel)
+{
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That channel has no instrument")});
+    }
+    const auto& instrument = patch->channels.at(static_cast<std::size_t>(channel)).instrument;
+    if (!instrument) return report(core::Error{core::ErrorCode::OutOfRange, tr("That channel has no instrument")});
+    const QString shareId = instrument->shareId;
+    if (shareId.isEmpty()) return true; // already its song's own
+    // Its settings as they are now go with the copy.
+    const std::vector<QString> problems = m_engine.storePluginStates(m_setlist); // each logged
+    if (!problems.empty()) reportMessage(problems.back(), Notifications::Warning);
+    core::unlinkFromSharing(m_setlist.songs.at(static_cast<std::size_t>(m_cursor.song)), shareId);
+    m_engine.relinkInstances(m_setlist); // (the last song sharing it keeps it; a new own copy loads)
+    qCInfo(lcUi) << "Channel" << channel + 1 << "has its own copy of its instrument";
+    commitChannelField(channel, true); // its own copy loads now (in Edit, not mid-song)
+    return true;
+}
+
+int DocumentController::selectedInstrumentSongs() const
+{
+    const core::Patch* patch = currentPatch();
+    const core::Song* song = currentSong();
+    if (patch == nullptr || song == nullptr) return 0;
+    const std::vector<core::PluginUse> uses = core::pluginUses(song->id, *patch);
+    const auto selected = std::ranges::find_if(
+        uses, [this](const core::PluginUse& use) { return use.channel == m_selectedChannel && use.effect < 0; });
+    return selected != uses.end() ? static_cast<int>(core::songsUsing(m_setlist, selected->key).size()) : 0;
 }
 
 bool DocumentController::setEffectBypass(int channel, int effect, bool bypass)
@@ -2086,6 +2177,7 @@ bool DocumentController::restore(std::vector<UndoStep>& from, std::vector<UndoSt
     emit structureChanged();
     emit chordInversionsChanged();
     emit mixerControlsChanged();
+    m_engine.relinkInstances(m_setlist); // an undone link or own copy reloads nothing
     setCursor(core::clampCursor(m_setlist, step.cursor), true); // plays it and refreshes every view
     m_committedCursor = m_cursor;
     setDirty(true);

@@ -157,11 +157,15 @@ Rectangle {
                 // Add a channel: pick an instrument (grouped by maker)
                 EffectSlot {
                     id: newChannelSlot
+                    objectName: "addInstrumentChannel"
                     x: 4
                     width: Theme.stripWidth
                     height: parent.height - newInputSlot.height - 4
                     text: ""
-                    onClicked: newChannelPicker.popup(newChannelSlot, newChannelSlot.width / 2, newChannelSlot.height / 2)
+                    onClicked: {
+                        newChannelPicker.shared = mixer.doc.otherSongsInstruments() // as the setlist is now
+                        newChannelPicker.popup(newChannelSlot, newChannelSlot.width / 2, newChannelSlot.height / 2)
+                    }
                     Text {
                         anchors.centerIn: parent
                         anchors.verticalCenterOffset: 18
@@ -174,6 +178,7 @@ Rectangle {
                     id: newChannelPicker
                     pluginModel: mixer.pluginModel
                     onPicked: (pluginId, name) => mixer.doc.addChannel(pluginId, name)
+                    onPickedShared: (song, patch, channel) => mixer.doc.addSharedChannel(song, patch, channel)
                 }
                 // Add a channel playing an audio input (a mic, a guitar).
                 EffectSlot {
