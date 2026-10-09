@@ -196,6 +196,11 @@ public:
     // Where the click plays: 0 the mix; n the device's outputs 2n+1 and 2n+2
     // (the in-ears only). A pair the device does not have: the mix.
     virtual void setClickOutput(int pair) = 0;
+    // Recording the performance: what the audience hears (the mix) to a WAV
+    // file. A file that cannot be written is an error; stopping gives its seconds.
+    virtual core::Result<void> startRecording(const QString& path) = 0;
+    virtual core::Result<double> stopRecording() = 0;
+    [[nodiscard]] virtual bool recording() const = 0;
     // The outputs the audio device has open (2: only the mix's, 1-2).
     [[nodiscard]] virtual int outputChannels() const = 0;
     [[nodiscard]] virtual bool clickOn() const = 0;

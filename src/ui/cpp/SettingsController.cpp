@@ -321,6 +321,11 @@ void SettingsController::clearControl(int action)
 
 void SettingsController::pollLearning()
 {
+    // The interface changed (unplugged, recovered, another one): its output choices with it.
+    if (const int outputs = m_engine.outputChannels(); outputs != m_outputsSeen) {
+        m_outputsSeen = outputs;
+        emit changed();
+    }
     if (m_learning < 0) return;
     const engine::MidiTrigger pressed = m_engine.takeLearnedTrigger();
     if (!pressed.isSet()) return;

@@ -571,6 +571,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     QElapsedTimer timer;
     timer.start();
     if (&patch != &m_patch) m_patch = patch;
+    callUpExternalSounds(patch);
     m_song = song;
     std::set<Vst3Node*> used;
     m_currentInstruments.clear();
@@ -650,11 +651,16 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     const std::set<const INode*> playing(used.begin(), used.end());
     std::vector<std::shared_ptr<ChannelStrip>> tails;
     std::set<const INode*> ringing;
+    std::set<const INode*> releasing; // instruments whose old strip's MIDI effects made notes
     if (const std::shared_ptr<RenderGraph>& previous = m_exchange.currentShared()) {
         for (const auto* strips : {&previous->strips(), &previous->tails()}) {
             for (const auto& strip : *strips) {
                 const std::vector<const INode*> nodes = strip->nodes();
                 const bool shared = std::ranges::any_of(nodes, [&playing](const INode* n) { return playing.contains(n); });
+                // A strip whose MIDI effects made notes (a chord's, an arpeggio's), going
+                // while its instrument plays on: its notes go too (its effects' state does
+                // not carry over, so nothing else would end them).
+                if (shared && strip->hasMidiEffects() && !nodes.empty()) releasing.insert(nodes.front());
                 if (strip->tailDone() || shared || nodes.empty() || tails.size() >= kMaxTails) continue;
                 tails.push_back(strip);
                 ringing.insert(nodes.begin(), nodes.end());
@@ -665,7 +671,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     // Instruments leaving the sound (and not ringing out) release their
     // notes, so they do not hang when the patch comes back.
     for (const auto& [key, node] : m_nodes) {
-        if (used.count(node.get()) == 0 && !ringing.contains(node.get())) node->releaseAllNotes();
+        if ((used.count(node.get()) == 0 && !ringing.contains(node.get())) || releasing.contains(node.get())) node->releaseAllNotes();
     }
     std::vector<std::shared_ptr<INode>> master;
     for (const QString& key : masterKeys()) {
@@ -785,6 +791,10 @@ std::vector<Notice> RealEngine::poll()
         notices.push_back(Notice::warning(u"The MIDI clock to %1 stopped: the output stopped working"_s.arg(m_clockOut.portName())));
         qCWarning(lcEngine).noquote() << notices.back().text;
         m_clockOut.close(); // choosing the output again in Settings restarts it
+    }
+    if (m_recorder.takeFailed()) {
+        notices.push_back(Notice::error(u"Recording stopped: the recording could not be written (is the disk full?): %1"_s.arg(m_recorder.filePath())));
+        (void)m_recorder.stop(); // finishes what was written; its problem is in the notice above
     }
     // Knobs mapped to parameters: shown in the plugins' own windows, and
     // where each parameter is now, for the knobs' pickup.
@@ -1619,6 +1629,35 @@ double RealEngine::tempo() const
     return m_tempo.load(std::memory_order_relaxed);
 }
 
+void RealEngine::callUpExternalSounds(const core::Patch& patch)
+{
+    GC_ONLY_MAIN_THREAD();
+    // Once per patch chosen (or its hardware sounds changed): a rebuild of the
+    // same patch (a device change, a fader) must not send the synths their
+    // sound again mid-song.
+    if (m_calledUp && m_calledUp->first == patch.id && m_calledUp->second == patch.externalPrograms) return;
+    m_calledUp = std::pair{patch.id, patch.externalPrograms};
+    for (const core::ExternalProgram& sound : patch.externalPrograms) {
+        const auto channel = static_cast<unsigned char>(std::clamp(sound.midiChannel, 1, 16) - 1);
+        const auto send = [this, &sound](std::initializer_list<unsigned char> bytes) {
+            const std::vector<unsigned char> message(bytes);
+            if (auto sent = m_externalOut.send(sound.port, message); !sent) {
+                m_pendingNotices.push_back(Notice::warning(sent.error().message)); // logged by send
+                return false;
+            }
+            return true;
+        };
+        // Bank select (MSB, LSB) first, then the program: the synth needs them in that order.
+        if (sound.bank >= 0 && (!send({static_cast<unsigned char>(0xB0 | channel), 0, static_cast<unsigned char>((sound.bank >> 7) & 0x7F)})
+                                || !send({static_cast<unsigned char>(0xB0 | channel), 32, static_cast<unsigned char>(sound.bank & 0x7F)}))) {
+            continue;
+        }
+        if (send({static_cast<unsigned char>(0xC0 | channel), static_cast<unsigned char>(std::clamp(sound.program, 0, 127))})) {
+            qCInfo(lcEngine).noquote() << "Called up program" << sound.program + 1 << "on" << sound.port << "channel" << channel + 1;
+        }
+    }
+}
+
 void RealEngine::setClickOutput(int pair)
 {
     m_clickPair.store(std::max(pair, 0), std::memory_order_relaxed);
@@ -1899,6 +1938,7 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
         m_limiterRate = rate;
     }
     m_limiter.process(out);
+    m_recorder.push(out.left, out.right, out.frames); // what the audience hears, when recording
     // The other outputs, each pair through its own limiter (ears are on them).
     for (std::size_t pair = 0; ((2 * pair) + 2) <= sends.size() && pair < m_sendLimiters.size(); ++pair) {
         m_sendLimiters.at(pair).process(sendPair(sends, static_cast<int>(pair) + 1, out));

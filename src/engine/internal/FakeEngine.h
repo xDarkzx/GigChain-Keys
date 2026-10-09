@@ -87,6 +87,13 @@ public:
     [[nodiscard]] double tempo() const override { return m_tempo; }
     void setClick(bool on, double) override { m_click = on; }
     void setClickOutput(int) override {}
+    // (The demo makes no sound: nothing to record.)
+    core::Result<void> startRecording(const QString&) override
+    {
+        return core::fail(core::ErrorCode::DeviceUnavailable, QStringLiteral("Nothing to record: running without sound"));
+    }
+    core::Result<double> stopRecording() override { return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Not recording")); }
+    [[nodiscard]] bool recording() const override { return false; }
     // (As an 8-output interface, so the output choices can be seen and tested.)
     [[nodiscard]] int outputChannels() const override { return 8; }
     [[nodiscard]] bool clickOn() const override { return m_click; }

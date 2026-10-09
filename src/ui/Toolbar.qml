@@ -216,6 +216,16 @@ ToolBar {
             tip: qsTr("Stop every sound now (stuck notes, runaway effects)")
             onClicked: bar.engineStatus.panic()
         }
+        // Recording the performance: what the audience hears, to a WAV.
+        StageButton {
+            objectName: "recordButton"
+            text: bar.engineStatus.recording ? qsTr("● Stop rec") : qsTr("● Rec")
+            tone: bar.engineStatus.recording ? "danger" : ""
+            checked: bar.engineStatus.recording
+            tip: bar.engineStatus.recording ? qsTr("Stop recording (it is saved in your Music folder)")
+                                            : qsTr("Record what the audience hears to a WAV file in your Music folder")
+            onClicked: bar.engineStatus.toggleRecording()
+        }
 
         StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8; visible: !bar.performMode }
 

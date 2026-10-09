@@ -3,10 +3,16 @@
 #include "DocumentController.h"
 #include "FreezeWatchdog.h"
 
+#include "gigchain/core/Branding.h"
 #include "gigchain/engine/IEngine.h"
 #include "gigchain/platform/MemoryUse.h"
 
+#include <QDateTime>
+#include <QDir>
 #include <QLoggingCategory>
+#include <QRegularExpression>
+#include <QStandardPaths>
+#include <QTime>
 
 #include <algorithm>
 #include <cmath>
@@ -61,6 +67,34 @@ void EngineStatus::setMasterMuted(bool muted)
     if (m_engine.masterMuted() == muted) return;
     m_engine.setMasterMute(muted);
     emit masterMutedChanged();
+}
+
+void EngineStatus::toggleRecording()
+{
+    if (m_engine.recording()) {
+        const QString path = m_recordingPath;
+        auto stopped = m_engine.stopRecording();
+        if (stopped) {
+            m_document.reportMessage(tr("Recorded %1 to %2").arg(QTime(0, 0).addSecs(static_cast<int>(*stopped)).toString(u"m:ss"_s),
+                                                                   QDir::toNativeSeparators(path)),
+                                     Notifications::Info);
+        } else {
+            m_document.reportMessage(stopped.error().message, Notifications::Error); // logged by the engine
+        }
+    } else {
+        // In the Music folder: "<app> Recordings/2026-10-09 21-30 Saturday Gig.wav".
+        const QString folder = QStandardPaths::writableLocation(QStandardPaths::MusicLocation) + u'/' + branding::name() + u" Recordings"_s;
+        QString setlist = m_document.displayName();
+        setlist.remove(QRegularExpression(u"[\\\\/:*?\"<>|]"_s)); // not allowed in a file name
+        m_recordingPath = folder + u'/' + QDateTime::currentDateTime().toString(u"yyyy-MM-dd HH-mm"_s) + u' ' + setlist + u".wav"_s;
+        if (auto started = m_engine.startRecording(m_recordingPath); !started) {
+            m_document.reportMessage(started.error().message, Notifications::Error); // logged by the engine
+        }
+    }
+    if (m_recording != m_engine.recording()) {
+        m_recording = m_engine.recording();
+        emit recordingChanged();
+    }
 }
 
 void EngineStatus::panic()
@@ -358,18 +392,25 @@ void EngineStatus::pollMixerKnobs()
     }
     // Fader and pan, as the knob's travel (0-1).
     const auto faderAt = [](double volumeDb) { return std::clamp((volumeDb + 60.0) / 72.0, 0.0, 1.0); };
+    const auto controlAt = [&](int slot) {
+        const int strip = slot <= kStrips ? slot - 1 : slot - 1 - kStrips;
+        const core::Patch* now = m_document.currentPatch();
+        if (slot == 0) return faderAt(masterVolumeDb());
+        const core::Channel& channel = now->channels.at(static_cast<std::size_t>(strip)); // (checked by the caller)
+        return slot <= kStrips ? faderAt(channel.volumeDb) : (channel.pan + 1.0) / 2.0;
+    };
     for (int slot = 0; slot < engine::kAppKnobCount; ++slot) {
         const int value = values.at(static_cast<std::size_t>(slot));
         if (value < 0) continue;
         const int strip = slot <= kStrips ? slot - 1 : slot - 1 - kStrips;
-        if (slot > 0 && strip >= channels) continue;
-        const core::Channel* channel = slot > 0 && patch != nullptr ? &patch->channels.at(static_cast<std::size_t>(strip)) : nullptr;
-        if (slot > 0 && channel == nullptr) continue;
-        const double now = channel == nullptr ? faderAt(masterVolumeDb())
-                           : slot <= kStrips ? faderAt(channel->volumeDb)
-                                             : (channel->pan + 1.0) / 2.0;
+        if (slot > 0 && (patch == nullptr || strip >= channels)) continue;
+        const double now = controlAt(slot);
+        core::KnobPickup& pickup = m_knobPickups.at(static_cast<std::size_t>(slot));
+        double& setTo = m_knobSetTo.at(static_cast<std::size_t>(slot));
+        // Moved since by something else (the mouse, undo): the knob picks it up again.
+        if (pickup.caught && std::abs(now - setTo) > core::KnobPickup::kNear) pickup = {};
         // It moves the fader only once it gets to where the fader is: no jump.
-        if (!m_knobPickups.at(static_cast<std::size_t>(slot)).take(value / 127.0, now)) continue;
+        if (!pickup.take(value / 127.0, now)) continue;
         if (slot == 0) {
             setMasterVolumeDb(volumeOf(value));
         } else if (slot <= kStrips) {
@@ -377,6 +418,7 @@ void EngineStatus::pollMixerKnobs()
         } else {
             (void)m_document.setChannelPan(strip, std::clamp((value - 64) / 63.0, -1.0, 1.0));
         }
+        setTo = controlAt(slot); // where it put it (to see a move by something else)
     }
 }
 
@@ -472,6 +514,10 @@ void EngineStatus::poll()
     const int outputs = m_engine.outputChannels();
     if (cpu != m_cpuLoad || midi != m_midiActivity || status != m_statusText || memory != m_memoryMb ||
         inputs != m_audioInputs || outputs != m_audioOutputs) {
+        if (m_recording != m_engine.recording()) { // (stopped by itself: the disk failed, said by the engine)
+            m_recording = m_engine.recording();
+            emit recordingChanged();
+        }
         m_audioInputs = inputs;
         m_audioOutputs = outputs;
         m_cpuLoad = cpu;

@@ -337,6 +337,17 @@ Result<void> validate(const Setlist& setlist)
                 if (auto r = validateChannel(patch.channels.at(c), channelPath); !r) return r;
                 if (auto r = unique(patch.channels.at(c).id.value(), channelPath + ".id"_L1); !r) return r;
             }
+            if (patch.externalPrograms.size() > static_cast<std::size_t>(limits::kMaxExternalPrograms)) {
+                return fail(ErrorCode::LimitExceeded, u"%1 calls up more than %2 hardware sounds"_s.arg(patchPath).arg(limits::kMaxExternalPrograms));
+            }
+            for (std::size_t e = 0; e < patch.externalPrograms.size(); ++e) {
+                const ExternalProgram& sent = patch.externalPrograms.at(e);
+                const QString at = u"%1.externalPrograms[%2]"_s.arg(patchPath).arg(e);
+                if (auto r = validateLength(sent.port, limits::kMaxNameLength, at + ".port"_L1); !r) return r;
+                if (auto r = checkRange(sent.midiChannel, 1, 16, at + ".midiChannel"_L1); !r) return r;
+                if (auto r = checkRange(sent.program, 0, 127, at + ".program"_L1); !r) return r;
+                if (auto r = checkRange(sent.bank, -1, limits::kMaxBank, at + ".bank"_L1); !r) return r;
+            }
         }
     }
     return {};

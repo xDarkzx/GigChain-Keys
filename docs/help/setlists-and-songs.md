@@ -45,6 +45,18 @@ website and paste them into an empty setlist's chart (**Ctrl+V**). See
 
 Pedals and pads can do the same: see [Sound and your keyboard](audio-and-midi.md).
 
+## Hardware synths (external gear)
+
+Playing a hardware synth too (a Nord, a Prophet, a module in the rack)?
+Right-click a song, **External Gear…**, and **Add a synth**: choose the MIDI
+output it is on, its channel, the **Program** (1-128) and, if the synth wants
+one, its **Bank**. When the song comes up, the synth is sent that sound, so
+the computer and the hardware change together. A change is sent at once, so
+you can hear it while you choose. Up to four synths per song.
+
+If the synth is not plugged in, the app says so and carries on; the sound
+goes out next time the song comes up with it there.
+
 ## Undo
 
 Every change to the setlist can be undone with **Ctrl+Z** and redone with

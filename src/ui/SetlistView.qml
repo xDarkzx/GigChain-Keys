@@ -173,6 +173,14 @@ Item {
                         }
                     }
                     StageMenuItem {
+                        objectName: "externalGearItem"
+                        text: qsTr("External Gear…")
+                        onTriggered: {
+                            view.doc.selectPatch(row.songIndex, 0)
+                            externalGear.open()
+                        }
+                    }
+                    StageMenuItem {
                         text: qsTr("Backing Track…")
                         onTriggered: {
                             trackDialog.song = row.songIndex
@@ -290,6 +298,11 @@ Item {
                 }
             }
         }
+    }
+
+    ExternalGearDialog {
+        id: externalGear
+        doc: view.doc
     }
 
     FileDialog {

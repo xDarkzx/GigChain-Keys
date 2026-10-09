@@ -127,6 +127,25 @@ Result<void> renamePatch(Setlist& setlist, Cursor cursor, const QString& name)
     return {};
 }
 
+Result<void> setExternalPrograms(Setlist& setlist, Cursor cursor, const std::vector<ExternalProgram>& programs)
+{
+    Patch* patch = patchAt(setlist, cursor);
+    if (patch == nullptr) return missing(u"Song %1, sound %2"_s.arg(cursor.song + 1).arg(cursor.patch + 1));
+    if (programs.size() > static_cast<std::size_t>(limits::kMaxExternalPrograms)) {
+        return fail(ErrorCode::LimitExceeded, u"A sound can call up at most %1 hardware sounds"_s.arg(limits::kMaxExternalPrograms));
+    }
+    for (const ExternalProgram& p : programs) {
+        if (p.port.trimmed().isEmpty()) return fail(ErrorCode::InvalidData, u"Choose the MIDI output the synth is on"_s);
+        if (p.midiChannel < 1 || p.midiChannel > 16) return fail(ErrorCode::OutOfRange, u"MIDI channels are 1 to 16"_s);
+        if (p.program < 0 || p.program > 127) return fail(ErrorCode::OutOfRange, u"Programs are 1 to 128"_s);
+        if (p.bank < -1 || p.bank > limits::kMaxBank) {
+            return fail(ErrorCode::OutOfRange, u"Banks are 0 to %1 (or none)"_s.arg(limits::kMaxBank));
+        }
+    }
+    patch->externalPrograms = programs;
+    return {};
+}
+
 Result<void> setPatchPlayMode(Setlist& setlist, Cursor cursor, PlayMode mode)
 {
     Patch* patch = patchAt(setlist, cursor);

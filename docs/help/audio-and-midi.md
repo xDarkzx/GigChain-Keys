@@ -46,6 +46,14 @@ still comes out of outputs **1-2** (the mix). Two things can go elsewhere:
 Every pair has the safety limiter too. A pair the interface does not have
 (another interface plugged in) plays in the mix until that one is back.
 
+### Recording the gig
+
+**● Rec** in the toolbar records what the audience hears (the mix, after the
+safety limiter) until you click **● Stop rec**. The recording is a WAV file
+in your **Music** folder, in **GigChain Keys Recordings**, named for the date
+and the setlist; the app says where when it stops. A full disk stops the
+recording and says so; what was recorded is kept.
+
 ### A microphone or a guitar
 
 Under **Audio inputs**, choose the device your mic or guitar is plugged into.

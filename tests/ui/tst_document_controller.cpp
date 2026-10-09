@@ -72,6 +72,21 @@ private slots:
     // An instrument shared between songs (loaded once): a duplicated song
     // shares its original's; another song can add "the same as in another
     // song"; a song can take its own copy, and undo shares it again.
+    // External gear: the sound's hardware programs reach the engine (which
+    // sends them); an entry with no output or a program past 128 is refused, said.
+    void aSoundCallsUpItsHardwareSynths()
+    {
+        QVERIFY(m_doc->setExternalPrograms({QVariantMap{{u"port"_s, u"Nord"_s}, {u"midiChannel"_s, 2}, {u"program"_s, 41}, {u"bank"_s, -1}}}));
+        QCOMPARE(m_engine->lastPatch.externalPrograms.size(), std::size_t{1});
+        QCOMPARE(m_engine->lastPatch.externalPrograms.front().program, 41);
+        QCOMPARE(m_doc->externalPrograms().front().toMap().value(u"port"_s).toString(), u"Nord"_s);
+        QVERIFY(m_doc->isDirty());
+        QVERIFY(!m_doc->setExternalPrograms({QVariantMap{{u"port"_s, u""_s}, {u"program"_s, 1}}}));
+        QVERIFY(m_doc->lastError().contains(u"MIDI output"_s));
+        QVERIFY(!m_doc->setExternalPrograms({QVariantMap{{u"port"_s, u"Nord"_s}, {u"program"_s, 200}}}));
+        QCOMPARE(m_doc->externalPrograms().size(), 1); // unchanged
+    }
+
     // A channel set not to take the sustain pedal: the engine gets it at
     // once, undo gives it back, a name it does not know is refused.
     void aChannelIsSetNotToTakeThePedal()
@@ -1418,6 +1433,11 @@ private slots:
         m_engine->appKnobValues.at(volume1) = 0;
         status.poll();
         QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, -60.0);
+        // The fader moved with the mouse: the knob (still at the bottom) picks it up again, no jump.
+        QVERIFY(m_doc->setChannelVolume(0, 0.0));
+        m_engine->appKnobValues.at(volume1) = 5;
+        status.poll();
+        QCOMPARE(m_doc->currentPatch()->channels.at(0).volumeDb, 0.0);
 
         // One knob, one job: CC 7 learned for the master leaves the strip.
         status.learnMixerKnob(0);

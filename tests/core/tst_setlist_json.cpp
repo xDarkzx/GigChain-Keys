@@ -43,6 +43,9 @@ Setlist richSetlist()
     Channel mic = makeChannel(QStringLiteral("Vocal"));
     mic.inputLeft = 1;
     song.patches.front().channels = {piano, empty, mic};
+    song.patches.front().externalPrograms = {
+        ExternalProgram{.port = QStringLiteral("Nord Stage 3 MIDI"), .midiChannel = 2, .program = 41, .bank = 130},
+        ExternalProgram{.port = QStringLiteral("Prophet-6"), .midiChannel = 1, .program = 7, .bank = -1}};
     song.patches.push_back(makePatch(QStringLiteral("Chorus")));
     song.chart = QStringLiteral("{title: Café}\n[Dm]I love [C#m7]you so much[D/E]\n");
     song.key = QStringLiteral("Dm");

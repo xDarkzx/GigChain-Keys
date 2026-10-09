@@ -191,6 +191,7 @@ private:
     bool m_limiterOn = true;
     double m_limiterCeilingDb = -1.0;
     int m_clickOutput = 0;
+    int m_outputsSeen = 2; // the interface's outputs when last looked (the output choices follow it)
     QString m_running;
     QString m_error;
     std::vector<engine::AudioInputDevice> m_inputs;

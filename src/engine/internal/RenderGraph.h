@@ -114,6 +114,7 @@ public:
     void setLoopSlot(int slot) { m_loopSlot.store(slot, std::memory_order_relaxed); }
     [[nodiscard]] int loopSlot() const { return m_loopSlot.load(std::memory_order_relaxed); }
     [[nodiscard]] int outputPair() const noexcept { return m_outputPair; } // StripSpec::outputPair
+    [[nodiscard]] bool hasMidiEffects() const noexcept { return !m_effected.empty(); }
     // Peak since the last call (then reset), and the most recent block's RMS.
     LevelReading takeLevel();
 

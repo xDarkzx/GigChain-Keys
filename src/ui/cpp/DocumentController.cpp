@@ -1761,6 +1761,39 @@ int DocumentController::playMode() const
     return patch != nullptr ? static_cast<int>(patch->playMode) : static_cast<int>(core::PlayMode::All);
 }
 
+QVariantList DocumentController::externalPrograms() const
+{
+    QVariantList list;
+    const core::Patch* patch = currentPatch();
+    if (patch == nullptr) return list;
+    for (const core::ExternalProgram& p : patch->externalPrograms) {
+        list << QVariantMap{{u"port"_s, p.port}, {u"midiChannel"_s, p.midiChannel}, {u"program"_s, p.program}, {u"bank"_s, p.bank}};
+    }
+    return list;
+}
+
+bool DocumentController::setExternalPrograms(const QVariantList& programs)
+{
+    std::vector<core::ExternalProgram> list;
+    for (const QVariant& item : programs) {
+        const QVariantMap m = item.toMap();
+        list.push_back(core::ExternalProgram{.port = m.value(u"port"_s).toString(),
+                                             .midiChannel = m.value(u"midiChannel"_s, 1).toInt(),
+                                             .program = m.value(u"program"_s, 0).toInt(),
+                                             .bank = m.value(u"bank"_s, -1).toInt()});
+    }
+    if (auto r = core::setExternalPrograms(m_setlist, m_cursor, list); !r) return report(r.error());
+    setDirty(true);
+    applyCurrentPatchToEngine(); // sent now: the player hears the synth's new sound
+    emit currentChanged();
+    return true;
+}
+
+QStringList DocumentController::midiOutputs() const
+{
+    return m_engine.midiOutputs();
+}
+
 bool DocumentController::setPlayMode(int mode)
 {
     if (mode != static_cast<int>(core::PlayMode::All) && mode != static_cast<int>(core::PlayMode::Selected)) {

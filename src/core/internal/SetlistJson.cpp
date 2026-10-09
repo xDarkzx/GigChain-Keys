@@ -295,6 +295,17 @@ Patch readPatch(JsonReader& r, const QJsonObject& obj, const QString& path)
         const QString channelPath = u"%1.channels[%2]"_s.arg(path).arg(i);
         patch.channels.push_back(readChannel(r, r.object(channels.at(i), channelPath), channelPath));
     }
+    // Hardware sounds it calls up (absent: none).
+    const QJsonArray external = r.optionalArray(obj, "externalPrograms"_L1, path, limits::kMaxExternalPrograms);
+    for (qsizetype i = 0; i < external.size() && !r.failed(); ++i) {
+        const QString at = u"%1.externalPrograms[%2]"_s.arg(path).arg(i);
+        const QJsonObject e = r.object(external.at(i), at);
+        patch.externalPrograms.push_back(ExternalProgram{
+            .port = r.string(e, "port"_L1, at, limits::kMaxNameLength),
+            .midiChannel = r.integer(e, "midiChannel"_L1, at, 1, 16),
+            .program = r.integer(e, "program"_L1, at, 0, 127),
+            .bank = r.optionalInteger(e, "bank"_L1, at, -1, limits::kMaxBank, -1)});
+    }
     // "all" (every channel together) or "selected"; absent in older files: all.
     if (!r.failed() && obj.contains("playMode"_L1)) {
         const QString mode = r.string(obj, "playMode"_L1, path, 16);
@@ -476,11 +487,10 @@ QJsonObject writeChannel(const Channel& channel)
     if (!ignores.isEmpty()) obj.insert(u"ignores"_s, ignores);
     if (channel.outputPair != 0) obj.insert(u"outputPair"_s, channel.outputPair);
     if (channel.chord != 0) obj.insert(u"chord"_s, channel.chord);
-    if (channel.arpeggio != 0) {
-        obj.insert(u"arpeggio"_s, channel.arpeggio);
-        obj.insert(u"arpRate"_s, channel.arpRate);
-        obj.insert(u"arpOctaves"_s, channel.arpOctaves);
-    }
+    // (Its rate and octaves are kept while it is off: turned on again, it plays as it was set.)
+    if (channel.arpeggio != 0) obj.insert(u"arpeggio"_s, channel.arpeggio);
+    if (channel.arpRate != 1) obj.insert(u"arpRate"_s, channel.arpRate);
+    if (channel.arpOctaves != 1) obj.insert(u"arpOctaves"_s, channel.arpOctaves);
     return obj;
 }
 
@@ -490,10 +500,20 @@ QJsonObject writePatch(const Patch& patch)
     for (const Channel& channel : patch.channels) {
         channels.append(writeChannel(channel));
     }
-    return QJsonObject{{u"id"_s, patch.id.value()},
-                       {u"name"_s, patch.name},
-                       {u"channels"_s, channels},
-                       {u"playMode"_s, patch.playMode == PlayMode::Selected ? u"selected"_s : u"all"_s}};
+    QJsonObject obj{{u"id"_s, patch.id.value()},
+                    {u"name"_s, patch.name},
+                    {u"channels"_s, channels},
+                    {u"playMode"_s, patch.playMode == PlayMode::Selected ? u"selected"_s : u"all"_s}};
+    if (!patch.externalPrograms.empty()) {
+        QJsonArray external;
+        for (const ExternalProgram& e : patch.externalPrograms) {
+            QJsonObject item{{u"port"_s, e.port}, {u"midiChannel"_s, e.midiChannel}, {u"program"_s, e.program}};
+            if (e.bank >= 0) item.insert(u"bank"_s, e.bank);
+            external.append(item);
+        }
+        obj.insert(u"externalPrograms"_s, external);
+    }
+    return obj;
 }
 
 QJsonObject writeSong(const Song& song)

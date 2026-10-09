@@ -230,6 +230,18 @@ public:
     [[nodiscard]] bool clickOn() const override { return click; }
     int clickPair = 0;
     void setClickOutput(int pair) override { clickPair = pair; }
+    QString recordingTo; // empty: not recording
+    core::Result<void> startRecording(const QString& path) override
+    {
+        recordingTo = path;
+        return {};
+    }
+    core::Result<double> stopRecording() override
+    {
+        recordingTo.clear();
+        return 12.5;
+    }
+    [[nodiscard]] bool recording() const override { return !recordingTo.isEmpty(); }
     int outputs = 8; // an 8-output interface
     [[nodiscard]] int outputChannels() const override { return outputs; }
     engine::BackingTrackState track;

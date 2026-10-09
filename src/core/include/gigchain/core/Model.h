@@ -105,12 +105,25 @@ enum class PlayMode : int {
     Selected, // only the selected channel (one instrument at a time, chosen live)
 };
 
+// A hardware synth's sound chosen with the patch: a Program Change (and bank
+// select) sent to a MIDI output when the patch comes up.
+struct ExternalProgram
+{
+    QString port;        // the MIDI output's name
+    int midiChannel = 1; // 1-16
+    int program = 0;     // 0-127 (shown as 1-128)
+    int bank = -1;       // 0-16383 (bank select MSB and LSB), -1 = none
+
+    friend bool operator==(const ExternalProgram&, const ExternalProgram&) = default;
+};
+
 struct Patch
 {
     PatchId id;
     QString name;
     std::vector<Channel> channels;
     PlayMode playMode = PlayMode::All;
+    std::vector<ExternalProgram> externalPrograms; // hardware sounds it calls up (at most limits::kMaxExternalPrograms)
 
     friend bool operator==(const Patch&, const Patch&) = default;
 };

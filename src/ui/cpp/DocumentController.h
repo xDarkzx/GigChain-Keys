@@ -108,6 +108,13 @@ public:
     [[nodiscard]] int playMode() const;
     // An undo step; the engine plays it at once.
     Q_INVOKABLE bool setPlayMode(int mode);
+    // External gear: the hardware sounds the current sound calls up when it
+    // comes up, [{port, midiChannel (1-16), program (0-127), bank (-1 none)}];
+    // set, they are sent at once (to hear the choice).
+    Q_INVOKABLE QVariantList externalPrograms() const;
+    Q_INVOKABLE bool setExternalPrograms(const QVariantList& programs);
+    // The MIDI outputs there are now (for external gear).
+    Q_INVOKABLE QStringList midiOutputs() const;
     // Why channel `index` of the current sound would not sound if played now
     // ("" = it plays): muted, another soloed, not in the section in force,
     // another selected (one at a time), no instrument loaded.

@@ -70,6 +70,7 @@ qt_add_qml_module(gigchain_ui
         PerformView.qml
         NotificationWindow.qml
         ChannelZoneDialog.qml
+        ExternalGearDialog.qml
         KnobDialog.qml
         KnobLearnMenu.qml
         WarmupBar.qml

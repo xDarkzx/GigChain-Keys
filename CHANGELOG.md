@@ -33,6 +33,11 @@ Downloads for every version are on the
   effects), one key can play a chord (major, minor, power, sus, seventh,
   octaves), and held keys can play as an arpeggio (up, down, up and down, as
   played; 1/4 to 1/16 at the song's tempo, up to 3 octaves).
+- **Hardware synths:** a song can call up a sound on up to four hardware
+  synths (Program Change and bank select on their MIDI outputs) when it comes
+  up: right-click the song, **External Gear…**.
+- **Record the gig:** **● Rec** in the toolbar records what the audience
+  hears to a WAV file in your Music folder.
 
 ### Fixed
 

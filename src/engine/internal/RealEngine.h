@@ -4,6 +4,8 @@
 #include "AudioFile.h"
 #include "GraphExchange.h"
 #include "Metronome.h"
+#include "ExternalMidiOut.h"
+#include "PerformanceRecorder.h"
 #include "MidiClockOut.h"
 #include "MidiInput.h"
 #include "MidiMonitor.h"
@@ -128,6 +130,9 @@ public:
     AppKnobValues takeAppKnobValues() override;
     void setClick(bool on, double volumeDb) override;
     void setClickOutput(int pair) override;
+    core::Result<void> startRecording(const QString& path) override { return m_recorder.start(path, m_audio.sampleRate()); }
+    core::Result<double> stopRecording() override { return m_recorder.stop(); }
+    [[nodiscard]] bool recording() const override { return m_recorder.recording(); }
     [[nodiscard]] int outputChannels() const override { return m_audio.outputChannels(); }
     [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
     void setBackingTrack(const QString& path) override;
@@ -319,6 +324,12 @@ private:
     // Audio thread: bar 1 is moved to this sample (-1: nothing to do).
     std::atomic<int64_t> m_barOriginAt{-1};
     MidiClockOut m_clockOut;
+    ExternalMidiOut m_externalOut;      // hardware synths' Program Changes
+    PerformanceRecorder m_recorder;     // the mix to a WAV file, when recording
+    // The patch whose hardware sounds were sent last, and what was sent.
+    std::optional<std::pair<core::PatchId, std::vector<core::ExternalProgram>>> m_calledUp;
+    // A patch just chosen: its hardware sounds (Program Change, bank) to their outputs.
+    void callUpExternalSounds(const core::Patch& patch);
     MidiMonitor m_keyboard; // what is being played, for the on-screen keyboard
 
     // The backing track: read on a worker thread, handed to the audio thread

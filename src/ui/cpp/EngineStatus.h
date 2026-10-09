@@ -86,6 +86,7 @@ class EngineStatus : public QObject
     Q_PROPERTY(int audioInputChannels READ audioInputChannels NOTIFY statusChanged)
     // The interface's outputs open (2: only the mix's, 1-2).
     Q_PROPERTY(int audioOutputChannels READ audioOutputChannels NOTIFY statusChanged)
+    Q_PROPERTY(bool recording READ recording NOTIFY recordingChanged)
     // The on-screen keyboard: how hard each key (0-127) is held (0 = up),
     // the pitch bend (-1..1, 0 = centre), mod wheel (0..1) and sustain pedal.
     Q_PROPERTY(QVariantList keyVelocities READ keyVelocities NOTIFY keyboardChanged)
@@ -112,6 +113,10 @@ public:
 
     // Stops every sound now (every plugin reset, held notes released).
     Q_INVOKABLE void panic();
+    // Recording the performance (what the audience hears) to a WAV in the
+    // Music folder's recordings; stopping says where it went.
+    Q_INVOKABLE void toggleRecording();
+    [[nodiscard]] bool recording() const { return m_recording; }
 
     // On-screen keyboard: note on (velocity 100) or off, on MIDI channel 1.
     Q_INVOKABLE void playNote(int note, bool on);
@@ -180,6 +185,7 @@ public slots:
 
 signals:
     void statusChanged();
+    void recordingChanged();
     void masterVolumeDbChanged();
     void masterLevelChanged();
     void masterMutedChanged();
@@ -214,6 +220,8 @@ private:
 
     int m_audioInputs = 0;
     int m_audioOutputs = 2;
+    bool m_recording = false; // as last seen (the engine stops by itself when the disk fails)
+    QString m_recordingPath;
     engine::MidiActivity m_keyboard;
     double m_tempo = 120.0;
     bool m_clickOn = false;
@@ -229,6 +237,7 @@ private:
     // The learned mixer knobs' pickup (a knob takes over a fader only once
     // it reaches it), fresh for each sound.
     std::array<core::KnobPickup, engine::kAppKnobCount> m_knobPickups{};
+    std::array<double, engine::kAppKnobCount> m_knobSetTo{}; // where each knob last put its control (0-1)
     std::optional<core::PatchId> m_knobPickupsFor;
     std::optional<std::pair<int, int>> m_learnedKnob;
     std::optional<engine::PluginParameter> m_learnedParameter;
