@@ -118,4 +118,39 @@ core::Result<AudioClip> decodeAudioFile(const QString& path, double sampleRate, 
     return clip;
 }
 
+TrackRead readTrackSet(const std::vector<QString>& paths, double sampleRate, const std::atomic<bool>* cancel)
+{
+    TrackRead read;
+    read.set.paths = paths;
+    read.set.sampleRate = sampleRate;
+    read.set.clips.resize(paths.size());
+    const auto budget = static_cast<int64_t>(kMaxTrackSetSeconds * sampleRate);
+    int64_t used = 0;
+    for (std::size_t i = 0; i < paths.size(); ++i) {
+        const QString& path = paths.at(i);
+        if (path.isEmpty()) continue;
+        if (cancel != nullptr && cancel->load(std::memory_order_relaxed)) break;
+        auto clip = decodeAudioFile(path, sampleRate, cancel);
+        if (!clip) {
+            qCWarning(lcEngine).noquote() << clip.error().message;
+            read.problems.push_back(clip.error().message);
+            read.failed.push_back(path);
+            continue;
+        }
+        if (used + clip->frames() > budget) {
+            const QString why = u"Left out %1: a song's tracks together may be at most %2 minutes of audio (they are all kept in memory)"_s
+                                    .arg(QFileInfo(path).fileName())
+                                    .arg(kMaxTrackSetSeconds / 60.0);
+            qCWarning(lcEngine).noquote() << why;
+            read.problems.push_back(why);
+            read.failed.push_back(path);
+            continue;
+        }
+        used += clip->frames();
+        clip->path = path;
+        read.set.clips.at(i) = std::move(*clip);
+    }
+    return read;
+}
+
 } // namespace gigchain::engine

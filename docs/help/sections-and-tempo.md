@@ -92,4 +92,25 @@ own **Play**, so the sound changes stay in time with it.
 
 **Remove Backing Track** in the same menu takes it off.
 
+### Stems: more tracks, each to its own outputs
+
+A song can play up to eight more tracks with its backing track: a click, a
+guide vocal, the drums on their own. Right-click the song, **Stems…**, and
+**Add stems…**. They play together from the same place, and each has its own
+level, mute (**M**) and outputs: send the click and the guide to outputs 3-4
+for your in-ears and leave them out of the main mix. Stems on outputs of their
+own skip the master fader, so turning the band down never takes the click
+away. A level, mute or output change is heard at once.
+
+The track and stems are all held in memory, up to 45 minutes of audio per song
+in all (eight stems of a five-minute song). Past that, the app says which files
+were left out.
+
+### Markers
+
+The flag button next to the track's time lists the song's markers: choose one
+to jump there, playing or not. **Add Marker at…** marks where the track is now
+(name it *Chorus 2*, *Outro*…); **Remove Marker** takes one off. Markers are
+saved with the song.
+
 See also: [Chord charts](charts.md), [Perform mode](perform.md).

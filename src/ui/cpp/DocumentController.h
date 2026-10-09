@@ -72,6 +72,9 @@ class DocumentController : public QObject
     // The current song's tempo (0 = not set) and backing track file name ("" = none).
     Q_PROPERTY(double songTempo READ songTempo NOTIFY songChanged)
     Q_PROPERTY(QString songBackingTrack READ songBackingTrack NOTIFY songChanged)
+    // Its stems ({file, volumeDb, mute, outputPair}) and markers ({name, seconds}).
+    Q_PROPERTY(QVariantList songStems READ songStems NOTIFY songChanged)
+    Q_PROPERTY(QVariantList songMarkers READ songMarkers NOTIFY songChanged)
     // The current song's time signature and whether its sections switch a beat early.
     Q_PROPERTY(int songTimeNumerator READ songTimeNumerator NOTIFY songChanged)
     Q_PROPERTY(int songTimeDenominator READ songTimeDenominator NOTIFY songChanged)
@@ -281,6 +284,16 @@ public:
     // (the setlist must be saved first); an empty url removes it.
     [[nodiscard]] QString songBackingTrack() const;
     Q_INVOKABLE bool setSongBackingTrack(int song, const QUrl& file);
+    // Its stems: each file copied into the setlist's folder as the track is;
+    // a level, mute or output change plays at once (nothing read again).
+    [[nodiscard]] QVariantList songStems() const;
+    Q_INVOKABLE bool addSongStem(int song, const QUrl& file);
+    Q_INVOKABLE bool removeSongStem(int song, int stem);
+    Q_INVOKABLE bool setSongStemMix(int song, int stem, double volumeDb, bool mute, int outputPair);
+    // Its markers, kept in the track's order.
+    [[nodiscard]] QVariantList songMarkers() const;
+    Q_INVOKABLE bool addSongMarker(int song, const QString& name, double seconds);
+    Q_INVOKABLE bool removeSongMarker(int song, int marker);
 
     [[nodiscard]] int songTimeNumerator() const;
     [[nodiscard]] int songTimeDenominator() const;
@@ -420,6 +433,11 @@ private:
     void setFilePath(const QString& path);
     // The current song's tempo, time signature and backing track, to the engine.
     void applyCurrentSongToEngine();
+    void applyStemsToEngine(); // the current song's stems
+    // `file` into the setlist's folder (kept there with it): its file name there.
+    [[nodiscard]] core::Result<QString> copyIntoSetlistFolder(const QUrl& file) const;
+    // Changes the song's stems (`change` false: it said why); `reread`: files changed.
+    bool changeStems(int song, const std::function<bool(std::vector<core::BackingStem>&)>& change, bool reread);
     // The current song's sections for the current patch, to the engine
     // (before the patch itself, so the new patch plays them from its first
     // note). A different song than last time stops the count and starts

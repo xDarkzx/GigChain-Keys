@@ -171,6 +171,28 @@ struct SongLink
     friend bool operator==(const SongLink&, const SongLink&) = default;
 };
 
+// One more track played with the song's backing track (MainStage's
+// multi-track playback): a stem (drums, a click, a guide vocal), each with
+// its own level and outputs, so the in-ears can get what the audience does not.
+struct BackingStem
+{
+    QString file;          // in the setlist's folder, as the backing track
+    double volumeDb = 0.0; // limits::kMinVolumeDb..kMaxVolumeDb
+    bool mute = false;
+    int outputPair = 0;    // 0 the mix (through the master); n the interface's outputs 2n+1-2n+2
+
+    friend bool operator==(const BackingStem&, const BackingStem&) = default;
+};
+
+// A named place in the backing track ("Chorus 2", "Outro") to jump to.
+struct TrackMarker
+{
+    QString name;
+    double seconds = 0.0;
+
+    friend bool operator==(const TrackMarker&, const TrackMarker&) = default;
+};
+
 struct Song
 {
     SongId id;
@@ -191,6 +213,10 @@ struct Song
     // An audio file played along (WAV, MP3, FLAC...), by file name in the
     // setlist's folder like attachments; empty = none.
     QString backingTrack;
+    // More tracks playing with it, locked to it (at most limits::kMaxStems),
+    // and places marked in it (by time, at most limits::kMaxTrackMarkers).
+    std::vector<BackingStem> stems;
+    std::vector<TrackMarker> markers;
     // For counting the song's bars: beats per bar and the beat's note value.
     int timeNumerator = 4;
     int timeDenominator = 4;

@@ -73,6 +73,7 @@ qt_add_qml_module(gigchain_ui
         NotificationWindow.qml
         ChannelZoneDialog.qml
         ExternalGearDialog.qml
+        StemsDialog.qml
         KnobDialog.qml
         KnobLearnMenu.qml
         WarmupBar.qml
@@ -110,6 +111,7 @@ qt_add_qml_module(gigchain_ui
         icons/chevron-left.svg
         icons/chevron-right.svg
         icons/chevron-up.svg
+        icons/flag.svg
         icons/search.svg
         icons/info-circle.svg
         icons/metronome.svg

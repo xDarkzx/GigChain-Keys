@@ -20,6 +20,7 @@
 #include <optional>
 #include <set>
 #include <span>
+#include <string_view>
 #include <utility>
 
 using namespace Qt::StringLiterals;
@@ -1752,79 +1753,142 @@ std::optional<PluginParameter> RealEngine::takeTouchedParameter(const core::Chan
     return PluginParameter{.id = *touched, .name = u"Parameter %1"_s.arg(*touched)}; // moved, but not listed as automatable
 }
 
+std::vector<QString> RealEngine::trackPaths() const
+{
+    if (m_trackPath.isEmpty() && m_stemPaths.empty()) return {};
+    std::vector<QString> paths{m_trackPath};
+    paths.insert(paths.end(), m_stemPaths.begin(), m_stemPaths.end());
+    return paths;
+}
+
 void RealEngine::setBackingTrack(const QString& path)
 {
     GC_ONLY_MAIN_THREAD();
     if (path == m_trackPath) return;
     m_trackPath = path;
+    m_stemPaths.clear(); // another song's track: its stems come with it (setBackingStems)
+    rereadTracks();
+}
+
+void RealEngine::setBackingStems(const std::vector<BackingStemFile>& stems)
+{
+    GC_ONLY_MAIN_THREAD();
+    std::vector<QString> paths;
+    for (std::size_t i = 0; i < stems.size() && i < m_stemGains.size(); ++i) {
+        const BackingStemFile& stem = stems.at(i);
+        m_stemGains.at(i).store(stem.mute ? 0.0F : dbToGain(stem.volumeDb), std::memory_order_relaxed);
+        m_stemPairs.at(i).store(std::max(stem.outputPair, 0), std::memory_order_relaxed);
+        paths.push_back(stem.path);
+    }
+    if (stems.size() > m_stemGains.size()) {
+        m_pendingNotices.push_back(Notice::warning(u"Only the first %1 stems play"_s.arg(m_stemGains.size())));
+        qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
+    }
+    if (paths == m_stemPaths) return; // a level, mute or output: applied above, nothing to read
+    m_stemPaths = std::move(paths);
+    rereadTracks();
+}
+
+void RealEngine::rereadTracks()
+{
+    GC_ONLY_MAIN_THREAD();
     m_trackFailed.clear();
     m_trackPlaying.store(false, std::memory_order_relaxed);
     m_trackPosition.store(0, std::memory_order_relaxed);
-    m_track.publish(nullptr); // the old track stops at once
+    m_track.publish(nullptr); // the old set stops at once
     if (m_trackReader) {
         m_cancelTrackRead.store(true, std::memory_order_relaxed); // the new one starts when it has stopped (poll)
         return;
     }
-    if (!path.isEmpty()) startReadingTrack(path);
+    if (const std::vector<QString> paths = trackPaths(); !paths.empty()) startReadingTracks(paths);
 }
 
-void RealEngine::startReadingTrack(const QString& path)
+void RealEngine::seekBackingTrack(double seconds)
+{
+    const TrackSet* set = m_track.current();
+    if (set == nullptr || !std::isfinite(seconds)) return; // nothing read yet: nothing to move
+    const auto at = static_cast<int64_t>(std::llround(std::max(seconds, 0.0) * set->sampleRate));
+    m_trackSeek.store(std::min(at, set->frames()), std::memory_order_relaxed);
+}
+
+void RealEngine::startReadingTracks(const std::vector<QString>& paths)
 {
     GC_ONLY_MAIN_THREAD();
     m_cancelTrackRead.store(false, std::memory_order_relaxed);
     const double rate = m_audio.sampleRate();
-    m_trackReader.reset(QThread::create([this, path, rate] {
-        auto clip = decodeAudioFile(path, rate, &m_cancelTrackRead);
-        const std::scoped_lock lock(m_trackMutex);
-        m_trackRead = std::move(clip);
-        m_trackReadPath = path;
-    }));
+    m_trackReader.reset(QThread::create(&RealEngine::readTracks, this, paths, rate));
     m_trackReader->setObjectName(u"BackingTrackReader"_s);
     m_trackReader->start(QThread::LowPriority);
+}
+
+void RealEngine::readTracks(const std::vector<QString>& paths, double rate) noexcept
+{
+    // Nothing may leave a thread (the app would end): out of memory on a big
+    // set is kept here, without allocating, and said and logged by the main
+    // thread (poll).
+    const auto broke = [this](std::string_view why) noexcept {
+        const std::size_t n = std::min(why.size(), m_trackReadWhy.size() - 1);
+        std::copy_n(why.begin(), n, m_trackReadWhy.begin());
+        m_trackReadWhy.at(n) = '\0';
+        m_trackReadBroke.store(true, std::memory_order_release);
+    };
+    try {
+        TrackRead read = readTrackSet(paths, rate, &m_cancelTrackRead);
+        const std::scoped_lock lock(m_trackMutex);
+        m_trackRead = std::move(read);
+    } catch (const std::exception& e) {
+        broke(e.what());
+    } catch (...) {
+        broke("an error of an unknown kind");
+    }
 }
 
 void RealEngine::collectBackingTrack(std::vector<Notice>& notices)
 {
     GC_ONLY_MAIN_THREAD();
     m_track.collectGarbage();
+    const std::vector<QString> paths = trackPaths();
     if (m_trackReader && m_trackReader->isFinished()) {
         m_trackReader.reset();
-        std::optional<core::Result<AudioClip>> read;
-        QString readPath;
+        std::optional<TrackRead> read;
         {
             const std::scoped_lock lock(m_trackMutex);
             read.swap(m_trackRead);
-            readPath = m_trackReadPath;
         }
-        if (read && readPath == m_trackPath) {
-            if (*read) {
-                m_trackPosition.store(0, std::memory_order_relaxed);
-                m_track.publish(std::make_shared<AudioClip>(std::move(**read)));
-            } else {
-                m_trackFailed = m_trackPath;
-                qCWarning(lcEngine).noquote() << read->error().message;
-                notices.push_back(Notice::error(read->error().message));
-            }
+        if (m_trackReadBroke.exchange(false, std::memory_order_acquire)) {
+            const QString why = u"The backing tracks could not be read: %1"_s.arg(QString::fromUtf8(m_trackReadWhy.data()));
+            qCWarning(lcEngine).noquote() << why;
+            notices.push_back(Notice::error(why));
+            m_trackFailed = paths; // not tried again until asked for again
+        }
+        if (read && read->set.paths == paths) { // (else: asked for other files meanwhile; read below)
+            std::ranges::transform(read->problems, std::back_inserter(notices), &Notice::error); // logged by the reader
+            m_trackFailed = std::move(read->failed);
+            m_trackPosition.store(0, std::memory_order_relaxed);
+            if (read->set.frames() > 0) m_track.publish(std::make_shared<TrackSet>(std::move(read->set)));
         }
     }
-    if (m_trackReader || m_trackPath.isEmpty() || m_trackFailed == m_trackPath) return;
+    if (m_trackReader || paths.empty()) return;
     // Not read yet (another read was running), or read for another sample
-    // rate (the audio device changed): read it (again).
-    const AudioClip* clip = m_track.current();
-    if (clip == nullptr || clip->path != m_trackPath || clip->sampleRate != m_audio.sampleRate()) {
-        if (clip != nullptr) {
+    // rate (the audio device changed): read it (again). Files that failed
+    // are not tried again until asked for again.
+    const TrackSet* set = m_track.current();
+    const bool current = set != nullptr && set->paths == paths && set->sampleRate == m_audio.sampleRate();
+    const bool failedAlready = set == nullptr && !m_trackFailed.empty();
+    if (!current && !failedAlready) {
+        if (set != nullptr) {
             m_trackPlaying.store(false, std::memory_order_relaxed);
             m_track.publish(nullptr);
         }
-        startReadingTrack(m_trackPath);
+        startReadingTracks(paths);
     }
 }
 
 void RealEngine::playBackingTrack(bool play)
 {
-    const AudioClip* clip = m_track.current();
-    if (play && (clip == nullptr || clip->path != m_trackPath)) return; // nothing ready to play
-    if (play && m_trackPosition.load(std::memory_order_relaxed) >= clip->frames()) {
+    const TrackSet* set = m_track.current();
+    if (play && (set == nullptr || set->paths != trackPaths())) return; // nothing ready to play
+    if (play && m_trackPosition.load(std::memory_order_relaxed) >= set->frames()) {
         m_trackPosition.store(0, std::memory_order_relaxed); // it ended: from the start
     }
     m_trackPlaying.store(play, std::memory_order_relaxed);
@@ -1832,15 +1896,15 @@ void RealEngine::playBackingTrack(bool play)
 
 BackingTrackState RealEngine::backingTrack() const
 {
-    const AudioClip* clip = m_track.current();
-    const bool loaded = clip != nullptr && clip->path == m_trackPath && !m_trackPath.isEmpty();
-    const double rate = loaded ? clip->sampleRate : 0.0;
+    const TrackSet* set = m_track.current();
+    const bool loaded = set != nullptr && set->paths == trackPaths() && set->frames() > 0;
+    const double rate = loaded ? set->sampleRate : 0.0;
     return BackingTrackState{.path = m_trackPath,
                              .loading = m_trackReader != nullptr,
                              .loaded = loaded,
                              .playing = loaded && m_trackPlaying.load(std::memory_order_relaxed),
                              .position = rate > 0.0 ? static_cast<double>(m_trackPosition.load(std::memory_order_relaxed)) / rate : 0.0,
-                             .length = loaded ? clip->seconds() : 0.0};
+                             .length = rate > 0.0 ? static_cast<double>(set->frames()) / rate : 0.0};
 }
 
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(const QString& pluginId)
@@ -1938,14 +2002,20 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     m_exchange.release();
     m_loops.endBlock();
 
-    // The backing track, through the master fader.
+    // The backing track and its stems, locked together: the track and stems
+    // in the mix through the master fader, stems on outputs of their own at
+    // their own level (the in-ears, not the audience).
     const auto frames = static_cast<std::size_t>(std::max(out.frames, 0));
-    if (const AudioClip* clip = m_track.acquire(); clip != nullptr) {
+    if (const TrackSet* set = m_track.acquire(); set != nullptr) {
+        const int64_t length = set->frames();
         if (m_trackRewind.exchange(false, std::memory_order_relaxed)) m_trackPosition.store(0, std::memory_order_relaxed);
+        if (const int64_t seek = m_trackSeek.exchange(-1, std::memory_order_relaxed); seek >= 0) {
+            m_trackPosition.store(std::min(seek, length), std::memory_order_relaxed); // a marker
+        }
         // Played with the song: from the section's place in the track, on its first beat.
         if (song.seekTrack && bpm > 0.0) {
-            const auto at = static_cast<int64_t>(std::llround(song.trackQuarter * 60.0 / bpm * clip->sampleRate));
-            m_trackPosition.store(std::clamp<int64_t>(at, 0, clip->frames()), std::memory_order_relaxed);
+            const auto at = static_cast<int64_t>(std::llround(song.trackQuarter * 60.0 / bpm * set->sampleRate));
+            m_trackPosition.store(std::clamp<int64_t>(at, 0, length), std::memory_order_relaxed);
         }
         if (song.stopTrack) m_trackPlaying.store(false, std::memory_order_relaxed);
         std::size_t offset = 0; // where in this block the track plays from
@@ -1953,19 +2023,29 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
             m_trackPlaying.store(true, std::memory_order_relaxed);
             offset = static_cast<std::size_t>(song.startTrackAt);
         }
-        const int64_t position = std::clamp<int64_t>(m_trackPosition.load(std::memory_order_relaxed), 0, clip->frames());
+        const int64_t position = std::clamp<int64_t>(m_trackPosition.load(std::memory_order_relaxed), 0, length);
         if (m_trackPlaying.load(std::memory_order_relaxed) && offset < frames) {
-            const auto n = static_cast<std::size_t>(
-                std::min<int64_t>(static_cast<int64_t>(frames - offset), clip->frames() - position));
-            const float gain = m_trackGain.load(std::memory_order_relaxed) * masterGain;
-            const auto from = static_cast<std::size_t>(position);
-            const auto add = [gain](float mix, float sample) { return mix + (sample * gain); };
-            const std::span<float> left = std::span<float>(out.left, frames).subspan(offset, n);
-            const std::span<float> right = std::span<float>(out.right, frames).subspan(offset, n);
-            std::ranges::transform(left, std::span<const float>(clip->left).subspan(from, n), left.begin(), add);
-            std::ranges::transform(right, std::span<const float>(clip->right).subspan(from, n), right.begin(), add);
+            const auto n = static_cast<std::size_t>(std::min<int64_t>(static_cast<int64_t>(frames - offset), length - position));
+            const float trackGain = m_trackGain.load(std::memory_order_relaxed);
+            for (std::size_t c = 0; c < set->clips.size(); ++c) {
+                const AudioClip& clip = set->clips.at(c);
+                if (position >= clip.frames()) continue; // empty, or a shorter stem that has ended
+                const auto take = std::min<std::size_t>(n, static_cast<std::size_t>(clip.frames() - position));
+                const int pair = c == 0 ? 0 : m_stemPairs.at(c - 1).load(std::memory_order_relaxed);
+                const AudioBlock to = sendPair(sends, pair, out);
+                const bool inMix = to.left == out.left; // (a pair the device does not have: the mix)
+                const float gain = trackGain * (c == 0 ? 1.0F : m_stemGains.at(c - 1).load(std::memory_order_relaxed))
+                                   * (inMix ? masterGain : 1.0F);
+                if (gain <= 0.0F) continue;
+                const auto from = static_cast<std::size_t>(position);
+                const auto add = [gain](float mix, float sample) { return mix + (sample * gain); };
+                const std::span<float> left = std::span<float>(to.left, frames).subspan(offset, take);
+                const std::span<float> right = std::span<float>(to.right, frames).subspan(offset, take);
+                std::ranges::transform(left, std::span<const float>(clip.left).subspan(from, take), left.begin(), add);
+                std::ranges::transform(right, std::span<const float>(clip.right).subspan(from, take), right.begin(), add);
+            }
             m_trackPosition.store(position + static_cast<int64_t>(n), std::memory_order_relaxed);
-            if (position + static_cast<int64_t>(n) >= clip->frames()) m_trackPlaying.store(false, std::memory_order_relaxed);
+            if (position + static_cast<int64_t>(n) >= length) m_trackPlaying.store(false, std::memory_order_relaxed);
         }
     }
     m_track.release();

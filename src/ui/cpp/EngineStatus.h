@@ -152,6 +152,7 @@ public:
     [[nodiscard]] int songQueuedPlace() const;
     Q_INVOKABLE void playPauseTrack();
     Q_INVOKABLE void rewindTrack();
+    Q_INVOKABLE void seekTrack(double seconds); // to a marker, playing or not
 
     // Learning a knob: move a knob on the keyboard and the control in the
     // plugin's window (either order); the mapping is added to the channel

@@ -2,6 +2,7 @@
 
 #include "AudioDevice.h"
 #include "AudioFile.h"
+#include "gigchain/core/Limits.h"
 #include "GraphExchange.h"
 #include "Metronome.h"
 #include "ExternalMidiOut.h"
@@ -154,8 +155,10 @@ public:
     [[nodiscard]] int outputChannels() const override { return m_audio.outputChannels(); }
     [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
     void setBackingTrack(const QString& path) override;
+    void setBackingStems(const std::vector<BackingStemFile>& stems) override;
     void playBackingTrack(bool play) override;
     void rewindBackingTrack() override { m_trackRewind.store(true, std::memory_order_relaxed); }
+    void seekBackingTrack(double seconds) override;
     void setBackingTrackVolume(double volumeDb) override { m_trackGain.store(dbToGain(volumeDb), std::memory_order_relaxed); }
     [[nodiscard]] BackingTrackState backingTrack() const override;
     [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId& id, int target) const override;
@@ -174,7 +177,10 @@ private:
     // Main thread: a finished backing-track read becomes the track; a track
     // read for another sample rate is read again.
     void collectBackingTrack(std::vector<Notice>& notices);
-    void startReadingTrack(const QString& path);
+    // Reads the track and its stems (m_trackPaths) again; a read running is cancelled first (poll).
+    void rereadTracks();
+    void startReadingTracks(const std::vector<QString>& paths);
+    void readTracks(const std::vector<QString>& paths, double rate) noexcept; // the reader thread's work
     // The plugin instance for a slot, loaded if needed (logged; a failure is
     // reported to the user). `announce`: show the load in the progress UI.
     std::shared_ptr<Vst3Node> nodeFor(const QString& key, const core::PluginSlot& slot, bool announce);
@@ -368,10 +374,17 @@ private:
     void callUpExternalSounds(const core::Patch& patch);
     MidiMonitor m_keyboard; // what is being played, for the on-screen keyboard
 
-    // The backing track: read on a worker thread, handed to the audio thread
-    // through the exchange. Play state and position are atomics.
-    HazardExchange<AudioClip> m_track;
+    // The backing track and its stems: read together on a worker thread,
+    // handed to the audio thread through the exchange. Play state, position
+    // and the stems' levels and outputs are atomics.
+    HazardExchange<TrackSet> m_track;
     QString m_trackPath;          // main thread: the file asked for
+    std::vector<QString> m_stemPaths; // main thread: its stems' files
+    // The files the track set is read from: the track's (maybe "") and its stems'.
+    [[nodiscard]] std::vector<QString> trackPaths() const;
+    std::array<std::atomic<float>, core::limits::kMaxStems> m_stemGains{}; // 0 = muted
+    std::array<std::atomic<int>, core::limits::kMaxStems> m_stemPairs{};
+    std::atomic<int64_t> m_trackSeek{-1}; // frames to jump to (-1: none); taken by the audio thread
     std::atomic<bool> m_trackPlaying{false};
     std::atomic<bool> m_trackRewind{false};
     std::atomic<int64_t> m_trackPosition{0}; // frames; written by the audio thread
@@ -379,10 +392,11 @@ private:
     // The reading in progress, and its outcome (guarded by m_trackMutex).
     std::unique_ptr<QThread> m_trackReader;
     std::atomic<bool> m_cancelTrackRead{false};
+    std::atomic<bool> m_trackReadBroke{false}; // the reader failed outright (said and logged by poll) ...
+    std::array<char, 256> m_trackReadWhy{};    // ... why (written before the flag, read after it)
     std::mutex m_trackMutex;
-    std::optional<core::Result<AudioClip>> m_trackRead;
-    QString m_trackReadPath; // the path m_trackRead is for
-    QString m_trackFailed;   // main thread: a path that could not be read (not tried again until asked again)
+    std::optional<TrackRead> m_trackRead;
+    std::vector<QString> m_trackFailed; // main thread: files that could not be read (not tried again until asked again)
 };
 
 } // namespace gigchain::engine

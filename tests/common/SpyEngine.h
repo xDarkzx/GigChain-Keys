@@ -2,6 +2,7 @@
 
 #include "gigchain/engine/IEngine.h"
 
+#include <algorithm>
 #include <array>
 #include <map>
 #include <optional>
@@ -267,8 +268,14 @@ public:
         track = engine::BackingTrackState{.path = path, .loading = false, .loaded = !path.isEmpty(), .playing = false,
                                           .position = 0.0, .length = path.isEmpty() ? 0.0 : 60.0};
     }
+    std::vector<engine::BackingStemFile> stems;
+    void setBackingStems(const std::vector<engine::BackingStemFile>& files) override { stems = files; }
     void playBackingTrack(bool play) override { track.playing = play && track.loaded; }
     void rewindBackingTrack() override { track.position = 0.0; }
+    void seekBackingTrack(double seconds) override
+    {
+        if (track.loaded) track.position = std::clamp(seconds, 0.0, track.length);
+    }
     double trackVolume = 0.0;
     void setBackingTrackVolume(double volumeDb) override { trackVolume = volumeDb; }
     [[nodiscard]] engine::BackingTrackState backingTrack() const override { return track; }

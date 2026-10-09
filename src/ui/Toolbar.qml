@@ -317,7 +317,7 @@ ToolBar {
         // with sections plays it from its own Play).
         Row {
             id: transport
-            visible: bar.doc.songBackingTrack !== ""
+            visible: bar.doc.songBackingTrack !== "" || bar.doc.songStems.length > 0
             spacing: -1
             function clock(seconds) {
                 const s = Math.max(0, Math.floor(seconds))
@@ -354,6 +354,92 @@ ToolBar {
                     color: Theme.readoutText
                     font.pixelSize: Theme.smallFontSize
                     font.family: "Consolas"
+                }
+            }
+            // Markers: jump to a marked place; mark where it is now; the song's stems.
+            StageButton {
+                id: markerButton
+                objectName: "markerButton"
+                iconSource: "icons/flag.svg"
+                enabled: bar.engineStatus.trackLoaded
+                tip: bar.doc.songMarkers.length > 0 ? qsTr("Markers: jump to a marked place in the track")
+                                                    : qsTr("Mark places in the track to jump to (Verse 2, Outro…)")
+                onClicked: markerMenu.popup(markerButton, 0, markerButton.height)
+            }
+            StageMenu {
+                id: markerMenu
+                objectName: "markerMenu"
+                Instantiator {
+                    model: bar.doc.songMarkers
+                    delegate: StageMenuItem {
+                        required property var modelData
+                        text: modelData.name + "  " + transport.clock(modelData.seconds)
+                        onTriggered: bar.engineStatus.seekTrack(modelData.seconds)
+                    }
+                    onObjectAdded: (i, object) => markerMenu.insertItem(i, object)
+                    onObjectRemoved: (i, object) => markerMenu.removeItem(object)
+                }
+                MenuSeparator {
+                    visible: bar.doc.songMarkers.length > 0
+                    contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder }
+                }
+                StageMenuItem {
+                    text: qsTr("Add Marker at %1…").arg(transport.clock(bar.engineStatus.trackPosition))
+                    onTriggered: {
+                        markerName.at = bar.engineStatus.trackPosition
+                        markerName.text = qsTr("Marker %1").arg(bar.doc.songMarkers.length + 1)
+                        markerNameDialog.open()
+                    }
+                }
+                StageMenu {
+                    id: removeMarkerMenu
+                    title: qsTr("Remove Marker")
+                    enabled: bar.doc.songMarkers.length > 0
+                    Instantiator {
+                        model: bar.doc.songMarkers
+                        delegate: StageMenuItem {
+                            required property var modelData
+                            required property int index
+                            text: modelData.name + "  " + transport.clock(modelData.seconds)
+                            onTriggered: bar.doc.removeSongMarker(bar.doc.songIndex, index)
+                        }
+                        onObjectAdded: (i, object) => removeMarkerMenu.insertItem(i, object)
+                        onObjectRemoved: (i, object) => removeMarkerMenu.removeItem(object)
+                    }
+                }
+            }
+            StageDialog {
+                id: markerNameDialog
+                objectName: "markerNameDialog"
+                title: qsTr("Marker at %1").arg(transport.clock(markerName.at))
+                width: 320
+                onOpened: {
+                    markerName.forceActiveFocus()
+                    markerName.selectAll()
+                }
+                function add() {
+                    if (bar.doc.addSongMarker(bar.doc.songIndex, markerName.text, markerName.at)) close()
+                }
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 10
+                    StageTextField {
+                        id: markerName
+                        objectName: "markerName"
+                        property real at: 0
+                        Layout.fillWidth: true
+                        Layout.margins: 20
+                        Layout.bottomMargin: 0
+                        placeholderText: qsTr("Chorus 2, Outro…")
+                        onAccepted: markerNameDialog.add()
+                    }
+                    RowLayout {
+                        Layout.alignment: Qt.AlignRight
+                        Layout.margins: 20
+                        Layout.topMargin: 0
+                        StageButton { text: qsTr("Cancel"); onClicked: markerNameDialog.close() }
+                        StageButton { text: qsTr("Add"); onClicked: markerNameDialog.add() }
+                    }
                 }
             }
         }

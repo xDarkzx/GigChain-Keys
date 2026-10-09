@@ -1962,34 +1962,153 @@ bool DocumentController::setSongBackingTrack(int song, const QUrl& file)
     }
     QString fileName;
     if (!file.isEmpty()) {
-        if (m_filePath.isEmpty()) {
-            return report(core::Error{core::ErrorCode::FileWriteFailed,
-                                      tr("Save the setlist first: backing tracks are kept in the setlist's folder")});
-        }
-        if (!file.isLocalFile()) {
-            return report(core::Error{core::ErrorCode::FileNotFound, tr("Only local files can be used: %1").arg(file.toString())});
-        }
-        const QFileInfo source(file.toLocalFile());
-        const QDir folder = QFileInfo(m_filePath).absoluteDir();
-        fileName = source.fileName();
-        const QString target = folder.filePath(fileName);
-        if (QFileInfo(target).absoluteFilePath() != source.absoluteFilePath()) {
-            if (QFileInfo::exists(target)) {
-                if (QFileInfo(target).size() != source.size()) {
-                    return report(core::Error{core::ErrorCode::FileWriteFailed,
-                                              tr("The setlist's folder already has a different %1").arg(fileName)});
-                }
-            } else if (!QFile::copy(source.absoluteFilePath(), target)) {
-                return report(core::Error{core::ErrorCode::FileWriteFailed,
-                                          tr("Could not copy %1 into the setlist's folder").arg(fileName)});
-            }
-        }
+        auto copied = copyIntoSetlistFolder(file);
+        if (!copied) return report(copied.error());
+        fileName = *copied;
     }
     if (auto r = core::setSongBackingTrack(m_setlist, song, fileName); !r) return report(r.error());
     setDirty(true);
     if (song == m_cursor.song) applyCurrentSongToEngine();
     emit songChanged();
     return true;
+}
+
+core::Result<QString> DocumentController::copyIntoSetlistFolder(const QUrl& file) const
+{
+    if (m_filePath.isEmpty()) {
+        return core::fail(core::ErrorCode::FileWriteFailed, tr("Save the setlist first: backing tracks are kept in the setlist's folder"));
+    }
+    if (!file.isLocalFile()) {
+        return core::fail(core::ErrorCode::FileNotFound, tr("Only local files can be used: %1").arg(file.toString()));
+    }
+    const QFileInfo source(file.toLocalFile());
+    const QDir folder = QFileInfo(m_filePath).absoluteDir();
+    QString fileName = source.fileName();
+    const QString target = folder.filePath(fileName);
+    if (QFileInfo(target).absoluteFilePath() != source.absoluteFilePath()) {
+        if (QFileInfo::exists(target)) {
+            if (QFileInfo(target).size() != source.size()) {
+                return core::fail(core::ErrorCode::FileWriteFailed, tr("The setlist's folder already has a different %1").arg(fileName));
+            }
+        } else if (!QFile::copy(source.absoluteFilePath(), target)) {
+            return core::fail(core::ErrorCode::FileWriteFailed, tr("Could not copy %1 into the setlist's folder").arg(fileName));
+        }
+    }
+    return fileName;
+}
+
+QVariantList DocumentController::songStems() const
+{
+    QVariantList list;
+    if (const core::Song* song = currentSong()) {
+        for (const core::BackingStem& stem : song->stems) {
+            list << QVariantMap{{u"file"_s, stem.file}, {u"volumeDb"_s, stem.volumeDb}, {u"mute"_s, stem.mute}, {u"outputPair"_s, stem.outputPair}};
+        }
+    }
+    return list;
+}
+
+QVariantList DocumentController::songMarkers() const
+{
+    QVariantList list;
+    if (const core::Song* song = currentSong()) {
+        for (const core::TrackMarker& marker : song->markers) list << QVariantMap{{u"name"_s, marker.name}, {u"seconds"_s, marker.seconds}};
+    }
+    return list;
+}
+
+bool DocumentController::changeStems(int song, const std::function<bool(std::vector<core::BackingStem>&)>& change, bool reread)
+{
+    if (song < 0 || std::cmp_greater_equal(song, m_setlist.songs.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That song does not exist")});
+    }
+    std::vector<core::BackingStem> stems = m_setlist.songs.at(static_cast<std::size_t>(song)).stems;
+    if (!change(stems)) return false;
+    if (auto r = core::setSongStems(m_setlist, song, stems); !r) return report(r.error());
+    setDirty(true);
+    if (song == m_cursor.song) {
+        if (reread) applyCurrentSongToEngine();
+        else applyStemsToEngine(); // a level, mute or output: no reading again
+    }
+    emit songChanged();
+    return true;
+}
+
+bool DocumentController::addSongStem(int song, const QUrl& file)
+{
+    auto copied = copyIntoSetlistFolder(file);
+    if (!copied) return report(copied.error());
+    return changeStems(song, [this, &copied](std::vector<core::BackingStem>& stems) {
+        if (std::cmp_greater_equal(stems.size(), core::limits::kMaxStems)) {
+            return report(core::Error{core::ErrorCode::LimitExceeded, tr("A song can have at most %1 stems").arg(core::limits::kMaxStems)});
+        }
+        stems.push_back(core::BackingStem{.file = *copied, .volumeDb = 0.0, .mute = false, .outputPair = 0});
+        return true;
+    }, true);
+}
+
+bool DocumentController::removeSongStem(int song, int stem)
+{
+    return changeStems(song, [this, stem](std::vector<core::BackingStem>& stems) {
+        if (stem < 0 || std::cmp_greater_equal(stem, stems.size())) return report(core::Error{core::ErrorCode::OutOfRange, tr("That stem does not exist")});
+        stems.erase(stems.begin() + stem);
+        return true;
+    }, true);
+}
+
+bool DocumentController::setSongStemMix(int song, int stem, double volumeDb, bool mute, int outputPair)
+{
+    m_coalesceKey = u"stem:%1:%2"_s.arg(song).arg(stem); // a level drag: one undo step
+    return changeStems(song, [this, stem, volumeDb, mute, outputPair](std::vector<core::BackingStem>& stems) {
+        if (stem < 0 || std::cmp_greater_equal(stem, stems.size())) return report(core::Error{core::ErrorCode::OutOfRange, tr("That stem does not exist")});
+        core::BackingStem& changed = stems.at(static_cast<std::size_t>(stem));
+        changed.volumeDb = volumeDb;
+        changed.mute = mute;
+        changed.outputPair = outputPair;
+        return true;
+    }, false);
+}
+
+bool DocumentController::addSongMarker(int song, const QString& name, double seconds)
+{
+    if (song < 0 || std::cmp_greater_equal(song, m_setlist.songs.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That song does not exist")});
+    }
+    std::vector<core::TrackMarker> markers = m_setlist.songs.at(static_cast<std::size_t>(song)).markers;
+    markers.push_back(core::TrackMarker{.name = name, .seconds = seconds});
+    if (auto r = core::setSongMarkers(m_setlist, song, std::move(markers)); !r) return report(r.error());
+    setDirty(true);
+    emit songChanged();
+    return true;
+}
+
+bool DocumentController::removeSongMarker(int song, int marker)
+{
+    if (song < 0 || std::cmp_greater_equal(song, m_setlist.songs.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That song does not exist")});
+    }
+    std::vector<core::TrackMarker> markers = m_setlist.songs.at(static_cast<std::size_t>(song)).markers;
+    if (marker < 0 || std::cmp_greater_equal(marker, markers.size())) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("That marker does not exist")});
+    }
+    markers.erase(markers.begin() + marker);
+    if (auto r = core::setSongMarkers(m_setlist, song, std::move(markers)); !r) return report(r.error());
+    setDirty(true);
+    emit songChanged();
+    return true;
+}
+
+void DocumentController::applyStemsToEngine()
+{
+    const core::Song* song = currentSong();
+    std::vector<engine::BackingStemFile> files;
+    if (song != nullptr && !m_filePath.isEmpty()) {
+        const QDir folder = QFileInfo(m_filePath).absoluteDir();
+        std::ranges::transform(song->stems, std::back_inserter(files), [&folder](const core::BackingStem& stem) {
+            return engine::BackingStemFile{.path = folder.filePath(stem.file), .volumeDb = stem.volumeDb, .mute = stem.mute, .outputPair = stem.outputPair};
+        });
+    }
+    m_engine.setBackingStems(files);
 }
 
 void DocumentController::applyCurrentSongToEngine()
@@ -2005,6 +2124,7 @@ void DocumentController::applyCurrentSongToEngine()
                               ? QFileInfo(m_filePath).absoluteDir().filePath(song->backingTrack)
                               : QString();
     m_engine.setBackingTrack(track);
+    applyStemsToEngine(); // (after the track: a new track clears the old song's stems)
 }
 
 // ---------------------------------------------------------------- files

@@ -283,9 +283,15 @@ public:
     // makes it the track; empty = none. Asking for the same file again keeps
     // it (and where it is).
     virtual void setBackingTrack(const QString& path) = 0;
+    // Its stems (MainStage's multi-track playback): read with it (the same
+    // files again keep it, and where it is), played locked to it, each at its
+    // level on its outputs; a level, mute or output change applies at once.
+    virtual void setBackingStems(const std::vector<BackingStemFile>& stems) = 0;
     // Plays from where it is, or pauses.
     virtual void playBackingTrack(bool play) = 0;
     virtual void rewindBackingTrack() = 0;
+    // To that place (a marker), playing or not.
+    virtual void seekBackingTrack(double seconds) = 0;
     virtual void setBackingTrackVolume(double volumeDb) = 0;
     [[nodiscard]] virtual BackingTrackState backingTrack() const = 0;
 

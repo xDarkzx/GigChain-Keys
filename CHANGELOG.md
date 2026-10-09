@@ -10,6 +10,11 @@ Downloads for every version are on the
 
 ### Added
 
+- **Stems and markers:** a song can play up to eight stems with its backing
+  track (right-click it, **Stems…**), locked together, each with its own
+  level, mute and outputs: the click and the guide to the in-ears, out of the
+  main mix. The flag button by the track's time jumps to named markers
+  (**Add Marker at…** marks where the track is).
 - **One instrument for many songs:** the mixer's **Instrument** slot offers
   **Same as in another song**, and a duplicated song shares its original's
   instruments. A shared instrument is loaded once, however many songs play

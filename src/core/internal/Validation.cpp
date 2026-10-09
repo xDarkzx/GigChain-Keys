@@ -197,6 +197,29 @@ Result<void> validateChart(const Song& song, const QString& path)
     if (!song.backingTrack.isEmpty()) {
         if (auto r = validateFileName(song.backingTrack, path + ".backingTrack"_L1); !r) return r;
     }
+    if (song.stems.size() > static_cast<std::size_t>(limits::kMaxStems)) {
+        return fail(ErrorCode::LimitExceeded, u"%1 has more than %2 stems"_s.arg(path).arg(limits::kMaxStems));
+    }
+    for (std::size_t i = 0; i < song.stems.size(); ++i) {
+        const BackingStem& stem = song.stems.at(i);
+        const QString at = u"%1.stems[%2]"_s.arg(path).arg(i);
+        if (auto r = validateFileName(stem.file, at + ".file"_L1); !r) return r;
+        if (!std::isfinite(stem.volumeDb) || stem.volumeDb < limits::kMinVolumeDb || stem.volumeDb > limits::kMaxVolumeDb) {
+            return fail(ErrorCode::OutOfRange, u"%1.volumeDb must be between %2 and %3 dB"_s.arg(at).arg(limits::kMinVolumeDb).arg(limits::kMaxVolumeDb));
+        }
+        if (auto r = checkRange(stem.outputPair, 0, limits::kMaxOutputPair, at + ".outputPair"_L1); !r) return r;
+    }
+    if (song.markers.size() > static_cast<std::size_t>(limits::kMaxTrackMarkers)) {
+        return fail(ErrorCode::LimitExceeded, u"%1 has more than %2 markers"_s.arg(path).arg(limits::kMaxTrackMarkers));
+    }
+    for (std::size_t i = 0; i < song.markers.size(); ++i) {
+        const TrackMarker& marker = song.markers.at(i);
+        const QString at = u"%1.markers[%2]"_s.arg(path).arg(i);
+        if (auto r = validateLength(marker.name, limits::kMaxNameLength, at + ".name"_L1); !r) return r;
+        if (!std::isfinite(marker.seconds) || marker.seconds < 0.0 || marker.seconds > limits::kMaxTrackSeconds) {
+            return fail(ErrorCode::OutOfRange, u"%1.seconds must be between 0 and %2"_s.arg(at).arg(limits::kMaxTrackSeconds));
+        }
+    }
     return validateSections(song, path);
 }
 
