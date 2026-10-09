@@ -441,6 +441,17 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString
 
     // New and changed plugins: each in a scanner process, or here.
     const bool outOfProcess = !scanner.isEmpty() && QFileInfo(scanner).isFile();
+    // VST2 candidates are any library of the right name (on Linux any .so):
+    // never opened in the app itself, only in a scanner process.
+    if (format == PluginFormat::Vst2 && !outOfProcess && !scanner.isEmpty() && !toRead.empty()) {
+        qCWarning(lcEngine).noquote() << "The plugin scanner" << scanner << "was not found: the" << toRead.size()
+                                      << "new VST2 plugins in" << folder << "are not read (only the scanner may open them)";
+        for (Found* f : toRead) {
+            f->entry = CacheEntry{.fingerprint = fingerprintOf(f->bundle), .info = std::nullopt,
+                                  .error = u"not read: the plugin scanner is missing"_s, .retry = true};
+        }
+        toRead.clear();
+    }
     if (!scanner.isEmpty() && !outOfProcess && !toRead.empty()) {
         qCWarning(lcEngine).noquote() << "The plugin scanner" << scanner
                                       << "was not found: reading plugins in this process (one that crashes takes the app with it)";

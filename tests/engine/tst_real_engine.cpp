@@ -689,6 +689,39 @@ private slots:
         engine.injectNote(1, 64, 0);
     }
 
+    // A library put in a plugin folder is not a VST2 plugin because a setlist
+    // names it: loading one runs its code, so only what the (sandboxed) scan
+    // read as a VST2 plugin loads; anything else is refused unloaded.
+    void anUnscannedLibraryInAPluginFolderIsNeverLoaded()
+    {
+#ifndef Q_OS_WIN
+        QSKIP("Uses a Windows system library as the stranger");
+#else
+        QTemporaryDir folder;
+        const QString stranger = folder.filePath(u"Stranger.dll"_s);
+        QVERIFY(QFile::copy(u"C:/Windows/System32/version.dll"_s, stranger));
+        RealEngineOptions options;
+        options.midiInputs = false;
+        options.pluginFolder = folder.path(); // installed there, as far as folders go
+        auto created = createRealEngine(options);
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        const std::size_t before = engine.loadedPluginCount();
+
+        core::Patch patch = core::makePatch(u"Strange"_s);
+        core::Channel channel = core::makeChannel(u"Stranger"_s);
+        channel.instrument = slot(stranger, u"Stranger"_s);
+        patch.channels.push_back(channel);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Stranger .* is not a VST2 plugin the scan found"_s));
+        engine.applyPatch(patch);
+        QCOMPARE(engine.loadedPluginCount(), before);
+        const auto notices = engine.poll();
+        QVERIFY(std::ranges::any_of(notices, [](const Notice& n) { return n.text.contains(u"the scan found"_s); }));
+        // (Never loaded: had it been, it would have been opened and found not to be a plugin.)
+#endif
+    }
+
     void unknownPluginIsReportedNotIgnored()
     {
         auto created = createQuietEngine();

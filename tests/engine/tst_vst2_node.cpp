@@ -101,6 +101,16 @@ private slots:
         node.releaseAllNotes();
         (void)play(node, 1);
         QVERIFY(!node.holdsNotes());
+
+        // The pedal holds what was played after the key is up: still held,
+        // and let go with the notes (the pedal up too), not left ringing.
+        (void)play(node, 1, {MidiEvent{.status = 0xB0, .data1 = 64, .data2 = 127, .sampleOffset = 0},
+                             MidiEvent{.status = 0x90, .data1 = 64, .data2 = 100, .sampleOffset = 0}});
+        (void)play(node, 1, {MidiEvent{.status = 0x80, .data1 = 64, .data2 = 0, .sampleOffset = 0}});
+        QVERIFY(node.holdsNotes()); // the key is up, the pedal is not
+        node.releaseAllNotes();
+        (void)play(node, 1);
+        QVERIFY(!node.holdsNotes());
     }
 
     // An effect's settings come back in a fresh instance (what a setlist does

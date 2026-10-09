@@ -107,6 +107,8 @@ struct Vst2Node::Impl
     EventList eventList;
     vst2::TimeInfo time{};
     std::bitset<std::size_t{16} * 128> heldNotes; // channel * 128 + note
+    std::bitset<16> sustained;                    // channels whose sustain pedal is down
+    std::atomic<bool> holding{false};             // heldNotes or sustained, for any thread
 
     std::atomic<bool> releaseRequested{false};
     std::atomic<uint64_t> droppedEvents{0};
@@ -398,20 +400,34 @@ void Vst2Node::process(std::span<const MidiEvent> events, AudioBlock io, const T
     inProcess() = true;
     impl.setTime(time);
     impl.eventList.numEvents = 0;
-    if (impl.releaseRequested.exchange(false, std::memory_order_acquire) && impl.heldNotes.any()) {
+    // Let go (the patch changed): every held note off, and on each channel
+    // with a note or the pedal down, the pedal up and all notes off, so
+    // nothing the pedal held rings on into the next patch.
+    if (impl.releaseRequested.exchange(false, std::memory_order_acquire) && (impl.heldNotes.any() || impl.sustained.any())) {
         for (std::size_t i = 0; i < impl.heldNotes.size(); ++i) {
             if (impl.heldNotes.test(i)) impl.add(static_cast<uint8_t>(0x80 | (i / 128)), static_cast<uint8_t>(i % 128), 0, 0);
         }
+        for (std::size_t channel = 0; channel < impl.sustained.size(); ++channel) {
+            bool notes = false;
+            for (std::size_t note = 0; note < 128 && !notes; ++note) notes = impl.heldNotes.test((channel * 128) + note);
+            if (!notes && !impl.sustained.test(channel)) continue;
+            impl.add(static_cast<uint8_t>(0xB0 | channel), 64, 0, 0);  // sustain up
+            impl.add(static_cast<uint8_t>(0xB0 | channel), 123, 0, 0); // all notes off
+        }
         impl.heldNotes.reset();
+        impl.sustained.reset();
     }
     for (const MidiEvent& e : events) {
         const int type = e.status & 0xF0;
         if (type < 0x80 || type == 0xF0) continue; // clock and system messages are not for instruments
-        const auto key = (static_cast<std::size_t>(e.status & 0x0F) * 128) + (e.data1 & 0x7F);
+        const auto channel = static_cast<std::size_t>(e.status & 0x0F);
+        const auto key = (channel * 128) + (e.data1 & 0x7F);
         if (type == 0x90 && e.data2 > 0) impl.heldNotes.set(key);
         else if (type == 0x80 || type == 0x90) impl.heldNotes.reset(key);
+        else if (type == 0xB0 && e.data1 == 64) impl.sustained.set(channel, e.data2 >= 64);
         impl.add(e.status, e.data1, e.data2, e.sampleOffset);
     }
+    impl.holding.store(impl.heldNotes.any() || impl.sustained.any(), std::memory_order_relaxed);
     if (impl.eventList.numEvents > 0) impl.call(vst2::op::kProcessEvents, 0, 0, &impl.eventList);
 
     // Effects read their input; instruments get silence there.
@@ -446,7 +462,8 @@ void Vst2Node::queueParameter(uint32_t id, double value, int32_t /*sampleOffset*
 
 bool Vst2Node::holdsNotes() const noexcept
 {
-    return m_impl->heldNotes.any();
+    // A key down, or the pedal holding what was played (it still sounds).
+    return m_impl->holding.load(std::memory_order_relaxed);
 }
 
 double Vst2Node::parameterValue(uint32_t id) const

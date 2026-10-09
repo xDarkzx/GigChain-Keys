@@ -326,6 +326,20 @@ bool RealEngine::isInstalledPlugin(const QString& pluginId) const
 
 core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QString& name) const
 {
+    // A VST2 plugin is a plain library, and loading one runs its code before
+    // anything can check it: only one the (sandboxed) scan found and read as
+    // a VST2 plugin, never just any file a setlist names in a plugin folder.
+    if (PluginNode::isVst2(pluginId) && isInstalledPlugin(pluginId)) {
+        const QString file = QDir::cleanPath(QFileInfo(pluginId).absoluteFilePath());
+        const bool scanned = std::ranges::any_of(m_plugins, [&file](const PluginInfo& p) {
+            return p.format == PluginFormat::Vst2
+                   && QString::compare(QDir::cleanPath(QFileInfo(p.id).absoluteFilePath()), file, platform::fileNameCase()) == 0;
+        });
+        if (scanned) return {};
+        const QString problem = u"%1 (%2) is not a VST2 plugin the scan found: not loaded"_s.arg(name, pluginId);
+        qCWarning(lcEngine).noquote() << problem;
+        return core::fail(core::ErrorCode::InvalidData, problem);
+    }
     if (isInstalledPlugin(pluginId)) return {};
     const QString problem = u"%1 is not one of the installed plugins (%2): not loaded. Install it in %3, "
                             u"or choose another plugin"_s.arg(name, pluginId, QDir::toNativeSeparators(m_pluginFolder));
