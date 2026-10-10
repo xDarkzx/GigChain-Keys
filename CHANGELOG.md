@@ -8,6 +8,8 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-10 (alpha)
+
 ### Added
 
 - **VST2 plugins:** older and free plugins that only ever came as VST2 now
@@ -58,11 +60,23 @@ Downloads for every version are on the
   the channel's split, transpose and MIDI effects. Add the synth's audio
   input to the same channel to hear it through the mixer.
 
+### Changed
+
+- **A new look:** the whole app now looks like a piece of stage gear, in the
+  style of MainStage and Logic: channel strips in framed sections with real
+  knobs and meters, a backlit display for the song, tempo and part, and
+  recessed panels for the setlist and the chart.
+
 ### Fixed
 
 - **The toolbar on a narrower screen:** the setlist's name no longer runs
   over the Panic and Undo buttons when the window is less than about 1,700
   pixels wide.
+- **A short window:** the mixer no longer runs off the bottom of the window;
+  it shrinks to fit and its strips stay whole, so the faders and buttons stay
+  in sight.
+- **Scrolling by touch:** on a touch screen, swiping the setlist or the
+  instrument list scrolls it again instead of starting a drag.
 
 ## [0.3.0] - 2026-10-08 (alpha)
 

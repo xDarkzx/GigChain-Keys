@@ -80,7 +80,7 @@ Get-FileHash .\GigChainKeys-0.1.0-x64-setup.exe -Algorithm SHA256   # Windows (P
 
 ```bash
 shasum -a 256 GigChainKeys-0.1.0-arm64.dmg                          # macOS (Terminal)
-sha256sum GigChainKeys-0.3.0-x86_64.AppImage                         # Linux
+sha256sum GigChainKeys-0.4.0-x86_64.AppImage                         # Linux
 ```
 
 ### First start on Linux
@@ -244,6 +244,7 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
+| 0.4.0 | Alpha: a new MainStage-style look; VST2 plugins; stems and markers for backing tracks; one shared reverb (aux send); hardware synths; more outputs; chord trigger and arpeggiator; record the gig; one instrument for many songs |
 | 0.3.0 | Alpha: Linux AppImage and .deb; you move the song (Perform's Play, Next part, Loop part, made for touch screens); MIDI Learn and keyboard transport buttons; instruments named for their sound; Practice warm-ups |
 | 0.2.2 | Alpha: free instruments to get, from the app (pianos, synths, pads) |
 | 0.2.1 | Alpha: the song's timeline with live controls; instruments all together or one at a time; keyboard shortcuts for the stage |
