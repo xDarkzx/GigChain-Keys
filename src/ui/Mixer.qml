@@ -113,6 +113,11 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            // The room left under the looper, whatever the strips would like:
+            // a short mixer makes the strips shorter (their faders), never
+            // pushes them out of the window.
+            Layout.preferredHeight: 0
+            Layout.minimumHeight: 0
             spacing: Theme.spacing
 
         ListView {
@@ -120,6 +125,8 @@ Rectangle {
             objectName: "mixerStrips"
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.preferredHeight: 0
+            Layout.minimumHeight: 0
             orientation: ListView.Horizontal
             spacing: 4
             clip: true
@@ -235,7 +242,8 @@ Rectangle {
             objectName: "auxStrip"
             visible: mixer.auxBus !== null
             Layout.alignment: Qt.AlignTop
-            Layout.preferredHeight: Math.min(strips.height, Theme.stripHeight)
+            Layout.fillHeight: true // (the row's height, up to a strip's: never sized from the strips, a loop)
+            Layout.maximumHeight: Theme.stripHeight
             Layout.preferredWidth: Theme.stripWidth
             radius: Theme.radiusCard
             border.color: Theme.stripBorder
@@ -294,7 +302,8 @@ Rectangle {
             id: masterStrip
             property int menuEffect: -1
             Layout.alignment: Qt.AlignTop
-            Layout.preferredHeight: Math.min(strips.height, Theme.stripHeight)
+            Layout.fillHeight: true
+            Layout.maximumHeight: Theme.stripHeight
             Layout.preferredWidth: Theme.stripWidth
             radius: Theme.radiusCard
             border.color: Theme.stripBorder

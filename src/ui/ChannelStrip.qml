@@ -475,6 +475,7 @@ Rectangle {
         }
         EffectSlot {
             id: addSlot
+            objectName: "addEffectSlot"
             Layout.fillWidth: true
             text: ""
             onClicked: strip.menu(addEffectMenuComponent).popup(addSlot, 0, addSlot.height)
@@ -539,7 +540,7 @@ Rectangle {
             objectName: "channelFader"
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.minimumHeight: 90
+            Layout.minimumHeight: 60 // (a short mixer squeezes the fader, never the mute, solo and name below it)
             volumeDb: strip.volumeDb
             level: strip.peak
             onVolumeMoved: (db) => strip.doc.setChannelVolume(strip.index, db)
