@@ -30,7 +30,7 @@ rely on come before the new ideas below. First audited against the code on
 | MIDI clock | **Done** | Sent to a chosen MIDI output; the tempo can follow a clock coming in (Settings > MIDI). |
 | Undo | **Done** | Every edit to the setlist (Ctrl+Z, Ctrl+Shift+Z); a fader drag is one step. |
 | Sounds out of the box | **Partly** | The app scans a `plugins` folder next to itself; an installer has to fill it (see below). |
-| Plugin formats | **Partly** | VST3 only. Gig Performer also hosts VST2 (many older Windows plugins); an open-source VST2 host needs care, since Steinberg no longer licenses the VST2 SDK. |
+| Plugin formats | **Partly** | VST3 and VST2. VST2 is hosted through our own definitions of its interface (Steinberg's VST2 SDK is not used), as Audacity, Ardour and LMMS do; VST2 shell plugins (Waves) are not yet. Audio Units on the Mac are not hosted (most Mac plugins also install as VST3). |
 | Charts (chords and lyrics on screen) | **Ahead** | Built in; neither rival has them. |
 | Master effects, meters, limiter | **Done** | |
 | One instrument for many songs (MainStage's aliases) | **Done** | **Same as in another song** and duplicated songs share one loaded instrument; **Own copy for this song** splits one off. |
@@ -55,7 +55,8 @@ Audited again against MainStage 3 on 2026-10-09; still to build, in this order:
   Dexed, both GPL like the app, and a free sampled piano), built and
   placed in `plugins/` by the installer (6). Their licences and credits go
   with them.
-- **VST2**, only if it can be done within the licences.
+- **VST2 shell plugins** (several plugins in one file, as Waves'), and
+  **Audio Units** on the Mac if players ask for them.
 
 ---
 

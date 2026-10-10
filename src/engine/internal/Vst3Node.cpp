@@ -729,6 +729,20 @@ core::Result<void> Vst3Node::restoreStateUnguarded(const State& state)
     return {};
 }
 
+core::Result<QByteArray> Vst3Node::saveEncodedState() const
+{
+    auto state = saveState();
+    if (!state) return tl::unexpected(state.error());
+    return state->encode();
+}
+
+core::Result<void> Vst3Node::restoreEncodedState(const QByteArray& bytes)
+{
+    auto state = State::decode(bytes);
+    if (!state) return tl::unexpected(state.error());
+    return restoreState(*state);
+}
+
 QString Vst3Node::bundlePath() const
 {
     return m_impl->bundlePath;
@@ -986,6 +1000,11 @@ core::Result<std::unique_ptr<IPluginEditor>> Vst3Node::createEditor(const std::s
         return std::unique_ptr<IPluginEditor>();
     }
     return std::unique_ptr<IPluginEditor>(std::make_unique<Vst3Editor>(node, std::move(view), impl.name));
+}
+
+core::Result<std::unique_ptr<IPluginEditor>> Vst3Node::makeEditor(const std::shared_ptr<PluginNode>& self)
+{
+    return createEditor(std::static_pointer_cast<Vst3Node>(self));
 }
 
 } // namespace gigchain::engine

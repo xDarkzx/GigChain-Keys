@@ -1,9 +1,16 @@
 # Instruments and effects
 
-GigChain Keys plays **VST3 plugins**: pianos, organs, synths, strings, and
-effects such as reverbs and delays. It finds the plugins installed on your
-computer by itself (on Windows in *C:\Program Files\Common Files\VST3*).
+GigChain Keys plays **VST3 and VST2 plugins**: pianos, organs, synths,
+strings, and effects such as reverbs and delays. It finds the plugins
+installed on your computer by itself (on Windows VST3 in *C:\Program
+Files\Common Files\VST3*, VST2 in the folder your installers chose, such as
+*C:\Program Files\VSTPlugins* or *C:\Program Files\Steinberg\VSTPlugins*).
 **Settings > Plugins** shows how many were found.
+
+A plugin installed both ways is listed once, as VST3 (usually its newer
+version). A plugin's details in the browser say which it is ("Built with VST
+2.4"). VST2 "shell" plugins, which hold several plugins in one file (as
+Waves' do), are not played yet.
 
 ## No instruments yet?
 

@@ -3,6 +3,7 @@
 // X11 layer in WSL), or a Cocoa window's NSView with Surge XT on the Mac.
 // Skips when the plugin is not installed, or where there is no window system
 // (Linux without a display).
+#include "PluginNode.h"
 #include "TestPlugins.h"
 #include "Vst3Node.h"
 
@@ -112,6 +113,33 @@ private slots:
 
         (*editor)->detach();
         QVERIFY(!(*editor)->isAttached());
+    }
+
+    // A VST2 plugin's own window opens the same way (its own size, its idle
+    // timer running while open) and closes cleanly.
+    void aVst2EditorAttachesAndDetaches()
+    {
+#ifndef Q_OS_WIN
+        QSKIP("The test VST2 effect is a Windows one");
+#else
+        const QString vst2 = u"C:/Program Files/Steinberg/VSTPlugins/TDR Kotelnikov.dll"_s;
+        if (!QFileInfo::exists(vst2)) QSKIP("The test VST2 effect is not installed");
+        auto node = PluginNode::load(vst2, 48000.0, 256);
+        QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
+        auto editor = PluginNode::createEditor(*node);
+        QVERIFY2(editor.has_value(), editor ? "" : qPrintable(editor.error().message));
+        QVERIFY(*editor != nullptr);
+        QCOMPARE((*editor)->title(), u"TDR Kotelnikov"_s);
+
+        HiddenParent parent;
+        const auto attached = (*editor)->attach({.handle = parent.handle(), .kind = platform::nativeWindowKind()});
+        QVERIFY2(attached.has_value(), attached ? "" : qPrintable(attached.error().message));
+        const QSize size = (*editor)->preferredSize();
+        QVERIFY2(size.width() > 100 && size.height() > 100, qPrintable(u"%1x%2"_s.arg(size.width()).arg(size.height())));
+        QTest::qWait(300); // idled meanwhile
+        (*editor)->detach();
+        QVERIFY(!(*editor)->isAttached());
+#endif
     }
 
     void attachingToNothingIsAnError()

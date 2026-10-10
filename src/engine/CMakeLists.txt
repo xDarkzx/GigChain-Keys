@@ -28,6 +28,11 @@ add_library(gigchain_engine STATIC
     internal/MidiClockOut.h
     internal/MidiClockOut.cpp
     internal/MidiQueue.h
+    internal/PluginNode.h
+    internal/PluginNode.cpp
+    internal/Vst2Abi.h
+    internal/Vst2Node.h
+    internal/Vst2Node.cpp
     internal/Vst3Node.h
     internal/Vst3Node.cpp
     internal/EngineLog.h

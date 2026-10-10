@@ -1,7 +1,7 @@
 # Getting started
 
 Welcome to **GigChain Keys**: a home for your keyboard rig on stage. It plays your
-instruments and effects (VST3 plugins), keeps every song of the night in a
+instruments and effects (VST3 and VST2 plugins), keeps every song of the night in a
 **setlist**, shows each song's **chords and lyrics**, and helps you **practise**
 them.
 

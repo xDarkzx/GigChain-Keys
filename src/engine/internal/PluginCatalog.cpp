@@ -1,6 +1,8 @@
 #include "PluginCatalog.h"
 #include "PluginLoadGuard.h"
 #include "PluginModules.h"
+#include "PluginNode.h"
+#include "Vst2Node.h"
 
 #include "EngineLog.h"
 #include "gigchain/platform/PluginFolders.h"
@@ -38,16 +40,20 @@ namespace {
 
 constexpr int kMaxDepth = 8; // also stops junction loops
 
-void findBundles(const QString& folder, int depth, QStringList& bundles)
+// The plugins of one format under `folder`: .vst3 bundles, or VST2 plugin
+// files (platform::isVst2PluginFile).
+void findBundles(const QString& folder, int depth, PluginFormat format, QStringList& bundles)
 {
     if (depth > kMaxDepth) return;
     const QDir dir(folder);
     const auto entries = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot, QDir::Name);
     for (const QFileInfo& entry : entries) {
-        if (entry.fileName().endsWith(u".vst3"_s, Qt::CaseInsensitive)) {
+        const bool plugin = format == PluginFormat::Vst3 ? entry.fileName().endsWith(u".vst3"_s, Qt::CaseInsensitive)
+                                                        : platform::isVst2PluginFile(entry.fileName());
+        if (plugin) {
             bundles << entry.absoluteFilePath(); // a bundle folder or a single-file plugin: do not look inside
-        } else if (entry.isDir()) {
-            findBundles(entry.absoluteFilePath(), depth + 1, bundles);
+        } else if (entry.isDir() && !entry.fileName().endsWith(u".vst3"_s, Qt::CaseInsensitive)) {
+            findBundles(entry.absoluteFilePath(), depth + 1, format, bundles);
         }
     }
 }
@@ -75,7 +81,7 @@ Fingerprint fingerprintOf(const QString& bundle)
 {
     QFileInfo file(bundle);
     if (file.isDir()) {
-        const QFileInfo module(platform::vst3ModuleFile(bundle));
+        const QFileInfo module(PluginNode::isVst2(bundle) ? platform::vst2LibraryFile(bundle) : platform::vst3ModuleFile(bundle));
         if (module.exists()) file = module;
     }
     return Fingerprint{.size = file.isFile() ? file.size() : -1, .modified = file.lastModified().toMSecsSinceEpoch()};
@@ -108,6 +114,7 @@ QJsonObject toJson(const QString& bundle, const CacheEntry& entry)
     o.insert(u"website"_s, p.website);
     o.insert(u"email"_s, p.email);
     o.insert(u"sdkVersion"_s, p.sdkVersion);
+    o.insert(u"vst2"_s, p.format == PluginFormat::Vst2);
     return o;
 }
 
@@ -128,11 +135,12 @@ CacheEntry fromJson(const QJsonObject& o)
                             .classId = o.value(u"classId"_s).toString(),
                             .website = o.value(u"website"_s).toString(),
                             .email = o.value(u"email"_s).toString(),
-                            .sdkVersion = o.value(u"sdkVersion"_s).toString()};
+                            .sdkVersion = o.value(u"sdkVersion"_s).toString(),
+                            .format = o.value(u"vst2"_s).toBool() ? PluginFormat::Vst2 : PluginFormat::Vst3};
     return entry;
 }
 
-constexpr int kCacheFormat = 1;
+constexpr int kCacheFormat = 1; // (entries without "vst2" are VST3: older caches still read)
 
 std::map<QString, CacheEntry> readCache(const QString& cacheFile)
 {
@@ -184,9 +192,34 @@ void writeCache(const QString& cacheFile, const std::map<QString, CacheEntry>& c
     }
 }
 
+// Opens one VST2 plugin and reads what it says of itself.
+CacheEntry openAndReadVst2(const QString& file)
+{
+    CacheEntry entry;
+    entry.fingerprint = fingerprintOf(file);
+    auto info = Vst2Node::readInfo(file);
+    if (!info) {
+        entry.error = info.error().message;
+        return entry;
+    }
+    entry.info = PluginInfo{.id = file,
+                            .name = info->name,
+                            .vendor = info->vendor,
+                            .kind = info->instrument ? PluginKind::Instrument : PluginKind::Effect,
+                            .subCategories = info->instrument ? u"Instrument"_s : u"Fx"_s,
+                            .version = info->version,
+                            .classId = u"VST2-%1"_s.arg(static_cast<uint32_t>(info->uniqueId), 8, 16, QLatin1Char('0')),
+                            .website = {},
+                            .email = {},
+                            .sdkVersion = u"VST 2.4"_s,
+                            .format = PluginFormat::Vst2};
+    return entry;
+}
+
 // Opens one plugin and reads its factory.
 CacheEntry openAndRead(const QString& bundle)
 {
+    if (PluginNode::isVst2(bundle)) return openAndReadVst2(bundle);
     CacheEntry entry;
     entry.fingerprint = fingerprintOf(bundle);
     try {
@@ -351,21 +384,23 @@ bool PluginCatalog::readToFile(const QString& bundle, const QString& resultFile)
 }
 
 std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString& cacheFile, ScanStats* stats,
-                                            const Progress& progress, const PluginLoadGuard* guard, const QString& scanner)
+                                            const Progress& progress, const PluginLoadGuard* guard, const QString& scanner,
+                                            PluginFormat format)
 {
     ScanStats local;
     ScanStats& counts = stats != nullptr ? *stats : local;
     counts = {};
     std::vector<PluginInfo> plugins;
+    const char* formatName = format == PluginFormat::Vst3 ? "VST3" : "VST2";
     if (!QFileInfo(folder).isDir()) {
-        qCInfo(lcEngine).noquote() << "No VST3 folder at" << folder;
+        qCInfo(lcEngine).noquote() << "No" << formatName << "folder at" << folder;
         return plugins;
     }
 
     QElapsedTimer timer;
     timer.start();
     QStringList bundles;
-    findBundles(folder, 0, bundles);
+    findBundles(folder, 0, format, bundles);
 
     const std::map<QString, CacheEntry> cached = readCache(cacheFile);
     const int total = static_cast<int>(bundles.size());
@@ -406,6 +441,17 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString
 
     // New and changed plugins: each in a scanner process, or here.
     const bool outOfProcess = !scanner.isEmpty() && QFileInfo(scanner).isFile();
+    // VST2 candidates are any library of the right name (on Linux any .so):
+    // never opened in the app itself, only in a scanner process.
+    if (format == PluginFormat::Vst2 && !outOfProcess && !scanner.isEmpty() && !toRead.empty()) {
+        qCWarning(lcEngine).noquote() << "The plugin scanner" << scanner << "was not found: the" << toRead.size()
+                                      << "new VST2 plugins in" << folder << "are not read (only the scanner may open them)";
+        for (Found* f : toRead) {
+            f->entry = CacheEntry{.fingerprint = fingerprintOf(f->bundle), .info = std::nullopt,
+                                  .error = u"not read: the plugin scanner is missing"_s, .retry = true};
+        }
+        toRead.clear();
+    }
     if (!scanner.isEmpty() && !outOfProcess && !toRead.empty()) {
         qCWarning(lcEngine).noquote() << "The plugin scanner" << scanner
                                       << "was not found: reading plugins in this process (one that crashes takes the app with it)";
@@ -441,7 +487,7 @@ std::vector<PluginInfo> PluginCatalog::scan(const QString& folder, const QString
     std::ranges::sort(plugins, [](const PluginInfo& a, const PluginInfo& b) {
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
     });
-    qCInfo(lcEngine).noquote() << "Found" << plugins.size() << "VST3 plugins in" << folder << "(" << counts.opened
+    qCInfo(lcEngine).noquote() << "Found" << plugins.size() << formatName << "plugins in" << folder << "(" << counts.opened
                                << "opened," << counts.fromCache << "from cache," << counts.failed << "skipped ) in"
                                << timer.elapsed() << "ms";
     return plugins;
