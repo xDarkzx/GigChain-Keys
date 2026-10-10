@@ -113,6 +113,11 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            // The room left under the looper, whatever the strips would like:
+            // a short mixer makes the strips shorter (their faders), never
+            // pushes them out of the window.
+            Layout.preferredHeight: 0
+            Layout.minimumHeight: 0
             spacing: Theme.spacing
 
         ListView {
@@ -120,6 +125,8 @@ Rectangle {
             objectName: "mixerStrips"
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.preferredHeight: 0
+            Layout.minimumHeight: 0
             orientation: ListView.Horizontal
             spacing: 4
             clip: true
@@ -235,7 +242,8 @@ Rectangle {
             objectName: "auxStrip"
             visible: mixer.auxBus !== null
             Layout.alignment: Qt.AlignTop
-            Layout.preferredHeight: Math.min(strips.height, Theme.stripHeight)
+            Layout.fillHeight: true // (the row's height, up to a strip's: never sized from the strips, a loop)
+            Layout.maximumHeight: Theme.stripHeight
             Layout.preferredWidth: Theme.stripWidth
             radius: Theme.radiusCard
             border.color: Theme.stripBorder
@@ -258,12 +266,16 @@ Rectangle {
                     font.bold: true
                     font.letterSpacing: 2
                 }
-                BusEffectList {
-                    objectName: "auxEffects"
+                StripSection {
                     Layout.fillWidth: true
-                    bus: mixer.auxBus
-                    pluginModel: mixer.pluginModel
-                    addHint: qsTr("Add a shared effect (reverb, delay). Turn up a channel's Send knob to feed it.")
+                    label: qsTr("AUX FX")
+                    BusEffectList {
+                        objectName: "auxEffects"
+                        Layout.fillWidth: true
+                        bus: mixer.auxBus
+                        pluginModel: mixer.pluginModel
+                        addHint: qsTr("Add a shared effect (reverb, delay). Turn up a channel's Send knob to feed it.")
+                    }
                 }
                 Item { Layout.fillHeight: true }
                 Text {
@@ -290,7 +302,8 @@ Rectangle {
             id: masterStrip
             property int menuEffect: -1
             Layout.alignment: Qt.AlignTop
-            Layout.preferredHeight: Math.min(strips.height, Theme.stripHeight)
+            Layout.fillHeight: true
+            Layout.maximumHeight: Theme.stripHeight
             Layout.preferredWidth: Theme.stripWidth
             radius: Theme.radiusCard
             border.color: Theme.stripBorder
@@ -338,6 +351,9 @@ Rectangle {
                     ToolTip.text: masterMute.muted ? qsTr("Muted: click to hear everything again") : qsTr("Mute everything")
                 }
                 // master effect slots, then one empty slot to add another
+                StripSection {
+                    Layout.fillWidth: true
+                    label: qsTr("MASTER FX")
                 ListView {
                     id: masterEffects
                     objectName: "masterEffectList"
@@ -388,6 +404,7 @@ Rectangle {
                     ToolTip.visible: masterAddHover.hovered
                     ToolTip.text: qsTr("Add an effect on everything (EQ, compressor, limiter). Kept with your rig, not the setlist.")
                 }
+                }
                 Component {
                     id: masterAddMenuComponent
                     EffectPickerMenu {
@@ -420,6 +437,10 @@ Rectangle {
                     }
                 }
 
+                // The level: what goes out, the fader with its meter, the limiter's light.
+                StripSection {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                 Readout {
                     objectName: "masterVolumeReadout"
                     Layout.fillWidth: true
@@ -466,6 +487,7 @@ Rectangle {
                     HoverHandler { id: limHover }
                     ToolTip.visible: limHover.hovered
                     ToolTip.text: qsTr("Lights when the safety limiter stops a peak going past its ceiling (Settings > Audio). Often lit: turn something down.")
+                }
                 }
                 Rectangle {
                     Layout.fillWidth: true

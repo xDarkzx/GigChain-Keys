@@ -45,6 +45,9 @@ qt_add_qml_module(gigchain_ui
         ChannelStrip.qml
         Mixer.qml
         PanKnob.qml
+        KnobFace.qml
+        LcdPanel.qml
+        StripSection.qml
         SendKnob.qml
         BusEffectList.qml
         VolumeFader.qml
@@ -113,6 +116,7 @@ qt_add_qml_module(gigchain_ui
         icons/chevron-up.svg
         icons/flag.svg
         icons/search.svg
+        icons/settings.svg
         icons/info-circle.svg
         icons/metronome.svg
         icons/player-pause.svg

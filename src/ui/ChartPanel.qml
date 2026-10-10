@@ -111,6 +111,7 @@ Rectangle {
                 tip: qsTr("Copy a song's chords and lyrics from any site or file, then paste (%1)").arg(Theme.keys("Ctrl+V"))
             }
             StageButton {
+                objectName: "importChartButton"
                 text: qsTr("Import file…")
                 visible: !panel.editing
                 onClicked: importDialog.open()
@@ -287,6 +288,17 @@ Rectangle {
             Layout.fillHeight: true
             contentWidth: availableWidth
             clip: true
+            padding: Theme.spacing
+            // The chart set into the panel: a framed well, as Perform's.
+            background: Rectangle {
+                radius: Theme.radiusCard
+                border.color: Theme.wellBorder
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Theme.chartWellTop }
+                    GradientStop { position: 1.0; color: Theme.chartWellBottom }
+                }
+                Rectangle { x: 1; y: 1; width: parent.width - 2; height: 3; radius: 2; color: Theme.wellShadow }
+            }
             // Dragging the mouse moves chords, not the page. (A Flickable that
             // is not interactive ignores the wheel too: the wheel is turned
             // into scrolling here, as a page scrolls.)

@@ -82,15 +82,23 @@ Rectangle {
                         tip: qsTr("Previous song")
                         onClicked: perform.doc.previousSong()
                     }
-                    ColumnLayout {
+                    // The song and patch on a big display, as MainStage's patch LCD.
+                    LcdPanel {
                         Layout.fillWidth: true
-                        spacing: 0
+                        Layout.preferredHeight: 52 // (as tall as the buttons beside it: the chart keeps the screen)
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.spacingLarge
+                        anchors.rightMargin: Theme.spacingLarge
+                        anchors.topMargin: 2
+                        anchors.bottomMargin: 3
+                        spacing: -2
                         Label {
                             objectName: "performSongName"
                             Layout.fillWidth: true
                             text: perform.doc.currentSongName !== "" ? perform.doc.currentSongName : qsTr("No song")
-                            color: Theme.accent
-                            font.pixelSize: Theme.performSubtitleSize + 4
+                            color: Theme.lcdText
+                            font.pixelSize: Theme.performSubtitleSize - 6
                             font.bold: true
                             elide: Text.ElideRight
                         }
@@ -100,18 +108,20 @@ Rectangle {
                             Label {
                                 objectName: "performPatchName"
                                 text: perform.doc.hasPatch ? perform.doc.currentPatchName : qsTr("No patch")
-                                color: Theme.text
-                                font.pixelSize: Theme.fontSize + 3
+                                color: Theme.lcdAccent
+                                font.pixelSize: Theme.fontSize
+                                font.bold: true
                             }
                             Label {
                                 Layout.fillWidth: true
                                 text: perform.doc.nextPatchLabel === "" ? qsTr("End of set")
                                                                          : qsTr("Next: %1").arg(perform.doc.nextPatchLabel)
-                                color: Theme.textDim
-                                font.pixelSize: Theme.fontSize + 3
+                                color: Theme.lcdTextDim
+                                font.pixelSize: Theme.fontSize
                                 elide: Text.ElideRight
                             }
                         }
+                    }
                     }
                     // The chart's size, kept for next time.
                     Row {
@@ -144,6 +154,25 @@ Rectangle {
                     }
                 }
 
+                // The deck: the transport and the parts, raised pads on a
+                // panel of their own, as a control surface's.
+                Rectangle {
+                    id: deck
+                    Layout.fillWidth: true
+                    visible: perform.doc.canPlaySong || parts.count > 0
+                    implicitHeight: deckColumn.implicitHeight + 2 * Theme.spacing
+                    radius: Theme.radiusCard
+                    border.color: Theme.outline
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: Theme.panelRaised }
+                        GradientStop { position: 1.0; color: Theme.panelBottom }
+                    }
+                    Rectangle { x: 2; y: 1; width: parent.width - 4; height: 1; color: Theme.bevelLight }
+                ColumnLayout {
+                    id: deckColumn
+                    anchors.fill: parent
+                    anchors.margins: Theme.spacing
+                    spacing: Theme.spacing
                 // The song's transport: Play / Stop, on to the next part (at
                 // the next bar line), loop the part playing, and where it is.
                 RowLayout {
@@ -257,14 +286,27 @@ Rectangle {
                         }
                     }
                 }
+                }
+                }
 
-                // The whole song, big enough to read from the keys.
+                // The whole song, big enough to read from the keys, set into
+                // the surface (a framed well, not floating on black).
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: perform.hasChart
+                    radius: Theme.radiusCard
+                    border.color: Theme.wellBorder
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: Theme.chartWellTop }
+                        GradientStop { position: 1.0; color: Theme.chartWellBottom }
+                    }
+                    Rectangle { x: 1; y: 1; width: parent.width - 2; height: 3; radius: 2; color: Theme.wellShadow }
                 Flickable {
                     id: performChart
                     objectName: "performChart"
-                    visible: perform.hasChart
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    anchors.fill: parent
+                    anchors.margins: Theme.spacing
                     clip: true
                     contentWidth: width
                     contentHeight: stageChart.height
@@ -306,6 +348,7 @@ Rectangle {
                         followStarted: perform.engineStatus.chordStarted
                         onChordClicked: (name) => performDiagram.show(name) // forgot it? how to play it
                     }
+                }
                 }
 
                 // No lyrics or chords yet: say so, and lead to the editor.
@@ -352,6 +395,39 @@ Rectangle {
                         }
                         focusPolicy: Qt.NoFocus
                         onMoved: perform.engineStatus.masterVolumeDb = value
+                        // A hardware fader on its side: a cut groove lit up to the cap, and a metal cap.
+                        background: Rectangle {
+                            x: performMaster.leftPadding
+                            y: performMaster.topPadding + performMaster.availableHeight / 2 - height / 2
+                            width: performMaster.availableWidth
+                            height: 6
+                            radius: 3
+                            color: Theme.faderGroove
+                            border.color: "#000000"
+                            Rectangle {
+                                width: performMaster.visualPosition * parent.width
+                                height: parent.height
+                                radius: 3
+                                color: Theme.ledBlue
+                                opacity: 0.55
+                            }
+                        }
+                        handle: Rectangle {
+                            x: performMaster.leftPadding + performMaster.visualPosition * (performMaster.availableWidth - width)
+                            y: performMaster.topPadding + performMaster.availableHeight / 2 - height / 2
+                            width: 34
+                            height: 22
+                            radius: 3
+                            border.color: "#0d0d0e"
+                            gradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.0; color: Theme.faderCapTop }
+                                GradientStop { position: 0.48; color: Theme.faderCapMid }
+                                GradientStop { position: 0.52; color: Theme.faderCapBottom }
+                                GradientStop { position: 1.0; color: Theme.faderCapMid }
+                            }
+                            Rectangle { anchors.centerIn: parent; width: 2; height: parent.height - 2; color: "#ffffff" }
+                        }
                     }
                     StatBox {
                         label: ""

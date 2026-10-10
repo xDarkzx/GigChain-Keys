@@ -11,6 +11,7 @@ Item {
     property string value
     property string widest: value // the longest value this box will show
     property color valueColor: Theme.text
+    property color labelColor: Theme.textDim
 
     implicitWidth: labelText.implicitWidth + 6 + widestMetrics.advanceWidth
     implicitHeight: Math.max(labelText.implicitHeight, valueText.implicitHeight)
@@ -26,8 +27,8 @@ Item {
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         text: box.label
-        color: Theme.textDim
-        font.pixelSize: Theme.fontSize
+        color: box.labelColor
+        font.pixelSize: Theme.smallFontSize
     }
     Text {
         id: valueText

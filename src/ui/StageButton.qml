@@ -71,6 +71,17 @@ Button {
         implicitHeight: control.implicitHeight
         radius: Theme.radiusSmall
         border.color: Theme.outline
+        // The shadow it casts on the panel (a key standing up; gone when pressed).
+        Rectangle {
+            z: -1
+            x: 1
+            y: 2
+            width: parent.width
+            height: parent.height
+            radius: parent.radius
+            color: "#70000000"
+            visible: !control.down && control.enabled
+        }
         gradient: Gradient {
             GradientStop { position: 0.0; color: control.topColor }
             GradientStop { position: 1.0; color: control.bottomColor }

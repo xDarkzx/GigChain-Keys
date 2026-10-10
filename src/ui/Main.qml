@@ -351,6 +351,7 @@ ApplicationWindow {
 
                 // The plugin above, the mixer below (drag the divider).
                 SplitView {
+                    id: editSplit
                     SplitView.fillWidth: true
                     orientation: Qt.Vertical
                     handle: StageSplitHandle {}
@@ -371,7 +372,9 @@ ApplicationWindow {
                     }
                     Mixer {
                         visible: root.mixerOpen
-                        SplitView.preferredHeight: Theme.mixerHeight + (root.loops.stripVisible ? Theme.looperHeight : 0)
+                        // A whole strip, but never more than about half the room (a small screen keeps its chart).
+                        SplitView.preferredHeight: Math.min(Theme.mixerHeight + (root.loops.stripVisible ? Theme.looperHeight : 0),
+                                                            editSplit.height * 0.6)
                         SplitView.minimumHeight: 240
                         doc: root.doc
                         channelModel: root.channelModel

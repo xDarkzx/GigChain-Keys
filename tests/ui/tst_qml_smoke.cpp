@@ -8,6 +8,7 @@
 
 #include <QClipboard>
 #include <QElapsedTimer>
+#include <QRegularExpression>
 #include <QFile>
 #include <QGuiApplication>
 #include <QJsonArray>
@@ -291,6 +292,76 @@ class TestQmlSmoke : public QObject
     // ---- The demo video's director (see demoVideo) ----------------------
     QObject* m_overlay = nullptr;
     SceneRecorder* m_recorder = nullptr;
+
+    // The videos' setlist: six songs, the first with a chart, sections, a
+    // flow and four sounds (the demo engine's), saved (the title bar names it).
+    void buildDemoSetlist()
+    {
+        ui::DocumentController& doc = m_session->document();
+        const auto part = [](const QString& name) { return QVariantMap{{u"name"_s, name}, {u"occurrence"_s, 1}}; };
+        QVERIFY(doc.renameSong(0, u"Morning Light"_s));
+        QVERIFY(doc.setSongTempo(0, 96));
+        QVERIFY(doc.setSongChart(0, u"{comment: Verse 1}\n"
+                                  "[C]Down by the [G]water we [Am]wait for the [F]morning\n"
+                                  "[C]Every small [G]light on the [F]harbour wall\n"
+                                  "{comment: Chorus}\n"
+                                  "[F]Hold on, [G]hold on, the [Am]night is nearly [F]over\n"
+                                  "[C]We are [G]almost [F]home\n"
+                                  "{comment: Verse 2}\n"
+                                  "[C]Out on the [G]road where the [Am]rain keeps on [F]falling\n"
+                                  "[C]Every old [G]song brings me [F]back again\n"
+                                  "{comment: Bridge}\n"
+                                  "[Am]And if the [G]light should [F]fade\n"
+                                  "[Am]I will [G]find my [F]way [G]home\n"_s));
+        QVERIFY(doc.setSongFlow({part(u"Verse 1"_s), part(u"Chorus"_s), part(u"Verse 2"_s), part(u"Chorus"_s), part(u"Bridge"_s),
+                                 part(u"Chorus"_s)}));
+        for (int section = 0; section < 4; ++section) QVERIFY(doc.setSectionBars(section, 2));
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        QVERIFY(doc.setChannelName(0, u"Warm Piano"_s));
+        QVERIFY(doc.addEffect(0, u"fake.reverb"_s, u"Reverb"_s));
+        QVERIFY(doc.addChannel(u"fake.analog-pad"_s, u"Analog Pad"_s));
+        QVERIFY(doc.setChannelName(1, u"Soft Pad"_s));
+        QVERIFY(doc.setChannelVolume(1, -8.0));
+        QVERIFY(doc.addEffect(1, u"fake.chorus"_s, u"Chorus"_s));
+        QVERIFY(doc.addChannel(u"fake.string-ensemble"_s, u"String Ensemble"_s));
+        QVERIFY(doc.setChannelName(2, u"Strings"_s));
+        QVERIFY(doc.setChannelVolume(2, -12.0));
+        QVERIFY(doc.addChannel(u"fake.synth-lead"_s, u"Synth Lead"_s));
+        QVERIFY(doc.setChannelName(3, u"Synth Bass"_s));
+        QVERIFY(doc.setChannelVolume(3, -6.0));
+        QVERIFY(doc.removeSectionChannel(0, 2)); // the strings wait for the chorus
+        QVERIFY(doc.removeSectionChannel(2, 2));
+        const QList<std::pair<QString, QList<std::pair<QString, QString>>>> others = {
+            {u"Blue Harbour"_s, {{u"fake.electric-piano"_s, u"Electric Piano"_s}, {u"fake.tonewheel-organ"_s, u"Tonewheel Organ"_s}}},
+            {u"Silver Line"_s, {{u"fake.grand-piano"_s, u"Grand Piano"_s}, {u"fake.synth-lead"_s, u"Synth Lead"_s}}},
+            {u"Golden Hour"_s, {{u"fake.electric-piano"_s, u"Electric Piano"_s}, {u"fake.analog-pad"_s, u"Analog Pad"_s}}},
+            {u"City Rain"_s, {{u"fake.tonewheel-organ"_s, u"Tonewheel Organ"_s}}},
+            {u"Last Train Home"_s, {{u"fake.grand-piano"_s, u"Grand Piano"_s}, {u"fake.string-ensemble"_s, u"String Ensemble"_s}}},
+        };
+        for (const auto& [name, instruments] : others) {
+            QVERIFY(doc.addSong());
+            const int song = static_cast<int>(doc.setlist().songs.size()) - 1;
+            QVERIFY(doc.renameSong(song, name));
+            QVERIFY(doc.selectPatch(song, 0));
+            for (const auto& [id, instrument] : instruments) QVERIFY(doc.addChannel(id, instrument));
+            if (song == 2) QVERIFY(doc.addEffect(0, u"fake.delay"_s, u"Delay"_s));
+        }
+        QVERIFY(doc.saveAs(m_dir->filePath(u"Saturday Gig.gigchain.json"_s))); // (the title bar names it)
+    }
+    // A song as a chord website shows it (chords on their own lines), for pasting.
+    static QString demoPastedSong()
+    {
+        return u"Verse\n"
+               "C              G\n"
+               "Under the streetlights the city is sleeping\n"
+               "Am               F\n"
+               "I hear your voice in the hum of the rain\n"
+               "Chorus\n"
+               "F          G          C\n"
+               "Carry me home, carry me home\n"
+               "Am         F           G\n"
+               "Back to the place where the river runs slow\n"_s;
+    }
 
     // Waits until `seconds` into the scene's voice.
     void at(double seconds) const
@@ -608,6 +679,27 @@ private slots:
         QTRY_VERIFY(loopPart->property("checked").toBool());
         fingerTap(play);
         QTRY_VERIFY(!m_engine->songPosition().playing);
+    }
+
+    // A short window (a laptop, the keyboard shown): the mixer takes at most
+    // its share, and each strip fits inside it, its fader shorter, its mute,
+    // solo and name plate still in sight (they were pushed under the keyboard).
+    void aShortWindowKeepsWholeStripsInSight()
+    {
+        window()->resize(1400, 760);
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        settle();
+        auto* strips = window()->findChild<QQuickItem*>(u"mixerStrips"_s);
+        QVERIFY(strips != nullptr);
+        QQuickItem* plate = findItem(strips, u"stripNamePlate"_s);
+        QVERIFY(plate != nullptr);
+        const double plateBottom = plate->mapToScene({0, plate->height()}).y();
+        const double stripsBottom = strips->mapToScene({0, strips->height()}).y();
+        const double keyboardTop = window()->findChild<QQuickItem*>(u"keyboardView"_s)->mapToScene({0, 0}).y();
+        QVERIFY2(plateBottom <= stripsBottom + 0.5, qPrintable(u"the name plate ends at %1, the strips at %2"_s.arg(plateBottom).arg(stripsBottom)));
+        QVERIFY2(stripsBottom <= keyboardTop + 0.5, qPrintable(u"the strips end at %1, under the keyboard at %2"_s.arg(stripsBottom).arg(keyboardTop)));
     }
 
     // In the setlist a finger slid over the songs scrolls the list; it does
@@ -1049,10 +1141,13 @@ private slots:
         w->requestActivate();
         QVERIFY(QTest::qWaitForWindowExposed(w));
 
+        // The display in the bar's middle: the setlist above, the song and patch under it.
         auto* title = w->findChild<QQuickItem*>(u"windowTitle"_s);
-        QVERIFY(title != nullptr);
+        auto* setlist = w->findChild<QQuickItem*>(u"windowSetlist"_s);
+        QVERIFY(title != nullptr && setlist != nullptr);
         const QString shown = title->property("text").toString();
-        QVERIFY2(shown.contains(m_session->document().displayName()), qPrintable(shown));
+        QVERIFY2(setlist->property("text").toString().contains(m_session->document().displayName()),
+                 qPrintable(setlist->property("text").toString()));
         QVERIFY2(shown.contains(u"Song 1"_s) && shown.contains(u"Patch 1"_s), qPrintable(shown));
         QVERIFY(m_session->document().renameSong(0, u"<b>A & B</b>"_s));
         QTRY_VERIFY2(title->property("text").toString().contains(u"&lt;b&gt;A &amp; B&lt;/b&gt;"_s),
@@ -1952,67 +2047,10 @@ private slots:
             m_overlay = nullptr;
         });
 
-        // ---- The setlist ---------------------------------------------------
-        const auto part = [](const QString& name) { return QVariantMap{{u"name"_s, name}, {u"occurrence"_s, 1}}; };
-        QVERIFY(doc.renameSong(0, u"Morning Light"_s));
-        QVERIFY(doc.setSongTempo(0, 96));
-        QVERIFY(doc.setSongChart(0, u"{comment: Verse 1}\n"
-                                  "[C]Down by the [G]water we [Am]wait for the [F]morning\n"
-                                  "[C]Every small [G]light on the [F]harbour wall\n"
-                                  "{comment: Chorus}\n"
-                                  "[F]Hold on, [G]hold on, the [Am]night is nearly [F]over\n"
-                                  "[C]We are [G]almost [F]home\n"
-                                  "{comment: Verse 2}\n"
-                                  "[C]Out on the [G]road where the [Am]rain keeps on [F]falling\n"
-                                  "[C]Every old [G]song brings me [F]back again\n"
-                                  "{comment: Bridge}\n"
-                                  "[Am]And if the [G]light should [F]fade\n"
-                                  "[Am]I will [G]find my [F]way [G]home\n"_s));
-        QVERIFY(doc.setSongFlow({part(u"Verse 1"_s), part(u"Chorus"_s), part(u"Verse 2"_s), part(u"Chorus"_s), part(u"Bridge"_s),
-                                 part(u"Chorus"_s)}));
-        for (int section = 0; section < 4; ++section) QVERIFY(doc.setSectionBars(section, 2));
-        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
-        QVERIFY(doc.setChannelName(0, u"Warm Piano"_s));
-        QVERIFY(doc.addEffect(0, u"fake.reverb"_s, u"Reverb"_s));
-        QVERIFY(doc.addChannel(u"fake.analog-pad"_s, u"Analog Pad"_s));
-        QVERIFY(doc.setChannelName(1, u"Soft Pad"_s));
-        QVERIFY(doc.setChannelVolume(1, -8.0));
-        QVERIFY(doc.addEffect(1, u"fake.chorus"_s, u"Chorus"_s));
-        QVERIFY(doc.addChannel(u"fake.string-ensemble"_s, u"String Ensemble"_s));
-        QVERIFY(doc.setChannelName(2, u"Strings"_s));
-        QVERIFY(doc.setChannelVolume(2, -12.0));
-        QVERIFY(doc.addChannel(u"fake.synth-lead"_s, u"Synth Lead"_s));
-        QVERIFY(doc.setChannelName(3, u"Synth Bass"_s));
-        QVERIFY(doc.setChannelVolume(3, -6.0));
-        QVERIFY(doc.removeSectionChannel(0, 2)); // the strings wait for the chorus
-        QVERIFY(doc.removeSectionChannel(2, 2));
-        const QList<std::pair<QString, QList<std::pair<QString, QString>>>> others = {
-            {u"Blue Harbour"_s, {{u"fake.electric-piano"_s, u"Electric Piano"_s}, {u"fake.tonewheel-organ"_s, u"Tonewheel Organ"_s}}},
-            {u"Silver Line"_s, {{u"fake.grand-piano"_s, u"Grand Piano"_s}, {u"fake.synth-lead"_s, u"Synth Lead"_s}}},
-            {u"Golden Hour"_s, {{u"fake.electric-piano"_s, u"Electric Piano"_s}, {u"fake.analog-pad"_s, u"Analog Pad"_s}}},
-            {u"City Rain"_s, {{u"fake.tonewheel-organ"_s, u"Tonewheel Organ"_s}}},
-            {u"Last Train Home"_s, {{u"fake.grand-piano"_s, u"Grand Piano"_s}, {u"fake.string-ensemble"_s, u"String Ensemble"_s}}},
-        };
-        for (const auto& [name, instruments] : others) {
-            QVERIFY(doc.addSong());
-            const int song = static_cast<int>(doc.setlist().songs.size()) - 1;
-            QVERIFY(doc.renameSong(song, name));
-            QVERIFY(doc.selectPatch(song, 0));
-            for (const auto& [id, instrument] : instruments) QVERIFY(doc.addChannel(id, instrument));
-            if (song == 2) QVERIFY(doc.addEffect(0, u"fake.delay"_s, u"Delay"_s));
-        }
-        QVERIFY(doc.saveAs(m_dir->filePath(u"Saturday Gig.gigchain.json"_s))); // (the title bar names it)
+        buildDemoSetlist();
+        if (QTest::currentTestFailed()) return;
         // The song pasted in scene 7, as a chord website shows it.
-        const QString pasted = u"Verse\n"
-                                "C              G\n"
-                                "Under the streetlights the city is sleeping\n"
-                                "Am               F\n"
-                                "I hear your voice in the hum of the rain\n"
-                                "Chorus\n"
-                                "F          G          C\n"
-                                "Carry me home, carry me home\n"
-                                "Am         F           G\n"
-                                "Back to the place where the river runs slow\n"_s;
+        const QString pasted = demoPastedSong();
 
         auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
         auto* sideTabs = findItem(w->contentItem(), u"sidePanelTabs"_s);
@@ -2358,6 +2396,853 @@ private slots:
         m_overlay->setProperty("logoLine2", u"github.com/xDarkzx/GigChain-Keys"_s);
         QTest::qWait(600);
         if (begin(u"11"_s)) end();
+    }
+
+    // The feature videos (one feature each, about two minutes). With
+    // GIGCHAIN_FEATURE_VIDEO set to a video's folder (features\<n>-<name>:
+    // its subs.json from make_subs.py, with every word's time; Director.qml
+    // and splash.png in the folder above), the app is played through scene by
+    // scene, each recorded to scene_NN.mp4. Each action is timed to a word of
+    // the narration, so the scenes follow the voice. GIGCHAIN_DEMO_SCENES=03,05
+    // records only those. Off otherwise.
+    void featureVideo()
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_FEATURE_VIDEO");
+        if (folder.isEmpty()) QSKIP("Set GIGCHAIN_FEATURE_VIDEO to a feature video's folder to record it");
+        const QString feature = QFileInfo(folder).fileName().left(1); // "1".."4"
+        const QStringList only = qEnvironmentVariable("GIGCHAIN_DEMO_SCENES").split(u',', Qt::SkipEmptyParts);
+        QFile subsFile(folder + u"/subs.json"_s);
+        QVERIFY2(subsFile.open(QIODevice::ReadOnly), qPrintable(subsFile.errorString()));
+        const QJsonObject scenes = QJsonDocument::fromJson(subsFile.readAll()).object();
+        QVERIFY(!scenes.isEmpty());
+        const QString shared = QFileInfo(folder).absolutePath() + u"/.."_s; // Director.qml, splash.png
+
+        QObject* root = m_qml->rootObjects().value(0);
+        QQuickWindow* w = window();
+        w->resize(SceneRecorder::kWindowWidth, SceneRecorder::kWindowHeight);
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        QTest::qWait(300);
+        ui::DocumentController& doc = m_session->document();
+        auto* loops = root->property("loops").value<QObject*>();
+        QVERIFY(loops != nullptr);
+
+        QQuickItem* layer = nullptr;
+        for (QQuickItem* level = w->contentItem(); level != nullptr && layer == nullptr; level = level->parentItem()) {
+            for (QQuickItem* child : level->childItems()) {
+                if (child->inherits("QQuickOverlay")) layer = child;
+            }
+        }
+        QQmlComponent component(m_qml.get(), QUrl::fromLocalFile(shared + u"/Director.qml"_s));
+        QVERIFY2(component.isReady(), qPrintable(component.errorString()));
+        std::unique_ptr<QObject> overlayObject(component.beginCreate(m_qml->rootContext()));
+        auto* overlay = qobject_cast<QQuickItem*>(overlayObject.get());
+        QVERIFY(overlay != nullptr);
+        component.setInitialProperties(overlay, {{u"logoSource"_s, QUrl::fromLocalFile(shared + u"/splash.png"_s)}});
+        overlay->setParentItem(layer != nullptr ? layer : w->contentItem());
+        component.completeCreate();
+        m_overlay = overlay;
+        SceneRecorder recorder(w, overlay, root->findChild<QQuickWindow*>(u"notificationWindow"_s));
+        m_recorder = &recorder;
+        const auto cleanUp = qScopeGuard([this] {
+            m_recorder = nullptr;
+            m_overlay = nullptr;
+        });
+        buildDemoSetlist();
+        if (QTest::currentTestFailed()) return;
+        if (auto* engineName = w->findChild<QQuickItem*>(u"statusAudio"_s)) engineName->setVisible(false);
+        auto* sideTabs = findItem(w->contentItem(), u"sidePanelTabs"_s);
+        auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(sideTabs != nullptr && tabs != nullptr);
+
+        // ---- The scene machinery: start, the words, the end ------------------
+        QJsonObject scene;
+        const auto begin = [&](const QString& key) {
+            if (!only.isEmpty() && !only.contains(key)) return false;
+            scene = scenes.value(key).toObject();
+            if (scene.isEmpty()) return false;
+            if (!recorder.start(folder + u"/scene_"_s + key + u".mp4"_s, scene.value(u"lines"_s).toArray())) {
+                qWarning().noquote() << recorder.problem();
+                return false;
+            }
+            return true;
+        };
+        const auto end = [&] {
+            at(scene.value(u"duration"_s).toDouble() + 0.45);
+            QVERIFY2(recorder.stop(), qPrintable(recorder.problem()));
+        };
+        // When the narration says `word` (its `nth` time in the scene): the
+        // action happens on the word. A word the voice did not say: at
+        // `fallback` of the scene (said in the log, to fix the script).
+        const auto word = [&](const QString& wanted, double fallback, int nth = 1) {
+            int seen = 0;
+            for (const auto& v : scene.value(u"words"_s).toArray()) {
+                const QString said = v.toObject().value(u"word"_s).toString().toLower().remove(QRegularExpression(u"[^a-z0-9']"_s));
+                if (said.startsWith(wanted.toLower()) && ++seen == nth) return v.toObject().value(u"start"_s).toDouble();
+            }
+            qWarning().noquote() << "Scene: the narration does not say" << wanted << "- at" << fallback << "of it";
+            return fallback * scene.value(u"duration"_s).toDouble();
+        };
+        const auto atWord = [&](const QString& wanted, double fallback, int nth = 1) { at(word(wanted, fallback, nth)); };
+        const auto toEdit = [&](int song) {
+            for (QObject* popup : root->findChildren<QObject*>()) {
+                if (popup->inherits("QQuickPopup") && popup->property("visible").toBool()) QMetaObject::invokeMethod(popup, "close");
+            }
+            doc.stopSong();
+            for (int note = 0; note < 128; ++note) m_engine->injectNote(1, note, 0);
+            (void)m_engine->takeKeyPresses();
+            QVERIFY(root->setProperty("performMode", false));
+            QVERIFY(root->setProperty("practiceMode", false));
+            QVERIFY(doc.selectPatch(song, 0));
+            sideTabs->setProperty("currentIndex", 0);
+            tabs->setProperty("currentIndex", 0);
+            doc.setSelectedChannel(0);
+            // The loop station's video: always in sight; the others: out of the way (a setting: it outlives a run).
+            loops->setProperty("stripVisible", feature == u"1"_s);
+            // The charts' video: the chart has the room (the mixer opened where it matters).
+            root->setProperty("editMixerOpen", feature != u"2"_s);
+            m_overlay->setProperty("pointer", QPointF(-60, -60));
+            m_overlay->setProperty("caption", QString());
+            m_overlay->setProperty("logo", 0.0);
+            unspot();
+            w->setVisibility(QWindow::Windowed);
+            w->setGeometry(0, 0, SceneRecorder::kWindowWidth, SceneRecorder::kWindowHeight);
+            QTest::qWait(600);
+        };
+        // Notes played on the keyboard for `seconds` (a phrase, over and over).
+        const auto playPhrase = [&](const QList<int>& notes, double seconds) {
+            QElapsedTimer t;
+            t.start();
+            for (int i = 0; static_cast<double>(t.elapsed()) < seconds * 1000; ++i) {
+                const int note = notes.at(i % notes.size());
+                m_engine->injectNote(1, note, 96);
+                QTest::qWait(230);
+                m_engine->injectNote(1, note, 0);
+                QTest::qWait(20);
+            }
+        };
+        const auto closing = [&](const QString& key) {
+            toEdit(0);
+            m_overlay->setProperty("logo", 1.0);
+            m_overlay->setProperty("logoLine", u"Free  ·  Open source"_s);
+            m_overlay->setProperty("logoLine2", u"github.com/xDarkzx/GigChain-Keys"_s);
+            QTest::qWait(600);
+            if (begin(key)) end();
+            m_overlay->setProperty("logo", 0.0);
+        };
+        // A shown menu entry by the start of its text (a submenu's entry has no name of its own).
+        const auto entry = [&](const QString& text) -> QQuickItem* {
+            QQuickItem* found = nullptr;
+            const std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+                if (found != nullptr) return;
+                if (item->inherits("QQuickMenuItem") && item->isVisible() && item->property("text").toString().startsWith(text)) found = item;
+                for (QQuickItem* inner : item->childItems()) walk(inner);
+            };
+            walk(w->contentItem());
+            if (found == nullptr && layer != nullptr) walk(layer);
+            if (found == nullptr) { // (said: what the menus show, to fix the scene)
+                QStringList seen;
+                const std::function<void(QQuickItem*)> list = [&](QQuickItem* item) {
+                    if (item->inherits("QQuickMenuItem") && item->isVisible()) seen << item->property("text").toString();
+                    for (QQuickItem* inner : item->childItems()) list(inner);
+                };
+                list(w->contentItem());
+                if (layer != nullptr) list(layer);
+                qWarning().noquote() << "No menu entry" << text << "- shown:" << seen.join(u" | "_s);
+            }
+            return found;
+        };
+        const auto cell = [&](int channel) { return shown(u"loopRecord"_s).value(channel); };
+        const auto cellPlay = [&](int channel) { return shown(u"loopPlay"_s).value(channel); };
+        // A toolbar menu opened and an item in it clicked (the pointer goes there).
+        const auto menuItem = [&](const QString& button, const QString& item) {
+            press(shownOne(button), Qt::LeftButton, 500);
+            QTRY_VERIFY(shownOne(item) != nullptr);
+            QTest::qWait(250);
+            press(shownOne(item), Qt::LeftButton, 450);
+        };
+
+        if (feature == u"1"_s) {
+            // ================= 1: the loop station =================
+            QVERIFY(root->setProperty("editKeyboardOpen", false)); // (the room goes to the looper and the strips)
+            QVERIFY(loops->setProperty("stripVisible", true));
+            // ---- 01: the hook: three loops going ------------------------------
+            toEdit(0);
+            for (const int channel : {0, 3, 2}) {
+                QVERIFY(QMetaObject::invokeMethod(loops, "record", Q_ARG(int, channel)));
+                QVERIFY(QMetaObject::invokeMethod(loops, "record", Q_ARG(int, channel)));
+            }
+            QTest::qWait(400);
+            if (begin(u"01"_s)) {
+                spot(shownOne(u"looperBand"_s));
+                atWord(u"loop"_s, 0.3);
+                playPhrase({60, 64, 67, 72}, 2.0);
+                atWord(u"bass"_s, 0.5);
+                playPhrase({36, 43, 41, 38}, 2.0);
+                atWord(u"melody"_s, 0.7);
+                playPhrase({76, 79, 81, 79}, 2.0);
+                end();
+            }
+            QVERIFY(QMetaObject::invokeMethod(loops, "clearAll"));
+
+            // ---- 02: where it lives -------------------------------------------
+            toEdit(0);
+            QVERIFY(loops->setProperty("stripVisible", false)); // (turned on in the scene)
+            QTest::qWait(300);
+            if (begin(u"02"_s)) {
+                atWord(u"click"_s, 0.1);
+                spot(shownOne(u"loopsMenuButton"_s));
+                menuItem(u"loopsMenuButton"_s, u"loopsShowStrip"_s);
+                atWord(u"row"_s, 0.5);
+                spot(shownOne(u"looperBand"_s));
+                atWord(u"every"_s, 0.8);
+                spot(stripsArea(4));
+                end();
+            }
+
+            // ---- 03: record the first loop --------------------------------------
+            toEdit(0);
+            if (begin(u"03"_s)) {
+                atWord(u"piano"_s, 0.1);
+                press(strip(0), Qt::LeftButton, 500);
+                atWord(u"record"_s, 0.2);
+                spot(cell(0));
+                press(cell(0), Qt::LeftButton, 450);
+                atWord(u"play"_s, 0.35);
+                playPhrase({60, 64, 67, 64, 57, 60, 64, 60}, 3.0);
+                atWord(u"finish"_s, 0.6);
+                press(cell(0), Qt::LeftButton, 300); // closed: it plays round
+                atWord(u"round"_s, 0.75);
+                spot(cellPlay(0));
+                end();
+            }
+
+            // ---- 04: always in time --------------------------------------------
+            toEdit(0);
+            if (begin(u"04"_s)) {
+                atWord(u"lock"_s, 0.1);
+                spot(shownOne(u"looperBand"_s));
+                atWord(u"choose"_s, 0.35);
+                press(shownOne(u"loopsMenuButton"_s), Qt::LeftButton, 500);
+                QTRY_VERIFY(entry(u"Loop length"_s) != nullptr);
+                press(entry(u"Loop length"_s), Qt::LeftButton, 400); // its lengths open beside it
+                QTest::qWait(300);
+                if (const QQuickItem* lengths = entry(u"4 bars"_s)) spot(rectOf(lengths).united(rectOf(entry(u"Loop length"_s))));
+                atWord(u"late"_s, 0.75);
+                QTest::keyClick(w, Qt::Key_Escape);
+                QTest::keyClick(w, Qt::Key_Escape);
+                spot(shownOne(u"looperBand"_s));
+                end();
+            }
+
+            // ---- 05: stack it up -------------------------------------------------
+            toEdit(0);
+            if (begin(u"05"_s)) {
+                atWord(u"bass"_s, 0.1);
+                press(strip(3), Qt::LeftButton, 450);
+                press(cell(3), Qt::LeftButton, 350);
+                spot(cell(3));
+                playPhrase({36, 36, 43, 41}, 2.2);
+                press(cell(3), Qt::LeftButton, 300);
+                atWord(u"strings"_s, 0.35);
+                press(strip(2), Qt::LeftButton, 400);
+                press(cell(2), Qt::LeftButton, 300);
+                spot(cell(2));
+                playPhrase({72, 76, 79, 76}, 2.0);
+                press(cell(2), Qt::LeftButton, 300);
+                atWord(u"turn"_s, 0.75);
+                spot(stripsArea(4));
+                for (int step = 0; step <= 20; ++step) {
+                    QVERIFY(doc.setChannelVolume(2, -12.0 + (8.0 * std::sin(step / 20.0 * std::numbers::pi))));
+                    QTest::qWait(40);
+                }
+                atWord(u"mute"_s, 0.9);
+                QVERIFY(doc.setChannelMute(3, true));
+                end();
+                QVERIFY(doc.setChannelMute(3, false));
+            }
+
+            // ---- 06: made a mistake? --------------------------------------------
+            toEdit(0);
+            // The piano's loop with a layer on top (whatever scenes ran before).
+            QVERIFY(QMetaObject::invokeMethod(loops, "clear", Q_ARG(int, 0)));
+            for (int step = 0; step < 4; ++step) QVERIFY(QMetaObject::invokeMethod(loops, "record", Q_ARG(int, 0)));
+            QTest::qWait(300);
+            if (begin(u"06"_s)) {
+                atWord(u"undo"_s, 0.25);
+                press(cellPlay(0), Qt::RightButton, 500);
+                QTRY_VERIFY(entry(u"Undo last layer"_s) != nullptr);
+                spot(rectOf(entry(u"Undo last layer"_s)).united(rectOf(entry(u"Clear this loop"_s))));
+                press(entry(u"Undo last layer"_s), Qt::LeftButton, 400);
+                atWord(u"clear"_s, 0.75);
+                press(cellPlay(0), Qt::RightButton, 400);
+                QTRY_VERIFY(entry(u"Clear this loop"_s) != nullptr);
+                press(entry(u"Clear this loop"_s), Qt::LeftButton, 400);
+                spot(cell(0));
+                end();
+            }
+
+            // ---- 07: free loops ------------------------------------------------
+            toEdit(0);
+            if (begin(u"07"_s)) {
+                atWord(u"free"_s, 0.15);
+                press(shownOne(u"loopsMenuButton"_s), Qt::LeftButton, 500);
+                QTRY_VERIFY(entry(u"Free loops"_s) != nullptr && entry(u"Loops follow"_s) != nullptr);
+                spot(rectOf(entry(u"Loops follow"_s)).united(rectOf(entry(u"Free loops"_s))));
+                atWord(u"length"_s, 0.45);
+                QTest::keyClick(w, Qt::Key_Escape);
+                press(cell(1), Qt::LeftButton, 400);
+                playPhrase({48, 55, 52, 55}, 1.8);
+                press(cell(1), Qt::LeftButton, 300);
+                atWord(u"tempo"_s, 0.6);
+                spot(shownOne(u"tempoField"_s));
+                end();
+            }
+
+            // ---- 08: hands on the keys --------------------------------------------
+            toEdit(0);
+            if (begin(u"08"_s)) {
+                atWord(u"buttons"_s, 0.3);
+                menuItem(u"loopsMenuButton"_s, u"loopsLearn"_s);
+                QTest::qWait(400);
+                for (QObject* dialog : w->findChildren<QObject*>(u"loopControlsDialog"_s)) {
+                    auto* content = dialog->property("contentItem").value<QQuickItem*>();
+                    if (dialog->property("visible").toBool() && content != nullptr && content->parentItem() != nullptr) spot(content->parentItem());
+                }
+                atWord(u"hands"_s, 0.8);
+                end();
+            }
+            QVERIFY(QMetaObject::invokeMethod(loops, "clearAll"));
+
+            // ---- 09: the close ----------------------------------------------------
+            closing(u"09"_s);
+        }
+
+        // A mouse drag the viewer sees: the pointer carries it.
+        const auto videoDrag = [&](QPointF from, QPointF to) {
+            glide(from, 450);
+            m_overlay->setProperty("glide", 0);
+            QTest::mousePress(w, Qt::LeftButton, {}, from.toPoint());
+            for (int i = 1; i <= 24; ++i) {
+                const QPointF p = from + ((to - from) * i / 24.0);
+                m_overlay->setProperty("pointer", p);
+                QTest::mouseMove(w, p.toPoint());
+                QTest::qWait(22);
+            }
+            QTest::mouseRelease(w, Qt::LeftButton, {}, to.toPoint());
+            QTest::qWait(80);
+        };
+        // The chart's word cell showing `text`, and a part of it (its word, its chord box).
+        const auto cellOf = [&](const QString& text) -> QQuickItem* {
+            const QList<QQuickItem*> all = shown(u"chartCell"_s);
+            const auto it = std::ranges::find_if(all, [&text](QQuickItem* c) { return c->property("modelData").toMap().value(u"text"_s).toString() == text; });
+            return it == all.end() ? nullptr : *it;
+        };
+        const auto part = [&](const QString& text, const QString& name) -> QQuickItem* {
+            QQuickItem* c = cellOf(text);
+            return c != nullptr ? findItem(c, name) : nullptr;
+        };
+        const auto typeKeys = [&](const QString& text) {
+            for (const QChar c : text) {
+                QTest::keyClick(w, c.toLatin1());
+                QTest::qWait(90); // (as a player types)
+            }
+        };
+        const auto perform = [&] {
+            QVERIFY(root->setProperty("performMode", true));
+            w->setVisibility(QWindow::Windowed);
+            w->setGeometry(0, 0, SceneRecorder::kWindowWidth, SceneRecorder::kWindowHeight);
+        };
+
+        if (feature == u"2"_s) {
+            // ================= 2: charts and lyrics =================
+            // ---- 01: the hook: the chart on stage, following --------------------
+            toEdit(0);
+            perform();
+            QTest::qWait(500);
+            doc.playSongFromTop();
+            QTest::qWait(1200);
+            if (begin(u"01"_s)) {
+                atWord(u"sheets"_s, 0.15);
+                spot(shownOne(u"performChart"_s));
+                atWord(u"songs"_s, 0.7);
+                unspot();
+                end();
+            }
+
+            // ---- 02: just paste it ------------------------------------------------
+            toEdit(1);
+            QGuiApplication::clipboard()->setText(demoPastedSong());
+            if (begin(u"02"_s)) {
+                atWord(u"control"_s, 0.4);
+                press(shownOne(u"pasteChartButton"_s), Qt::LeftButton, 600);
+                QTRY_VERIFY(!doc.setlist().songs.at(1).chart.isEmpty());
+                atWord(u"every"_s, 0.7);
+                spot(shownOne(u"chartScroll"_s));
+                end();
+            }
+
+            // ---- 03: fix it right there -----------------------------------------
+            toEdit(1);
+            if (doc.setlist().songs.at(1).chart.isEmpty()) {
+                QGuiApplication::clipboard()->setText(demoPastedSong());
+                QVERIFY(QMetaObject::invokeMethod(&doc, "pasteChartFromClipboard", Q_ARG(int, 1)));
+            }
+            QTest::qWait(300);
+            if (begin(u"03"_s)) {
+                atWord(u"add"_s, 0.2);
+                press(part(u"city"_s, u"chartWord"_s), Qt::LeftButton, 500); // the line opens: a box over each word
+                QTest::qWait(250);
+                press(part(u"city"_s, u"chordBox"_s), Qt::LeftButton, 350);
+                QTRY_VERIFY(part(u"city"_s, u"chordEditInput"_s) != nullptr && part(u"city"_s, u"chordEditInput"_s)->isVisible());
+                typeKeys(u"Em"_s);
+                QTest::keyClick(w, Qt::Key_Return);
+                atWord(u"change"_s, 0.45);
+                glide(centre(part(u"sleeping"_s, u"chartWord"_s)), 450);
+                QVERIFY(QMetaObject::invokeMethod(m_overlay, "click"));
+                QTest::mouseDClick(w, Qt::LeftButton, {}, centre(part(u"sleeping"_s, u"chartWord"_s)).toPoint());
+                QTRY_VERIFY(part(u"sleeping"_s, u"wordEditInput"_s) != nullptr && part(u"sleeping"_s, u"wordEditInput"_s)->isVisible());
+                typeKeys(u"dreaming"_s);
+                QTest::keyClick(w, Qt::Key_Return);
+                atWord(u"drag"_s, 0.75);
+                if (const QQuickItem* chip = findItem(cellOf(u"city"_s), u"chartChordChip"_s)) {
+                    videoDrag(centre(chip), centre(part(u"is"_s, u"chordBox"_s)));
+                }
+                end();
+            }
+
+            // ---- 04: your chords, ready to go -------------------------------------
+            toEdit(1);
+            QTest::qWait(300);
+            if (begin(u"04"_s)) {
+                atWord(u"across"_s, 0.1);
+                spot(shownOne(u"paletteChords"_s));
+                atWord(u"drag"_s, 0.4);
+                const QList<QQuickItem*> palette = shown(u"paletteChord"_s);
+                QVERIFY(!palette.isEmpty());
+                press(part(u"voice"_s, u"chartWord"_s), Qt::LeftButton, 400); // (its line opened: the boxes show)
+                QTest::qWait(250);
+                unspot();
+                videoDrag(centre(palette.at(0)), centre(part(u"voice"_s, u"chordBox"_s)));
+                atWord(u"remove"_s, 0.75);
+                if (const QQuickItem* chip = findItem(cellOf(u"voice"_s), u"chartChordChip"_s)) {
+                    videoDrag(centre(chip), centre(shownOne(u"chordRemoveZone"_s)));
+                }
+                end();
+            }
+
+            // ---- 05: sections ---------------------------------------------------
+            toEdit(0);
+            if (begin(u"05"_s)) {
+                atWord(u"header"_s, 0.3);
+                const QList<QQuickItem*> headers = shown(u"sectionHeader"_s);
+                QVERIFY(headers.size() >= 2);
+                spot(headers.at(0));
+                atWord(u"choose"_s, 0.45);
+                press(findItem(headers.at(0), u"sectionAdd"_s), Qt::LeftButton, 450);
+                QTest::qWait(400);
+                if (const QQuickItem* strings = entry(u"Strings"_s)) {
+                    press(strings, Qt::LeftButton, 400);
+                } else {
+                    QVERIFY(doc.addSectionChannel(0, 2)); // what the menu's Strings does (its popup: not drawn offscreen)
+                }
+                atWord(u"verse"_s, 0.7, 2);
+                spot(shown(u"sectionHeader"_s).value(0));
+                atWord(u"chorus"_s, 0.85, 2);
+                spot(shown(u"sectionHeader"_s).value(1));
+                end();
+            }
+
+            // ---- 06: the song's flow ---------------------------------------------
+            toEdit(0);
+            if (begin(u"06"_s)) {
+                atWord(u"order"_s, 0.15);
+                spot(shownOne(u"flowBar"_s));
+                const QList<QQuickItem*> flow = shown(u"flowPart"_s);
+                for (const QQuickItem* flowPart : flow) glide(centre(flowPart), 380);
+                atWord(u"press"_s, 0.55);
+                unspot();
+                press(shownOne(u"songPlayButton"_s), Qt::LeftButton, 500);
+                atWord(u"sounds"_s, 0.75);
+                QVERIFY(root->setProperty("editMixerOpen", true)); // (the sounds changing, on the strips)
+                QTest::qWait(250);
+                spot(stripsArea(4));
+                end();
+            }
+
+            // ---- 07: already got charts? ----------------------------------------
+            toEdit(0);
+            if (begin(u"07"_s)) {
+                atWord(u"import"_s, 0.2);
+                glide(centre(shownOne(u"importChartButton"_s)), 600);
+                spot(shownOne(u"importChartButton"_s));
+                atWord(u"edit"_s, 0.8);
+                spot(shownOne(u"chartScroll"_s));
+                end();
+            }
+
+            // ---- 08: on stage -------------------------------------------------
+            toEdit(0);
+            perform();
+            QTest::qWait(400);
+            doc.playSongFromTop();
+            QTest::qWait(800);
+            if (begin(u"08"_s)) {
+                atWord(u"perform"_s, 0.05);
+                spot(shownOne(u"performChart"_s));
+                atWord(u"tap"_s, 0.7);
+                unspot();
+                const QList<QQuickItem*> chords = tappableChords();
+                QVERIFY(chords.size() > 2);
+                press(chords.at(2), Qt::LeftButton, 400);
+                atWord(u"exactly"_s, 0.85);
+                for (QObject* diagram : w->findChildren<QObject*>(u"chordDiagram"_s)) {
+                    auto* content = diagram->property("contentItem").value<QQuickItem*>();
+                    if (diagram->property("visible").toBool() && content != nullptr && content->parentItem() != nullptr) spot(content->parentItem());
+                }
+                end();
+                QTest::keyClick(w, Qt::Key_Escape);
+            }
+
+            // ---- 09: the close ----------------------------------------------------
+            closing(u"09"_s);
+        }
+
+        auto* warmup = root->property("warmup").value<ui::WarmupController*>();
+        QVERIFY(warmup != nullptr);
+        ui::PracticeController& practice = m_session->practice();
+        const auto toPractice = [&] {
+            QVERIFY(QMetaObject::invokeMethod(w->findChild<QObject*>(u"practiceButton"_s), "clicked"));
+            QTest::qWait(400);
+        };
+        // An exercise played along (as a player would) for the scene, from now.
+        const auto notesOf = [&practice] {
+            QList<QVariantMap> toPlay;
+            for (const QVariant& n : practice.notes()) toPlay << n.toMap();
+            return toPlay;
+        };
+
+        if (feature == u"3"_s) {
+            // ================= 3: warm-ups =================
+            // ---- 01: the hook: a warm-up running ---------------------------------
+            toEdit(0);
+            toPractice();
+            warmup->setActive(true);
+            QTest::qWait(300);
+            warmup->startExercise(0, static_cast<int>(core::WarmupHands::Both));
+            if (begin(u"01"_s)) {
+                QList<QVariantMap> toPlay = notesOf();
+                QList<std::pair<int, double>> held;
+                playAlong(toPlay, held, scene.value(u"duration"_s).toDouble() + 0.4);
+                for (const auto& [pitch, until] : held) m_engine->injectNote(1, pitch, 0);
+                end();
+            }
+            QVERIFY(QMetaObject::invokeMethod(warmup, "stop"));
+
+            // ---- 02: choose your level --------------------------------------------
+            toEdit(0);
+            toPractice();
+            warmup->setActive(false);
+            QTest::qWait(300);
+            if (begin(u"02"_s)) {
+                atWord(u"warm"_s, 0.15);
+                press(shownOne(u"practiceWarmupMode"_s), Qt::LeftButton, 500);
+                atWord(u"beginner"_s, 0.45);
+                spot(shownOne(u"warmupLevel0"_s));
+                glide(centre(shownOne(u"warmupLevel0"_s)), 350);
+                atWord(u"intermediate"_s, 0.55);
+                spot(shownOne(u"warmupLevel1"_s));
+                glide(centre(shownOne(u"warmupLevel1"_s)), 350);
+                atWord(u"pro"_s, 0.65);
+                spot(shownOne(u"warmupLevel2"_s));
+                glide(centre(shownOne(u"warmupLevel2"_s)), 350);
+                end();
+            }
+
+            // ---- 03: which finger? -----------------------------------------------
+            toEdit(0);
+            toPractice();
+            warmup->setActive(true);
+            QTest::qWait(300);
+            warmup->startExercise(0, static_cast<int>(core::WarmupHands::Right));
+            if (begin(u"03"_s)) {
+                QList<QVariantMap> toPlay = notesOf();
+                QList<std::pair<int, double>> held;
+                playAlong(toPlay, held, word(u"every"_s, 0.05));
+                spot(shownOne(u"practiceFalls"_s));
+                playAlong(toPlay, held, word(u"thumb"_s, 0.35));
+                if (const QQuickItem* finger = shownOne(u"practiceFinger"_s)) spot(finger);
+                playAlong(toPlay, held, word(u"right"_s, 0.6));
+                spot(shownOne(u"practiceFalls"_s));
+                playAlong(toPlay, held, scene.value(u"duration"_s).toDouble() + 0.4);
+                for (const auto& [pitch, until] : held) m_engine->injectNote(1, pitch, 0);
+                end();
+            }
+            QVERIFY(QMetaObject::invokeMethod(warmup, "stop"));
+
+            // ---- 04: one hand, then both ----------------------------------------
+            toEdit(0);
+            toPractice();
+            warmup->setActive(true);
+            QTest::qWait(300);
+            if (begin(u"04"_s)) {
+                for (const auto& [said, hands, fallback] : {std::tuple{u"right"_s, core::WarmupHands::Right, 0.1},
+                                                             std::tuple{u"left"_s, core::WarmupHands::Left, 0.35},
+                                                             std::tuple{u"both"_s, core::WarmupHands::Both, 0.6}}) {
+                    atWord(said, fallback);
+                    warmup->startExercise(0, static_cast<int>(hands));
+                    QTest::qWait(200);
+                    spot(shownOne(u"warmupHands"_s + QString::number(static_cast<int>(hands))));
+                    QList<QVariantMap> toPlay = notesOf();
+                    QList<std::pair<int, double>> held;
+                    const double until = said == u"both"_s ? scene.value(u"duration"_s).toDouble() + 0.4
+                                                           : word(said == u"right"_s ? u"left"_s : u"both"_s, fallback + 0.25) - 0.2;
+                    playAlong(toPlay, held, until);
+                    for (const auto& [pitch, when] : held) m_engine->injectNote(1, pitch, 0);
+                }
+                end();
+            }
+            QVERIFY(QMetaObject::invokeMethod(warmup, "stop"));
+
+            // ---- 05: how did you do? (a run played to its end, then its score) ----
+            toEdit(0);
+            toPractice();
+            warmup->setActive(true);
+            QTest::qWait(300);
+            if (only.isEmpty() || only.contains(u"05"_s)) {
+                warmup->startExercise(0, static_cast<int>(core::WarmupHands::Both));
+                QList<QVariantMap> toPlay = notesOf();
+                QList<std::pair<int, double>> held;
+                const auto secondsLeft = [&practice] { return (practice.length() - practice.position()) * 60.0 / practice.tempo(); };
+                QVERIFY2(recorder.prepare(folder + u"/scene_05.mp4"_s), qPrintable(recorder.problem()));
+                playAlong(toPlay, held, [&] { return secondsLeft() <= 2.5; });
+                if (begin(u"05"_s)) {
+                    playAlong(toPlay, held, [&] { return !practice.playing(); });
+                    QTRY_VERIFY(!shown(u"warmupStars"_s).isEmpty());
+                    atWord(u"notes"_s, 0.3);
+                    spot(shownOne(u"warmupNotesScore"_s));
+                    atWord(u"tip"_s, 0.8);
+                    spot(shownOne(u"warmupTip"_s));
+                    end();
+                }
+            }
+
+            // ---- 06: it grows with you ------------------------------------------
+            if (begin(u"06"_s)) {
+                atWord(u"three"_s, 0.1);
+                if (const QQuickItem* stars = shownOne(u"warmupStars"_s)) spot(stars);
+                atWord(u"level"_s, 0.45); // ("Pass the level": heard as "past" too)
+                spot(shownOne(u"warmupLevel1"_s) != nullptr ? rectOf(shownOne(u"warmupLevel1"_s)) : QRectF());
+                atWord(u"pushing"_s, 0.75);
+                unspot();
+                end();
+            }
+            QVERIFY(QMetaObject::invokeMethod(warmup, "stop"));
+            warmup->setActive(false);
+
+            // ---- 07: then onto real songs ------------------------------------------
+            toEdit(0);
+            toPractice();
+            practice.setMode(1);
+            practice.setSpeed(1.0);
+            if (begin(u"07"_s)) {
+                QList<QVariantMap> toPlay = notesOf();
+                QList<std::pair<int, double>> held;
+                at(word(u"song"_s, 0.15));
+                press(shownOne(u"practiceSongMode"_s), Qt::LeftButton, 500); // (back from the warm-ups)
+                QTRY_VERIFY(shownOne(u"practicePlay"_s) != nullptr);
+                at(word(u"fall"_s, 0.25));
+                press(shownOne(u"practicePlay"_s), Qt::LeftButton, 450);
+                playAlong(toPlay, held, word(u"slow"_s, 0.45));
+                spot(shownOne(u"practiceSpeed"_s));
+                practice.setSpeed(0.6);
+                playAlong(toPlay, held, word(u"loop"_s, 0.6));
+                spot(shownOne(u"practiceLoop"_s));
+                playAlong(toPlay, held, word(u"wait"_s, 0.8));
+                spot(shownOne(u"practiceMode2"_s)); // Wait for me
+                playAlong(toPlay, held, scene.value(u"duration"_s).toDouble() + 0.4);
+                for (const auto& [pitch, until] : held) m_engine->injectNote(1, pitch, 0);
+                end();
+            }
+            if (practice.playing()) QVERIFY(QMetaObject::invokeMethod(&practice, "stop"));
+
+            // ---- 08: the close ----------------------------------------------------
+            closing(u"08"_s);
+        }
+
+        if (feature == u"4"_s) {
+            // ================= 4: layers, splits and effects =================
+            // City Rain: one organ to start from.
+            const int song = 4;
+            const auto chord = [&](bool down) {
+                for (const int note : {48, 60, 64, 67}) m_engine->injectNote(1, note, down ? 100 : 0);
+            };
+            // ---- 01: the hook: a full sound -----------------------------------------
+            toEdit(0);
+            if (begin(u"01"_s)) {
+                spot(stripsArea(4));
+                chord(true);
+                atWord(u"reverb"_s, 0.7);
+                chord(false);
+                end();
+            }
+
+            // ---- 02: add an instrument ------------------------------------------
+            toEdit(song);
+            if (begin(u"02"_s)) {
+                atWord(u"instruments"_s, 0.05);
+                const QRectF tabsArea = rectOf(sideTabs);
+                const QPointF instrumentsTab(tabsArea.x() + (tabsArea.width() * 0.75), tabsArea.center().y());
+                glide(instrumentsTab, 500);
+                QVERIFY(QMetaObject::invokeMethod(m_overlay, "click"));
+                QTest::mouseClick(w, Qt::LeftButton, {}, instrumentsTab.toPoint());
+                QTest::qWait(300);
+                spot(shownOne(u"pluginList"_s));
+                atWord(u"drag"_s, 0.45);
+                const QRectF list = rectOf(shownOne(u"pluginList"_s));
+                const QPointF from(list.x() + 110, list.y() + 40);
+                const QRectF mixer = stripsArea(1);
+                glide(from, 450);
+                glide(QPointF(mixer.right() + 120, mixer.center().y()), 900); // (carried to the mixer)
+                QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+                QTest::qWait(250);
+                atWord(u"click"_s, 0.8);
+                spot(stripsArea(2));
+                press(strip(1)->findChild<QQuickItem*>(u"instrumentSlot"_s), Qt::LeftButton, 450);
+                end();
+            }
+
+            // ---- 03: layer them up ------------------------------------------------
+            toEdit(song);
+            if (doc.currentPatch()->channels.size() < 2) QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+            if (begin(u"03"_s)) {
+                atWord(u"strings"_s, 0.15);
+                QVERIFY(doc.addChannel(u"fake.string-ensemble"_s, u"String Ensemble"_s));
+                QTest::qWait(250);
+                spot(stripsArea(3));
+                atWord(u"chord"_s, 0.35);
+                chord(true);
+                atWord(u"fader"_s, 0.7);
+                const QQuickItem* fader = strip(2)->findChild<QQuickItem*>(u"faderKnobArea"_s);
+                spot(fader);
+                glide(centre(fader), 400);
+                for (int step = 0; step <= 24; ++step) {
+                    QVERIFY(doc.setChannelVolume(2, -(10.0 * step / 24.0)));
+                    QTest::qWait(35);
+                }
+                chord(false);
+                end();
+            }
+
+            // ---- 04: or one at a time ----------------------------------------------
+            toEdit(song);
+            if (begin(u"04"_s)) {
+                atWord(u"button"_s, 0.25);
+                spot(shownOne(u"playModeButton"_s));
+                press(shownOne(u"playModeButton"_s), Qt::LeftButton, 500);
+                atWord(u"strip"_s, 0.55);
+                unspot();
+                press(strip(1), Qt::LeftButton, 450);
+                chord(true);
+                QTest::qWait(700);
+                chord(false);
+                atWord(u"switching"_s, 0.8);
+                press(strip(0), Qt::LeftButton, 450);
+                chord(true);
+                QTest::qWait(600);
+                chord(false);
+                end();
+            }
+            doc.setPlayMode(0);
+
+            // ---- 05: split your keyboard ---------------------------------------------
+            toEdit(song);
+            QVERIFY(root->setProperty("editKeyboardOpen", true));
+            if (begin(u"05"_s)) {
+                atWord(u"keyboard"_s, 0.25);
+                QVERIFY(QMetaObject::invokeMethod(&doc, "editChannel", Q_ARG(int, 0), Q_ARG(QString, u"zone"_s)));
+                QTest::qWait(300);
+                atWord(u"lowest"_s, 0.45);
+                QVERIFY(doc.setChannelKeyRange(0, 24, 47)); // the organ: the bass, the left hand
+                atWord(u"piano"_s, 0.6, 2);
+                QVERIFY(QMetaObject::invokeMethod(w->findChild<QObject*>(u"zoneDialog"_s), "close"));
+                QVERIFY(doc.setChannelKeyRange(1, 48, 108));
+                QVERIFY(doc.setChannelKeyRange(2, 48, 108));
+                QTest::qWait(250);
+                QRectF zones;
+                for (const QQuickItem* zone : shown(u"zoneText"_s)) zones = zones.united(rectOf(zone));
+                spot(zones);
+                atWord(u"hit"_s, 0.85);
+                spot(shownOne(u"keyboardView"_s));
+                end();
+            }
+            for (int channel = 0; std::cmp_less(channel, doc.currentPatch()->channels.size()); ++channel) {
+                QVERIFY(doc.setChannelKeyRange(channel, 0, 127));
+            }
+
+            // ---- 06: add some effects -------------------------------------------
+            toEdit(song);
+            if (begin(u"06"_s)) {
+                atWord(u"slots"_s, 0.1);
+                const QQuickItem* add = strip(1)->findChild<QQuickItem*>(u"addEffectSlot"_s);
+                spot(add);
+                atWord(u"empty"_s, 0.25);
+                press(add, Qt::LeftButton, 450);
+                QTest::qWait(500);
+                QTest::keyClick(w, Qt::Key_Escape);
+                QVERIFY(doc.addEffect(1, u"fake.reverb"_s, u"Reverb"_s));
+                QTest::qWait(250);
+                spot(strip(1)->findChild<QQuickItem*>(u"effectList"_s));
+                atWord(u"power"_s, 0.75);
+                QVERIFY(doc.setEffectBypass(1, 0, true));
+                QTest::qWait(600);
+                QVERIFY(doc.setEffectBypass(1, 0, false));
+                end();
+            }
+
+            // ---- 07: one reverb for everything -------------------------------------
+            toEdit(song);
+            auto* auxBus = root->property("auxBus").value<QObject*>();
+            QVERIFY(auxBus != nullptr);
+            if (begin(u"07"_s)) {
+                atWord(u"aux"_s, 0.15);
+                spot(shownOne(u"auxStrip"_s));
+                QVERIFY(QMetaObject::invokeMethod(auxBus, "addEffect", Q_ARG(QString, u"fake.reverb"_s), Q_ARG(QString, u"Hall Reverb"_s)));
+                atWord(u"send"_s, 0.35);
+                for (int channel = 0; channel < 2; ++channel) {
+                    const QQuickItem* send = strip(channel)->findChild<QQuickItem*>(u"sendKnob"_s);
+                    spot(send);
+                    glide(centre(send), 400);
+                    for (int step = 0; step <= 16; ++step) {
+                        QVERIFY(doc.setChannelSend(channel, -40.0 + (30.0 * step / 16.0)));
+                        QTest::qWait(35);
+                    }
+                }
+                atWord(u"room"_s, 0.85);
+                spot(stripsArea(3).united(rectOf(shownOne(u"auxStrip"_s))));
+                end();
+            }
+
+            // ---- 08: a proper mixer ----------------------------------------------
+            toEdit(song);
+            if (begin(u"08"_s)) {
+                atWord(u"mute"_s, 0.2);
+                spot(stripsArea(3));
+                QVERIFY(doc.setChannelMute(2, true));
+                atWord(u"solo"_s, 0.35);
+                QVERIFY(doc.setChannelMute(2, false));
+                QVERIFY(doc.setChannelSolo(1, true));
+                chord(true);
+                atWord(u"limiter"_s, 0.75);
+                QVERIFY(doc.setChannelSolo(1, false));
+                chord(false);
+                spot(shownOne(u"limiterLight"_s));
+                end();
+            }
+
+            // ---- 09: the close ----------------------------------------------------
+            closing(u"09"_s);
+        }
     }
 
     void readmeScreenshots()
