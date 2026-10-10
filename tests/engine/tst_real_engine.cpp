@@ -657,7 +657,10 @@ private slots:
         }));
         QCOMPARE(actions, std::vector<ControlAction>{ControlAction::NextSong});
         QVERIFY(engine.takeControlActions().empty()); // once
-        QCOMPARE(engine.channelLevel(patch.channels[0].id).peak, 0.0F); // the piano never heard it
+        // The piano never heard it: no note sounded (a note is over 0.001, as below; the Mac's
+        // Surge can leave a whisper after its reset: -84 dB, 6.6e-05, measured on Mac CI).
+        const float padPeak = engine.channelLevel(patch.channels.at(0).id).peak;
+        QVERIFY2(padPeak < 0.001F, qPrintable(u"the pad played the piano: peak %1"_s.arg(padPeak)));
         engine.injectNote(1, 36, 0);
 
         engine.injectNote(1, 60, 110); // any other key still plays

@@ -40,7 +40,7 @@ public:
     uint64_t takeDropped();
 
 private:
-    void sendUntilStopped(const std::stop_token& stop);
+    void sendUntilStopped();
     void sendFrom(HardwareOut& out);
 
     ExternalMidiOut& m_out;
@@ -51,7 +51,9 @@ private:
     // error per note while a synth is unplugged).
     std::map<QString, std::chrono::steady_clock::time_point> m_restingUntil;
     std::atomic<uint64_t> m_dropped{0};
-    std::jthread m_thread; // last: stops before the rest goes
+    // (std::thread and a flag, not std::jthread: Apple's library has no jthread.)
+    std::atomic<bool> m_stop{false};
+    std::thread m_thread; // stopped and joined by the destructor, before the rest goes
 };
 
 } // namespace gigchain::engine
