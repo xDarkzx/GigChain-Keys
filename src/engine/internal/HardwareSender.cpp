@@ -29,7 +29,12 @@ std::size_t messageLength(uint8_t status)
 
 HardwareSender::HardwareSender(ExternalMidiOut& out) : m_out(out) {}
 
-HardwareSender::~HardwareSender() = default; // m_thread stops and joins first (declared last)
+HardwareSender::~HardwareSender()
+{
+    if (!m_thread.joinable()) return;
+    m_stop.store(true, std::memory_order_relaxed);
+    m_thread.join();
+}
 
 void HardwareSender::setOuts(std::vector<std::shared_ptr<HardwareOut>> outs)
 {
@@ -39,7 +44,7 @@ void HardwareSender::setOuts(std::vector<std::shared_ptr<HardwareOut>> outs)
         if (m_outs.empty()) return; // a running thread idles (it is cheap); none starts
     }
     if (!m_thread.joinable()) {
-        m_thread = std::jthread([this](const std::stop_token& stop) { sendUntilStopped(stop); });
+        m_thread = std::thread([this] { sendUntilStopped(); });
         qCInfo(lcEngine) << "Hardware synths: sender thread started";
     }
 }
@@ -77,11 +82,11 @@ uint64_t HardwareSender::takeDropped()
                            [](uint64_t sum, const auto& out) { return sum + out->takeDropped(); });
 }
 
-void HardwareSender::sendUntilStopped(const std::stop_token& stop)
+void HardwareSender::sendUntilStopped()
 {
     // Its 1 ms waits must be 1 ms (Windows' default is 15.6: late, uneven notes), and it must not wait behind the UI.
     platform::preciseTimingForThisThread();
-    while (!stop.stop_requested()) {
+    while (!m_stop.load(std::memory_order_relaxed)) {
         std::vector<std::shared_ptr<HardwareOut>> outs; // (a synth no channel plays any more is let go at the end)
         {
             const std::scoped_lock lock(m_mutex);
