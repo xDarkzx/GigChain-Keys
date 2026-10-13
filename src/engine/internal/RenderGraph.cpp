@@ -1,5 +1,6 @@
 #include "RenderGraph.h"
 
+#include "GlidingGain.h"
 #include "LoopStation.h"
 
 #include "gigchain/core/Limits.h"
@@ -62,7 +63,8 @@ ChannelStrip::ChannelStrip(StripSpec spec, int maxBlock)
       m_routed(static_cast<std::size_t>(kMaxStripEventsPerBlock)),
       m_midiEffects(spec.midiEffects),
       m_effected(spec.midiEffects.any() ? static_cast<std::size_t>(kMaxStripEventsPerBlock) : 0),
-      m_hardware(std::move(spec.hardware))
+      m_hardware(std::move(spec.hardware)),
+      m_levels(spec.levels ? std::move(spec.levels) : std::make_shared<StripLevels>())
 {
     m_outputPair = std::max(spec.outputPair, 0);
     for (auto& now : m_mappedNow) now.store(-1.0F, std::memory_order_relaxed); // not known until refreshed
@@ -88,15 +90,25 @@ void ChannelStrip::setSendDb(double sendDb)
 
 void ChannelStrip::addSend(const AudioBlock& aux) noexcept
 {
-    const float send = m_send.load(std::memory_order_relaxed);
-    if (send <= 0.0F || m_sentFrames <= 0 || aux.frames < m_sentFrames) return;
-    // Its sound after its fader and pan (what mixInto left in its buffers).
+    const float target = m_send.load(std::memory_order_relaxed);
+    float send = m_levels->send.load(std::memory_order_relaxed);
+    if (send < 0.0F) send = target; // its first block: where the knob is
+    if (m_sentFrames <= 0 || aux.frames < m_sentFrames) return;
+    if (send <= 0.0F && target <= 0.0F) return; // nothing sent, nothing gliding
+    // Its sound after its fader and pan (what mixInto left in its buffers),
+    // at the send gliding to the knob's level.
     const auto frames = static_cast<std::size_t>(m_sentFrames);
-    const auto add = [send](float bus, float sample) { return bus + (sample * send); };
     const std::span<float> left(aux.left, frames);
     const std::span<float> right(aux.right, frames);
-    std::ranges::transform(left, std::span<const float>(m_left).first(frames), left.begin(), add);
-    std::ranges::transform(right, std::span<const float>(m_right).first(frames), right.begin(), add);
+    auto fromRight = m_right.begin();
+    auto toRight = right.begin();
+    auto fromLeft = m_left.begin();
+    for (float& bus : left) {
+        send = glideTo(send, target, m_glide);
+        bus += *fromLeft++ * send;
+        *toRight++ += *fromRight++ * send;
+    }
+    m_levels->send.store(send, std::memory_order_relaxed);
 }
 
 void ChannelStrip::setPan(double pan)
@@ -116,6 +128,83 @@ std::vector<const INode*> ChannelStrip::nodes() const
     if (m_instrument) all.push_back(m_instrument.get());
     std::ranges::transform(m_effects, std::back_inserter(all), [](const auto& effect) { return effect.get(); });
     return all;
+}
+
+std::shared_ptr<ChannelStrip> ChannelStrip::effectsTail(std::vector<std::shared_ptr<INode>> dropped) const
+{
+    const auto toDb = [](float gain) {
+        return gain > 0.0F ? 20.0 * std::log10(static_cast<double>(gain)) : core::limits::kMinVolumeDb;
+    };
+    StripSpec spec;
+    spec.id = m_id;
+    spec.route = m_route;
+    spec.effects = std::move(dropped);
+    spec.volumeDb = toDb(m_gain.load(std::memory_order_relaxed));
+    spec.pan = m_pan.load(std::memory_order_relaxed);
+    spec.mute = m_mute.load(std::memory_order_relaxed);
+    spec.outputPair = m_outputPair;
+    spec.sendDb = toDb(m_send.load(std::memory_order_relaxed));
+    // Its own levels, from this strip's now (this strip plays on in the new patch).
+    spec.levels = std::make_shared<StripLevels>();
+    spec.levels->left.store(m_levels->left.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    spec.levels->right.store(m_levels->right.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    spec.levels->send.store(m_levels->send.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    return std::make_shared<ChannelStrip>(std::move(spec), maxBlock());
+}
+
+CarryOver carryOver(const RenderGraph* previous, std::vector<StripSpec>& specs, const std::set<const HardwareOut*>& hardwareUsed,
+                    std::size_t maxTails)
+{
+    CarryOver carried;
+    std::set<const INode*> playing;
+    for (const StripSpec& spec : specs) {
+        if (spec.instrument) playing.insert(spec.instrument.get());
+        std::ranges::transform(spec.effects, std::inserter(playing, playing.end()), [](const auto& e) { return e.get(); });
+    }
+    if (previous == nullptr) return carried;
+
+    // A new strip playing on an old strip's instrument (or audio input) starts
+    // at its levels: a playing strip's, else a tail's (the sound coming back).
+    for (StripSpec& spec : specs) {
+        const auto plays = [&spec](const auto& old) {
+            if (spec.instrument) return old->instrument() == spec.instrument.get();
+            return spec.inputLeft >= 0 && old->inputLeft() == spec.inputLeft;
+        };
+        for (const auto* strips : {&previous->strips(), &previous->tails()}) {
+            const auto same = std::ranges::find_if(*strips, plays);
+            if (same == strips->end() || spec.levels) continue;
+            spec.levels = (*same)->levels();
+        }
+    }
+
+    for (const auto* strips : {&previous->strips(), &previous->tails()}) {
+        for (const auto& strip : *strips) {
+            const std::vector<const INode*> nodes = strip->nodes();
+            const bool shared = std::ranges::any_of(nodes, [&playing](const INode* n) { return playing.contains(n); });
+            // A strip whose MIDI effects made notes (a chord's, an arpeggio's), going
+            // while its instrument plays on: its notes go too (its effects' state does
+            // not carry over, so nothing else would end them).
+            if (shared && strip->hasMidiEffects() && !nodes.empty()) carried.releasing.insert(nodes.front());
+            if (strip->tailDone() || carried.tails.size() >= maxTails) continue;
+            if (shared) {
+                // Its sound plays on in the new patch; the effects it plays on without ring out.
+                std::vector<std::shared_ptr<INode>> dropped;
+                std::ranges::copy_if(strip->effects(), std::back_inserter(dropped),
+                                     [&playing](const auto& effect) { return !playing.contains(effect.get()); });
+                if (dropped.empty()) continue;
+                for (const auto& effect : dropped) carried.ringing.insert(effect.get());
+                carried.tails.push_back(strip->effectsTail(std::move(dropped)));
+                continue;
+            }
+            // A hardware synth's notes held when the patch changes end with their keys
+            // (unless the new patch plays that synth from the same channel: it ends them).
+            const bool synthHeld = strip->holdsHardwareNotes() && !hardwareUsed.contains(strip->hardware().get());
+            if (nodes.empty() && !synthHeld) continue;
+            carried.tails.push_back(strip);
+            carried.ringing.insert(nodes.begin(), nodes.end());
+        }
+    }
+    return carried;
 }
 
 std::span<const MidiEvent> ChannelStrip::effected(std::size_t count, int frames, const TimeInfo& time) noexcept
@@ -169,13 +258,21 @@ void ChannelStrip::produce(std::span<const MidiEvent> routed, int frames, const 
     }
 }
 
-float ChannelStrip::mixInto(const AudioBlock& mix, float gain, LoopStation* loops) noexcept
+float ChannelStrip::mixInto(const AudioBlock& mix, float gain, double sampleRate, LoopStation* loops) noexcept
 {
     const auto frames = static_cast<std::size_t>(mix.frames);
     // Constant-power pan, normalised so the centre is unity on both sides.
     const double angle = (static_cast<double>(m_pan.load(std::memory_order_relaxed)) + 1.0) * std::numbers::pi / 4.0;
-    const float leftGain = gain * static_cast<float>(std::cos(angle) * std::numbers::sqrt2);
-    const float rightGain = gain * static_cast<float>(std::sin(angle) * std::numbers::sqrt2);
+    const float leftTarget = gain * static_cast<float>(std::cos(angle) * std::numbers::sqrt2);
+    const float rightTarget = gain * static_cast<float>(std::sin(angle) * std::numbers::sqrt2);
+    // Where the gains are now (its first block: where its controls say), gliding to those.
+    m_glide = glideStep(sampleRate);
+    float leftGain = m_levels->left.load(std::memory_order_relaxed);
+    float rightGain = m_levels->right.load(std::memory_order_relaxed);
+    if (leftGain < 0.0F || rightGain < 0.0F) {
+        leftGain = leftTarget;
+        rightGain = rightTarget;
+    }
 
     m_sentFrames = mix.frames; // its buffers hold this block, faded: its send
     float peak = 0.0F;
@@ -191,6 +288,8 @@ float ChannelStrip::mixInto(const AudioBlock& mix, float gain, LoopStation* loop
     auto outLeft = toLeft.begin();
     auto outRight = toRight.begin();
     for (auto inLeft = fromLeft.begin(); inLeft != fromLeft.end(); ++inLeft, ++inRight, ++outLeft, ++outRight) {
+        leftGain = glideTo(leftGain, leftTarget, m_glide);
+        rightGain = glideTo(rightGain, rightTarget, m_glide);
         const float left = *inLeft * leftGain;
         const float right = *inRight * rightGain;
         *inLeft = left;
@@ -200,6 +299,8 @@ float ChannelStrip::mixInto(const AudioBlock& mix, float gain, LoopStation* loop
         peak = std::max({peak, std::abs(left), std::abs(right)});
         sumSquares += 0.5 * (static_cast<double>(left) * left + static_cast<double>(right) * right);
     }
+    m_levels->left.store(leftGain, std::memory_order_relaxed);
+    m_levels->right.store(rightGain, std::memory_order_relaxed);
     m_rms.store(frames > 0 ? static_cast<float>(std::sqrt(sumSquares / static_cast<double>(frames))) : 0.0F,
                 std::memory_order_relaxed);
     if (const int slot = m_loopSlot.load(std::memory_order_relaxed); loops != nullptr && slot >= 0) {
@@ -261,7 +362,7 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
     if (m_hardware) m_hardware->push(heard, audible); // a silenced strip starts no notes on the synth either
     produce(heard, mix.frames, time, inputs);
 
-    atomicMax(m_peak, mixInto(mix, audible ? m_gain.load(std::memory_order_relaxed) : 0.0F, loops));
+    atomicMax(m_peak, mixInto(mix, audible ? m_gain.load(std::memory_order_relaxed) : 0.0F, time.sampleRate, loops));
 }
 
 void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBlock& mix, const TimeInfo& time,
@@ -285,7 +386,7 @@ void ChannelStrip::renderTail(std::span<const MidiEvent> events, const AudioBloc
     if (m_hardware) m_hardware->push(heard, false); // the synth's held notes end with their keys
     produce(heard, mix.frames, time, {});
     const float gain = m_mute.load(std::memory_order_relaxed) ? 0.0F : m_gain.load(std::memory_order_relaxed);
-    const float peak = mixInto(mix, gain, loops);
+    const float peak = mixInto(mix, gain, time.sampleRate, loops);
 
     // Done after a second of silence with nothing held, or when it has
     // droned on long after every key was let go.

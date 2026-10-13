@@ -92,6 +92,34 @@ bool writeSineWav(const QString& path, quint32 frames, double amplitude = 0.5)
     return out.status() == QDataStream::Ok;
 }
 
+// What the engine recorded (a 32-bit float stereo WAV, as it writes them):
+// its rate and its left channel, exactly as written (no resampling).
+struct Recorded
+{
+    double rate = 0.0;
+    std::vector<float> left;
+};
+Recorded readRecording(const QString& path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return {};
+    QDataStream in(&file);
+    in.setByteOrder(QDataStream::LittleEndian);
+    in.setFloatingPointPrecision(QDataStream::SinglePrecision);
+    in.skipRawData(24);
+    quint32 rate = 0;
+    in >> rate;
+    in.skipRawData(44 - 28); // the rest of the header
+    Recorded heard{.rate = static_cast<double>(rate), .left = {}};
+    while (!in.atEnd()) {
+        float left = 0.0F;
+        float right = 0.0F;
+        in >> left >> right;
+        heard.left.push_back(left);
+    }
+    return heard;
+}
+
 void pump(IEngine& engine, int milliseconds)
 {
     const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
@@ -929,6 +957,54 @@ private slots:
             if (!reported) std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         QVERIFY(reported);
+    }
+
+    // Moving the master fader, muting the master or turning the backing
+    // track down while it plays never steps the sound (a click): measured on
+    // what the engine records (what the audience hears), a sine whose
+    // steepest step between two samples is known.
+    void theMasterAndTheTrackGlideWhileTheyPlay()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.applyPatch(core::makePatch(u"Empty"_s));
+        engine.setMasterVolume(-40.0); // quiet in the room
+
+        const QTemporaryDir dir;
+        const QString track = dir.filePath(u"backing.wav"_s);
+        QVERIFY(writeSineWav(track, 48000 * 4)); // 4 s of a 0.5 sine at 440 Hz
+        engine.setBackingTrack(track);
+        for (int i = 0; i < 300 && !engine.backingTrack().loaded; ++i) pump(engine, 10);
+        QVERIFY2(engine.backingTrack().loaded, "the backing track was not read");
+
+        const QString recorded = dir.filePath(u"heard.wav"_s);
+        QVERIFY(engine.startRecording(recorded).has_value());
+        engine.playBackingTrack(true);
+        QVERIFY(waitUntil(engine, [&engine] { return engine.backingTrack().position > 0.3; }));
+        engine.setMasterMute(true);
+        pump(engine, 300);
+        engine.setMasterMute(false);
+        pump(engine, 300);
+        engine.setMasterVolume(-52.0);
+        pump(engine, 300);
+        engine.setBackingTrackVolume(-12.0);
+        pump(engine, 300);
+        QVERIFY(engine.backingTrack().playing); // still inside the track: its end is not measured
+        QVERIFY(engine.stopRecording().has_value());
+
+        const Recorded heard = readRecording(recorded);
+        QVERIFY2(heard.rate > 0.0 && !heard.left.empty(), "the recording could not be read");
+        // The sine's own steepest step at the loudest it was recorded.
+        const float loudest = std::abs(std::ranges::max(heard.left, {}, [](float x) { return std::abs(x); }));
+        QVERIFY2(loudest > 0.0F, "nothing was recorded");
+        const double ownStep = loudest * 2.0 * std::numbers::pi * 440.0 / heard.rate;
+        double steepest = 0.0;
+        for (std::size_t i = 1; i < heard.left.size(); ++i) {
+            steepest = std::max(steepest, static_cast<double>(std::abs(heard.left.at(i) - heard.left.at(i - 1))));
+        }
+        QVERIFY2(steepest <= 2.0 * ownStep, qPrintable(u"a step %1 times the sine's own (a click)"_s.arg(steepest / ownStep)));
     }
 
     // A stem plays locked to the track: the set lasts as long as its longest

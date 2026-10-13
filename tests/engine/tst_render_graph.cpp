@@ -112,6 +112,13 @@ struct Output
     AudioBlock block() { return AudioBlock{left.data(), right.data(), kFrames}; }
 };
 
+// Renders on until a fader, pan, mute, solo or send change has glided to
+// where it was set (gains glide there in about 17 ms, never jump: a click).
+void settle(RenderGraph& graph, Output& out, float masterGain = 1.0F)
+{
+    for (int block = 0; block < 40; ++block) graph.render({}, out.block(), masterGain); // 40 x 64 frames: 53 ms
+}
+
 StripSpec strip(std::shared_ptr<INode> instrument, const RouteSettings& route = {}, double volumeDb = 0.0)
 {
     StripSpec spec;
@@ -206,8 +213,8 @@ private slots:
         QVERIFY(std::abs(out.right[kFrames - 1] - out.left[0]) < 1e-6F);
 
         graph.strip(0)->setVolumeDb(0.0);
-        graph.render({}, out.block(), 1.0F);
-        QVERIFY(std::abs(out.left[0] - 0.5F) < 1e-6F);
+        settle(graph, out);
+        QVERIFY2(std::abs(out.left.front() - 0.5F) < 1e-6F, qPrintable(QString::number(out.left.front(), 'g', 9)));
 
         graph.render({}, out.block(), 0.5F); // master gain
         QVERIFY(std::abs(out.left[0] - 0.25F) < 1e-6F);
@@ -225,13 +232,13 @@ private slots:
         QVERIFY(std::abs(out.left[0] - 0.75F) < 1e-6F);
 
         graph.strip(1)->setMute(true);
-        graph.render({}, out.block(), 1.0F);
+        settle(graph, out);
         QVERIFY(std::abs(out.left[0] - 0.25F) < 1e-6F);
 
         graph.strip(1)->setMute(false);
         graph.strip(1)->setSolo(true);
-        graph.render({}, out.block(), 1.0F);
-        QVERIFY(std::abs(out.left[0] - 0.5F) < 1e-6F);
+        settle(graph, out);
+        QVERIFY2(std::abs(out.left.front() - 0.5F) < 1e-6F, qPrintable(QString::number(out.left.front(), 'g', 9)));
     }
 
     void panMovesSoundAcrossTheStereoField()
@@ -245,11 +252,11 @@ private slots:
         QVERIFY(std::abs(out.left[0] - 1.0F) < 1e-5F && std::abs(out.right[0] - 1.0F) < 1e-5F);
 
         graph.strip(0)->setPan(-1.0);
-        graph.render({}, out.block(), 1.0F);
+        settle(graph, out);
         QVERIFY(out.left[0] > 1.3F && std::abs(out.right[0]) < 1e-5F); // hard left, +3 dB law
 
         graph.strip(0)->setPan(0.5);
-        graph.render({}, out.block(), 1.0F);
+        settle(graph, out);
         QVERIFY(out.right[0] > out.left[0] && out.left[0] > 0.0F);
     }
 
@@ -291,12 +298,12 @@ private slots:
         QCOMPARE(out.right.back(), 1.5F);
 
         graph->strip(0)->setSendDb(-96.0); // turned down: dry only
-        graph->render({}, out.block(), 1.0F);
+        settle(*graph, out);
         QVERIFY(std::abs(out.left.front() - 0.5F) < 1e-4F);
 
         graph->strip(0)->setSendDb(0.0);
         graph->strip(0)->setMute(true); // after the fader: muted sends nothing
-        graph->render({}, out.block(), 1.0F);
+        settle(*graph, out);
         QCOMPARE(out.left.front(), 0.0F);
 
         auto dry = build(0.0, false);

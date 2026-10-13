@@ -8,6 +8,17 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Fixed
+
+- **No clicks when the sound changes:** a fader, pan, mute, solo or aux
+  send moved while you play (the master's and the backing track's and stems'
+  too), and a patch or song change that keeps an instrument at another
+  level, now glide there in a few milliseconds instead of jumping, so
+  nothing clicks or pops.
+- **Reverbs and delays ring out when an instrument plays on:** when the next
+  patch keeps an instrument but not one of its effects, that effect's tail
+  now rings out to the end instead of stopping dead.
+
 ## [0.4.0] - 2026-10-10 (alpha)
 
 ### Added

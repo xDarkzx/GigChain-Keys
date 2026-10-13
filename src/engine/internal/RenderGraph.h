@@ -13,6 +13,7 @@
 #include <bitset>
 #include <cstdint>
 #include <memory>
+#include <set>
 #include <span>
 #include <utility>
 #include <vector>
@@ -44,6 +45,17 @@ struct ParameterMapping
     return AudioBlock{.left = two.front(), .right = two.back(), .frames = fallback.frames};
 }
 
+// The gains a strip plays at now (written by the audio thread): its left and
+// right (fader, pan, mute and solo) and its aux send. They glide to where the
+// controls say (a jump clicks). Shared with the strip of the next patch that
+// plays on the same sound, so that one starts where the sound was.
+struct StripLevels
+{
+    std::atomic<float> left{-1.0F}; // below 0: not played yet (starts where its controls say)
+    std::atomic<float> right{-1.0F};
+    std::atomic<float> send{-1.0F};
+};
+
 // Everything needed to build one channel strip. Nodes must already be
 // prepared for the graph's sample rate and block size.
 struct StripSpec
@@ -69,6 +81,7 @@ struct StripSpec
     MidiEffectSettings midiEffects; // its chord trigger and arpeggiator
     double sendDb = -96.0;          // its aux send (core::limits::kMinVolumeDb: none)
     std::shared_ptr<HardwareOut> hardware; // a hardware synth its keys go to (null: none)
+    std::shared_ptr<StripLevels> levels;   // where its gains are now (null: its own; see carryOver)
 };
 
 // Which section of the song is in force during a block: `before` up to the
@@ -130,6 +143,14 @@ public:
 
     // Main thread: the nodes this strip plays (instrument first).
     [[nodiscard]] std::vector<const INode*> nodes() const;
+    [[nodiscard]] const INode* instrument() const noexcept { return m_instrument.get(); }
+    [[nodiscard]] const std::vector<std::shared_ptr<INode>>& effects() const noexcept { return m_effects; }
+    [[nodiscard]] int inputLeft() const noexcept { return m_inputLeft; }
+    [[nodiscard]] const std::shared_ptr<StripLevels>& levels() const noexcept { return m_levels; }
+    // Main thread: a strip of only `dropped` (some of this one's effects), at
+    // this one's fader, pan, mute, send and output, and starting at its gains
+    // now: they ring out (fed silence) when the next patch plays on without them.
+    [[nodiscard]] std::shared_ptr<ChannelStrip> effectsTail(std::vector<std::shared_ptr<INode>> dropped) const;
     // Main thread, often: where each mapped parameter is now, for its knob's
     // pickup (a knob takes over only once it reaches it).
     void refreshMappedValues();
@@ -155,9 +176,9 @@ private:
     [[nodiscard]] INode* mappingTarget(const ParameterMapping& m) const noexcept;
     // The strip's sound for this block into m_left/m_right, before its fader.
     void produce(std::span<const MidiEvent> routed, int frames, const TimeInfo& time, const AudioInputs& inputs) noexcept;
-    // Puts the strip's fader and pan (at `gain`) on its sound, adds it to
-    // `mix` and to its loop (if recording); returns the peak.
-    float mixInto(const AudioBlock& mix, float gain, LoopStation* loops) noexcept;
+    // Puts the strip's fader and pan (at `gain`, gliding there) on its sound,
+    // adds it to `mix` and to its loop (if recording); returns the peak.
+    float mixInto(const AudioBlock& mix, float gain, double sampleRate, LoopStation* loops) noexcept;
 
     core::ChannelId m_id;
     RouteSettings m_route;
@@ -182,6 +203,8 @@ private:
     std::atomic<float> m_gain{1.0F};
     std::atomic<float> m_send{0.0F}; // the aux send's gain
     int m_sentFrames = 0;            // audio thread: frames of m_left/m_right this block (for its send)
+    std::shared_ptr<StripLevels> m_levels; // the gains it plays at now (never null)
+    float m_glide = 1.0F;                  // audio thread: how far a gain moves to its target per sample (one-pole)
     std::atomic<float> m_pan{0.0F};
     std::atomic<bool> m_mute{false};
     std::atomic<bool> m_solo{false};
@@ -250,6 +273,25 @@ private:
     int m_maxBlock;
     std::atomic<uint64_t> m_oversizedBlocks{0};
 };
+
+// What a patch change carries over from the graph sounding now (main thread).
+struct CarryOver
+{
+    // Ringing out in the new graph: strips the new patch does not play
+    // (held notes until let go, reverbs until they fade), and the effects a
+    // strip played that its sound goes on without.
+    std::vector<std::shared_ptr<ChannelStrip>> tails;
+    std::set<const INode*> ringing;   // the nodes those tails play
+    std::set<const INode*> releasing; // instruments playing on whose old strip's MIDI effects made notes
+};
+
+// Works out the carry-over into `specs` (the new patch's strips) from
+// `previous` (null: nothing sounds yet), and gives each new strip that plays
+// on an old strip's instrument or audio input that strip's levels, so its
+// sound glides from where it was. `hardwareUsed`: the hardware synths the new
+// patch plays. At most `maxTails` tails.
+CarryOver carryOver(const RenderGraph* previous, std::vector<StripSpec>& specs, const std::set<const HardwareOut*>& hardwareUsed,
+                    std::size_t maxTails);
 
 // Linear gain for a volume in dB; the floor (-96 dB) is silence.
 float dbToGain(double volumeDb);

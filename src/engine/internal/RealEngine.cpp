@@ -687,32 +687,13 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
         specs.push_back(std::move(spec));
     }
 
-    // Strips of the sounding graph (and its own tails) that the new patch
-    // does not play ring out: held notes until they are let go, reverbs
-    // until they fade. A strip sharing a plugin with the new patch cannot
-    // (the plugin plays in the new patch).
-    const std::set<const INode*> playing(used.begin(), used.end());
-    std::vector<std::shared_ptr<ChannelStrip>> tails;
-    std::set<const INode*> ringing;
-    std::set<const INode*> releasing; // instruments whose old strip's MIDI effects made notes
-    if (const std::shared_ptr<RenderGraph>& previous = m_exchange.currentShared()) {
-        for (const auto* strips : {&previous->strips(), &previous->tails()}) {
-            for (const auto& strip : *strips) {
-                const std::vector<const INode*> nodes = strip->nodes();
-                const bool shared = std::ranges::any_of(nodes, [&playing](const INode* n) { return playing.contains(n); });
-                // A strip whose MIDI effects made notes (a chord's, an arpeggio's), going
-                // while its instrument plays on: its notes go too (its effects' state does
-                // not carry over, so nothing else would end them).
-                if (shared && strip->hasMidiEffects() && !nodes.empty()) releasing.insert(nodes.front());
-                // A hardware synth's notes held when the patch changes end with their keys
-                // (unless the new patch plays that synth from the same channel: it ends them).
-                const bool synthHeld = strip->holdsHardwareNotes() && !hardwareUsed.contains(strip->hardware().get());
-                if (strip->tailDone() || shared || (nodes.empty() && !synthHeld) || tails.size() >= kMaxTails) continue;
-                tails.push_back(strip);
-                ringing.insert(nodes.begin(), nodes.end());
-            }
-        }
-    }
+    // What rings out of the sounding graph: strips the new patch does not
+    // play (held notes until let go, reverbs until they fade), and effects a
+    // sound plays on without; a sound playing on glides from its level.
+    CarryOver carried = carryOver(m_exchange.currentShared().get(), specs, hardwareUsed, kMaxTails);
+    std::vector<std::shared_ptr<ChannelStrip>>& tails = carried.tails;
+    const std::set<const INode*>& ringing = carried.ringing;
+    const std::set<const INode*>& releasing = carried.releasing;
     // The synths still played, by the new patch or its tails; the rest are let go.
     std::set<const HardwareOut*> hardwareKept = hardwareUsed;
     for (const auto& tail : tails) {
@@ -2032,8 +2013,10 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     const std::span<float* const> sends = m_audio.extraOutputs(); // outputs 3 and up, silent so far
     RenderGraph* graph = m_exchange.acquire();
     if (graph != nullptr) {
-        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs, gate, &m_loops,
-                      sends);
+        // At unity: the master fader glides on the mix below (it never jumps: a click).
+        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, 1.0F, time, inputs, gate, &m_loops, sends);
+        const auto mixFrames = static_cast<std::size_t>(std::max(out.frames, 0));
+        m_masterGlide.scale(std::span(out.left, mixFrames), std::span(out.right, mixFrames), masterGain, rate);
     } else {
         std::fill_n(out.left, out.frames, 0.0F);
         std::fill_n(out.right, out.frames, 0.0F);
@@ -2075,13 +2058,12 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
                 const bool inMix = to.left == out.left; // (a pair the device does not have: the mix)
                 const float gain = trackGain * (c == 0 ? 1.0F : m_stemGains.at(c - 1).load(std::memory_order_relaxed))
                                    * (inMix ? masterGain : 1.0F);
-                if (gain <= 0.0F) continue;
+                GlidingGain& glide = m_clipGlides.at(c); // (it glides there: a fader or mute never clicks)
+                if (glide.silent(gain)) continue;
                 const auto from = static_cast<std::size_t>(position);
-                const auto add = [gain](float mix, float sample) { return mix + (sample * gain); };
-                const std::span<float> left = std::span<float>(to.left, frames).subspan(offset, take);
-                const std::span<float> right = std::span<float>(to.right, frames).subspan(offset, take);
-                std::ranges::transform(left, std::span<const float>(clip.left).subspan(from, take), left.begin(), add);
-                std::ranges::transform(right, std::span<const float>(clip.right).subspan(from, take), right.begin(), add);
+                glide.addInto(std::span<float>(to.left, frames).subspan(offset, take), std::span<float>(to.right, frames).subspan(offset, take),
+                              std::span<const float>(clip.left).subspan(from, take), std::span<const float>(clip.right).subspan(from, take),
+                              gain, rate);
             }
             m_trackPosition.store(position + static_cast<int64_t>(n), std::memory_order_relaxed);
             if (position + static_cast<int64_t>(n) >= length) m_trackPlaying.store(false, std::memory_order_relaxed);
