@@ -80,10 +80,12 @@ std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSe
     ports.reserve(static_cast<std::size_t>(present.size()));
     for (const QString& name : present) {
         const auto channel = setup.channels.find(name);
+        const auto rig = setup.rigs.find(midiDeviceOf(name)); // the keyboard's, whichever of its ports
         ports.push_back(MidiPort{.name = name,
                                  .enabled = setup.configured && setup.enabled.contains(name),
                                  .controlsOnly = setup.configured && setup.controls.contains(name) && !setup.enabled.contains(name),
-                                 .channel = channel != setup.channels.end() ? std::clamp(channel->second, 0, 16) : 0});
+                                 .channel = channel != setup.channels.end() ? std::clamp(channel->second, 0, 16) : 0,
+                                 .rig = rig != setup.rigs.end() ? rig->second : KeyboardRig{}});
     }
     const bool anyOn = std::ranges::any_of(ports, [](const MidiPort& p) { return p.enabled; });
     if (!anyOn && !ports.empty()) {

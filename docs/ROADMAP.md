@@ -49,6 +49,7 @@ Audited again against MainStage 3 on 2026-10-09; still to build, in this order:
 | Aux sends (one shared reverb) | **Done** | One Aux bus (its effects kept with the rig, beside the master's) fed by each channel's Send knob, after its fader. More than one aux bus is not planned yet. |
 | Recording the performance | **Done** | ● Rec records the mix (after the limiter) to a WAV in the Music folder. Per-channel (multitrack) recording is not planned yet. |
 | A layout of your own (screen controls mirroring the hardware) | **Missing** | A fixed layout. |
+| Another keyboard plays everything learned (Gig Performer's Rig Manager) | **Done** | Settings > MIDI > Teach…: each learned control is asked for by what it does; the keyboard is remembered. |
 
 **Still open:**
 - **Bundled sounds:** which open-source instruments ship (e.g. Surge XT and

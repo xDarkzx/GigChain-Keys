@@ -108,6 +108,20 @@ follows it whatever sound is playing, as a controller's eight faders sit
 over eight strips. Right-click again to **Forget** it. For a plugin's own
 settings (a filter, a leslie speed) see [Splits, layers and knobs](splits-layers-knobs.md).
 
+### Another keyboard: a backup, or the venue's
+
+Everything you learned (your buttons and pedals, the mixer's faders, the
+looper's buttons, every knob in every song) was learned on your keyboard.
+Another one sends its knobs and buttons as other numbers, so teach it once:
+in **Settings > MIDI**, click **Teach…** beside it. It asks for each control
+you learned, one at a time, by what it does ("Next song", "Cutoff (3
+songs)"): move or press the one on this keyboard that should do it, or
+**Skip** it if this keyboard has none. **Save**, and every song works on it
+as on yours. It is remembered: plug that keyboard in again and it just
+works. A pad can stand for a button and a button for a pad. **Taught**
+beside a keyboard shows how many controls it knows; **Teach…** again to
+change them.
+
 ### Expression, dynamics and the other sliders
 
 The mod wheel (CC 1), breath (CC 2), foot pedal (CC 4), volume (CC 7), pan

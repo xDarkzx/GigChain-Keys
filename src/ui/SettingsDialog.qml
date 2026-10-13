@@ -20,6 +20,8 @@ StageDialog {
     height: Math.min(640, (parent ? parent.height : 640) - 32)
 
     onAboutToShow: settings.load()
+    // Closed while a keyboard is being taught: as it was (Save keeps it).
+    onAboutToHide: settings.cancelTeaching()
 
     Timer {
         interval: 1500
@@ -295,6 +297,75 @@ StageDialog {
                                     currentIndex: midiRow.modelData.channel
                                     onActivated: (i) => dialog.settings.setMidiInputChannel(midiRow.modelData.name, i)
                                 }
+                                // "Learn this keyboard": a backup or borrowed one plays everything learned on yours.
+                                StageButton {
+                                    objectName: "teachKeyboard" + midiRow.index
+                                    Layout.preferredWidth: 110
+                                    text: midiRow.modelData.taught > 0 ? qsTr("Taught (%1)").arg(midiRow.modelData.taught) : qsTr("Teach…")
+                                    enabled: midiRow.modelData.mode !== 2 && !dialog.settings.teaching.active
+                                    onClicked: dialog.settings.startTeaching(midiRow.modelData.name)
+                                }
+                            }
+                        }
+
+                        // Teaching a keyboard: one control at a time.
+                        Rectangle {
+                            objectName: "teachingPanel"
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            visible: dialog.settings.teaching.active === true
+                            implicitHeight: teachingColumn.implicitHeight + 24
+                            radius: 6
+                            color: Theme.wellTop
+                            border.color: Theme.accent
+                            ColumnLayout {
+                                id: teachingColumn
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 8
+                                readonly property var t: dialog.settings.teaching
+                                Label {
+                                    text: teachingColumn.t.done
+                                          ? qsTr("Done: %1 knows your controls.").arg(teachingColumn.t.keyboard)
+                                          : qsTr("On %1, move or press: (%2 of %3)").arg(teachingColumn.t.keyboard)
+                                                .arg(teachingColumn.t.at + 1).arg(teachingColumn.t.count)
+                                    color: Theme.textDim
+                                    font.pixelSize: Theme.smallFontSize
+                                }
+                                Label {
+                                    objectName: "teachingAsk"
+                                    Layout.fillWidth: true
+                                    visible: !teachingColumn.t.done
+                                    text: teachingColumn.t.label ?? ""
+                                    color: Theme.text
+                                    font.pixelSize: Theme.titleFontSize
+                                    font.bold: true
+                                    wrapMode: Text.Wrap
+                                }
+                                Label {
+                                    visible: !teachingColumn.t.done
+                                    text: qsTr("Learned on your keyboard as %1").arg(teachingColumn.t.learned ?? "")
+                                    color: Theme.textDim
+                                    font.pixelSize: Theme.smallFontSize
+                                }
+                                RowLayout {
+                                    spacing: 8
+                                    StageButton { text: qsTr("Back"); enabled: teachingColumn.t.at > 0; onClicked: dialog.settings.backTeaching() }
+                                    StageButton {
+                                        text: qsTr("Skip (this keyboard has none)")
+                                        visible: !teachingColumn.t.done
+                                        onClicked: dialog.settings.skipTeaching()
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                    StageButton { text: qsTr("Cancel"); onClicked: dialog.settings.cancelTeaching() }
+                                    StageButton {
+                                        objectName: "finishTeaching"
+                                        text: qsTr("Save")
+                                        highlighted: teachingColumn.t.done
+                                        onClicked: dialog.settings.finishTeaching()
+                                    }
+                                }
                             }
                         }
                         Label {
@@ -313,6 +384,17 @@ StageDialog {
                                        + "(Play, Stop, ◀◀ ▶▶, Loop, Click in Mackie Control mode, and anything you learn), "
                                        + "and never plays a note. A controller without keys (a nanoKONTROL) can be set "
                                        + "to Buttons and knobs too. %1 remembers your choice.").arg(Branding.name)
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
+                        Label {
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            text: qsTr("Playing another keyboard (a backup, or one at the venue)? Teach… asks for each knob and "
+                                       + "button you learned, one by one: move the one on this keyboard that should do it. Then "
+                                       + "every song, the mixer, the looper and your buttons work on it as on yours. It is "
+                                       + "remembered: plug it in again and it just works.")
                             color: Theme.textDim
                             wrapMode: Text.Wrap
                         }

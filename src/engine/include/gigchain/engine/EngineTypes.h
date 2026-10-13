@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gigchain/core/Ids.h"
+#include "gigchain/engine/MidiControl.h"
 
 #include <QString>
 
@@ -255,6 +256,7 @@ struct MidiPort
     bool enabled = false;      // plays into the app
     bool controlsOnly = false; // not played: its buttons and knobs only (transport, learned controls)
     int channel = 0;           // 0 = all channels, 1-16 = only that one
+    KeyboardRig rig;           // its keyboard's controls as learned on another one (empty: as they are)
 
     bool operator==(const MidiPort&) const = default;
 };

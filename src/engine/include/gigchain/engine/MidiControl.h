@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <vector>
 
 namespace gigchain::engine {
 
@@ -57,6 +58,19 @@ struct MidiTrigger
 };
 
 using ControlTriggers = std::array<MidiTrigger, kControlActionCount>;
+
+// One control of a keyboard taught to the app ("Learn this keyboard"): what
+// it sends (`from`), and the control learned on another keyboard that it
+// stands for (`to`: as the setlist and settings know it). So a backup or
+// borrowed keyboard plays everything learned without learning it again.
+struct RigEntry
+{
+    MidiTrigger from;
+    MidiTrigger to;
+
+    bool operator==(const RigEntry&) const = default;
+};
+using KeyboardRig = std::vector<RigEntry>;
 
 // Keyboard knobs and faders learned for the app's own controls: the
 // master, then each mixer strip's volume, then each strip's pan (by the

@@ -14,6 +14,7 @@ qt_add_qml_module(gigchain_ui
         cpp/LoopController.h cpp/LoopController.cpp
         cpp/Notifications.h cpp/Notifications.cpp
         cpp/SettingsController.h cpp/SettingsController.cpp
+        cpp/KeyboardTeaching.h cpp/KeyboardTeaching.cpp
         cpp/InputPermission.h cpp/InputPermission.cpp
         cpp/PracticeController.h cpp/PracticeController.cpp
         cpp/WarmupController.h cpp/WarmupController.cpp

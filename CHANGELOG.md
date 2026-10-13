@@ -8,6 +8,15 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **Teach another keyboard:** playing a backup keyboard, or the one at the
+  venue? **Settings > MIDI > Teach…** asks for each knob and button you
+  learned, one at a time, by what it does; move the one on this keyboard
+  that should do it. Then every song, the mixer, the looper and your
+  buttons work on it as on yours, and it is remembered for next time (as
+  Gig Performer's Rig Manager).
+
 ### Fixed
 
 - **No clicks when the sound changes:** a fader, pan, mute, solo or aux

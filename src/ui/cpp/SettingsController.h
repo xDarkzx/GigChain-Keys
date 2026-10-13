@@ -1,6 +1,7 @@
 #pragma once
 
 #include "InputPermission.h"
+#include "KeyboardTeaching.h"
 
 #include "gigchain/engine/EngineTypes.h"
 #include "gigchain/engine/MidiControl.h"
@@ -10,8 +11,10 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantList>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
+#include <optional>
 #include <vector>
 
 class QSettings;
@@ -47,7 +50,8 @@ class SettingsController : public QObject
     Q_PROPERTY(int bufferFrames READ bufferFrames WRITE setBufferFrames NOTIFY changed)
     Q_PROPERTY(QVariantList bufferSizes READ bufferSizes CONSTANT)
     Q_PROPERTY(double latencyMs READ latencyMs NOTIFY changed)                   // one buffer at the chosen rate
-    Q_PROPERTY(QVariantList midiInputs READ midiInputs NOTIFY changed)            // [{name, enabled, mode (setMidiInputMode), channel}]
+    Q_PROPERTY(QVariantList midiInputs READ midiInputs NOTIFY changed)            // [{name, enabled, mode (setMidiInputMode), channel, taught}]
+    Q_PROPERTY(QVariantMap teaching READ teaching NOTIFY changed)                 // see startTeaching
     Q_PROPERTY(QString running READ running NOTIFY changed)                      // the engine's status line
     Q_PROPERTY(QString error READ error NOTIFY changed)
     // General: open the last setlist on start instead of the start screen.
@@ -154,6 +158,21 @@ public:
     // While the window is open: picks up keyboards plugged in or pulled out,
     // keeping the choices already made on this page.
     Q_INVOKABLE void refreshMidi();
+
+    // "Learn this keyboard": the keyboard `port` belongs to (another one than
+    // the controls were learned on) is asked for each control learned, one
+    // by one; what is moved on it then stands for that control (saved per
+    // keyboard: plugged in again, it just works). False (said in `error`):
+    // nothing is learned yet. While it runs, `teaching` says what to move.
+    Q_INVOKABLE bool startTeaching(const QString& port);
+    Q_INVOKABLE void skipTeaching(); // this keyboard has nothing for the control asked
+    Q_INVOKABLE void backTeaching(); // the control before, again
+    Q_INVOKABLE void finishTeaching(); // keeps what was taught (the rest as it is)
+    Q_INVOKABLE void cancelTeaching(); // as it was before
+    // The keyboard `port` belongs to plays its controls as they are again.
+    Q_INVOKABLE void forgetKeyboard(const QString& port);
+    // {active, keyboard, at, count, label}: the control to move now.
+    [[nodiscard]] QVariantMap teaching() const;
     // Windows default output at its own rate, 256 frames, only the first MIDI
     // input on, the start screen on start, the safety limiter on at -1 dB.
     Q_INVOKABLE void resetToDefaults();
@@ -187,6 +206,13 @@ private:
     bool m_reopenLast = false;
     engine::ControlTriggers m_controls{};
     int m_learning = -1;
+    // "Learn this keyboard" in progress: the keyboard (midiDeviceOf), its
+    // rig before (put back on cancel; its controls arrive as they are while taught).
+    std::optional<KeyboardTeaching> m_teaching;
+    QString m_teachingKeyboard;
+    engine::KeyboardRig m_teachingWas;
+    // The MIDI setup with `keyboard`'s rig set to `rig` (empty: none), taken by the engine and saved.
+    void applyRig(const QString& keyboard, const engine::KeyboardRig& rig, bool save);
     bool m_controlsTouched = false; // changed on the MIDI page since load()
     bool m_limiterOn = true;
     double m_limiterCeilingDb = -1.0;
