@@ -6,6 +6,7 @@
 #include "GraphExchange.h"
 #include "Metronome.h"
 #include "ExternalMidiOut.h"
+#include "GlidingGain.h"
 #include "HardwareSender.h"
 #include "PerformanceRecorder.h"
 #include "MidiClockOut.h"
@@ -389,6 +390,10 @@ private:
     std::atomic<bool> m_trackRewind{false};
     std::atomic<int64_t> m_trackPosition{0}; // frames; written by the audio thread
     std::atomic<float> m_trackGain{1.0F};
+    // Audio thread: the master's gain and each clip's (the track, then its
+    // stems), gliding to where they are set instead of jumping (a click).
+    GlidingGain m_masterGlide;
+    std::array<GlidingGain, core::limits::kMaxStems + 1> m_clipGlides{};
     // The reading in progress, and its outcome (guarded by m_trackMutex).
     std::unique_ptr<QThread> m_trackReader;
     std::atomic<bool> m_cancelTrackRead{false};

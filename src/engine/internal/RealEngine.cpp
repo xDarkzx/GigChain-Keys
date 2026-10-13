@@ -2013,8 +2013,10 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     const std::span<float* const> sends = m_audio.extraOutputs(); // outputs 3 and up, silent so far
     RenderGraph* graph = m_exchange.acquire();
     if (graph != nullptr) {
-        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, masterGain, time, inputs, gate, &m_loops,
-                      sends);
+        // At unity: the master fader glides on the mix below (it never jumps: a click).
+        graph->render(std::span<const MidiEvent>(m_events.data(), count), out, 1.0F, time, inputs, gate, &m_loops, sends);
+        const auto mixFrames = static_cast<std::size_t>(std::max(out.frames, 0));
+        m_masterGlide.scale(std::span(out.left, mixFrames), std::span(out.right, mixFrames), masterGain, rate);
     } else {
         std::fill_n(out.left, out.frames, 0.0F);
         std::fill_n(out.right, out.frames, 0.0F);
@@ -2056,13 +2058,12 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
                 const bool inMix = to.left == out.left; // (a pair the device does not have: the mix)
                 const float gain = trackGain * (c == 0 ? 1.0F : m_stemGains.at(c - 1).load(std::memory_order_relaxed))
                                    * (inMix ? masterGain : 1.0F);
-                if (gain <= 0.0F) continue;
+                GlidingGain& glide = m_clipGlides.at(c); // (it glides there: a fader or mute never clicks)
+                if (glide.silent(gain)) continue;
                 const auto from = static_cast<std::size_t>(position);
-                const auto add = [gain](float mix, float sample) { return mix + (sample * gain); };
-                const std::span<float> left = std::span<float>(to.left, frames).subspan(offset, take);
-                const std::span<float> right = std::span<float>(to.right, frames).subspan(offset, take);
-                std::ranges::transform(left, std::span<const float>(clip.left).subspan(from, take), left.begin(), add);
-                std::ranges::transform(right, std::span<const float>(clip.right).subspan(from, take), right.begin(), add);
+                glide.addInto(std::span<float>(to.left, frames).subspan(offset, take), std::span<float>(to.right, frames).subspan(offset, take),
+                              std::span<const float>(clip.left).subspan(from, take), std::span<const float>(clip.right).subspan(from, take),
+                              gain, rate);
             }
             m_trackPosition.store(position + static_cast<int64_t>(n), std::memory_order_relaxed);
             if (position + static_cast<int64_t>(n) >= length) m_trackPlaying.store(false, std::memory_order_relaxed);

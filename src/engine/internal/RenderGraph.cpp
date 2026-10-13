@@ -1,5 +1,6 @@
 #include "RenderGraph.h"
 
+#include "GlidingGain.h"
 #include "LoopStation.h"
 
 #include "gigchain/core/Limits.h"
@@ -27,20 +28,6 @@ constexpr float kQuietLevel = 1.0e-4F;
 constexpr double kQuietSeconds = 1.0;
 // ... or this long with nothing held at all (a drone that never fades).
 constexpr double kLongestTailSeconds = 30.0;
-// How fast a strip's gains glide to a new setting (a one-pole's time
-// constant): a fader, mute or solo, or a patch change, never steps the
-// sound (a click), and a mute is silent within about 17 ms (-60 dB).
-constexpr double kGlideSeconds = 0.0025;
-
-// One sample of a gain gliding from `now` to `target` (`glide`: the share of
-// the way it moves per sample). It lands on the target once within a hair,
-// or once a step no longer moves it (a float's precision near 1: it would
-// stop short of the target for good; the last step is far below hearing).
-float glideTo(float now, float target, float glide)
-{
-    const float next = now + ((target - now) * glide);
-    return next == now || std::abs(target - next) < 1.0e-6F ? target : next;
-}
 
 bool isNoteOff(const MidiEvent& e)
 {
@@ -279,7 +266,7 @@ float ChannelStrip::mixInto(const AudioBlock& mix, float gain, double sampleRate
     const float leftTarget = gain * static_cast<float>(std::cos(angle) * std::numbers::sqrt2);
     const float rightTarget = gain * static_cast<float>(std::sin(angle) * std::numbers::sqrt2);
     // Where the gains are now (its first block: where its controls say), gliding to those.
-    m_glide = sampleRate > 0.0 ? static_cast<float>(1.0 - std::exp(-1.0 / (kGlideSeconds * sampleRate))) : 1.0F;
+    m_glide = glideStep(sampleRate);
     float leftGain = m_levels->left.load(std::memory_order_relaxed);
     float rightGain = m_levels->right.load(std::memory_order_relaxed);
     if (leftGain < 0.0F || rightGain < 0.0F) {
