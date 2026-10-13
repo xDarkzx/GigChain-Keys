@@ -687,32 +687,13 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
         specs.push_back(std::move(spec));
     }
 
-    // Strips of the sounding graph (and its own tails) that the new patch
-    // does not play ring out: held notes until they are let go, reverbs
-    // until they fade. A strip sharing a plugin with the new patch cannot
-    // (the plugin plays in the new patch).
-    const std::set<const INode*> playing(used.begin(), used.end());
-    std::vector<std::shared_ptr<ChannelStrip>> tails;
-    std::set<const INode*> ringing;
-    std::set<const INode*> releasing; // instruments whose old strip's MIDI effects made notes
-    if (const std::shared_ptr<RenderGraph>& previous = m_exchange.currentShared()) {
-        for (const auto* strips : {&previous->strips(), &previous->tails()}) {
-            for (const auto& strip : *strips) {
-                const std::vector<const INode*> nodes = strip->nodes();
-                const bool shared = std::ranges::any_of(nodes, [&playing](const INode* n) { return playing.contains(n); });
-                // A strip whose MIDI effects made notes (a chord's, an arpeggio's), going
-                // while its instrument plays on: its notes go too (its effects' state does
-                // not carry over, so nothing else would end them).
-                if (shared && strip->hasMidiEffects() && !nodes.empty()) releasing.insert(nodes.front());
-                // A hardware synth's notes held when the patch changes end with their keys
-                // (unless the new patch plays that synth from the same channel: it ends them).
-                const bool synthHeld = strip->holdsHardwareNotes() && !hardwareUsed.contains(strip->hardware().get());
-                if (strip->tailDone() || shared || (nodes.empty() && !synthHeld) || tails.size() >= kMaxTails) continue;
-                tails.push_back(strip);
-                ringing.insert(nodes.begin(), nodes.end());
-            }
-        }
-    }
+    // What rings out of the sounding graph: strips the new patch does not
+    // play (held notes until let go, reverbs until they fade), and effects a
+    // sound plays on without; a sound playing on glides from its level.
+    CarryOver carried = carryOver(m_exchange.currentShared().get(), specs, hardwareUsed, kMaxTails);
+    std::vector<std::shared_ptr<ChannelStrip>>& tails = carried.tails;
+    const std::set<const INode*>& ringing = carried.ringing;
+    const std::set<const INode*>& releasing = carried.releasing;
     // The synths still played, by the new patch or its tails; the rest are let go.
     std::set<const HardwareOut*> hardwareKept = hardwareUsed;
     for (const auto& tail : tails) {
