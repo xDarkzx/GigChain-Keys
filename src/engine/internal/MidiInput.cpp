@@ -87,6 +87,59 @@ std::optional<MidiEvent> parseMidi(std::span<const unsigned char> bytes) noexcep
                      .sampleOffset = 0};
 }
 
+bool translateControl(MidiEvent& event, std::span<const RigEntry> rig) noexcept
+{
+    const int type = event.status & 0xF0;
+    const auto channel = static_cast<uint8_t>(event.status & 0x0F);
+    // What it is as a control, and whether it is pressed (or how far a knob is).
+    MidiTrigger::Kind kind = MidiTrigger::None;
+    bool pressed = false;
+    switch (type) {
+    case 0xB0:
+        kind = MidiTrigger::ControlChange;
+        pressed = event.data2 > 0;
+        break;
+    case 0x90:
+    case 0x80:
+        kind = MidiTrigger::Note;
+        pressed = type == 0x90 && event.data2 > 0;
+        break;
+    case 0xC0:
+        kind = MidiTrigger::ProgramChange;
+        pressed = true;
+        break;
+    default: return true; // pitch bend, aftertouch: never learned
+    }
+    const auto entry = std::ranges::find_if(rig, [&](const RigEntry& e) {
+        return e.from.kind == kind && e.from.channel == channel && e.from.number == event.data1;
+    });
+    if (entry == rig.end()) return true;
+    const MidiTrigger& to = entry->to;
+    const auto status = [&to](int toType) { return static_cast<uint8_t>(toType | to.channel); };
+    // How hard or how far, as the learned control takes it (a press with no value of its own: full).
+    const uint8_t value = kind == MidiTrigger::ProgramChange ? uint8_t{127} : (pressed ? std::max<uint8_t>(event.data2, 1) : uint8_t{0});
+    switch (to.kind) {
+    case MidiTrigger::ControlChange:
+        event.status = status(0xB0);
+        event.data1 = to.number;
+        event.data2 = kind == MidiTrigger::ControlChange ? event.data2 : (pressed ? uint8_t{127} : uint8_t{0}); // a knob as it is; a pad: on or off
+        return true;
+    case MidiTrigger::Note:
+        event.status = status(pressed ? 0x90 : 0x80);
+        event.data1 = to.number;
+        event.data2 = value;
+        return true;
+    case MidiTrigger::ProgramChange:
+        if (!pressed) return false; // let go: a program change has no "off"
+        event.status = status(0xC0);
+        event.data1 = to.number;
+        event.data2 = 0;
+        return true;
+    case MidiTrigger::None: break;
+    }
+    return true;
+}
+
 MidiInput::MidiInput() = default;
 
 MidiInput::~MidiInput()
@@ -140,6 +193,7 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
         port->name = name;
         port->channel = wanted->channel;
         port->controlsOnly = !wanted->enabled;
+        port->rig = wanted->rig; // (fixed while it is open: its thread reads it)
         try {
             port->in = std::make_unique<RtMidiIn>();
             port->in->setErrorCallback(
@@ -160,7 +214,8 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
         qCInfo(lcEngine).noquote() << "MIDI input opened:" << name
                                    << (port->controlsOnly ? u"(buttons and knobs only)"_s
                                        : port->channel == 0 ? u"(all channels)"_s
-                                                            : u"(channel %1 only)"_s.arg(port->channel));
+                                                            : u"(channel %1 only)"_s.arg(port->channel))
+                                   << (port->rig.empty() ? QString() : u"taught: %1 controls"_s.arg(port->rig.size()));
         m_ports.push_back(std::move(port));
     }
     return notices;
@@ -220,6 +275,8 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
     }
     auto event = parseMidi(*message);
     if (!event || !passesChannelFilter(event->status, port->channel)) return;
+    // A taught keyboard: its controls arrive as the ones learned on another keyboard.
+    if (!translateControl(*event, port->rig)) return;
     // A keyboard's DAW port: Mackie Control's buttons, and the rest for
     // learned controls only (it never plays).
     if (port->controlsOnly) {

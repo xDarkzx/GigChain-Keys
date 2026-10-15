@@ -288,6 +288,61 @@ private slots:
         QCOMPARE(changed.count(), 1);
     }
 
+    // "Learn this keyboard": a backup keyboard is taught the controls learned
+    // on yours (a knob moved, a pad pressed), its rig goes to the engine, is
+    // saved, and comes back next start; cancelled, nothing changes.
+    void aBackupKeyboardIsTaughtTheLearnedControls()
+    {
+        m_engine->midiPresent = {u"Backup Keys"_s};
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QVERIFY(!settings.startTeaching(u"Backup Keys"_s)); // nothing learned yet
+        QVERIFY(settings.error().contains(u"Nothing is learned"_s));
+
+        using Trigger = engine::MidiTrigger;
+        const Trigger pedal{.kind = Trigger::ControlChange, .channel = 0, .number = 64};
+        const Trigger pad{.kind = Trigger::Note, .channel = 9, .number = 36};
+        settings.learnControl(static_cast<int>(engine::ControlAction::NextSong));
+        m_engine->learned = pedal;
+        settings.pollLearning();
+        settings.learnControl(static_cast<int>(engine::ControlAction::Panic));
+        m_engine->learned = pad;
+        settings.pollLearning();
+        QVERIFY(settings.apply());
+
+        QVERIFY(settings.startTeaching(u"Backup Keys"_s));
+        QVariantMap t = settings.teaching();
+        QCOMPARE(t.value(u"count"_s).toInt(), 2);
+        QCOMPARE(t.value(u"label"_s).toString(), u"Next song"_s);
+        m_engine->controllerMoves.push_back({1, 20, 100}); // its fader (channel 1, CC 20)
+        settings.pollLearning();
+        QCOMPARE(settings.teaching().value(u"label"_s).toString(), u"Panic (stop all sound)"_s);
+        m_engine->learned = Trigger{.kind = Trigger::Note, .channel = 0, .number = 48}; // a key
+        settings.pollLearning();
+        QVERIFY(settings.teaching().value(u"done"_s).toBool());
+        settings.finishTeaching();
+        QVERIFY(!settings.teaching().value(u"active"_s).toBool());
+
+        const QString keyboard = engine::midiDeviceOf(u"Backup Keys"_s);
+        const engine::KeyboardRig expected{{.from = Trigger{.kind = Trigger::ControlChange, .channel = 0, .number = 20}, .to = pedal},
+                                           {.from = Trigger{.kind = Trigger::Note, .channel = 0, .number = 48}, .to = pad}};
+        QCOMPARE(m_engine->midi.rigs.at(keyboard), expected);
+        QCOMPARE(settings.midiInputs().front().toMap().value(u"taught"_s).toInt(), 2);
+        QCOMPARE(SettingsController::engineOptions(*m_settings).midi.rigs.at(keyboard), expected); // next start
+
+        // Taught again, and cancelled: as it was.
+        QVERIFY(settings.startTeaching(u"Backup Keys"_s));
+        QVERIFY(m_engine->midi.rigs.find(keyboard) == m_engine->midi.rigs.end()); // its controls as they are while taught
+        m_engine->learned = Trigger{.kind = Trigger::Note, .channel = 0, .number = 50};
+        settings.pollLearning();
+        settings.cancelTeaching();
+        QCOMPARE(m_engine->midi.rigs.at(keyboard), expected);
+
+        settings.forgetKeyboard(u"Backup Keys"_s);
+        QVERIFY(m_engine->midi.rigs.empty());
+        QVERIFY(SettingsController::engineOptions(*m_settings).midi.rigs.empty());
+    }
+
     void aPedalIsLearnedForNextSongAndKept()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);

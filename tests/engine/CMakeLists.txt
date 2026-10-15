@@ -60,6 +60,8 @@ gigchain_add_test(tst_midi_clock SOURCES tst_midi_clock.cpp LIBS gigchain::engin
 target_include_directories(tst_midi_clock PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_transitions SOURCES tst_transitions.cpp LIBS gigchain::engine)
 target_include_directories(tst_transitions PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_test(tst_keyboard_rig SOURCES tst_keyboard_rig.cpp LIBS gigchain::engine)
+target_include_directories(tst_keyboard_rig PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_hardware_sender SOURCES tst_hardware_sender.cpp LIBS gigchain::engine)
 target_include_directories(tst_hardware_sender PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 # A fake plugin that crashes whoever reads it, and the scanner that must survive it.

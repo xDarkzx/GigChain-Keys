@@ -932,6 +932,30 @@ private slots:
         settle();
     }
 
+    // "Learn this keyboard" in Settings > MIDI: the control to move is shown
+    // by what it does; closing Settings cancels it.
+    void teachingAKeyboardShowsTheControlToMove()
+    {
+        core::LoopControls looper;
+        looper.buttons.at(core::LoopControls::Record) = core::LearnedControl{.kind = 0x90, .channel = 10, .number = 36};
+        QVERIFY(m_session->document().setLoopControls(looper));
+        auto* dialog = window()->findChild<QObject*>(u"settingsDialog"_s);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "open"));
+        QVERIFY(dialog->setProperty("page", 2)); // MIDI
+        settle();
+        QVERIFY(m_session->settingsController().startTeaching(u"Backup Keys"_s));
+        settle();
+        auto* panel = dialog->findChild<QQuickItem*>(u"teachingPanel"_s);
+        QVERIFY(panel != nullptr && panel->isVisible());
+        auto* ask = dialog->findChild<QQuickItem*>(u"teachingAsk"_s);
+        QVERIFY(ask != nullptr);
+        QCOMPARE(ask->property("text").toString(), u"Looper: Record"_s);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        settle();
+        QVERIFY(!m_session->settingsController().teaching().value(u"active"_s).toBool());
+        QVERIFY(m_session->document().setLoopControls({}));
+    }
+
     void channelVolumeTypesAndPanDragsSideways()
     {
         QVERIFY(m_session->document().addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));

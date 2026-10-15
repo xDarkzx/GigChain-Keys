@@ -26,6 +26,14 @@ namespace gigchain::engine {
 // (system messages, truncated or malformed input). Real-time safe.
 std::optional<MidiEvent> parseMidi(std::span<const unsigned char> bytes) noexcept;
 
+// A taught keyboard's control turned into the one it stands for (RigEntry):
+// a knob's CC into the learned CC (where it is: unchanged); a pad (a note)
+// and a button (a CC) into each other (pressed: on, let go: off); a press
+// into a learned program change. Anything not in `rig` is left as it is.
+// False: drop it (letting go of a button standing for a program change).
+// Real-time safe.
+[[nodiscard]] bool translateControl(MidiEvent& event, std::span<const RigEntry> rig) noexcept;
+
 // The sustain pedal's presses, for "a quick double press starts or stops the
 // song": press() says whether this press came within kDoubleTapNs of the last
 // (and then starts counting afresh: a third quick press is not another).
@@ -125,6 +133,7 @@ private:
         int64_t lastTickNs = 0;
         double tickSeconds = 0.0;
         SustainTaps sustain; // (this port's thread)
+        KeyboardRig rig;     // its keyboard's taught controls (translateControl)
     };
 
     static void callback(double timeStamp, std::vector<unsigned char>* message, void* user);

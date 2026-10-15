@@ -28,6 +28,9 @@ struct MidiSetup
     // sustain pedal does too (its presses still sustain).
     bool transportButtons = true;
     bool sustainDoubleTap = false;
+    // Keyboards taught to the app ("Learn this keyboard"), by device
+    // (midiDeviceOf): their controls as the ones learned on another keyboard.
+    std::map<QString, KeyboardRig> rigs;
 
     bool operator==(const MidiSetup&) const = default;
 };

@@ -1,6 +1,7 @@
 #include "SettingsController.h"
 
 #include "DocumentController.h"
+#include "KeyboardTeaching.h"
 
 #include "gigchain/core/Limits.h"
 #include "gigchain/engine/IEngine.h"
@@ -34,6 +35,41 @@ const QString kMidiEnabledKey = u"midi/enabled"_s;
 const QString kMidiControlsOnlyKey = u"midi/controlsOnly"_s; // inputs for their buttons and knobs only
 const QString kMidiOffKey = u"midi/off"_s;                   // inputs switched off
 const QString kMidiChannelsKey = u"midi/channels"_s;
+// Keyboards taught ("Learn this keyboard"): per keyboard, "from:to" packed triggers in hex.
+const QString kMidiKeyboardsKey = u"midi/keyboards"_s;
+
+QVariantMap rigsToSettings(const std::map<QString, engine::KeyboardRig>& rigs)
+{
+    QVariantMap saved;
+    for (const auto& [keyboard, rig] : rigs) {
+        QStringList entries;
+        for (const engine::RigEntry& e : rig) entries << u"%1:%2"_s.arg(e.from.pack(), 0, 16).arg(e.to.pack(), 0, 16);
+        if (!entries.isEmpty()) saved.insert(keyboard, entries);
+    }
+    return saved;
+}
+
+std::map<QString, engine::KeyboardRig> rigsFromSettings(const QVariantMap& saved)
+{
+    std::map<QString, engine::KeyboardRig> rigs;
+    for (auto it = saved.begin(); it != saved.end(); ++it) {
+        engine::KeyboardRig rig;
+        for (const QString& entry : it.value().toStringList()) {
+            const QStringList two = entry.split(u':');
+            bool fromOk = false;
+            bool toOk = false;
+            const auto from = engine::MidiTrigger::unpack(two.value(0).toUInt(&fromOk, 16));
+            const auto to = engine::MidiTrigger::unpack(two.value(1).toUInt(&toOk, 16));
+            if (two.size() != 2 || !fromOk || !toOk || !from.isSet() || !to.isSet()) {
+                qCWarning(lcUi).noquote() << "Ignored a taught control of" << it.key() << "that could not be read:" << entry;
+                continue;
+            }
+            rig.push_back(engine::RigEntry{.from = from, .to = to});
+        }
+        if (!rig.empty()) rigs[it.key()] = std::move(rig);
+    }
+    return rigs;
+}
 const QString kControlsKey = u"midi/controls"_s; // one packed trigger per action
 const QString kInputDeviceKey = u"audio/inputDevice"_s;
 const QString kClockOutputKey = u"midi/clockOutput"_s;
@@ -136,6 +172,7 @@ engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
     options.midi.off = settings.value(kMidiOffKey).toStringList();
     const QVariantMap channels = settings.value(kMidiChannelsKey).toMap();
     for (auto it = channels.begin(); it != channels.end(); ++it) options.midi.channels[it.key()] = it.value().toInt();
+    options.midi.rigs = rigsFromSettings(settings.value(kMidiKeyboardsKey).toMap());
     if (settings.value(kMidiNamesKey, 1).toInt() < kMidiNames) {
         // Saved with the place numbers: converted once, and saved converted.
         options.midi = engine::withoutPortPlaces(std::move(options.midi));
@@ -153,6 +190,7 @@ void SettingsController::saveMidi(QSettings& settings, const engine::MidiSetup& 
     settings.setValue(kMidiControlsOnlyKey, midi.controls);
     settings.setValue(kMidiOffKey, midi.off);
     settings.setValue(kMidiChannelsKey, channels);
+    settings.setValue(kMidiKeyboardsKey, rigsToSettings(midi.rigs));
     settings.setValue(kClockOutputKey, midi.clockOutput);
     settings.setValue(kFollowClockKey, midi.followClock);
     settings.setValue(kTransportButtonsKey, midi.transportButtons);
@@ -271,26 +309,11 @@ void SettingsController::setLimiterCeilingDb(double ceilingDb)
 
 QVariantList SettingsController::controls() const
 {
-    static constexpr std::array<const char*, engine::kControlActionCount> kLabels{
-        QT_TR_NOOP("Next song"),
-        QT_TR_NOOP("Previous song"),
-        QT_TR_NOOP("Next sound"),
-        QT_TR_NOOP("Previous sound"),
-        QT_TR_NOOP("Panic (stop all sound)"),
-        QT_TR_NOOP("Tap tempo"),
-        QT_TR_NOOP("Song / backing track: play / stop"),
-        QT_TR_NOOP("Next part of the song (on the next bar)"),
-        QT_TR_NOOP("Repeat this part once more"),
-        QT_TR_NOOP("Hold this part (loops until pressed again)"),
-        QT_TR_NOOP("Play the song"),
-        QT_TR_NOOP("Stop the song"),
-        QT_TR_NOOP("Previous part of the song (on the next bar)"),
-        QT_TR_NOOP("Click on / off")};
     QVariantList list;
     for (int i = 0; i < engine::kControlActionCount; ++i) {
         const engine::MidiTrigger& trigger = m_controls.at(static_cast<std::size_t>(i));
         list << QVariantMap{{u"action"_s, i},
-                            {u"label"_s, tr(kLabels.at(static_cast<std::size_t>(i)))},
+                            {u"label"_s, controlActionLabel(i)},
                             {u"trigger"_s, trigger.isSet() ? trigger.describe() : QString()}};
     }
     return list;
@@ -325,6 +348,21 @@ void SettingsController::pollLearning()
     if (const int outputs = m_engine.outputChannels(); outputs != m_outputsSeen) {
         m_outputsSeen = outputs;
         emit changed();
+    }
+    if (m_teaching) {
+        // A button, pad or pedal pressed, or a knob or fader moved: it stands for the control asked.
+        engine::MidiTrigger moved = m_engine.takeLearnedTrigger();
+        if (const auto knob = m_engine.takeControllerMove(); knob && !moved.isSet()) {
+            moved = engine::MidiTrigger{.kind = engine::MidiTrigger::ControlChange,
+                                        .channel = static_cast<uint8_t>(knob->at(0) - 1),
+                                        .number = static_cast<uint8_t>(knob->at(1))};
+        }
+        const QString asked = m_teaching->current() != nullptr ? m_teaching->current()->label : QString();
+        if (m_teaching->take(moved)) {
+            qCInfo(lcUi).noquote() << "Taught" << moved.describe() << "for" << asked;
+            emit changed();
+        }
+        return;
     }
     if (m_learning < 0) return;
     const engine::MidiTrigger pressed = m_engine.takeLearnedTrigger();
@@ -487,7 +525,8 @@ QVariantList SettingsController::midiInputs() const
         list << QVariantMap{{u"name"_s, port.name},
                             {u"enabled"_s, port.enabled},
                             {u"mode"_s, port.enabled ? 0 : port.controlsOnly ? 1 : 2},
-                            {u"channel"_s, port.channel}};
+                            {u"channel"_s, port.channel},
+                            {u"taught"_s, static_cast<int>(port.rig.size())}}; // controls taught on its keyboard
     }
     return list;
 }
@@ -554,7 +593,107 @@ engine::MidiSetup SettingsController::pendingMidi() const
         if (port.channel != 0) setup.channels[port.name] = port.channel;
         else setup.channels.erase(port.name);
     }
+    // A keyboard being taught plays its controls as they are for now: its rig is still the one before.
+    if (m_teaching) {
+        if (m_teachingWas.empty()) setup.rigs.erase(m_teachingKeyboard);
+        else setup.rigs[m_teachingKeyboard] = m_teachingWas;
+    }
     return setup;
+}
+
+void SettingsController::applyRig(const QString& keyboard, const engine::KeyboardRig& rig, bool save)
+{
+    engine::MidiSetup setup = m_engine.midiSetup();
+    if (rig.empty()) setup.rigs.erase(keyboard);
+    else setup.rigs[keyboard] = rig;
+    if (auto applied = m_engine.setMidiSetup(setup); !applied) m_error = applied.error().message; // logged by the engine
+    if (save) {
+        saveMidi(m_settings, setup);
+        m_settings.sync();
+        if (m_settings.status() != QSettings::NoError) {
+            m_error = tr("The keyboard's controls could not be saved (%1)").arg(m_settings.fileName());
+            qCWarning(lcUi).noquote() << m_error;
+        }
+    }
+    m_midi = m_engine.midiInputs();
+}
+
+bool SettingsController::startTeaching(const QString& port)
+{
+    if (m_teaching) cancelTeaching();
+    std::vector<TeachableControl> learned = controlsInUse(m_document.setlist(), m_controls);
+    if (learned.empty()) {
+        m_error = tr("Nothing is learned yet: learn your knobs and buttons first (Knobs, Learn), then another keyboard can be taught them.");
+        qCInfo(lcUi).noquote() << m_error;
+        emit changed();
+        return false;
+    }
+    m_error.clear();
+    m_teachingKeyboard = engine::midiDeviceOf(port);
+    const auto& rigs = m_engine.midiSetup().rigs;
+    const auto was = rigs.find(m_teachingKeyboard);
+    m_teachingWas = was != rigs.end() ? was->second : engine::KeyboardRig{};
+    applyRig(m_teachingKeyboard, {}, false); // its controls as they are while taught
+    m_teaching.emplace(std::move(learned));
+    (void)m_engine.takeLearnedTrigger(); // only what is moved from now on counts
+    (void)m_engine.takeControllerMove();
+    qCInfo(lcUi).noquote() << "Teaching keyboard" << m_teachingKeyboard << m_teaching->count() << "controls";
+    emit changed();
+    return true;
+}
+
+void SettingsController::skipTeaching()
+{
+    if (!m_teaching) return;
+    m_teaching->skip();
+    emit changed();
+}
+
+void SettingsController::backTeaching()
+{
+    if (!m_teaching) return;
+    m_teaching->back();
+    emit changed();
+}
+
+void SettingsController::finishTeaching()
+{
+    if (!m_teaching) return;
+    const engine::KeyboardRig rig = m_teaching->rig();
+    m_teaching.reset();
+    applyRig(m_teachingKeyboard, rig, true);
+    qCInfo(lcUi).noquote() << "Keyboard" << m_teachingKeyboard << "taught:" << rig.size() << "controls";
+    emit changed();
+}
+
+void SettingsController::cancelTeaching()
+{
+    if (!m_teaching) return;
+    m_teaching.reset();
+    applyRig(m_teachingKeyboard, m_teachingWas, false);
+    emit changed();
+}
+
+void SettingsController::forgetKeyboard(const QString& port)
+{
+    applyRig(engine::midiDeviceOf(port), {}, true);
+    emit changed();
+}
+
+QVariantMap SettingsController::teaching() const
+{
+    if (!m_teaching) {
+        return {{u"active"_s, false}, {u"keyboard"_s, QString()}, {u"at"_s, 0},        {u"count"_s, 0},
+                {u"done"_s, false},   {u"label"_s, QString()},    {u"learned"_s, QString()}};
+    }
+    const TeachableControl* asked = m_teaching->current();
+    return {{u"active"_s, true},
+            {u"keyboard"_s, m_teachingKeyboard},
+            {u"at"_s, static_cast<int>(m_teaching->at())},
+            {u"count"_s, static_cast<int>(m_teaching->count())},
+            {u"done"_s, m_teaching->done()},
+            {u"label"_s, asked != nullptr ? asked->label : QString()},
+            {u"learned"_s, asked != nullptr ? asked->learned.describe() : QString()}};
 }
 
 void SettingsController::resetToDefaults()
