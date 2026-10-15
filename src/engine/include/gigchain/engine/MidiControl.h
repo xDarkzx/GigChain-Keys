@@ -95,6 +95,28 @@ enum class LoopAction : int
 inline constexpr int kLoopButtonCount = 6; // the learnable ones (not Clear)
 using LoopTriggers = std::array<MidiTrigger, kLoopButtonCount>;
 
+// The panel's buttons learned on the keyboard (ASSIGN): each picks the
+// song's sound in its place, or turns the playing sound's part in its place
+// on or off. Never heard by the instruments.
+inline constexpr int kPanelSounds = 8;
+inline constexpr int kPanelParts = 8;
+struct PanelTriggers
+{
+    std::array<MidiTrigger, kPanelSounds> sounds{};
+    std::array<MidiTrigger, kPanelParts> parts{};
+
+    bool operator==(const PanelTriggers&) const = default;
+};
+// A panel button pressed on the keyboard.
+struct PanelPress
+{
+    enum Kind : uint8_t { Sound, Part };
+    Kind kind = Sound;
+    int index = 0; // its place (0 = the first sound, or the first part)
+
+    bool operator==(const PanelPress&) const = default;
+};
+
 // A knob choosing the instrument: its controller, and how it counts.
 struct SelectorKnob
 {

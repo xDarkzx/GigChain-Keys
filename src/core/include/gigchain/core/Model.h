@@ -279,11 +279,27 @@ struct MixerControls
     friend bool operator==(const MixerControls&, const MixerControls&) = default;
 };
 
+// The panel's buttons learned on the keyboard (a pad, a button, a
+// footswitch or a spare key: ASSIGN), kept with the setlist: each picks the
+// song's sound in its place, or turns the playing sound's part (instrument)
+// in its place on or off, whichever song is playing (as a Yamaha's
+// registration and part buttons, a Nord's program and section buttons).
+struct PanelControls
+{
+    static constexpr std::size_t kSounds = 8;
+    static constexpr std::size_t kParts = 8;
+    std::array<LearnedControl, kSounds> sounds{};
+    std::array<LearnedControl, kParts> parts{};
+
+    friend bool operator==(const PanelControls&, const PanelControls&) = default;
+};
+
 struct Setlist
 {
     std::vector<Song> songs;
     LoopControls loopControls;
     MixerControls mixerControls;
+    PanelControls panelControls;
 
     friend bool operator==(const Setlist&, const Setlist&) = default;
 };

@@ -271,6 +271,9 @@ public:
     void setLoopControls(const LoopTriggers&, const SelectorKnob&) override {}
     std::vector<LoopAction> takeLoopActions() override { return {}; }
     SelectorMove takeSelectorMove() override { return {}; }
+    // The demo has no MIDI input: no panel button is ever pressed.
+    void setPanelControls(const PanelTriggers&) override {}
+    std::vector<PanelPress> takePanelPresses() override { return {}; }
     std::optional<std::array<int, 3>> takeControllerMove() override { return std::nullopt; }
     void setAppKnobs(const AppKnobs& knobs) override { m_appKnobs = knobs; }
     AppKnobValues takeAppKnobValues() override

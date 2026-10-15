@@ -12,11 +12,16 @@ StageDialog {
 
     required property DocumentController doc
     required property SelectedChannel channel
+    property PanelController panel: null // "Set by playing"
+    readonly property var learning: panel !== null ? panel.zoneLearning : ({ active: false })
+    onAboutToHide: if (panel !== null) panel.cancelZoneLearning()
 
     readonly property var noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     function noteName(n) { return noteNames[n % 12] + (Math.floor(n / 12) - 1) }
 
-    title: qsTr("Keyboard zone: %1").arg(dialog.channel.name)
+    title: !learning.active ? qsTr("Keyboard zone: %1").arg(dialog.channel.name)
+                            : learning.step === 0 ? qsTr("Press the lowest key or pad it should play…")
+                                                  : qsTr("Now the highest key or pad…")
     width: 460
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
@@ -25,6 +30,24 @@ StageDialog {
         spacing: 12
 
         SettingsSection { title: qsTr("Keys it plays") }
+        // After Set by playing: its pads (or keys) on a channel of their own, while other parts hear every channel.
+        RowLayout {
+            visible: dialog.panel !== null && !dialog.learning.active && dialog.learning.othersHearIt === true
+            Layout.fillWidth: true
+            spacing: 8
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                font.pixelSize: Theme.smallFontSize
+                color: Theme.ledAmber
+                text: qsTr("The other parts of this sound hear these too.")
+            }
+            StageButton {
+                objectName: "keepOthersOnKeys"
+                text: qsTr("Keep them on the keys (channel 1)")
+                onClicked: dialog.panel.keepOthersOnTheKeys(dialog.channel.index, 1)
+            }
+        }
         SettingsRow {
             label: qsTr("Lowest key")
             StageSpinBox {
@@ -34,6 +57,15 @@ StageDialog {
                 editable: false
                 textFromValue: (v) => dialog.noteName(v)
                 onValueModified: dialog.doc.setChannelKeyRange(dialog.channel.index, value, Math.max(value, dialog.channel.keyHigh))
+            }
+            // Set by playing: press the lowest and highest key (or pad) it should play (the title says which).
+            StageButton {
+                objectName: "setZoneByPlaying"
+                visible: dialog.panel !== null
+                text: dialog.learning.active ? qsTr("Cancel") : qsTr("Set by playing")
+                highlighted: dialog.learning.active
+                tip: qsTr("Press the lowest and the highest key or pad it should play: no notes to type")
+                onClicked: dialog.learning.active ? dialog.panel.cancelZoneLearning() : dialog.panel.startZoneLearning(dialog.channel.index)
             }
         }
         SettingsRow {

@@ -8,6 +8,7 @@
 #include "MasterBus.h"
 #include "EngineStatus.h"
 #include "LoopController.h"
+#include "PanelController.h"
 #include "PluginListModel.h"
 #include "PracticeController.h"
 #include "WarmupController.h"
@@ -45,6 +46,7 @@ public:
     [[nodiscard]] StartupProgress& loading() { return m_loading; }
     [[nodiscard]] SettingsController& settingsController() { return m_settingsController; }
     [[nodiscard]] PracticeController& practice() { return m_practice; }
+    [[nodiscard]] PanelController& panel() { return m_panel; }
 
 private:
     OfficialArtwork m_artwork; // first: the models below read it
@@ -55,6 +57,7 @@ private:
     PluginListModel m_pluginModel;
     EngineStatus m_engineStatus;
     LoopController m_loops;
+    PanelController m_panel; // the panel bar: sounds and parts, and their pads
     EditorService m_editorService;
     EffectWindows m_effectWindows;
     MasterBus m_masterBus; // after the windows it opens

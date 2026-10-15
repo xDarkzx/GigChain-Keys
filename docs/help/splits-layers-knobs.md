@@ -21,6 +21,30 @@ A strip that would be silent if you played now is **dimmed**. Hover over it
 to see why: *Muted*, *Another channel is soloed*, *Not in Chorus*, or
 *One at a time*.
 
+## The panel: sounds, parts and your pads
+
+The bar above the mixer works like the front panel of a Yamaha, Casio, Korg
+or Nord (show or hide it with the **grid** button in the top bar):
+
+- **SOUNDS:** the song's sounds as buttons, like registration memory or
+  program buttons. The one playing is lit; click another to switch. Notes you
+  are holding and reverbs ring on.
+- **PARTS:** the instruments in the sound playing, like *Right 1 / Right 2 /
+  Left* or a Nord's section buttons. Lit means on: click to take the strings
+  out, again to bring them back. A split part shows its keys (*Bass C1–B2*).
+
+**Your pads (or any button, footswitch or spare key) on the panel:** click
+**Assign**, tap a sound or a part, then press the pad on your keyboard that
+should do it. Its name appears under the button. Tap the next one, and so on;
+**Done** when finished. A sound's pad picks the sound in that place in every
+song (pad 1 always the first sound), and a part's pad turns that part on and
+off. A pad you assign is never played as a note. Right-click a button to
+forget its pad.
+
+A typical setup, as on an arranger keyboard: sound 1 *Piano*, sound 2 *Piano
++ Strings*, sound 3 *Organ*, sound 4 *Bass + Piano* split; pads 1–4 pick
+them, pad 5 brings the strings in and out.
+
 ## Keyboard zones (splits)
 
 Right-click a channel strip and choose **Keyboard Zone…**.
@@ -28,6 +52,12 @@ Right-click a channel strip and choose **Keyboard Zone…**.
 - **Lowest key** and **Highest key:** the keys this instrument plays. Bass on
   the left hand and piano on the right: set the bass to *C1–B2* and the piano
   to *C3–C7*.
+- **Set by playing:** no notes to type. Click it, press the lowest key it
+  should play, then the highest (as holding *Split* and pressing a key on an
+  arranger keyboard). It works for your pads too: press the first and last
+  pad, and a drum kit or a sound effect plays on the pads while the keys play
+  the rest. If the other parts would hear the pads as well, **Keep them on the
+  keys** leaves the pads to this part alone.
 - **Transpose:** shift it up or down in semitones (+12 is an octave up). Handy
   to play a bass line an octave higher than it sounds.
 - **MIDI: Listens to:** *All channels*, or one channel only when your

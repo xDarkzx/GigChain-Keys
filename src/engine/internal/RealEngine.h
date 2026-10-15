@@ -145,6 +145,8 @@ public:
     void setLoopControls(const LoopTriggers& buttons, const SelectorKnob& selector) override;
     std::vector<LoopAction> takeLoopActions() override;
     SelectorMove takeSelectorMove() override;
+    void setPanelControls(const PanelTriggers& triggers) override;
+    std::vector<PanelPress> takePanelPresses() override;
     std::optional<std::array<int, 3>> takeControllerMove() override;
     void setAppKnobs(const AppKnobs& knobs) override;
     AppKnobValues takeAppKnobValues() override;
@@ -327,6 +329,10 @@ private:
     // LoopAction), which are held (audio thread), and the instrument knob.
     std::array<std::atomic<uint32_t>, kLoopButtonCount> m_loopTriggers{};
     std::atomic<uint32_t> m_loopPressed{0};
+    // The panel's buttons (packed triggers: the sounds', then the parts'), and
+    // those pressed since last asked (bit n: the nth of them).
+    std::array<std::atomic<uint32_t>, kPanelSounds + kPanelParts> m_panelTriggers{};
+    std::atomic<uint32_t> m_panelPressed{0};
     uint32_t m_loopHeld = 0;
     std::atomic<uint32_t> m_selectorKnob{0};
     std::atomic<int> m_selectorMode{0};

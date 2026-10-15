@@ -10,7 +10,10 @@
 
 ## 2. Ask, or report a bug
 
-[**Open an issue**](https://github.com/xDarkzx/GigChain-Keys/issues/new/choose)
+A quick question ("how do I put my sounds on my pads?")? Ask on the
+[**Discord**](https://discord.gg/BGn8Ujh37m), where other players can help too.
+
+For a bug or an idea, [**open an issue**](https://github.com/xDarkzx/GigChain-Keys/issues/new/choose)
 and pick **Bug report** or **Feature request**. A good bug report says:
 
 - **What you did**, step by step, and **what happened**, then **what you expected**.

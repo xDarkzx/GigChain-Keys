@@ -376,6 +376,10 @@ public:
     std::vector<engine::LoopAction> takeLoopActions() override { return std::exchange(pendingLoopActions, {}); }
     engine::SelectorMove selectorMove;
     engine::SelectorMove takeSelectorMove() override { return std::exchange(selectorMove, engine::SelectorMove{}); }
+    engine::PanelTriggers panelTriggers;
+    std::vector<engine::PanelPress> pendingPanelPresses;
+    void setPanelControls(const engine::PanelTriggers& panel) override { panelTriggers = panel; }
+    std::vector<engine::PanelPress> takePanelPresses() override { return std::exchange(pendingPanelPresses, {}); }
     std::vector<std::array<int, 3>> controllerMoves; // taken one per call, first first
     std::optional<std::array<int, 3>> takeControllerMove() override
     {

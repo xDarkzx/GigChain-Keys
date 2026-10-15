@@ -37,6 +37,8 @@ core::Setlist learnedSetlist()
     }
     setlist.mixerControls.master = core::LearnedControl{.kind = 0xB0, .channel = 1, .number = 7};
     setlist.loopControls.buttons.at(core::LoopControls::Record) = core::LearnedControl{.kind = 0x90, .channel = 10, .number = 36};
+    setlist.panelControls.sounds.at(1) = core::LearnedControl{.kind = 0x90, .channel = 10, .number = 37};
+    setlist.panelControls.parts.at(0) = core::LearnedControl{.kind = 0x90, .channel = 10, .number = 38};
     return setlist;
 }
 
@@ -54,7 +56,8 @@ private slots:
         engine::ControlTriggers buttons{};
         buttons.at(static_cast<std::size_t>(engine::ControlAction::NextSong)) = cc(0, 64);
         const std::vector<TeachableControl> controls = controlsInUse(learnedSetlist(), buttons);
-        QCOMPARE(controls.size(), std::size_t{5});
+        QCOMPARE(controls.size(), std::size_t{7});
+        const auto pad = [](uint8_t number) { return engine::MidiTrigger{.kind = engine::MidiTrigger::Note, .channel = 9, .number = number}; };
         const auto find = [&](engine::MidiTrigger t) {
             return std::ranges::find_if(controls, [&](const TeachableControl& c) { return c.learned == t; });
         };
@@ -67,6 +70,8 @@ private slots:
         const auto record = find(engine::MidiTrigger{.kind = engine::MidiTrigger::Note, .channel = 9, .number = 36});
         QVERIFY(record != controls.end());
         QVERIFY(record->label.contains(u"Record"_s));
+        QVERIFY2(find(pad(37))->label.contains(u"Sound 2"_s), qPrintable(find(pad(37))->label)); // the panel's
+        QVERIFY(find(pad(38))->label.contains(u"Part 1"_s));
     }
 
     // Taught one by one: each control moved on the other keyboard stands for

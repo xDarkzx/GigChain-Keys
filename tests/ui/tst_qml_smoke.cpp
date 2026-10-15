@@ -242,16 +242,46 @@ class TestQmlSmoke : public QObject
         return strip->findChild<QQuickItem*>(name);
     }
 
+    // An item by its objectName in the visual tree (a Repeater's items are
+    // not QObject children of the window): the first visible one, else any.
+    static QQuickItem* visualChild(QQuickItem* from, const QString& name, bool visibleOnly)
+    {
+        for (QQuickItem* child : from->childItems()) {
+            if (child->objectName() == name && (!visibleOnly || child->isVisible())) return child;
+            if (QQuickItem* found = visualChild(child, name, visibleOnly)) return found;
+        }
+        return nullptr;
+    }
+
+    // (Visible first: an Edit and a Perform view can each have one.)
     QQuickItem* item(const QString& name) const
     {
-        if (auto* found = window()->findChild<QQuickItem*>(name)) return found;
-        return stripChild(name);
+        const QList<QQuickItem*> named = window()->findChildren<QQuickItem*>(name);
+        if (const auto visibleOne = std::ranges::find_if(named, &QQuickItem::isVisible); visibleOne != named.end()) return *visibleOne;
+        if (auto* found = stripChild(name)) return found;
+        if (auto* found = visualChild(window()->contentItem(), name, true)) return found;
+        if (!named.isEmpty()) return named.front();
+        return visualChild(window()->contentItem(), name, false);
+    }
+
+    // Scrolled into view first, as a player would (a long dialog scrolls).
+    static void scrollIntoView(QQuickItem* target)
+    {
+        for (QQuickItem* up = target->parentItem(); up != nullptr; up = up->parentItem()) {
+            if (!up->inherits("QQuickFlickable")) continue;
+            const double top = target->mapToItem(up, QPointF(0, 0)).y();
+            const double bottom = top + target->height();
+            const double contentY = up->property("contentY").toDouble();
+            if (bottom > up->height()) up->setProperty("contentY", contentY + (bottom - up->height()) + 8);
+            else if (top < 0) up->setProperty("contentY", contentY + top - 8);
+        }
     }
 
     void click(const QString& name)
     {
         QQuickItem* target = item(name);
         QVERIFY2(target != nullptr, qPrintable(name));
+        scrollIntoView(target);
         QTest::mouseClick(window(), Qt::LeftButton, {},
                           target->mapToScene(QPointF(target->width() / 2, target->height() / 2)).toPoint());
         QTest::qWait(20);
@@ -929,6 +959,41 @@ private slots:
         settle();
         QVERIFY(dialog->findChild<QObject*>(u"limiterCeiling"_s) != nullptr);
         QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        settle();
+    }
+
+    // The panel bar: the song's sounds as buttons (a click picks one), its
+    // parts lit when on (a click turns one off), and ASSIGN arms a button
+    // to wait for a pad; the zone dialog can be set by playing.
+    void thePanelBarPicksSoundsAndArmsButtons()
+    {
+        auto& doc = m_session->document();
+        QVERIFY(doc.addPatch(0));
+        QVERIFY(doc.renamePatch(0, 1, u"Strings"_s));
+        QVERIFY(doc.selectPatch(0, 0));
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        window()->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        settle();
+        QVERIFY(item(u"panelBar"_s) != nullptr && item(u"panelBar"_s)->isVisible());
+        QCOMPARE(m_session->panel().sounds().size(), 2);
+        click(u"panelSound1"_s);
+        QCOMPARE(doc.cursor().patch, 1);
+        click(u"panelSound0"_s);
+        QCOMPARE(doc.cursor().patch, 0);
+        click(u"panelPart0"_s); // the piano off
+        QVERIFY(doc.currentPatch()->channels.at(0).mute);
+        click(u"panelPart0"_s); // and on
+        QVERIFY(!doc.currentPatch()->channels.at(0).mute);
+
+        click(u"panelAssign"_s);
+        QVERIFY(m_session->panel().assigning());
+        click(u"panelSound1"_s);
+        QCOMPARE(m_session->panel().armed().value(u"index"_s).toInt(), 1);
+        QCOMPARE(doc.cursor().patch, 0); // assigning: a tap arms, it does not pick
+        QVERIFY(item(u"panelHint"_s)->isVisible());
+        click(u"panelAssign"_s); // Done
+        QVERIFY(!m_session->panel().assigning());
         settle();
     }
 

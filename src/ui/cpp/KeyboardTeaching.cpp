@@ -82,6 +82,14 @@ std::vector<TeachableControl> controlsInUse(const core::Setlist& setlist, const 
     for (std::size_t b = 0; b < kLoopButtons.size(); ++b) add(triggerOf(setlist.loopControls.buttons.at(b)), tr(kLoopButtons.at(b)));
     add(triggerOf(setlist.loopControls.selector), tr("Instrument knob"));
 
+    // The panel's pads: a sound picked, a part on or off, by its place.
+    for (std::size_t i = 0; i < setlist.panelControls.sounds.size(); ++i) {
+        add(triggerOf(setlist.panelControls.sounds.at(i)), tr("Panel: Sound %1").arg(i + 1));
+    }
+    for (std::size_t i = 0; i < setlist.panelControls.parts.size(); ++i) {
+        add(triggerOf(setlist.panelControls.parts.at(i)), tr("Panel: Part %1 on / off").arg(i + 1));
+    }
+
     // The knobs learned for plugins: one per controller, named by what it
     // turns and in how many songs.
     struct Knob

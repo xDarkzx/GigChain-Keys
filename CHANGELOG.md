@@ -10,6 +10,15 @@ Downloads for every version are on the
 
 ### Added
 
+- **The panel:** the song's sounds and the playing sound's parts as buttons
+  above the mixer, like a Yamaha's registration and part buttons or a Nord's
+  program and section buttons. **Assign**, tap a button, press a pad (or any
+  button, footswitch or spare key): that pad then picks the sound, or turns
+  the part on and off, in every song.
+- **Splits set by playing:** in **Keyboard Zone**, **Set by playing**, then
+  press the lowest and highest key or pad it should play. Pads can play a
+  drum kit or a sound of their own while the keys play the rest.
+
 - **Teach another keyboard:** playing a backup keyboard, or the one at the
   venue? **Settings > MIDI > Teach…** asks for each knob and button you
   learned, one at a time, by what it does; move the one on this keyboard

@@ -15,6 +15,7 @@ qt_add_qml_module(gigchain_ui
         cpp/Notifications.h cpp/Notifications.cpp
         cpp/SettingsController.h cpp/SettingsController.cpp
         cpp/KeyboardTeaching.h cpp/KeyboardTeaching.cpp
+        cpp/PanelController.h cpp/PanelController.cpp
         cpp/InputPermission.h cpp/InputPermission.cpp
         cpp/PracticeController.h cpp/PracticeController.cpp
         cpp/WarmupController.h cpp/WarmupController.cpp
@@ -107,8 +108,10 @@ qt_add_qml_module(gigchain_ui
         LooperCell.qml
         LoopsPill.qml
         LoopControlsDialog.qml
+        PanelBar.qml
     RESOURCES
         icons/adjustments-horizontal.svg
+        icons/layout-grid.svg
         icons/alert-octagon.svg
         icons/bell.svg
         icons/chevron-down.svg

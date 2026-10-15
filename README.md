@@ -13,6 +13,7 @@
   <img alt="Stage: alpha" src="https://img.shields.io/badge/stage-public%20alpha-e0a526">
   <a href="https://github.com/xDarkzx/GigChain-Keys/actions/workflows/ci.yml"><img alt="Build" src="https://github.com/xDarkzx/GigChain-Keys/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/license-GPL--3.0-blue"></a>
+  <a href="https://discord.gg/BGn8Ujh37m"><img alt="Discord" src="https://img.shields.io/discord/1530363483701510154?label=discord&logo=discord&color=5865F2"></a>
 </p>
 
 <p align="center">
@@ -21,6 +22,7 @@
   <a href="docs/help/README.md"><b>User guide</b></a> ·
   <a href="SUPPORT.md"><b>Get help</b></a> ·
   <a href="CHANGELOG.md"><b>What's new</b></a> ·
+  <a href="https://discord.gg/BGn8Ujh37m"><b>Discord</b></a> ·
   <a href="https://github.com/sponsors/xDarkzx"><b>♥ Sponsor</b></a>
 </p>
 
@@ -215,6 +217,18 @@ is also here on GitHub:
 - **Found a bug?** [Report it](https://github.com/xDarkzx/GigChain-Keys/issues/new/choose). The [support page](SUPPORT.md) says what to include (and where the log file is).
 - **Have an idea?** [Suggest a feature](https://github.com/xDarkzx/GigChain-Keys/issues/new/choose).
 - **A security problem?** Please report it privately: see [SECURITY.md](SECURITY.md).
+- **Want to talk to other players?** Join the [Discord](https://discord.gg/BGn8Ujh37m).
+
+### Community
+
+Come and join the Discord: ask how to set up a sound, share your rig and
+your setlists, tell us what's missing for your gigs, or just hang out with
+other keys players. If you know someone who'd use GigChain Keys, send them
+the link.
+
+<p>
+  <a href="https://discord.gg/BGn8Ujh37m"><img alt="Join the Discord" src="https://img.shields.io/badge/Join_the_Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
+</p>
 
 ### Support the project
 

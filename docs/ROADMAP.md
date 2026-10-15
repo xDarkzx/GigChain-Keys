@@ -48,7 +48,7 @@ Audited again against MainStage 3 on 2026-10-09; still to build, in this order:
 | External gear: Program Change and MIDI out per patch | **Done** | A song's External Gear: Program Change and bank to up to four synths when it comes up; any channel can play a hardware synth (its keys out on a MIDI output, with its audio input to hear it: MainStage's External Instrument). |
 | Aux sends (one shared reverb) | **Done** | One Aux bus (its effects kept with the rig, beside the master's) fed by each channel's Send knob, after its fader. More than one aux bus is not planned yet. |
 | Recording the performance | **Done** | ● Rec records the mix (after the limiter) to a WAV in the Music folder. Per-channel (multitrack) recording is not planned yet. |
-| A layout of your own (screen controls mirroring the hardware) | **Missing** | A fixed layout. |
+| A layout of your own (screen controls mirroring the hardware) | **Partly** | The panel: the song's sounds and the sound's parts as buttons, each assignable to a pad, button or key (as an arranger keyboard's registration and part buttons). Free-form screen knobs and faders are not yet. |
 | Another keyboard plays everything learned (Gig Performer's Rig Manager) | **Done** | Settings > MIDI > Teach…: each learned control is asked for by what it does; the keyboard is remembered. |
 
 **Still open:**

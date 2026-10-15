@@ -13,6 +13,7 @@ ApplicationWindow {
     required property PluginListModel pluginModel
     required property EngineStatus engineStatus
     required property LoopController loops
+    required property PanelController panel
     required property EditorService editorService
     required property EffectWindows effectWindows
     required property MasterBus masterBus
@@ -35,6 +36,10 @@ ApplicationWindow {
     property bool performMixerOpen: false
     property bool performKeyboardOpen: false
     readonly property bool mixerOpen: performMode ? performMixerOpen : editMixerOpen
+    // The panel bar (sounds, parts, ASSIGN), shown in both modes unless hidden.
+    property bool editPanelOpen: true
+    property bool performPanelOpen: true
+    readonly property bool panelOpen: performMode ? performPanelOpen : editPanelOpen
     // (Practice shows its own keyboard.)
     readonly property bool keyboardOpen: practiceMode ? false : performMode ? performKeyboardOpen : editKeyboardOpen
     property string pendingAction: ""
@@ -211,6 +216,7 @@ ApplicationWindow {
         objectName: "zoneDialog"
         doc: root.doc
         channel: root.selectedChannel
+        panel: root.panel
     }
     LoopControlsDialog {
         id: loopControlsDialog
@@ -308,6 +314,11 @@ ApplicationWindow {
             if (root.performMode) root.performMixerOpen = !root.performMixerOpen
             else root.editMixerOpen = !root.editMixerOpen
         }
+        panelOpen: root.panelOpen
+        onTogglePanel: {
+            if (root.performMode) root.performPanelOpen = !root.performPanelOpen
+            else root.editPanelOpen = !root.editPanelOpen
+        }
         onNewRequested: root.guarded("new")
         onOpenRequested: root.guarded("open")
         onOpenRecentRequested: (path) => root.openRecent(path)
@@ -359,7 +370,8 @@ ApplicationWindow {
                     MainArea {
                         id: mainArea
                         SplitView.fillHeight: true
-                        SplitView.minimumHeight: 200
+                        // (Small enough for the panel bar and whole strips below on a short screen.)
+                        SplitView.minimumHeight: 120
                         doc: root.doc
                         editorService: root.editorService
                         engineStatus: root.engineStatus
@@ -369,6 +381,14 @@ ApplicationWindow {
                         // Plugin windows sit above Qt content: hide them while a dialog is up.
                         suspended: settingsDialog.visible || unsavedDialog.visible || zoneDialog.visible || knobDialog.visible
                                    || loopControlsDialog.visible || aboutDialog.visible || freeInstrumentsDialog.visible
+                    }
+                    PanelBar {
+                        visible: root.panelOpen && root.doc.hasSetlist
+                        SplitView.preferredHeight: implicitHeight
+                        SplitView.minimumHeight: implicitHeight
+                        SplitView.maximumHeight: implicitHeight
+                        panel: root.panel
+                        doc: root.doc
                     }
                     Mixer {
                         visible: root.mixerOpen
@@ -406,6 +426,8 @@ ApplicationWindow {
                 masterBus: root.masterBus
                 auxBus: root.auxBus
                 loops: root.loops
+                panel: root.panel
+                panelOpen: root.panelOpen
             }
 
             PracticeView {

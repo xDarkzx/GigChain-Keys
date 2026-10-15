@@ -320,10 +320,22 @@ Result<void> validateLoopControls(const LoopControls& controls)
     return {};
 }
 
+Result<void> validatePanelControls(const PanelControls& controls)
+{
+    for (std::size_t i = 0; i < PanelControls::kSounds; ++i) {
+        if (auto r = checkLearned(controls.sounds.at(i), u"panelControls.sounds[%1]"_s.arg(i), false); !r) return r;
+    }
+    for (std::size_t i = 0; i < PanelControls::kParts; ++i) {
+        if (auto r = checkLearned(controls.parts.at(i), u"panelControls.parts[%1]"_s.arg(i), false); !r) return r;
+    }
+    return {};
+}
+
 Result<void> validate(const Setlist& setlist)
 {
     if (auto r = validateLoopControls(setlist.loopControls); !r) return r;
     if (auto r = validateMixerControls(setlist.mixerControls); !r) return r;
+    if (auto r = validatePanelControls(setlist.panelControls); !r) return r;
     if (setlist.songs.size() > static_cast<std::size_t>(limits::kMaxSongs)) {
         return fail(ErrorCode::LimitExceeded, u"A setlist can hold at most %1 songs"_s.arg(limits::kMaxSongs));
     }

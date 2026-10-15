@@ -25,6 +25,8 @@ ToolBar {
     signal practiceRequested()
     signal toggleSidePanel()
     signal toggleMixer()
+    signal togglePanel()
+    property bool panelOpen: true
     signal newRequested()
     signal openRequested()
     signal openRecentRequested(string path)
@@ -624,6 +626,15 @@ ToolBar {
             checked: bar.mixerOpen
             tip: qsTr("Show or hide the mixer")
             onClicked: bar.toggleMixer()
+        }
+        StageButton {
+            objectName: "panelButton"
+            iconSource: "icons/layout-grid.svg"
+            visible: !bar.practiceMode
+            checkable: true
+            checked: bar.panelOpen
+            tip: qsTr("Show or hide the panel: your sounds and parts as buttons, and your keyboard's pads for them")
+            onClicked: bar.togglePanel()
         }
         StageButton {
             objectName: "settingsButton"
