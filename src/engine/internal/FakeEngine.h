@@ -29,7 +29,7 @@ public:
     void setControlTriggers(const ControlTriggers&) override {}
     std::vector<ControlAction> takeControlActions() override { return {}; }
     int takeProgramChange() override { return -1; } // no MIDI input
-    MidiTrigger takeLearnedTrigger() override { return {}; }
+    MidiTrigger takeLearnedTrigger() override { return std::exchange(m_learned, {}); }
     uint32_t takeTransportRequests() override { return 0; }
     void panic() override {}
     [[nodiscard]] QStringList blockedPlugins() const override { return {}; }
@@ -271,9 +271,9 @@ public:
     void setLoopControls(const LoopTriggers&, const SelectorKnob&) override {}
     std::vector<LoopAction> takeLoopActions() override { return {}; }
     SelectorMove takeSelectorMove() override { return {}; }
-    // The demo has no MIDI input: no panel button is ever pressed.
-    void setPanelControls(const PanelTriggers&) override {}
-    std::vector<PanelPress> takePanelPresses() override { return {}; }
+    // A pad assigned to the panel, played (injectNote): a press of its button.
+    void setPanelControls(const PanelTriggers& triggers) override { m_panel = triggers; }
+    std::vector<PanelPress> takePanelPresses() override { return std::exchange(m_panelPresses, {}); }
     std::optional<std::array<int, 3>> takeControllerMove() override { return std::nullopt; }
     void setAppKnobs(const AppKnobs& knobs) override { m_appKnobs = knobs; }
     AppKnobValues takeAppKnobValues() override
@@ -285,6 +285,9 @@ public:
 
 private:
     std::optional<std::pair<int, int>> m_moved; // the last controller injected (channel 1-16, number), not yet taken
+    MidiTrigger m_learned;                      // the last pad, key or button pressed, not yet taken (Learn)
+    PanelTriggers m_panel;                      // the panel's pads
+    std::vector<PanelPress> m_panelPresses;     // pressed since last asked
     AppKnobs m_appKnobs{};
     AppKnobValues m_appKnobValues = [] {
         AppKnobValues none{};
