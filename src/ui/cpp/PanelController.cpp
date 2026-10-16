@@ -7,6 +7,7 @@
 #include <QLoggingCategory>
 
 #include <algorithm>
+#include <array>
 
 using namespace Qt::StringLiterals;
 
@@ -22,6 +23,22 @@ engine::MidiTrigger triggerOf(const core::LearnedControl& c)
     return engine::MidiTrigger{.kind = static_cast<engine::MidiTrigger::Kind>(c.kind),
                                .channel = static_cast<uint8_t>(c.channel - 1),
                                .number = static_cast<uint8_t>(c.number)};
+}
+
+// A control in a few letters, for under a panel button: "PAD C1" (a note
+// on channel 10, where pads usually are), "KEY C4", "CC 20", "PROG 5".
+QString shortName(const engine::MidiTrigger& t)
+{
+    static constexpr std::array<const char*, 12> kNotes{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    switch (t.kind) {
+    case engine::MidiTrigger::Note:
+        return u"%1 %2%3"_s.arg(t.channel == 9 ? u"PAD"_s : u"KEY"_s, QLatin1StringView(kNotes.at(t.number % 12)))
+            .arg((t.number / 12) - 1);
+    case engine::MidiTrigger::ControlChange: return u"CC %1"_s.arg(t.number);
+    case engine::MidiTrigger::ProgramChange: return u"PROG %1"_s.arg(t.number + 1);
+    case engine::MidiTrigger::None: break;
+    }
+    return {};
 }
 
 } // namespace
@@ -50,7 +67,8 @@ QVariantList PanelController::sounds() const
         list << QVariantMap{{u"name"_s, song.patches.at(i).name},
                             {u"active"_s, std::cmp_equal(i, at.patch)},
                             {u"assignable"_s, i < panel.sounds.size()},
-                            {u"assigned"_s, assigned.isSet() ? assigned.describe() : QString()}};
+                            {u"assigned"_s, assigned.isSet() ? assigned.describe() : QString()},
+                            {u"pad"_s, shortName(assigned)}};
     }
     return list;
 }
@@ -69,7 +87,8 @@ QVariantList PanelController::parts() const
                             {u"keyLow"_s, channel.keyLow},
                             {u"keyHigh"_s, channel.keyHigh},
                             {u"assignable"_s, i < panel.parts.size()},
-                            {u"assigned"_s, assigned.isSet() ? assigned.describe() : QString()}};
+                            {u"assigned"_s, assigned.isSet() ? assigned.describe() : QString()},
+                            {u"pad"_s, shortName(assigned)}};
     }
     return list;
 }
@@ -91,6 +110,51 @@ void PanelController::pickSound(int index)
 {
     const core::Cursor at = m_document.cursor();
     (void)m_document.selectPatch(at.song, index); // a failure is reported and logged
+}
+
+int PanelController::addSound(bool copyPlaying)
+{
+    const core::Cursor at = m_document.cursor();
+    const auto& songs = m_document.setlist().songs;
+    if (at.song < 0 || std::cmp_greater_equal(at.song, songs.size())) {
+        m_document.reportMessage(tr("Add a song first: its sounds go in it"), Notifications::Warning);
+        return -1;
+    }
+    if (copyPlaying && at.patch >= 0) {
+        if (!m_document.duplicatePatch(at.song, at.patch)) return -1; // reported
+        // The copy goes after the others, as a new sound does.
+        const auto last = static_cast<int>(m_document.setlist().songs.at(static_cast<std::size_t>(at.song)).patches.size()) - 1;
+        const int copy = m_document.cursor().patch;
+        if (copy != last && !m_document.movePatch(at.song, copy, last)) return -1;
+        (void)m_document.selectPatch(at.song, last);
+        return last;
+    }
+    if (!m_document.addPatch(at.song)) return -1; // reported
+    return m_document.cursor().patch;
+}
+
+bool PanelController::renameSound(int index, const QString& name)
+{
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty()) return false; // a blank name: the old one stays
+    return m_document.renamePatch(m_document.cursor().song, index, trimmed);
+}
+
+bool PanelController::duplicateSound(int index)
+{
+    return m_document.duplicatePatch(m_document.cursor().song, index);
+}
+
+bool PanelController::deleteSound(int index)
+{
+    const core::Cursor at = m_document.cursor();
+    const auto& songs = m_document.setlist().songs;
+    if (at.song < 0 || std::cmp_greater_equal(at.song, songs.size())) return false;
+    if (songs.at(static_cast<std::size_t>(at.song)).patches.size() <= 1) {
+        m_document.reportMessage(tr("A song keeps at least one sound"), Notifications::Warning);
+        return false;
+    }
+    return m_document.removePatch(at.song, index);
 }
 
 void PanelController::togglePart(int index)

@@ -264,24 +264,10 @@ class TestQmlSmoke : public QObject
         return visualChild(window()->contentItem(), name, false);
     }
 
-    // Scrolled into view first, as a player would (a long dialog scrolls).
-    static void scrollIntoView(QQuickItem* target)
-    {
-        for (QQuickItem* up = target->parentItem(); up != nullptr; up = up->parentItem()) {
-            if (!up->inherits("QQuickFlickable")) continue;
-            const double top = target->mapToItem(up, QPointF(0, 0)).y();
-            const double bottom = top + target->height();
-            const double contentY = up->property("contentY").toDouble();
-            if (bottom > up->height()) up->setProperty("contentY", contentY + (bottom - up->height()) + 8);
-            else if (top < 0) up->setProperty("contentY", contentY + top - 8);
-        }
-    }
-
     void click(const QString& name)
     {
         QQuickItem* target = item(name);
         QVERIFY2(target != nullptr, qPrintable(name));
-        scrollIntoView(target);
         QTest::mouseClick(window(), Qt::LeftButton, {},
                           target->mapToScene(QPointF(target->width() / 2, target->height() / 2)).toPoint());
         QTest::qWait(20);
@@ -544,7 +530,7 @@ private slots:
         settle();
         auto* name = root->findChild<QObject*>(u"performPatchName"_s);
         QVERIFY(name != nullptr);
-        QCOMPARE(name->property("text").toString(), u"Patch 1"_s);
+        QCOMPARE(name->property("text").toString(), u"Sound 1"_s);
         // The chart, big, on stage.
         QVERIFY(m_session->document().setSongChart(0, u"{comment: Verse}\n[C]Hello [G]world\n"_s));
         settle();
@@ -972,11 +958,17 @@ private slots:
         QVERIFY(doc.renamePatch(0, 1, u"Strings"_s));
         QVERIFY(doc.selectPatch(0, 0));
         QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        window()->resize(1440, 1040); // room for it, as a full-HD screen (a short window leaves it out)
         window()->requestActivate();
         QVERIFY(QTest::qWaitForWindowExposed(window()));
         settle();
         QVERIFY(item(u"panelBar"_s) != nullptr && item(u"panelBar"_s)->isVisible());
         QCOMPARE(m_session->panel().sounds().size(), 2);
+        core::PanelControls pads; // (for the screenshot: a pad under the first sound)
+        pads.sounds.at(0) = core::LearnedControl{.kind = 0x90, .channel = 10, .number = 36};
+        QVERIFY(doc.setPanelControls(pads));
+        settle();
+        shoot(u"panel-bar"_s);
         click(u"panelSound1"_s);
         QCOMPARE(doc.cursor().patch, 1);
         click(u"panelSound0"_s);
@@ -992,9 +984,25 @@ private slots:
         QCOMPARE(m_session->panel().armed().value(u"index"_s).toInt(), 1);
         QCOMPARE(doc.cursor().patch, 0); // assigning: a tap arms, it does not pick
         QVERIFY(item(u"panelHint"_s)->isVisible());
+        shoot(u"panel-bar-assigning"_s);
         click(u"panelAssign"_s); // Done
         QVERIFY(!m_session->panel().assigning());
         settle();
+
+        // + on SOUNDS: an empty sound after the others, its name typed at once.
+        click(u"panelAddSound"_s);
+        QTRY_VERIFY(item(u"panelAddSoundEmpty"_s) != nullptr && item(u"panelAddSoundEmpty"_s)->isVisible());
+        shoot(u"panel-add-menu"_s);
+        click(u"panelAddSoundEmpty"_s);
+        QTRY_COMPARE(m_session->panel().sounds().size(), 3);
+        QCOMPARE(doc.cursor().patch, 2);
+        QTRY_VERIFY(window()->activeFocusItem() != nullptr && window()->activeFocusItem()->inherits("QQuickTextInput"));
+        QTest::keyClick(window(), Qt::Key_A, Qt::ControlModifier);
+        for (const QChar c : u"Organ"_s) QTest::keyClick(window(), c.toLatin1()); // keyClicks is widgets-only
+        QTest::keyClick(window(), Qt::Key_Return);
+        QTRY_COMPARE(m_session->panel().sounds().at(2).toMap().value(u"name"_s).toString(), u"Organ"_s);
+        settle();
+        shoot(u"panel-bar-added"_s);
     }
 
     // "Learn this keyboard" in Settings > MIDI: the control to move is shown
@@ -1237,7 +1245,7 @@ private slots:
         const QString shown = title->property("text").toString();
         QVERIFY2(setlist->property("text").toString().contains(m_session->document().displayName()),
                  qPrintable(setlist->property("text").toString()));
-        QVERIFY2(shown.contains(u"Song 1"_s) && shown.contains(u"Patch 1"_s), qPrintable(shown));
+        QVERIFY2(shown.contains(u"Song 1"_s) && shown.contains(u"Sound 1"_s), qPrintable(shown));
         QVERIFY(m_session->document().renameSong(0, u"<b>A & B</b>"_s));
         QTRY_VERIFY2(title->property("text").toString().contains(u"&lt;b&gt;A &amp; B&lt;/b&gt;"_s),
                      qPrintable(title->property("text").toString())); // shown as typed, not as markup

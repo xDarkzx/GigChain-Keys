@@ -14,7 +14,9 @@ Downloads for every version are on the
   above the mixer, like a Yamaha's registration and part buttons or a Nord's
   program and section buttons. **Assign**, tap a button, press a pad (or any
   button, footswitch or spare key): that pad then picks the sound, or turns
-  the part on and off, in every song.
+  the part on and off, in every song. **+** adds a sound (a copy of the one
+  playing, or an empty one) or an instrument right there; double-click a
+  sound to rename it. New sounds are named *Sound 1, Sound 2…*.
 - **Splits set by playing:** in **Keyboard Zone**, **Set by playing**, then
   press the lowest and highest key or pad it should play. Pads can play a
   drum kit or a sound of their own while the keys play the rest.

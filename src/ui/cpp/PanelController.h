@@ -27,7 +27,8 @@ class PanelController : public QObject
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Created by the application")
-    // The song's sounds: [{name, active, assigned}] (assigned: what on the keyboard picks it, or "").
+    // The song's sounds: [{name, active, assigned, pad}] (assigned: what on the keyboard
+    // picks it, or ""; pad: the same in a few letters, "PAD C1").
     Q_PROPERTY(QVariantList sounds READ sounds NOTIFY panelChanged)
     // The playing sound's parts: [{name, on, zone, assigned}] (zone: its keys, "" for all).
     Q_PROPERTY(QVariantList parts READ parts NOTIFY panelChanged)
@@ -58,6 +59,14 @@ public:
     // A click on the bar: the sound picked, the part on or off.
     Q_INVOKABLE void pickSound(int index);
     Q_INVOKABLE void togglePart(int index);
+
+    // The song's sounds, from the panel. + adds one after the others,
+    // playing at once: a copy of the sound playing (its instruments, to
+    // change) or an empty one; returns its place (-1: refused, said).
+    Q_INVOKABLE int addSound(bool copyPlaying);
+    Q_INVOKABLE bool renameSound(int index, const QString& name); // a name, not blank
+    Q_INVOKABLE bool duplicateSound(int index);
+    Q_INVOKABLE bool deleteSound(int index); // never the song's last
     // ASSIGN: the button waiting for its pad (tapped again: not any more).
     Q_INVOKABLE void arm(int kind, int index);
     Q_INVOKABLE void clearAssignment(int kind, int index);

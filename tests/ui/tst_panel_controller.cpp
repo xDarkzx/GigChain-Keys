@@ -163,6 +163,31 @@ private slots:
         QCOMPARE(m_doc->currentPatch()->channels.at(0).keyLow, 0);
     }
 
+    // + on the panel: a copy of the sound playing (its instruments, to
+    // change) or an empty one, after the others, playing at once; named,
+    // renamed, duplicated and deleted there too (never the song's last).
+    void soundsAreAddedNamedAndDeletedOnThePanel()
+    {
+        QVERIFY(m_doc->selectPatch(0, 1)); // Piano + Strings
+        QCOMPARE(m_panel->addSound(true), 3);
+        QCOMPARE(m_doc->cursor().patch, 3);
+        QCOMPARE(m_doc->currentPatch()->channels.size(), std::size_t{2}); // the piano and strings, to change
+        QCOMPARE(m_panel->addSound(false), 4);
+        QCOMPARE(m_doc->currentPatch()->channels.size(), std::size_t{0});
+        QCOMPARE(m_panel->sounds().at(4).toMap().value(u"name"_s).toString(), u"Sound 5"_s);
+
+        QVERIFY(m_panel->renameSound(4, u"Organ Swell"_s));
+        QCOMPARE(m_panel->sounds().at(4).toMap().value(u"name"_s).toString(), u"Organ Swell"_s);
+        QVERIFY(!m_panel->renameSound(4, u"  "_s)); // a name, not nothing
+
+        QVERIFY(m_panel->duplicateSound(0));
+        QCOMPARE(m_panel->sounds().size(), 6);
+        QVERIFY(m_panel->deleteSound(1));
+        QCOMPARE(m_panel->sounds().size(), 5);
+        while (m_panel->sounds().size() > 1) QVERIFY(m_panel->deleteSound(0));
+        QVERIFY(!m_panel->deleteSound(0)); // the song keeps one sound
+    }
+
 private:
     std::unique_ptr<QTemporaryDir> m_dir;
     std::unique_ptr<QSettings> m_settings;

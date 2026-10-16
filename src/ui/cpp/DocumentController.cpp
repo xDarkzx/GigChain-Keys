@@ -189,7 +189,7 @@ bool DocumentController::addPatch(int song)
     const bool validSong = song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size();
     const auto count = validSong ? m_setlist.songs.at(static_cast<std::size_t>(song)).patches.size() : 0;
     const auto current = currentPatchId();
-    const auto index = core::addPatch(m_setlist, song, tr("Patch %1").arg(count + 1));
+    const auto index = core::addPatch(m_setlist, song, tr("Sound %1").arg(count + 1));
     if (!index) return report(index.error());
     commitStructure(core::Cursor{song, *index}, current);
     return true;

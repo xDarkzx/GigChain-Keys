@@ -36,9 +36,10 @@ ApplicationWindow {
     property bool performMixerOpen: false
     property bool performKeyboardOpen: false
     readonly property bool mixerOpen: performMode ? performMixerOpen : editMixerOpen
-    // The panel bar (sounds, parts, ASSIGN), shown in both modes unless hidden.
+    // The panel bar (sounds, parts, ASSIGN): shown in Edit; in Perform the
+    // chart comes first, so it is hidden until shown (its pads work either way).
     property bool editPanelOpen: true
-    property bool performPanelOpen: true
+    property bool performPanelOpen: false
     readonly property bool panelOpen: performMode ? performPanelOpen : editPanelOpen
     // (Practice shows its own keyboard.)
     readonly property bool keyboardOpen: practiceMode ? false : performMode ? performKeyboardOpen : editKeyboardOpen
@@ -383,12 +384,15 @@ ApplicationWindow {
                                    || loopControlsDialog.visible || aboutDialog.visible || freeInstrumentsDialog.visible
                     }
                     PanelBar {
-                        visible: root.panelOpen && root.doc.hasSetlist
+                        id: editPanelBar
+                        // (On a short window the chart and whole strips come first: it steps aside; its pads still work.)
+                        visible: root.panelOpen && root.doc.hasSetlist && editSplit.height >= 820 // (a full-HD screen and up)
                         SplitView.preferredHeight: implicitHeight
                         SplitView.minimumHeight: implicitHeight
                         SplitView.maximumHeight: implicitHeight
                         panel: root.panel
                         doc: root.doc
+                        pluginModel: root.pluginModel
                     }
                     Mixer {
                         visible: root.mixerOpen

@@ -459,6 +459,7 @@ Rectangle {
             Layout.fillWidth: true
             panel: perform.panel
             doc: perform.doc
+            pluginModel: perform.pluginModel
         }
 
         Mixer {

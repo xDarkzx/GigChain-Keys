@@ -28,10 +28,18 @@ or Nord (show or hide it with the **grid** button in the top bar):
 
 - **SOUNDS:** the song's sounds as buttons, like registration memory or
   program buttons. The one playing is lit; click another to switch. Notes you
-  are holding and reverbs ring on.
+  are holding and reverbs ring on. **+** adds a sound after the others: a
+  **copy** of the one playing (same instruments, ready to change) or an
+  **empty** one; type its name straight away. Double-click a sound to rename
+  it; right-click to rename, duplicate or delete it.
 - **PARTS:** the instruments in the sound playing, like *Right 1 / Right 2 /
   Left* or a Nord's section buttons. Lit means on: click to take the strings
   out, again to bring them back. A split part shows its keys (*Bass C1–B2*).
+  **+** adds an instrument to the sound.
+
+The panel shows in Edit, and in Perform when you show it (the grid button in
+the top bar); on a small screen it steps aside so the chart and mixer fit.
+Your pads work either way.
 
 **Your pads (or any button, footswitch or spare key) on the panel:** click
 **Assign**, tap a sound or a part, then press the pad on your keyboard that

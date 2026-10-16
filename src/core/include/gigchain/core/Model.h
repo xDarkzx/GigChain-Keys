@@ -304,7 +304,7 @@ struct Setlist
     friend bool operator==(const Setlist&, const Setlist&) = default;
 };
 
-// New song with a fresh id and a single patch named "Patch 1".
+// New song with a fresh id and a single patch (a sound) named "Sound 1".
 Song makeSong(const QString& name);
 // New patch with a fresh id and no channels.
 Patch makePatch(const QString& name);
