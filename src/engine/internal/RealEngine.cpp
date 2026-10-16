@@ -156,6 +156,8 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
         }
         qCInfo(lcEngine).noquote() << "Plugins that come with the app:" << added << "from" << options.bundledPluginFolder;
     }
+    // The app's own instruments (built in, nothing to scan).
+    std::ranges::move(PluginNode::builtins(), std::back_inserter(engine->m_plugins));
     return engine;
 }
 
@@ -326,6 +328,13 @@ bool RealEngine::isInstalledPlugin(const QString& pluginId) const
 
 core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QString& name) const
 {
+    // The app's own instruments run no outside code: always there.
+    if (PluginNode::isBuiltin(pluginId)) {
+        if (std::ranges::any_of(PluginNode::builtins(), [&](const PluginInfo& p) { return p.id == pluginId; })) return {};
+        const QString problem = u"%1 (%2) is not one of this version's own instruments: not loaded"_s.arg(name, pluginId);
+        qCWarning(lcEngine).noquote() << problem;
+        return core::fail(core::ErrorCode::InvalidData, problem);
+    }
     // A VST2 plugin is a plain library, and loading one runs its code before
     // anything can check it: only one the (sandboxed) scan found and read as
     // a VST2 plugin, never just any file a setlist names in a plugin folder.

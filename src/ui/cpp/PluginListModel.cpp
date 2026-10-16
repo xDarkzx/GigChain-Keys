@@ -7,6 +7,7 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QLocale>
 #include <QLoggingCategory>
@@ -82,7 +83,9 @@ QVariant PluginListModel::data(const QModelIndex& index, int role) const
     case EmailRole: return plugin.email;
     case SdkVersionRole: return plugin.sdkVersion;
     case TagsRole: return plugin.subCategories.split(u'|', Qt::SkipEmptyParts);
-    case LocationRole: return QDir::toNativeSeparators(plugin.id);
+    case LocationRole:
+        return plugin.format == engine::PluginFormat::Builtin ? tr("Built into %1").arg(QCoreApplication::applicationName())
+                                                               : QDir::toNativeSeparators(plugin.id);
     case SizeRole: {
         const QFileInfo file(plugin.id);
         return file.isFile() ? QLocale::system().formattedDataSize(file.size()) : QString();

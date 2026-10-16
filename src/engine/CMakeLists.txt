@@ -52,6 +52,14 @@ add_library(gigchain_engine STATIC
     internal/PluginLoadGuard.cpp
     internal/ComponentHandler.h
     internal/SafetyLimiter.h
+    internal/SawStackDsp.h
+    internal/SawStackFx.h
+    internal/SawStackTypes.h
+    internal/SawStackTypes.cpp
+    internal/SawStack.h
+    internal/SawStack.cpp
+    internal/SawStackNode.h
+    internal/SawStackNode.cpp
     internal/RealEngine.h
     internal/RealEngine.cpp
     include/gigchain/engine/RealEngineFactory.h

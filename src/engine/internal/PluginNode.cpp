@@ -1,6 +1,7 @@
 #include "PluginNode.h"
 
 #include "EngineLog.h"
+#include "SawStackNode.h"
 #include "Vst2Node.h"
 #include "Vst3Node.h"
 
@@ -12,11 +13,29 @@ namespace gigchain::engine {
 
 bool PluginNode::isVst2(const QString& pluginId)
 {
-    return !pluginId.endsWith(u".vst3"_s, Qt::CaseInsensitive);
+    return !isBuiltin(pluginId) && !pluginId.endsWith(u".vst3"_s, Qt::CaseInsensitive);
+}
+
+bool PluginNode::isBuiltin(const QString& pluginId)
+{
+    return pluginId.startsWith(u"builtin:"_s);
+}
+
+std::vector<PluginInfo> PluginNode::builtins()
+{
+    return {SawStackNode::info()};
 }
 
 core::Result<std::shared_ptr<PluginNode>> PluginNode::load(const QString& pluginId, double sampleRate, int maxBlock)
 {
+    if (isBuiltin(pluginId)) {
+        if (pluginId == QLatin1StringView(SawStackNode::kPluginId)) {
+            return std::shared_ptr<PluginNode>(SawStackNode::create(sampleRate, maxBlock));
+        }
+        const QString why = u"%1 is not one of the app's own instruments (a newer version's, maybe)"_s.arg(pluginId);
+        qCWarning(lcEngine).noquote() << why;
+        return core::fail(core::ErrorCode::InvalidData, why);
+    }
     // Only this system's plugin files: anything else is refused, never loaded.
     if (isVst2(pluginId) && !platform::isVst2PluginFile(pluginId)) {
         const QString why = u"%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)"_s.arg(pluginId);

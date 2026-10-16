@@ -24,6 +24,7 @@ enum class PluginFormat
 {
     Vst3,
     Vst2,
+    Builtin, // the app's own (Saw Stack Pro): its id names no file
 };
 
 struct PluginInfo

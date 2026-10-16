@@ -3,6 +3,7 @@
 #include "INode.h"
 
 #include "gigchain/core/Error.h"
+#include "gigchain/engine/EngineTypes.h"
 #include "gigchain/engine/IPluginEditor.h"
 
 #include <QByteArray>
@@ -28,8 +29,12 @@ public:
     // Main thread. The plugin's own editor, or nullptr when it has none. The
     // editor keeps `node` alive until it is destroyed.
     static core::Result<std::unique_ptr<IPluginEditor>> createEditor(const std::shared_ptr<PluginNode>& node);
-    // Whether `pluginId` is a VST2 plugin (else VST3).
+    // Whether `pluginId` is a VST2 plugin (else VST3 or built in).
     [[nodiscard]] static bool isVst2(const QString& pluginId);
+    // Whether `pluginId` is one of the app's own instruments ("builtin:...").
+    [[nodiscard]] static bool isBuiltin(const QString& pluginId);
+    // The app's own instruments, as the instrument list shows them.
+    [[nodiscard]] static std::vector<PluginInfo> builtins();
 
     // Main thread: the parameters a knob can be mapped to, as {id, name}.
     struct Parameter
