@@ -166,6 +166,8 @@ public:
     [[nodiscard]] BackingTrackState backingTrack() const override;
     [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId& id, int target) const override;
     std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId& id, int target) override;
+    [[nodiscard]] double pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const override;
+    core::Result<void> setPluginParameter(const core::ChannelId& id, int target, uint32_t parameter, double value) override;
     std::optional<std::pair<int, int>> takeMovedController() override;
     [[nodiscard]] std::vector<AudioInputDevice> audioInputDevices() const override;
     [[nodiscard]] int audioInputChannels() const override { return m_audio.inputChannels(); }

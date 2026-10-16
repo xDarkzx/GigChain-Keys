@@ -4,6 +4,10 @@
 
 #include "gigchain/engine/IEngine.h"
 
+#include <QVariantMap>
+
+using namespace Qt::StringLiterals;
+
 namespace gigchain::ui {
 
 EditorService::EditorService(engine::IEngine& engine, DocumentController& document, QObject* parent)
@@ -45,6 +49,55 @@ QString EditorService::emptyReason() const
     const core::Channel& channel = patch->channels.at(static_cast<std::size_t>(index));
     if (!channel.instrument) return tr("This channel has no instrument");
     return tr("%1 has no editor to show").arg(channel.instrument->displayName);
+}
+
+const core::Channel* EditorService::builtinChannel() const
+{
+    const core::Patch* patch = m_document.currentPatch();
+    const int index = m_document.selectedChannel();
+    if (patch == nullptr || index < 0 || static_cast<std::size_t>(index) >= patch->channels.size()) return nullptr;
+    const core::Channel& channel = patch->channels.at(static_cast<std::size_t>(index));
+    const bool builtin = channel.instrument && channel.instrument->pluginId.startsWith(u"builtin:");
+    return builtin ? &channel : nullptr;
+}
+
+bool EditorService::builtinSelected() const
+{
+    return builtinChannel() != nullptr;
+}
+
+QString EditorService::builtinName() const
+{
+    const core::Channel* channel = builtinChannel();
+    return channel != nullptr && channel->instrument ? channel->instrument->displayName : QString();
+}
+
+QVariantList EditorService::builtinParameters() const
+{
+    QVariantList list;
+    const core::Channel* channel = builtinChannel();
+    if (channel == nullptr) return list;
+    for (const engine::PluginParameter& p : m_engine.pluginParameters(channel->id, -1)) {
+        list.append(QVariantMap{{u"id"_s, static_cast<int>(p.id)}, {u"name"_s, p.name}, {u"choices"_s, p.choices}});
+    }
+    return list;
+}
+
+double EditorService::builtinValue(int parameter) const
+{
+    const core::Channel* channel = builtinChannel();
+    if (channel == nullptr || parameter < 0) return -1.0;
+    return m_engine.pluginParameterValue(channel->id, -1, static_cast<uint32_t>(parameter));
+}
+
+void EditorService::setBuiltinValue(int parameter, double value)
+{
+    const core::Channel* channel = builtinChannel();
+    if (channel == nullptr || parameter < 0) return;
+    // (The engine logs the cause.)
+    if (auto set = m_engine.setPluginParameter(channel->id, -1, static_cast<uint32_t>(parameter), value); !set) {
+        m_document.reportMessage(set.error().message);
+    }
 }
 
 } // namespace gigchain::ui

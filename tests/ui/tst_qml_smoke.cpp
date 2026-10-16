@@ -1618,6 +1618,36 @@ private slots:
     void thereIsNoRedBar() { QVERIFY(window()->findChild<QQuickItem*>(u"messageBanner"_s) == nullptr); }
 
     // Dropping an instrument on the mixer loads it and shows it.
+    // Saw Stack Pro (the app's own instrument) shows its window in the main
+    // area: its types as keys, the one playing lit and on the display, and
+    // its five knobs; a key picks that type.
+    void sawStackProShowsItsTypesAndKnobs()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s));
+        doc.setSelectedChannel(0);
+        auto* tabs = window()->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(tabs != nullptr);
+        tabs->setProperty("currentIndex", 1); // the Instrument tab
+        settle();
+        QTRY_VERIFY(item(u"sawStackPanel"_s) != nullptr && item(u"sawStackPanel"_s)->isVisible());
+        QQuickItem* display = item(u"sawStackTypeShown"_s);
+        QVERIFY(display != nullptr);
+        QCOMPARE(display->property("text").toString(), u"Supersaw Chords"_s);
+        for (const char* knob : {"Cutoff", "Resonance", "Attack", "Release", "Spread"}) {
+            QVERIFY2(item(u"sawStackKnob_%1"_s.arg(QLatin1StringView(knob))) != nullptr, knob);
+        }
+        shoot(u"saw-stack-pro"_s);
+        // The types are under the knobs: scrolled to in a short window.
+        QQuickItem* scroll = item(u"sawStackScroll"_s);
+        QVERIFY(scroll != nullptr);
+        scroll->setProperty("contentY", std::max(0.0, scroll->property("contentHeight").toDouble() - scroll->height()));
+        settle();
+        click(u"sawStackType_2"_s);
+        QTRY_COMPARE(display->property("text").toString(), u"Future Bass Chords"_s);
+        settle();
+    }
+
     void droppingAnInstrumentOnTheMixerShowsTheInstrumentTab()
     {
         auto* tabs = window()->findChild<QObject*>(u"mainTabs"_s);

@@ -41,8 +41,16 @@ public:
     {
         uint32_t id = 0;
         QString name;
+        QStringList choices; // a stepped parameter's settings by name (PluginParameter::choices)
     };
     [[nodiscard]] virtual std::vector<Parameter> parameters() const = 0;
+    // Main thread: sets a parameter (0-1) as the plugin's own window would:
+    // for the app's own instruments, whose window the app draws. A plugin
+    // with a window of its own refuses (it is changed there).
+    virtual core::Result<void> setParameter(uint32_t /*id*/, double /*value*/)
+    {
+        return core::fail(core::ErrorCode::InvalidData, QStringLiteral("%1 is set in its own window").arg(name()));
+    }
     // Main thread: the parameter a MIDI controller on `midiChannel` (0-15)
     // moves, as the plugin assigned it; nothing when it does not say.
     [[nodiscard]] virtual std::optional<uint32_t> controllerParameter(int /*midiChannel*/, int /*controller*/) const

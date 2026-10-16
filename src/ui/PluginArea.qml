@@ -31,7 +31,7 @@ Rectangle {
             objectName: "pluginLearnBar"
             Layout.fillWidth: true
             Layout.margins: Theme.spacing
-            visible: editorHost.hasEditor
+            visible: editorHost.hasEditor || area.editorService.builtinSelected
             spacing: Theme.spacing
             StageButton {
                 objectName: "pluginMidiLearn"
@@ -71,10 +71,17 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
+            // The app's own instrument: its window is the app's.
+            SawStackPanel {
+                anchors.fill: parent
+                visible: area.editorService.builtinSelected
+                service: area.editorService
+            }
+
             // Shown only where no plugin window covers the area.
             Label {
                 anchors.centerIn: parent
-                visible: !editorHost.hasEditor
+                visible: !editorHost.hasEditor && !area.editorService.builtinSelected
                 text: editorHost.emptyReason
                 color: Theme.textDim
                 font.pixelSize: Theme.headerFontSize

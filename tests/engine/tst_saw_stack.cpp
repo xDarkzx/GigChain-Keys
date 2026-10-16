@@ -317,9 +317,14 @@ private slots:
         QCOMPARE(names, (QStringList{u"Type"_s, u"Cutoff"_s, u"Resonance"_s, u"Attack"_s, u"Release"_s, u"Spread"_s}));
         const uint32_t type = paramId(Macro::Type);
         const uint32_t cutoff = paramId(Macro::Cutoff);
-        node->setParameter(type, typeValue(typeNamed("Trance Lead")));
-        node->setParameter(cutoff, 0.8);
+        QVERIFY(node->setParameter(type, typeValue(typeNamed("Trance Lead"))).has_value());
+        QVERIFY(node->setParameter(cutoff, 0.8).has_value());
         QVERIFY(node->takeEdited());
+        QCOMPARE(node->takeTouchedParameter(), std::optional<uint32_t>(cutoff)); // for MIDI Learn
+        QCOMPARE(node->takeTouchedParameter(), std::nullopt);
+        // The type knob names its settings.
+        QCOMPARE(node->parameters().front().choices.size(), static_cast<qsizetype>(stackTypes().size()));
+        QVERIFY(!node->setParameter(9999, 0.5).has_value());
         const auto saved = node->saveEncodedState();
         QVERIFY(saved.has_value());
 

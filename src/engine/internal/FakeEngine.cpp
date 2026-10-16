@@ -3,6 +3,7 @@
 #include "FakeEngine.h"
 
 #include "EngineLog.h"
+#include "SawStackNode.h"
 
 #include "gigchain/core/Branding.h"
 
@@ -71,8 +72,33 @@ void FakeEngine::applyPatch(const core::SongId&, const core::Patch& patch)
     m_channels.clear();
     m_channels.reserve(patch.channels.size());
     std::ranges::transform(patch.channels, std::back_inserter(m_channels), [](const core::Channel& channel) {
-        return ChannelState{.id = channel.id, .volumeDb = channel.volumeDb, .mute = channel.mute, .solo = channel.solo};
+        return ChannelState{.id = channel.id,
+                            .volumeDb = channel.volumeDb,
+                            .mute = channel.mute,
+                            .solo = channel.solo,
+                            .sawStack = channel.instrument && channel.instrument->pluginId == QLatin1StringView(SawStackNode::kPluginId)};
     });
+}
+
+std::vector<PluginParameter> FakeEngine::pluginParameters(const core::ChannelId& id, int target) const
+{
+    const auto it = std::ranges::find_if(m_channels, [&id](const ChannelState& state) { return state.id == id; });
+    if (target < 0 && it != m_channels.end() && it->sawStack) {
+        std::vector<PluginParameter> list;
+        std::ranges::transform(SawStackNode().parameters(), std::back_inserter(list), [](const PluginNode::Parameter& p) {
+            return PluginParameter{.id = p.id, .name = p.name, .choices = p.choices};
+        });
+        return list;
+    }
+    return {{.id = 1, .name = u"Cutoff"_s, .choices = {}}, {.id = 2, .name = u"Resonance"_s, .choices = {}}};
+}
+
+double FakeEngine::pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const
+{
+    if (const auto set = m_parameterValues.find(parameter); set != m_parameterValues.end()) return set->second;
+    const auto it = std::ranges::find_if(m_channels, [&id](const ChannelState& state) { return state.id == id; });
+    if (target < 0 && it != m_channels.end() && it->sawStack) return SawStackNode().parameterValue(parameter); // its defaults
+    return 0.5;
 }
 
 LevelReading FakeEngine::masterLevel()

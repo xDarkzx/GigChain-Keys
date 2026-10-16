@@ -7,12 +7,16 @@
 #include <QSize>
 #include <QString>
 #include <QTimer>
+#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
 #include <memory>
 
 namespace gigchain::engine {
 class IEngine;
+}
+namespace gigchain::core {
+struct Channel;
 }
 
 namespace gigchain::ui {
@@ -26,9 +30,23 @@ class EditorService : public QObject
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Created by the application")
+    // The selected channel plays one of the app's own instruments (Saw Stack
+    // Pro): the app draws its window (builtinParameters and the like).
+    Q_PROPERTY(bool builtinSelected READ builtinSelected NOTIFY targetChanged)
+    Q_PROPERTY(QString builtinName READ builtinName NOTIFY targetChanged)
 
 public:
     EditorService(engine::IEngine& engine, DocumentController& document, QObject* parent = nullptr);
+
+    [[nodiscard]] bool builtinSelected() const;
+    [[nodiscard]] QString builtinName() const;
+    // The selected built-in instrument's parameters: [{id, name, choices}]
+    // (choices: a stepped one's settings by name); empty when none is selected or loaded.
+    Q_INVOKABLE [[nodiscard]] QVariantList builtinParameters() const;
+    // A parameter's value now (0-1), below 0 when not known.
+    Q_INVOKABLE [[nodiscard]] double builtinValue(int parameter) const;
+    // Sets it as the instrument's window does. Problems are shown and logged.
+    Q_INVOKABLE void setBuiltinValue(int parameter, double value);
 
     // nullptr when there is nothing to show. Failures are shown to the user
     // (banner) and logged, and returned.
@@ -44,6 +62,9 @@ signals:
     void targetChanged();
 
 private:
+    // The selected channel, when its instrument is one of the app's own.
+    [[nodiscard]] const core::Channel* builtinChannel() const;
+
     engine::IEngine& m_engine;
     DocumentController& m_document;
     QTimer m_coalesce; // merges the several signals one edit emits

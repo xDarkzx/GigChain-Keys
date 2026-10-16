@@ -29,7 +29,8 @@ public:
     [[nodiscard]] bool holdsNotes() const noexcept override;                                         // audio thread
 
     [[nodiscard]] std::vector<Parameter> parameters() const override;
-    [[nodiscard]] std::optional<uint32_t> takeTouchedParameter() override { return std::nullopt; }
+    // The knob last turned in its window (the app's), for MIDI Learn.
+    [[nodiscard]] std::optional<uint32_t> takeTouchedParameter() override;
     Problems takeProblems() override { return {}; }
     void releaseAllNotes() override { m_synth.requestReleaseAll(); }
     // Every parameter by its name (a later version adding parameters still
@@ -42,8 +43,9 @@ public:
     [[nodiscard]] QString name() const override;
     [[nodiscard]] bool isInstrument() const override { return true; }
 
-    // Main thread: sets a parameter as its own window would (counts as an edit).
-    void setParameter(uint32_t id, double value);
+    // Main thread: sets a parameter as its own window does (counts as an
+    // edit, and as the knob touched for MIDI Learn).
+    core::Result<void> setParameter(uint32_t id, double value) override;
 
 protected:
     // (Its own window comes with the next step; until then it has none.)
@@ -53,6 +55,7 @@ private:
     sawstack::Synth m_synth;
     std::atomic<bool> m_holdsNotes{false};
     std::atomic<bool> m_edited{false};
+    std::optional<uint32_t> m_touched; // main thread
 };
 
 } // namespace gigchain::engine

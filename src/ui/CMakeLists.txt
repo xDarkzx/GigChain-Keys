@@ -109,6 +109,7 @@ qt_add_qml_module(gigchain_ui
         LoopsPill.qml
         LoopControlsDialog.qml
         PanelBar.qml
+        SawStackPanel.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/layout-grid.svg

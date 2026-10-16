@@ -4,6 +4,7 @@
 #include "gigchain/engine/MidiControl.h"
 
 #include <QString>
+#include <QStringList>
 
 #include <array>
 #include <cstdint>
@@ -101,6 +102,9 @@ struct PluginParameter
 {
     uint32_t id = 0;
     QString name;
+    // A stepped parameter's settings, by name, evenly over 0-1 (Saw Stack
+    // Pro's types); empty for a continuous one.
+    QStringList choices;
 
     bool operator==(const PluginParameter&) const = default;
 };

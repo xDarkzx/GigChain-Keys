@@ -8,6 +8,19 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **Saw Stack Pro:** a built-in saw-stack synth, so the big layered EDM saws
+  need no paid plugin. Pick a type: *Supersaw Lead, Supersaw Chords, Future
+  Bass Chords, Melodic Dubstep Lead, Trance Lead, Anthem Lead, Big Room Lead,
+  Supersaw Pad, Supersaw Pluck* or *Reese Bass*. Then shape it with five knobs:
+  **Cutoff, Resonance, Attack, Release** and **Spread**. Each knob can be
+  learned to a knob on your keyboard. Behind each type are up to eight layers
+  (sub, low saw, main, wide, octave up, body, pluck and air noise), each with
+  up to 16 detuned saws, plus the type's own drive, glue compression and
+  chorus. Add reverb or delay in the channel's effects. It is under
+  **Instruments**, by *GigChain*.
+
 ## [0.5.0] - 2026-10-16 (alpha)
 
 ### Added

@@ -1795,8 +1795,25 @@ std::vector<PluginParameter> RealEngine::pluginParameters(const core::ChannelId&
     const auto node = currentNode(id, target);
     if (!node) return list;
     std::ranges::transform(node->parameters(), std::back_inserter(list),
-                           [](const PluginNode::Parameter& p) { return PluginParameter{.id = p.id, .name = p.name}; });
+                           [](const PluginNode::Parameter& p) { return PluginParameter{.id = p.id, .name = p.name, .choices = p.choices}; });
     return list;
+}
+
+double RealEngine::pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto node = currentNode(id, target);
+    return node ? node->parameterValue(parameter) : -1.0;
+}
+
+core::Result<void> RealEngine::setPluginParameter(const core::ChannelId& id, int target, uint32_t parameter, double value)
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto node = currentNode(id, target);
+    if (!node) return core::fail(core::ErrorCode::InvalidData, u"That plugin is not loaded"_s);
+    auto set = node->setParameter(parameter, value);
+    if (!set) qCWarning(lcEngine).noquote() << "Setting a parameter:" << set.error().message;
+    return set;
 }
 
 std::optional<PluginParameter> RealEngine::takeTouchedParameter(const core::ChannelId& id, int target)

@@ -284,6 +284,27 @@ private slots:
         QCOMPARE(service.emptyReason(), u"Select a channel in the mixer"_s);
     }
 
+    void theAppsOwnInstrumentIsShownByTheApp()
+    {
+        // Saw Stack Pro has no window of its own: the main area draws its
+        // knobs, which reach the engine; a plugin with a window is not one.
+        EditorService service(*m_engine, *m_doc);
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->addChannel(u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s));
+        m_doc->setSelectedChannel(0);
+        QVERIFY(!service.builtinSelected());
+        QVERIFY(service.builtinParameters().isEmpty());
+        m_doc->setSelectedChannel(1);
+        QVERIFY(service.builtinSelected());
+        QCOMPARE(service.builtinName(), u"Saw Stack Pro"_s);
+        const QVariantList parameters = service.builtinParameters();
+        QCOMPARE(parameters.size(), static_cast<qsizetype>(m_engine->parameters.size()));
+        QCOMPARE(parameters.front().toMap().value(u"name"_s).toString(), u"Cutoff"_s);
+        service.setBuiltinValue(7, 0.25);
+        QCOMPARE(m_engine->parameterValues.at(7), 0.25);
+        QCOMPARE(service.builtinValue(7), 0.25);
+    }
+
     void mixerMovesDoNotRebuildTheEditor()
     {
         // Volume, pan, mute and solo never change which plugin is shown; the

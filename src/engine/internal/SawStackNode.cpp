@@ -71,17 +71,30 @@ std::vector<PluginNode::Parameter> SawStackNode::parameters() const
     list.reserve(sawstack::kMacros);
     for (int m = 0; m < sawstack::kMacros; ++m) {
         const uint32_t id = sawstack::paramId(static_cast<sawstack::Macro>(m));
-        list.push_back({.id = id, .name = sawstack::paramName(id)});
+        list.push_back({.id = id, .name = sawstack::paramName(id), .choices = {}});
     }
+    QStringList types;
+    for (const sawstack::StackType& t : sawstack::stackTypes()) types << QString::fromLatin1(t.name);
+    list.front().choices = types; // the type
     return list;
 }
 
-void SawStackNode::setParameter(uint32_t id, double value)
+std::optional<uint32_t> SawStackNode::takeTouchedParameter()
 {
     GC_ONLY_MAIN_THREAD();
-    if (id >= static_cast<uint32_t>(sawstack::kParamCount)) return;
+    return std::exchange(m_touched, std::nullopt);
+}
+
+core::Result<void> SawStackNode::setParameter(uint32_t id, double value)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (id >= static_cast<uint32_t>(sawstack::kParamCount) || !std::isfinite(value)) {
+        return core::fail(core::ErrorCode::InvalidData, u"Saw Stack Pro has no parameter %1 (or %2 is not a value)"_s.arg(id).arg(value));
+    }
     m_synth.setParam(id, value);
     m_edited.store(true, std::memory_order_relaxed);
+    m_touched = id;
+    return {};
 }
 
 core::Result<QByteArray> SawStackNode::saveEncodedState() const

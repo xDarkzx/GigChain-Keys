@@ -306,6 +306,12 @@ public:
     // For "learn": the parameter last moved in that plugin's own window
     // since the previous call, or nothing.
     virtual std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId& id, int target) = 0;
+    // The app's own instruments (Saw Stack Pro), whose window the app draws:
+    // a parameter's value now (0-1; below 0 when not known), and setting it
+    // as that window does. Other plugins refuse (they are set in their own
+    // window), with the reason.
+    [[nodiscard]] virtual double pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const = 0;
+    virtual core::Result<void> setPluginParameter(const core::ChannelId& id, int target, uint32_t parameter, double value) = 0;
     // For "learn": the last keyboard knob, fader or pedal moved (any value)
     // since the previous call, as {MIDI channel 1-16, controller 0-127}.
     virtual std::optional<std::pair<int, int>> takeMovedController() = 0;
