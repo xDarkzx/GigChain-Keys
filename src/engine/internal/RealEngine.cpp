@@ -1030,6 +1030,9 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
     std::array<uint32_t, kAppKnobCount> appKnobs{};
     std::ranges::transform(m_appKnobs, appKnobs.begin(), [](const auto& packed) { return packed.load(std::memory_order_relaxed); });
     const auto selectorMode = static_cast<SelectorKnob::Mode>(m_selectorMode.load(std::memory_order_relaxed));
+    std::array<MidiTrigger, kPanelSounds + kPanelParts> panel;
+    std::ranges::transform(m_panelTriggers, panel.begin(),
+                           [](const auto& packed) { return MidiTrigger::unpack(packed.load(std::memory_order_relaxed)); });
 
     // The block's events, filtered in place: what is not a control stays.
     const std::span<MidiEvent> events(m_events.data(), count);
@@ -1085,6 +1088,13 @@ std::size_t RealEngine::takeControlMessages(std::size_t count) noexcept
                 }
                 action <<= 1U;
             }
+        }
+        // The panel's buttons: a sound picked, a part on or off (never played).
+        for (std::size_t b = 0; b < panel.size(); ++b) {
+            const TriggerMatch match = matchTrigger(panel.at(b), event.status, event.data1, event.data2);
+            if (!match.belongs) continue;
+            consumed = true;
+            if (match.pressed) m_panelPressed.fetch_or(1U << b, std::memory_order_relaxed);
         }
         // A patch button: it picks a patch (a learned trigger above wins).
         if (const int program = programOf(event.status, event.data1); !consumed && program >= 0) {
@@ -1158,6 +1168,28 @@ void RealEngine::setLoopControls(const LoopTriggers& buttons, const SelectorKnob
     for (std::size_t i = 0; i < buttons.size(); ++i) m_loopTriggers.at(i).store(buttons.at(i).pack(), std::memory_order_relaxed);
     m_selectorMode.store(selector.mode, std::memory_order_relaxed);
     m_selectorKnob.store(selector.knob.kind == MidiTrigger::ControlChange ? selector.knob.pack() : 0U, std::memory_order_relaxed);
+}
+
+void RealEngine::setPanelControls(const PanelTriggers& triggers)
+{
+    GC_ONLY_MAIN_THREAD();
+    for (std::size_t i = 0; i < triggers.sounds.size(); ++i) m_panelTriggers.at(i).store(triggers.sounds.at(i).pack(), std::memory_order_relaxed);
+    for (std::size_t i = 0; i < triggers.parts.size(); ++i) {
+        m_panelTriggers.at(kPanelSounds + i).store(triggers.parts.at(i).pack(), std::memory_order_relaxed);
+    }
+}
+
+std::vector<PanelPress> RealEngine::takePanelPresses()
+{
+    GC_ONLY_MAIN_THREAD();
+    const uint32_t pressed = m_panelPressed.exchange(0, std::memory_order_relaxed);
+    std::vector<PanelPress> presses;
+    for (int b = 0; b < kPanelSounds + kPanelParts; ++b) {
+        if ((pressed & (1U << b)) == 0) continue;
+        presses.push_back(b < kPanelSounds ? PanelPress{.kind = PanelPress::Sound, .index = b}
+                                           : PanelPress{.kind = PanelPress::Part, .index = b - kPanelSounds});
+    }
+    return presses;
 }
 
 std::vector<LoopAction> RealEngine::takeLoopActions()

@@ -1511,6 +1511,38 @@ private slots:
         QCOMPARE(value(), -1);
     }
 
+    // A pad assigned to a panel button (ASSIGN: Sound 2) is said as pressed
+    // once and never played; let go of, nothing more; unassigned, it plays.
+    void aPanelPadIsPressedAndNeverPlayed()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.applyPatch(core::makePatch(u"Empty"_s));
+        PanelTriggers panel;
+        panel.sounds.at(1) = MidiTrigger{.kind = MidiTrigger::Note, .channel = 9, .number = 36};
+        engine.setPanelControls(panel);
+        const auto presses = [&engine] {
+            std::vector<PanelPress> all;
+            for (int i = 0; i < 10; ++i) {
+                pump(engine, 50);
+                std::ranges::move(engine.takePanelPresses(), std::back_inserter(all));
+            }
+            return all;
+        };
+        engine.injectNote(10, 36, 100);
+        engine.injectNote(10, 36, 0);
+        QCOMPARE(presses(), (std::vector<PanelPress>{{.kind = PanelPress::Sound, .index = 1}}));
+        QCOMPARE(engine.keyboardActivity().velocity.at(36), uint8_t{0}); // never a note
+        (void)engine.takeKeyPresses();
+        engine.setPanelControls({}); // forgotten: the pad plays again
+        engine.injectNote(10, 36, 100);
+        QVERIFY(presses().empty());
+        QVERIFY(!engine.takeKeyPresses().empty());
+        engine.injectNote(10, 36, 0);
+    }
+
     // Each key pressed is kept with when it came (to the millisecond, for
     // scoring a warm-up), once; a key let go is not a press.
     void keyPressesAreTimed()

@@ -256,6 +256,13 @@ Result<void> setMixerControls(Setlist& setlist, const MixerControls& controls)
     return {};
 }
 
+Result<void> setPanelControls(Setlist& setlist, const PanelControls& controls)
+{
+    if (auto r = validatePanelControls(controls); !r) return r;
+    setlist.panelControls = controls;
+    return {};
+}
+
 Result<void> setSectionSetup(Setlist& setlist, int songIndex, const SectionSetup& setup)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));

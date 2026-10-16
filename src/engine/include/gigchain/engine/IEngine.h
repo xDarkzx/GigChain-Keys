@@ -269,6 +269,10 @@ public:
     virtual void setLoopControls(const LoopTriggers& buttons, const SelectorKnob& selector) = 0;
     virtual std::vector<LoopAction> takeLoopActions() = 0;
     virtual SelectorMove takeSelectorMove() = 0;
+    // The panel's keyboard buttons (never heard by the instruments), and
+    // which were pressed since last asked (sounds first, then parts).
+    virtual void setPanelControls(const PanelTriggers& triggers) = 0;
+    virtual std::vector<PanelPress> takePanelPresses() = 0;
     // Keyboard knobs for the app's own controls (AppKnobs: the mixer's
     // faders and pans), never heard by the instruments, and where each was
     // last turned to since the previous call.

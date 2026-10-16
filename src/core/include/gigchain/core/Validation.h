@@ -16,6 +16,8 @@ Result<void> validateSections(const Song& song, const QString& path);
 Result<void> validateLoopControls(const LoopControls& controls);
 // The mixer's learned keyboard knobs (controllers only).
 Result<void> validateMixerControls(const MixerControls& controls);
+// The panel's learned buttons (sounds and parts): each unset, or a button, pad or pedal.
+Result<void> validatePanelControls(const PanelControls& controls);
 
 // Checks every limit, every range and that all ids are present and unique.
 Result<void> validate(const Setlist& setlist);

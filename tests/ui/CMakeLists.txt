@@ -6,6 +6,7 @@ gigchain_add_test(tst_official_artwork SOURCES tst_official_artwork.cpp LIBS gig
 gigchain_add_test(tst_stage_quips SOURCES tst_stage_quips.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_settings SOURCES tst_settings.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_keyboard_teaching SOURCES tst_keyboard_teaching.cpp LIBS gigchain_ui)
+gigchain_add_test(tst_panel_controller SOURCES tst_panel_controller.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_practice_controller SOURCES tst_practice_controller.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_warmup_controller SOURCES tst_warmup_controller.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_help_library SOURCES tst_help_library.cpp LIBS gigchain_ui)

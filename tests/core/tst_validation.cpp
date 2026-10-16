@@ -42,7 +42,7 @@ private slots:
         const Setlist setlist = sampleSetlist();
         QVERIFY(validate(setlist).has_value());
         QCOMPARE(setlist.songs.front().patches.size(), std::size_t{1});
-        QCOMPARE(setlist.songs.front().patches.front().name, QStringLiteral("Patch 1"));
+        QCOMPARE(setlist.songs.front().patches.front().name, QStringLiteral("Sound 1"));
         QVERIFY(!setlist.songs.front().id.isNull());
     }
 

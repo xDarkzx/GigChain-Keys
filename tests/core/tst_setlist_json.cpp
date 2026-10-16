@@ -509,6 +509,27 @@ private slots:
         QVERIFY2(bad.error().message.contains(u"mixerControls.master"_s), qPrintable(bad.error().message));
     }
 
+    // The panel's buttons assigned on the keyboard (a pad for a sound, a
+    // button for a part) are kept with the setlist; a file without them has
+    // none (and is written without them); a program change is a button too.
+    void panelButtonsAreKept()
+    {
+        Setlist setlist;
+        setlist.songs.push_back(makeSong(u"One"_s));
+        QVERIFY(!toJson(setlist).contains("panelControls"));
+        setlist.panelControls.sounds.at(0) = LearnedControl{.kind = 0x90, .channel = 10, .number = 36};
+        setlist.panelControls.sounds.at(7) = LearnedControl{.kind = 0xC0, .channel = 1, .number = 4};
+        setlist.panelControls.parts.at(1) = LearnedControl{.kind = 0xB0, .channel = 1, .number = 20};
+        const auto read = fromJson(toJson(setlist));
+        QVERIFY2(read.has_value(), read ? "" : qPrintable(read.error().message));
+        QCOMPARE(read->panelControls, setlist.panelControls);
+
+        setlist.panelControls.parts.at(1).channel = 17;
+        const auto bad = fromJson(toJson(setlist));
+        QVERIFY(!bad.has_value());
+        QVERIFY2(bad.error().message.contains(u"panelControls.parts[1]"_s), qPrintable(bad.error().message));
+    }
+
     // Songs no longer follow the chords played (the player moves them on):
     // files that said a song did still open, the same as any other song,
     // and nothing about it is written any more.

@@ -189,7 +189,7 @@ bool DocumentController::addPatch(int song)
     const bool validSong = song >= 0 && static_cast<std::size_t>(song) < m_setlist.songs.size();
     const auto count = validSong ? m_setlist.songs.at(static_cast<std::size_t>(song)).patches.size() : 0;
     const auto current = currentPatchId();
-    const auto index = core::addPatch(m_setlist, song, tr("Patch %1").arg(count + 1));
+    const auto index = core::addPatch(m_setlist, song, tr("Sound %1").arg(count + 1));
     if (!index) return report(index.error());
     commitStructure(core::Cursor{song, *index}, current);
     return true;
@@ -1368,6 +1368,34 @@ bool DocumentController::setLoopControls(const core::LoopControls& controls)
     return true;
 }
 
+bool DocumentController::setPanelControls(const core::PanelControls& controls)
+{
+    if (!m_hasSetlist) {
+        return report(core::Error{core::ErrorCode::OutOfRange, tr("Start or open a setlist first")});
+    }
+    if (auto r = core::setPanelControls(m_setlist, controls); !r) return report(r.error());
+    setDirty(true);
+    applyPanelControlsToEngine();
+    emit panelControlsChanged();
+    return true;
+}
+
+void DocumentController::applyPanelControlsToEngine()
+{
+    const auto trigger = [](const core::LearnedControl& c) {
+        if (!c.isSet()) return engine::MidiTrigger{};
+        return engine::MidiTrigger{.kind = static_cast<engine::MidiTrigger::Kind>(c.kind),
+                                   .channel = static_cast<uint8_t>(c.channel - 1),
+                                   .number = static_cast<uint8_t>(c.number)};
+    };
+    static_assert(engine::kPanelSounds == static_cast<int>(core::PanelControls::kSounds), "a panel slot per sound button");
+    static_assert(engine::kPanelParts == static_cast<int>(core::PanelControls::kParts), "a panel slot per part button");
+    engine::PanelTriggers triggers;
+    std::ranges::transform(m_setlist.panelControls.sounds, triggers.sounds.begin(), trigger);
+    std::ranges::transform(m_setlist.panelControls.parts, triggers.parts.begin(), trigger);
+    m_engine.setPanelControls(triggers);
+}
+
 static_assert(engine::kAppKnobStrips == static_cast<int>(core::MixerControls::kStrips), "a knob slot per mixer control");
 
 core::LearnedControl* DocumentController::mixerKnob(core::MixerControls& controls, int slot)
@@ -2120,6 +2148,7 @@ void DocumentController::applyCurrentSongToEngine()
     m_engine.setLoopBars(song != nullptr ? song->loopBars : 4);
     applyLoopControlsToEngine(); // the setlist's (a newly opened one too)
     applyMixerControlsToEngine();
+    applyPanelControlsToEngine();
     const QString track = song != nullptr && !song->backingTrack.isEmpty() && !m_filePath.isEmpty()
                               ? QFileInfo(m_filePath).absoluteDir().filePath(song->backingTrack)
                               : QString();

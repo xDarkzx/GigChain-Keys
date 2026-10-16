@@ -40,7 +40,7 @@ QString EditorService::emptyReason() const
 {
     const core::Patch* patch = m_document.currentPatch();
     const int index = m_document.selectedChannel();
-    if (patch == nullptr || patch->channels.empty()) return tr("Drag an instrument here to start this patch");
+    if (patch == nullptr || patch->channels.empty()) return tr("Drag an instrument here to start this sound");
     if (index < 0 || static_cast<std::size_t>(index) >= patch->channels.size()) return tr("Select a channel in the mixer");
     const core::Channel& channel = patch->channels.at(static_cast<std::size_t>(index));
     if (!channel.instrument) return tr("This channel has no instrument");

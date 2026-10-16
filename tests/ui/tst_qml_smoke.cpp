@@ -242,10 +242,26 @@ class TestQmlSmoke : public QObject
         return strip->findChild<QQuickItem*>(name);
     }
 
+    // An item by its objectName in the visual tree (a Repeater's items are
+    // not QObject children of the window): the first visible one, else any.
+    static QQuickItem* visualChild(QQuickItem* from, const QString& name, bool visibleOnly)
+    {
+        for (QQuickItem* child : from->childItems()) {
+            if (child->objectName() == name && (!visibleOnly || child->isVisible())) return child;
+            if (QQuickItem* found = visualChild(child, name, visibleOnly)) return found;
+        }
+        return nullptr;
+    }
+
+    // (Visible first: an Edit and a Perform view can each have one.)
     QQuickItem* item(const QString& name) const
     {
-        if (auto* found = window()->findChild<QQuickItem*>(name)) return found;
-        return stripChild(name);
+        const QList<QQuickItem*> named = window()->findChildren<QQuickItem*>(name);
+        if (const auto visibleOne = std::ranges::find_if(named, &QQuickItem::isVisible); visibleOne != named.end()) return *visibleOne;
+        if (auto* found = stripChild(name)) return found;
+        if (auto* found = visualChild(window()->contentItem(), name, true)) return found;
+        if (!named.isEmpty()) return named.front();
+        return visualChild(window()->contentItem(), name, false);
     }
 
     void click(const QString& name)
@@ -514,7 +530,7 @@ private slots:
         settle();
         auto* name = root->findChild<QObject*>(u"performPatchName"_s);
         QVERIFY(name != nullptr);
-        QCOMPARE(name->property("text").toString(), u"Patch 1"_s);
+        QCOMPARE(name->property("text").toString(), u"Sound 1"_s);
         // The chart, big, on stage.
         QVERIFY(m_session->document().setSongChart(0, u"{comment: Verse}\n[C]Hello [G]world\n"_s));
         settle();
@@ -932,6 +948,63 @@ private slots:
         settle();
     }
 
+    // The panel bar: the song's sounds as buttons (a click picks one), its
+    // parts lit when on (a click turns one off), and ASSIGN arms a button
+    // to wait for a pad; the zone dialog can be set by playing.
+    void thePanelBarPicksSoundsAndArmsButtons()
+    {
+        auto& doc = m_session->document();
+        QVERIFY(doc.addPatch(0));
+        QVERIFY(doc.renamePatch(0, 1, u"Strings"_s));
+        QVERIFY(doc.selectPatch(0, 0));
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        window()->resize(1440, 1040); // room for it, as a full-HD screen (a short window leaves it out)
+        window()->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        settle();
+        QVERIFY(item(u"panelBar"_s) != nullptr && item(u"panelBar"_s)->isVisible());
+        QCOMPARE(m_session->panel().sounds().size(), 2);
+        core::PanelControls pads; // (for the screenshot: a pad under the first sound)
+        pads.sounds.at(0) = core::LearnedControl{.kind = 0x90, .channel = 10, .number = 36};
+        QVERIFY(doc.setPanelControls(pads));
+        settle();
+        shoot(u"panel-bar"_s);
+        click(u"panelSound1"_s);
+        QCOMPARE(doc.cursor().patch, 1);
+        click(u"panelSound0"_s);
+        QCOMPARE(doc.cursor().patch, 0);
+        click(u"panelPart0"_s); // the piano off
+        QVERIFY(doc.currentPatch()->channels.at(0).mute);
+        click(u"panelPart0"_s); // and on
+        QVERIFY(!doc.currentPatch()->channels.at(0).mute);
+
+        click(u"panelAssign"_s);
+        QVERIFY(m_session->panel().assigning());
+        click(u"panelSound1"_s);
+        QCOMPARE(m_session->panel().armed().value(u"index"_s).toInt(), 1);
+        QCOMPARE(doc.cursor().patch, 0); // assigning: a tap arms, it does not pick
+        QVERIFY(item(u"panelHint"_s)->isVisible());
+        shoot(u"panel-bar-assigning"_s);
+        click(u"panelAssign"_s); // Done
+        QVERIFY(!m_session->panel().assigning());
+        settle();
+
+        // + on SOUNDS: an empty sound after the others, its name typed at once.
+        click(u"panelAddSound"_s);
+        QTRY_VERIFY(item(u"panelAddSoundEmpty"_s) != nullptr && item(u"panelAddSoundEmpty"_s)->isVisible());
+        shoot(u"panel-add-menu"_s);
+        click(u"panelAddSoundEmpty"_s);
+        QTRY_COMPARE(m_session->panel().sounds().size(), 3);
+        QCOMPARE(doc.cursor().patch, 2);
+        QTRY_VERIFY(window()->activeFocusItem() != nullptr && window()->activeFocusItem()->inherits("QQuickTextInput"));
+        QTest::keyClick(window(), Qt::Key_A, Qt::ControlModifier);
+        for (const QChar c : u"Organ"_s) QTest::keyClick(window(), c.toLatin1()); // keyClicks is widgets-only
+        QTest::keyClick(window(), Qt::Key_Return);
+        QTRY_COMPARE(m_session->panel().sounds().at(2).toMap().value(u"name"_s).toString(), u"Organ"_s);
+        settle();
+        shoot(u"panel-bar-added"_s);
+    }
+
     // "Learn this keyboard" in Settings > MIDI: the control to move is shown
     // by what it does; closing Settings cancels it.
     void teachingAKeyboardShowsTheControlToMove()
@@ -1172,7 +1245,7 @@ private slots:
         const QString shown = title->property("text").toString();
         QVERIFY2(setlist->property("text").toString().contains(m_session->document().displayName()),
                  qPrintable(setlist->property("text").toString()));
-        QVERIFY2(shown.contains(u"Song 1"_s) && shown.contains(u"Patch 1"_s), qPrintable(shown));
+        QVERIFY2(shown.contains(u"Song 1"_s) && shown.contains(u"Sound 1"_s), qPrintable(shown));
         QVERIFY(m_session->document().renameSong(0, u"<b>A & B</b>"_s));
         QTRY_VERIFY2(title->property("text").toString().contains(u"&lt;b&gt;A &amp; B&lt;/b&gt;"_s),
                      qPrintable(title->property("text").toString())); // shown as typed, not as markup

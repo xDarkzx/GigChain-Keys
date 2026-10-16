@@ -327,6 +327,9 @@ public:
     // The looper's keyboard controls, kept with the setlist (an undoable edit).
     [[nodiscard]] const core::LoopControls& loopControls() const { return m_setlist.loopControls; }
     bool setLoopControls(const core::LoopControls& controls);
+    // The panel's buttons assigned on the keyboard (kept with the setlist).
+    [[nodiscard]] const core::PanelControls& panelControls() const { return m_setlist.panelControls; }
+    bool setPanelControls(const core::PanelControls& controls);
     // Keyboard knobs learned for the mixer (kept with the setlist; an undo
     // step each). Knob `slot`: 0 the master, 1 + n strip n's volume,
     // 1 + MixerControls::kStrips + n strip n's pan. One knob, one job: set
@@ -407,6 +410,7 @@ signals:
     void chordInversionsChanged(); // the current song's chosen inversions (or which song is current)
     void loopControlsChanged();
     void mixerControlsChanged();
+    void panelControlsChanged();
     void channelEditRequested(int channel, const QString& page);
     void sharingChanged(); // which songs share the selected channel's instrument may have changed
 
@@ -458,6 +462,7 @@ private:
     void applyLoopControlsToEngine();
     // The setlist's mixer knobs, to the engine.
     void applyMixerControlsToEngine();
+    void applyPanelControlsToEngine();
     // The learned knob of `slot`, or nullptr when there is no such slot.
     static core::LearnedControl* mixerKnob(core::MixerControls& controls, int slot);
     // Stores one section's setup (an undoable edit) and plays it.

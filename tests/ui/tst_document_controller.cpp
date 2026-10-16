@@ -226,8 +226,8 @@ private slots:
     {
         QVERIFY(m_doc->hasPatch());
         QCOMPARE(m_doc->currentSongName(), u"Song 1"_s);
-        QCOMPARE(m_doc->currentPatchName(), u"Patch 1"_s);
-        QCOMPARE(m_engine->lastPatch.name, u"Patch 1"_s); // the engine plays it
+        QCOMPARE(m_doc->currentPatchName(), u"Sound 1"_s);
+        QCOMPARE(m_engine->lastPatch.name, u"Sound 1"_s); // the engine plays it
         QVERIFY(m_doc->isDirty()); // a new song is an unsaved change
         QCOMPARE(m_doc->displayName(), u"Untitled"_s);
     }
@@ -240,7 +240,7 @@ private slots:
         QSignalSpy current(m_doc.get(), &DocumentController::currentChanged);
         m_doc->nextPatch();
         QCOMPARE(m_doc->patchIndex(), 1);
-        QCOMPARE(m_doc->nextPatchLabel(), u"Song 2 — Patch 1"_s);
+        QCOMPARE(m_doc->nextPatchLabel(), u"Song 2 — Sound 1"_s);
         m_doc->nextPatch();
         QCOMPARE(m_doc->songIndex(), 1);
         QCOMPARE(m_doc->nextPatchLabel(), QString());

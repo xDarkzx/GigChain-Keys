@@ -268,7 +268,7 @@ private slots:
     {
         EditorService service(*m_engine, *m_doc);
         QSignalSpy target(&service, &EditorService::targetChanged);
-        QCOMPARE(service.emptyReason(), u"Drag an instrument here to start this patch"_s);
+        QCOMPARE(service.emptyReason(), u"Drag an instrument here to start this sound"_s);
 
         QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
         QVERIFY(m_doc->addChannel(u"spy/Pad.vst3"_s, u"Spy Pad"_s));

@@ -12,7 +12,7 @@ Song makeSong(const QString& name)
     Song song;
     song.id = SongId::generate();
     song.name = name;
-    song.patches.push_back(makePatch(u"Patch 1"_s));
+    song.patches.push_back(makePatch(u"Sound 1"_s));
     return song;
 }
 

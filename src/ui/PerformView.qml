@@ -32,6 +32,8 @@ Rectangle {
     property MasterBus masterBus: null
     property MasterBus auxBus: null
     property LoopController loops: null
+    property PanelController panel: null
+    property bool panelOpen: true
 
     // "Add lyrics & chords": to the chart editor.
     signal editChartRequested()
@@ -450,6 +452,14 @@ Rectangle {
                     }
                 }
             }
+        }
+
+        PanelBar {
+            visible: perform.panel !== null && perform.panelOpen
+            Layout.fillWidth: true
+            panel: perform.panel
+            doc: perform.doc
+            pluginModel: perform.pluginModel
         }
 
         Mixer {

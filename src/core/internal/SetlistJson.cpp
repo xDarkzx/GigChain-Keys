@@ -620,10 +620,18 @@ QByteArray toJson(const Setlist& setlist)
     for (const LearnedControl& knob : setlist.mixerControls.volume) volume.append(control(knob));
     for (const LearnedControl& knob : setlist.mixerControls.pan) pan.append(control(knob));
     const QJsonObject mixerControls{{u"master"_s, control(setlist.mixerControls.master)}, {u"volume"_s, volume}, {u"pan"_s, pan}};
-    const QJsonObject root{{u"formatVersion"_s, kSetlistFormatVersion},
-                           {u"songs"_s, songs},
-                           {u"loopControls"_s, loopControls},
-                           {u"mixerControls"_s, mixerControls}};
+    QJsonObject root{{u"formatVersion"_s, kSetlistFormatVersion},
+                     {u"songs"_s, songs},
+                     {u"loopControls"_s, loopControls},
+                     {u"mixerControls"_s, mixerControls}};
+    // The panel's buttons, once one is assigned.
+    if (setlist.panelControls != PanelControls{}) {
+        QJsonArray sounds;
+        QJsonArray parts;
+        for (const LearnedControl& button : setlist.panelControls.sounds) sounds.append(control(button));
+        for (const LearnedControl& button : setlist.panelControls.parts) parts.append(control(button));
+        root.insert(u"panelControls"_s, QJsonObject{{u"sounds"_s, sounds}, {u"parts"_s, parts}});
+    }
     return QJsonDocument(root).toJson(QJsonDocument::Indented);
 }
 
@@ -678,6 +686,20 @@ Result<Setlist> fromJson(const QByteArray& bytes)
             for (qsizetype i = 0; i < list.size() && !reader.failed(); ++i) {
                 const QString where = u"%1.%2[%3]"_s.arg(path, QLatin1StringView(key)).arg(i);
                 knobs->at(static_cast<std::size_t>(i)) = control(reader.object(list.at(i), where), where);
+            }
+        }
+        if (reader.failed()) return tl::unexpected(reader.error());
+    }
+    // The panel's buttons (absent: none assigned).
+    if (root.contains("panelControls"_L1)) {
+        const QString path = rootPath + u".panelControls"_s;
+        const QJsonObject controls = reader.object(root.value("panelControls"_L1), path);
+        static_assert(PanelControls::kSounds == PanelControls::kParts); // (one loop for both)
+        for (const auto& [key, buttons] : {std::pair{"sounds", &setlist.panelControls.sounds}, std::pair{"parts", &setlist.panelControls.parts}}) {
+            const QJsonArray list = reader.optionalArray(controls, QLatin1StringView(key), path, PanelControls::kSounds);
+            for (qsizetype i = 0; i < list.size() && !reader.failed(); ++i) {
+                const QString where = u"%1.%2[%3]"_s.arg(path, QLatin1StringView(key)).arg(i);
+                buttons->at(static_cast<std::size_t>(i)) = control(reader.object(list.at(i), where), where);
             }
         }
         if (reader.failed()) return tl::unexpected(reader.error());
