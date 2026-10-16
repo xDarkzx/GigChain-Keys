@@ -155,6 +155,32 @@ private slots:
         QVERIFY(!engine->midiActivity());
     }
 
+    // The demo engine learns as the real one does: the last pad, key or
+    // button pressed (Learn, Pads…, Set by playing), and a pad assigned to
+    // the panel is a press of its button, never a note on the keyboard.
+    void padsAreLearnedAndPressThePanel()
+    {
+        const auto engine = engine::createFakeEngine();
+        engine->injectNote(10, 36, 100);
+        QCOMPARE(engine->takeLearnedTrigger(),
+                 (engine::MidiTrigger{.kind = engine::MidiTrigger::Note, .channel = 9, .number = 36}));
+        QVERIFY(!engine->takeLearnedTrigger().isSet()); // taken once
+        engine->injectNote(10, 36, 0);
+        QVERIFY(!engine->takeLearnedTrigger().isSet()); // letting go is no press
+        engine->injectController(1, 20, 127);
+        QCOMPARE(engine->takeLearnedTrigger(),
+                 (engine::MidiTrigger{.kind = engine::MidiTrigger::ControlChange, .channel = 0, .number = 20}));
+
+        engine::PanelTriggers panel;
+        panel.sounds.at(1) = engine::MidiTrigger{.kind = engine::MidiTrigger::Note, .channel = 9, .number = 37};
+        engine->setPanelControls(panel);
+        engine->injectNote(10, 37, 100);
+        QCOMPARE(engine->takePanelPresses(), (std::vector<engine::PanelPress>{{.kind = engine::PanelPress::Sound, .index = 1}}));
+        QCOMPARE(engine->keyboardActivity().velocity.at(37), uint8_t{0}); // never played
+        engine->injectNote(10, 37, 0);
+        QVERIFY(engine->takePanelPresses().empty());
+    }
+
     // A playing loop goes round at the tempo, timed by the engine's clock:
     // at 120 bpm a 4-bar loop is 8 seconds, so 3 seconds in it is in bar 2.
     void aPlayingLoopGoesRoundByTheClock()
