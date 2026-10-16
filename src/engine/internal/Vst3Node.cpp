@@ -485,13 +485,16 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io, const T
         Vst::ParamValue value = 0.0;
         if (impl.componentHandler.takeEditForProcessor(slot, id, value)) impl.setParameter(id, value, 0);
     }
-    if (impl.releaseRequested.exchange(false, std::memory_order_acquire) && impl.heldNotes.any()) {
+    if (impl.releaseRequested.exchange(false, std::memory_order_acquire)) {
         for (std::size_t i = 0; i < impl.heldNotes.size(); ++i) {
             if (!impl.heldNotes.test(i)) continue;
             Vst::Event off = noteOffEvent(0, static_cast<int>(i / 128), static_cast<int>(i % 128), 0);
             if (impl.events.addEvent(off) != kResultOk) impl.droppedEvents.fetch_add(1, std::memory_order_relaxed);
         }
         impl.heldNotes.reset();
+        // The sustain pedal up too, on every channel: the plugin keeps the
+        // pedal it last heard, so a pedal down at a panic would hold every note after it.
+        for (int channel = 0; channel < 16; ++channel) impl.sendController(channel, Vst::kCtrlSustainOnOff, 0.0, 0);
     }
     for (const MidiEvent& e : events) {
         const int type = e.status & 0xF0;

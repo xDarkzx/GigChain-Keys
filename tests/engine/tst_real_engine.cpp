@@ -720,6 +720,53 @@ private slots:
         engine.injectNote(1, 64, 0);
     }
 
+    // Panic stops ALL sound: a note held by the sustain pedal (and the pedal
+    // itself: after it a note let go dies away, not sustained by a pedal the
+    // plugin still thinks is down), the backing track and the looper.
+    void panicStopsSustainTheBackingTrackAndTheLoops()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+        const core::Patch patch = pianoPatch();
+        engine.applyPatch(patch);
+        const auto piano = [&] { return engine.channelLevel(patch.channels.at(0).id).peak; };
+
+        engine.injectController(1, 64, 127); // the pedal down (and left down by the "player")
+        engine.injectNote(1, 60, 110);
+        engine.injectNote(1, 60, 0);         // let go: the pedal holds it
+        QVERIFY(loudestUntilAbove(engine, piano, 0.001F) > 0.001F);
+
+        const QTemporaryDir dir;
+        const QString track = dir.filePath(u"backing.wav"_s);
+        QVERIFY(writeSineWav(track, 48000 * 6));
+        engine.setBackingTrack(track);
+        for (int i = 0; i < 300 && !engine.backingTrack().loaded; ++i) pump(engine, 10);
+        QVERIFY2(engine.backingTrack().loaded, "the backing track was not read");
+        engine.playBackingTrack(true);
+        QVERIFY(waitUntil(engine, [&engine] { return engine.backingTrack().playing; }));
+        engine.loopCommand(patch.channels.at(0).id, LoopCommand::Record);
+        pump(engine, 300);
+        engine.loopCommand(patch.channels.at(0).id, LoopCommand::PlayStop); // closed: it plays round
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Panic: every sound stopped"_s));
+        engine.panic();
+        QVERIFY2(quietWithin(engine, piano, 0.0005F), "the sustained note still sounds after panic");
+        QVERIFY2(!engine.backingTrack().playing, "the backing track still plays after panic");
+        for (const ChannelLoop& loop : engine.loops()) {
+            QVERIFY2(loop.state != LoopState::Playing && loop.state != LoopState::Overdubbing, "a loop still plays after panic");
+        }
+
+        // The pedal the plugin heard is up now: a note let go dies away (no pedal holding it).
+        engine.injectNote(1, 64, 110);
+        QVERIFY(loudestUntilAbove(engine, piano, 0.001F) > 0.001F);
+        engine.injectNote(1, 64, 0);
+        QVERIFY2(quietWithin(engine, piano, 0.0005F, 200, 4000), "a note let go after panic still sustains: the pedal stuck down");
+    }
+
     // A library put in a plugin folder is not a VST2 plugin because a setlist
     // names it: loading one runs its code, so only what the (sandboxed) scan
     // read as a VST2 plugin loads; anything else is refused unloaded.
