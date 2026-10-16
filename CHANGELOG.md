@@ -8,6 +8,8 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-16 (alpha)
+
 ### Added
 
 - **The panel:** the song's sounds and the playing sound's parts as buttons
@@ -20,7 +22,6 @@ Downloads for every version are on the
 - **Splits set by playing:** in **Keyboard Zone**, **Set by playing**, then
   press the lowest and highest key or pad it should play. Pads can play a
   drum kit or a sound of their own while the keys play the rest.
-
 - **Teach another keyboard:** playing a backup keyboard, or the one at the
   venue? **Settings > MIDI > Teach…** asks for each knob and button you
   learned, one at a time, by what it does; move the one on this keyboard
@@ -38,6 +39,9 @@ Downloads for every version are on the
 - **Reverbs and delays ring out when an instrument plays on:** when the next
   patch keeps an instrument but not one of its effects, that effect's tail
   now rings out to the end instead of stopping dead.
+- **Panic stops everything:** the backing track, its stems and the looper
+  stop too, and so does the song; a sustain pedal held down no longer keeps
+  notes ringing after it.
 
 ## [0.4.0] - 2026-10-10 (alpha)
 

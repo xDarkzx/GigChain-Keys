@@ -1239,6 +1239,10 @@ void RealEngine::panic()
             }
         }
     }
+    // Every sound means every sound: the backing track and its stems stop
+    // (where they are), and so do the loops (kept, to start again).
+    m_trackPlaying.store(false, std::memory_order_relaxed);
+    stopAllLoops();
     if (m_audio.isOpen()) {
         if (auto resumed = m_audio.resume(); !resumed) {
             m_pendingNotices.push_back(Notice::error(resumed.error().message));

@@ -100,7 +100,8 @@ void EngineStatus::toggleRecording()
 void EngineStatus::panic()
 {
     FreezeWatchdog::mark(u"panic"_s);
-    m_engine.panic(); // logged by the engine
+    m_document.stopSong(); // the song stops playing too (its parts, its count-in)
+    m_engine.panic();      // logged by the engine: the sound, the backing track, the loops
     m_document.reportMessage(tr("Panic: every sound stopped"), Notifications::Info);
 }
 
