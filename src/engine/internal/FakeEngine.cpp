@@ -194,10 +194,24 @@ double FakeEngine::masterVolume() const
     return m_masterDb;
 }
 
-void FakeEngine::injectNote(int, int note, int velocity)
+void FakeEngine::injectNote(int midiChannel, int note, int velocity)
 {
     // The fake engine makes no sound; the note only shows on the keyboard.
     if (note < 0 || note > 127 || velocity < 0 || velocity > 127) return;
+    const MidiTrigger pressed{.kind = MidiTrigger::Note,
+                              .channel = static_cast<uint8_t>(std::clamp(midiChannel, 1, 16) - 1),
+                              .number = static_cast<uint8_t>(note)};
+    if (velocity > 0) m_learned = pressed; // what Learn (Pads…, Set by playing) takes, as the real engine
+    // A pad assigned to the panel presses its button (never a note).
+    const auto isPad = [&pressed](const MidiTrigger& t) { return t == pressed; };
+    if (const auto sound = std::ranges::find_if(m_panel.sounds, isPad); sound != m_panel.sounds.end()) {
+        if (velocity > 0) m_panelPresses.push_back({.kind = PanelPress::Sound, .index = static_cast<int>(sound - m_panel.sounds.begin())});
+        return;
+    }
+    if (const auto part = std::ranges::find_if(m_panel.parts, isPad); part != m_panel.parts.end()) {
+        if (velocity > 0) m_panelPresses.push_back({.kind = PanelPress::Part, .index = static_cast<int>(part - m_panel.parts.begin())});
+        return;
+    }
     m_keyboard.velocity.at(static_cast<std::size_t>(note)) = static_cast<uint8_t>(velocity);
     if (velocity > 0) {
         const auto now = std::chrono::steady_clock::now().time_since_epoch();
@@ -215,6 +229,7 @@ void FakeEngine::injectController(int midiChannel, int controller, int value)
     m_moved = std::pair{midiChannel, controller};
     const MidiTrigger knob{.kind = MidiTrigger::ControlChange, .channel = static_cast<uint8_t>(midiChannel - 1),
                            .number = static_cast<uint8_t>(controller)};
+    if (value >= 64) m_learned = knob; // a button pressed (as the real engine's learnable)
     for (std::size_t i = 0; i < m_appKnobs.size(); ++i) {
         if (m_appKnobs.at(i) == knob) m_appKnobValues.at(i) = value;
     }

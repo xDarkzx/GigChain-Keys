@@ -2724,13 +2724,17 @@ private slots:
                 QTest::qWait(20);
             }
         };
-        const auto closing = [&](const QString& key) {
+        // The logo to close on, held `hold` seconds past the narration's end.
+        const auto closing = [&](const QString& key, double hold = 0.0) {
             toEdit(0);
             m_overlay->setProperty("logo", 1.0);
             m_overlay->setProperty("logoLine", u"Free  ·  Open source"_s);
             m_overlay->setProperty("logoLine2", u"github.com/xDarkzx/GigChain-Keys"_s);
             QTest::qWait(600);
-            if (begin(key)) end();
+            if (begin(key)) {
+                if (hold > 0.0) at(scene.value(u"duration"_s).toDouble() + 0.45 + hold);
+                end();
+            }
             m_overlay->setProperty("logo", 0.0);
         };
         // A shown menu entry by the start of its text (a submenu's entry has no name of its own).
@@ -3445,6 +3449,359 @@ private slots:
 
             // ---- 09: the close ----------------------------------------------------
             closing(u"09"_s);
+        }
+
+        if (feature == u"5"_s) {
+            // ================= 5: set it up like your keyboard: sounds, splits, pads =================
+            ui::PanelController& panel = m_session->panel();
+            QVERIFY(root->setProperty("editKeyboardOpen", false)); // (the room goes to the panel and the strips)
+            // A pad on the keyboard (channel 10, where pads are), pressed and let go.
+            const auto hitPad = [&](int note) {
+                m_engine->injectNote(10, note, 100);
+                QTest::qWait(120);
+                m_engine->injectNote(10, note, 0);
+                QTest::qWait(250); // (the panel takes it on its next look)
+            };
+            const auto key = [&](int note) {
+                m_engine->injectNote(1, note, 100);
+                QTest::qWait(150);
+                m_engine->injectNote(1, note, 0);
+                QTest::qWait(250);
+            };
+            const auto chord = [&](bool down) {
+                for (const int note : {48, 60, 64, 67}) m_engine->injectNote(1, note, down ? 100 : 0);
+            };
+            // Pads… (or Done) clicked, and the mouse taken off it: its tooltip must not hang over the panel.
+            const auto pressPads = [&](int ms) {
+                press(shownOne(u"panelAssign"_s), Qt::LeftButton, ms);
+                QTest::mouseMove(w, QPoint(w->width() / 2, w->height() - 40));
+            };
+            const auto soundKey = [&](int i) { return shownOne(u"panelSound%1"_s.arg(i)); };
+            const auto partKey = [&](int i) { return shownOne(u"panelPart%1"_s.arg(i)); };
+            // A dialog's item (dialogs sit in the overlay, not the window's content).
+            const auto inDialog = [&](const QString& name) -> QQuickItem* {
+                const QList<QQuickItem*> named = findAll(layer != nullptr ? layer : w->contentItem(), name);
+                const auto shownItem = std::ranges::find_if(named, &QQuickItem::isVisible);
+                return shownItem != named.end() ? *shownItem : nullptr;
+            };
+            // A name typed where the keyboard focus is, then Enter.
+            const auto typeName = [&](const QString& text) {
+                QTest::keyClick(w, Qt::Key_A, Qt::ControlModifier);
+                for (const QChar c : text) {
+                    QTest::keyClick(w, c.toLatin1());
+                    QTest::qWait(45);
+                }
+                QTest::keyClick(w, Qt::Key_Return);
+                QTest::qWait(200);
+            };
+            // + on a section, and its menu's entry picked (an instrument: added as the picker would, if its menu hides it).
+            const auto addPart = [&](const QString& pluginId, const QString& name) {
+                press(shownOne(u"panelAddPart"_s), Qt::LeftButton, 450);
+                QTest::qWait(500);
+                // (The instruments are grouped by maker: the demo's are in its own.)
+                if (const QQuickItem* maker = entry(u"GigChain Demo"_s)) {
+                    press(maker, Qt::LeftButton, 400);
+                    QTest::qWait(400);
+                }
+                if (const QQuickItem* pick = entry(name)) {
+                    press(pick, Qt::LeftButton, 400);
+                } else {
+                    QTest::keyClick(w, Qt::Key_Escape);
+                    QTest::keyClick(w, Qt::Key_Escape);
+                    QVERIFY(doc.addChannel(pluginId, name));
+                }
+                QTest::qWait(300);
+            };
+            const auto addSound = [&](const QString& which, const QString& name) {
+                press(shownOne(u"panelAddSound"_s), Qt::LeftButton, 450);
+                QTRY_VERIFY(entry(which) != nullptr);
+                QTest::qWait(350);
+                press(entry(which), Qt::LeftButton, 400);
+                QTest::qWait(300);
+                typeName(name);
+            };
+            // Keyboard Zone > Set by playing, the two ends pressed (a key or a pad on `channel`).
+            const auto zoneByPlaying = [&](int channel, int midiChannel, int low, int high, const QString& lowWord, const QString& highWord) {
+                QVERIFY(QMetaObject::invokeMethod(&doc, "editChannel", Q_ARG(int, channel), Q_ARG(QString, u"zone"_s)));
+                QTRY_VERIFY(inDialog(u"setZoneByPlaying"_s) != nullptr);
+                QTest::qWait(400);
+                spot(inDialog(u"setZoneByPlaying"_s));
+                press(inDialog(u"setZoneByPlaying"_s), Qt::LeftButton, 450);
+                atWord(lowWord, 0.5);
+                if (midiChannel == 10) hitPad(low); else key(low);
+                atWord(highWord, 0.65);
+                if (midiChannel == 10) hitPad(high); else key(high);
+                QTRY_COMPARE(doc.currentPatch()->channels.at(static_cast<std::size_t>(channel)).keyHigh, high);
+            };
+            const auto closeZone = [&] {
+                if (auto* zone = root->findChild<QObject*>(u"zoneDialog"_s)) QMetaObject::invokeMethod(zone, "close");
+                QTest::qWait(300);
+            };
+            const auto setPads = [&](bool on) {
+                core::PanelControls pads;
+                if (on) {
+                    for (int i = 0; i < 3; ++i) pads.sounds.at(static_cast<std::size_t>(i)) = core::LearnedControl{.kind = 0x90, .channel = 10, .number = 36 + i};
+                    pads.parts.at(1) = core::LearnedControl{.kind = 0x90, .channel = 10, .number = 39};
+                }
+                QVERIFY(doc.setPanelControls(pads));
+            };
+
+            // Two songs of its own: "Sunday Evening" built already (the hook), "Sunday Morning" built in the video.
+            QVERIFY(doc.addSong());
+            const int built = static_cast<int>(doc.setlist().songs.size()) - 1;
+            QVERIFY(doc.renameSong(built, u"Sunday Evening"_s));
+            QVERIFY(doc.selectPatch(built, 0));
+            QVERIFY(doc.renamePatch(built, 0, u"Piano"_s));
+            QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+            QVERIFY(doc.duplicatePatch(built, 0));
+            QVERIFY(doc.renamePatch(built, 1, u"Piano and Strings"_s));
+            QVERIFY(doc.selectPatch(built, 1));
+            QVERIFY(doc.addChannel(u"fake.string-ensemble"_s, u"String Ensemble"_s));
+            QVERIFY(doc.addPatch(built));
+            QVERIFY(doc.renamePatch(built, 2, u"Organ"_s));
+            QVERIFY(doc.selectPatch(built, 2));
+            QVERIFY(doc.addChannel(u"fake.tonewheel-organ"_s, u"Tonewheel Organ"_s));
+            QVERIFY(doc.addSong());
+            const int song = static_cast<int>(doc.setlist().songs.size()) - 1;
+            QVERIFY(doc.renameSong(song, u"Sunday Morning"_s));
+
+            // ---- 01: the question: the finished song, its sounds on the pads -------------
+            toEdit(built);
+            setPads(true);
+            QTest::qWait(300);
+            if (begin(u"01"_s)) {
+                QVERIFY2(shownOne(u"panelBar"_s) != nullptr, "the panel is not in sight (the window is too short for it)");
+                spot(shownOne(u"panelBar"_s));
+                atWord(u"several"_s, 0.25);
+                chord(true);
+                atWord(u"pads"_s, 0.45);
+                chord(false);
+                hitPad(37);
+                chord(true);
+                atWord(u"step"_s, 0.75);
+                chord(false);
+                hitPad(38);
+                chord(true);
+                end();
+                chord(false);
+            }
+            setPads(false);
+
+            // ---- 02: how it compares to your keyboard ----------------------------------
+            toEdit(built);
+            QVERIFY(doc.selectPatch(built, 1));
+            if (begin(u"02"_s)) {
+                atWord(u"several"_s, 0.45);
+                spot(soundKey(0) != nullptr ? rectOf(soundKey(0)).united(rectOf(soundKey(2))) : QRectF());
+                atWord(u"parts"_s, 0.7);
+                spot(rectOf(partKey(0)).united(rectOf(partKey(1))));
+                end();
+            }
+
+            // ---- 03: the panel -------------------------------------------------------------
+            toEdit(built);
+            if (begin(u"03"_s)) {
+                spot(shownOne(u"panelBar"_s));
+                atWord(u"grid"_s, 0.2);
+                spot(shownOne(u"panelButton"_s));
+                atWord(u"left"_s, 0.45);
+                spot(soundKey(0));
+                atWord(u"blue"_s, 0.55);
+                spot(soundKey(doc.cursor().patch));
+                atWord(u"green"_s, 0.8);
+                spot(partKey(0));
+                end();
+            }
+
+            // ---- 04: the first sound: a piano ----------------------------------------------
+            toEdit(song);
+            if (begin(u"04"_s)) {
+                atWord(u"double"_s, 0.25);
+                spot(soundKey(0));
+                glide(centre(soundKey(0)), 450);
+                QVERIFY(QMetaObject::invokeMethod(m_overlay, "click"));
+                QTest::mouseDClick(w, Qt::LeftButton, {}, centre(soundKey(0)).toPoint());
+                QTest::qWait(300);
+                typeName(u"Piano"_s);
+                atWord(u"plus"_s, 0.55);
+                spot(shownOne(u"panelAddPart"_s));
+                addPart(u"fake.grand-piano"_s, u"Grand Piano"_s);
+                atWord(u"play"_s, 0.85);
+                spot(stripsArea(1));
+                chord(true);
+                end();
+                chord(false);
+            }
+
+            // ---- 05: a second sound, copied --------------------------------------------------
+            toEdit(song);
+            if (begin(u"05"_s)) {
+                atWord(u"plus"_s, 0.2);
+                spot(shownOne(u"panelAddSound"_s));
+                atWord(u"copy"_s, 0.45, 2);
+                addSound(u"Copy of"_s, u"Piano and Strings"_s);
+                atWord(u"call"_s, 0.85);
+                spot(soundKey(1));
+                end();
+            }
+
+            // ---- 06: add the strings -----------------------------------------------------------
+            toEdit(song);
+            QVERIFY(doc.selectPatch(song, 1));
+            if (begin(u"06"_s)) {
+                atWord(u"strings"_s, 0.1);
+                spot(shownOne(u"panelAddPart"_s));
+                addPart(u"fake.string-ensemble"_s, u"String Ensemble"_s);
+                atWord(u"chord"_s, 0.35);
+                spot(rectOf(partKey(0)).united(rectOf(partKey(1))));
+                chord(true);
+                atWord(u"notice"_s, 0.65);
+                chord(false);
+                press(soundKey(0), Qt::LeftButton, 450);
+                atWord(u"own"_s, 0.85);
+                press(soundKey(1), Qt::LeftButton, 450);
+                end();
+            }
+
+            // ---- 07: a part on and off -----------------------------------------------------------
+            toEdit(song);
+            QVERIFY(doc.selectPatch(song, 1));
+            if (begin(u"07"_s)) {
+                spot(partKey(1));
+                chord(true);
+                atWord(u"click"_s, 0.15);
+                press(partKey(1), Qt::LeftButton, 450);
+                atWord(u"again"_s, 0.5);
+                press(partKey(1), Qt::LeftButton, 450);
+                atWord(u"right"_s, 0.75);
+                chord(false);
+                end();
+            }
+
+            // ---- 08: a third sound: the organ ----------------------------------------------------
+            toEdit(song);
+            QVERIFY(doc.selectPatch(song, 1));
+            if (begin(u"08"_s)) {
+                atWord(u"empty"_s, 0.15);
+                addSound(u"Empty sound"_s, u"Organ"_s);
+                atWord(u"organ"_s, 0.4, 2);
+                addPart(u"fake.tonewheel-organ"_s, u"Tonewheel Organ"_s);
+                atWord(u"three"_s, 0.6);
+                spot(rectOf(soundKey(0)).united(rectOf(soundKey(2))));
+                atWord(u"holding"_s, 0.75);
+                chord(true);
+                press(soundKey(0), Qt::LeftButton, 400);
+                QTest::qWait(500);
+                press(soundKey(1), Qt::LeftButton, 400);
+                end();
+                chord(false);
+            }
+
+            // ---- 09: a bass in your left hand ------------------------------------------------------
+            toEdit(song);
+            QVERIFY(doc.selectPatch(song, 1));
+            if (begin(u"09"_s)) {
+                atWord(u"bass"_s, 0.1, 2);
+                addPart(u"fake.synth-lead"_s, u"Bass"_s);
+                atWord(u"zone"_s, 0.3);
+                zoneByPlaying(2, 1, 24, 47, u"lowest"_s, u"highest"_s);
+                atWord(u"done"_s, 0.8);
+                closeZone();
+                spot(partKey(2));
+                end();
+            }
+            closeZone();
+
+            // ---- 10: sounds on your pads ---------------------------------------------------------------
+            toEdit(song);
+            setPads(false);
+            if (begin(u"10"_s)) {
+                atWord(u"pads"_s, 0.1);
+                spot(shownOne(u"panelAssign"_s));
+                pressPads(450);
+                atWord(u"tap"_s, 0.3);
+                press(soundKey(0), Qt::LeftButton, 400);
+                spot(soundKey(0));
+                atWord(u"hit"_s, 0.45);
+                hitPad(36);
+                atWord(u"second"_s, 0.65);
+                press(soundKey(1), Qt::LeftButton, 350);
+                hitPad(37);
+                atWord(u"third"_s, 0.8);
+                press(soundKey(2), Qt::LeftButton, 350);
+                hitPad(38);
+                atWord(u"done"_s, 0.92);
+                pressPads(400);
+                end();
+            }
+            if (panel.assigning()) panel.setAssigning(false);
+
+            // ---- 11: what the pads do now ---------------------------------------------------------------
+            toEdit(song);
+            if (begin(u"11"_s)) {
+                spot(rectOf(soundKey(0)).united(rectOf(soundKey(2))));
+                chord(true);
+                atWord(u"hit"_s, 0.1);
+                hitPad(37);
+                QTest::qWait(500);
+                hitPad(38);
+                QTest::qWait(500);
+                hitPad(36);
+                chord(false);
+                atWord(u"every"_s, 0.45);
+                QVERIFY(doc.selectPatch(built, 0)); // another song: the same pads
+                QTest::qWait(400);
+                hitPad(37);
+                QTest::qWait(400);
+                hitPad(38);
+                atWord(u"never"_s, 0.85);
+                end();
+            }
+
+            // ---- 12: parts on pads too -------------------------------------------------------------------
+            toEdit(song);
+            QVERIFY(doc.selectPatch(song, 1));
+            if (begin(u"12"_s)) {
+                atWord(u"pads"_s, 0.15);
+                pressPads(450);
+                atWord(u"strings"_s, 0.25);
+                press(partKey(1), Qt::LeftButton, 400);
+                spot(partKey(1));
+                atWord(u"hit"_s, 0.35);
+                hitPad(39);
+                pressPads(400); // Done
+                atWord(u"chorus"_s, 0.5);
+                chord(true);
+                hitPad(39);
+                atWord(u"again"_s, 0.65);
+                hitPad(39);
+                chord(false);
+                atWord(u"right"_s, 0.85);
+                spot(partKey(1));
+                end();
+            }
+            if (panel.assigning()) panel.setAssigning(false);
+
+            // ---- 13: pads that play their own sound -----------------------------------------------------------
+            toEdit(song);
+            if (begin(u"13"_s)) {
+                atWord(u"drum"_s, 0.12, 2);
+                addPart(u"fake.analog-pad"_s, u"Drum Kit"_s);
+                atWord(u"zone"_s, 0.3);
+                const int drums = static_cast<int>(doc.currentPatch()->channels.size()) - 1;
+                zoneByPlaying(drums, 10, 40, 47, u"first"_s, u"last"_s);
+                atWord(u"keep"_s, 0.85);
+                if (const QQuickItem* keep = inDialog(u"keepOthersOnKeys"_s)) {
+                    spot(keep);
+                    press(keep, Qt::LeftButton, 400);
+                }
+                end();
+            }
+            closeZone();
+
+            // ---- 14: the close ----------------------------------------------------------------------------------
+            closing(u"14"_s, 3.0); // the logo and links stay a little after the last word
+            setPads(false);
         }
     }
 
