@@ -10,6 +10,7 @@
 #include "PianoProNode.h"
 #include "PluginNode.h"
 #include "SawStack.h"
+#include "VideoSounds.h"
 
 #include "gigchain/engine/SidechainCurves.h"
 
@@ -503,6 +504,169 @@ private slots:
         QVERIFY(library.state(Source::Grand, kOddRate) != PianoLibrary::State::NotAsked);
         QTRY_COMPARE_WITH_TIMEOUT(library.state(Source::Grand, kOddRate), PianoLibrary::State::Failed, 10000);
         qunsetenv("GIGCHAIN_PIANO_SAMPLES");
+    }
+
+    // Feature video 7's sound, scene by scene (its script.md), with the real
+    // recorded pianos: made only when GIGCHAIN_VIDEO_SOUNDS names the folder
+    // to write sound_NN.wav into.
+    void renderVideoSounds()
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_VIDEO_SOUNDS");
+        if (folder.isEmpty()) QSKIP("Set GIGCHAIN_VIDEO_SOUNDS to a folder to make the video's sounds");
+        auto& library = PianoLibrary::instance();
+        const auto* grand = library.request(Source::Grand, video::kRate);
+        const auto* upright = library.request(Source::Upright, video::kRate);
+        QTRY_VERIFY_WITH_TIMEOUT(library.state(Source::Grand, video::kRate) != PianoLibrary::State::Loading
+                                     && library.state(Source::Upright, video::kRate) != PianoLibrary::State::Loading,
+                                 120000);
+        QVERIFY2(grand->load() != nullptr && upright->load() != nullptr, "the recorded pianos are needed (fetch the samples)");
+        using video::Take;
+        const auto type = [](const char* name) { return typeValue(typeNamed(name)); };
+        const uint32_t typeId = paramId(Macro::Type);
+        // A minor: Am, F, C, G: a left-hand root and right-hand chord per bar.
+        const std::vector<int> roots{45, 41, 48, 43};
+        const std::vector<std::vector<int>> hands{{60, 64, 69}, {60, 65, 69}, {60, 64, 67}, {59, 62, 67}};
+        const auto houseRiff = [&](Take& t, double from, int bars) {
+            for (int bar = 0; bar < bars; ++bar) {
+                const auto c = static_cast<std::size_t>(bar) % roots.size();
+                const double start = from + (bar * 4.0);
+                t.notes.push_back({.beat = start, .key = roots.at(c), .velocity = 105, .length = 3.6});
+                for (const double hit : {0.0, 0.75, 1.5, 2.5, 3.25}) {
+                    for (const int key : hands.at(c)) t.notes.push_back({.beat = start + hit, .key = key, .velocity = 112, .length = 0.35});
+                }
+            }
+        };
+        const auto heldChords = [&](Take& t, double from, int bars, double beatsEach, int velocity) {
+            for (int bar = 0; bar < bars; ++bar) {
+                const auto c = static_cast<std::size_t>(bar) % roots.size();
+                const double start = from + (bar * beatsEach);
+                t.notes.push_back({.beat = start, .key = roots.at(c), .velocity = velocity, .length = beatsEach - 0.1});
+                for (const int key : hands.at(c)) t.notes.push_back({.beat = start, .key = key, .velocity = velocity, .length = beatsEach - 0.1});
+            }
+        };
+        const auto phrase = [](Take& t, double from, int velocity) {
+            const std::vector<std::array<double, 3>> melody{{0, 72, .5}, {.5, 74, .5}, {1, 76, 1}, {2, 79, .5}, {2.5, 77, .5},
+                                                            {3, 76, 1}, {4, 74, 1}, {5, 72, 2.8}};
+            for (const auto& [beat, key, length] : melody) {
+                t.notes.push_back({.beat = from + beat, .key = static_cast<int>(key), .velocity = velocity, .length = length - 0.05});
+            }
+            t.notes.push_back({.beat = from, .key = 48, .velocity = velocity - 10, .length = 7.8});
+            t.notes.push_back({.beat = from + 4, .key = 43, .velocity = velocity - 10, .length = 3.8});
+        };
+        std::vector<std::pair<int, Take>> scenes;
+        { // 01: Big House Piano, the riff
+            Take t{36};
+            t.add({0, typeId, type("Big House Piano")});
+            houseRiff(t, 0, 8);
+            scenes.emplace_back(1, t);
+        }
+        { // 02: the grand, then the upright
+            Take t{36};
+            t.add({0, typeId, type("Grand Piano")});
+            phrase(t, 0, 85);
+            t.add({16, typeId, type("Upright Piano")});
+            phrase(t, 16, 85);
+            scenes.emplace_back(2, t);
+        }
+        { // 03: soft, hard, pedalled
+            Take t{36};
+            t.add({0, typeId, type("Grand Piano")});
+            phrase(t, 0, 40);
+            chord(t, 9, {36, 48, 55, 64, 67, 72}, 3, 125);
+            t.add({14, true});
+            heldChords(t, 14, 4, 4.0, 80);
+            t.add({30, false});
+            scenes.emplace_back(3, t);
+        }
+        { // 04: House Piano
+            Take t{20};
+            t.add({0, typeId, type("House Piano")});
+            houseRiff(t, 0, 4);
+            scenes.emplace_back(4, t);
+        }
+        { // 05: Big House Piano
+            Take t{20};
+            t.add({0, typeId, type("Big House Piano")});
+            houseRiff(t, 0, 4);
+            scenes.emplace_back(5, t);
+        }
+        { // 06: Prog House Piano
+            Take t{20};
+            t.add({0, typeId, type("Prog House Piano")});
+            houseRiff(t, 0, 4);
+            scenes.emplace_back(6, t);
+        }
+        { // 07: Emotional Piano's slow held chords, then Felt Piano's quiet melody
+            Take t{40};
+            t.add({0, typeId, type("Emotional Piano")});
+            t.add({0, true});
+            heldChords(t, 0, 2, 8.0, 75);
+            t.add({16, false});
+            t.add({20, typeId, type("Felt Piano")});
+            phrase(t, 20, 60);
+            phrase(t, 28, 55);
+            scenes.emplace_back(7, t);
+        }
+        { // 08: Electric Piano, soft then hard
+            Take t{36};
+            t.add({0, typeId, type("Electric Piano")});
+            heldChords(t, 0, 4, 4.0, 45);
+            heldChords(t, 16, 4, 4.0, 120);
+            scenes.emplace_back(8, t);
+        }
+        { // 09: DX Piano, then Lo-fi Keys
+            Take t{36};
+            t.add({0, typeId, type("DX Piano")});
+            heldChords(t, 0, 4, 4.0, 100);
+            t.add({16, typeId, type("Lo-fi Keys")});
+            heldChords(t, 16, 4, 4.0, 100);
+            scenes.emplace_back(9, t);
+        }
+        { // 10: House Piano plain, then octave, strings and sub come in
+            Take t{36};
+            t.add({0, typeId, type("House Piano")});
+            for (const Layer l : {Layer::Octave, Layer::Strings, Layer::Sub}) t.add({0, paramId(l, LayerParam::On), 0.0});
+            houseRiff(t, 0, 8);
+            t.add({8, paramId(Layer::Octave, LayerParam::On), 1.0});
+            t.add({16, paramId(Layer::Strings, LayerParam::On), 1.0});
+            t.add({24, paramId(Layer::Sub, LayerParam::On), 1.0});
+            scenes.emplace_back(10, t);
+        }
+        { // 11: Felt Piano, tape off then on
+            Take t{36};
+            t.add({0, typeId, type("Felt Piano")});
+            t.add({0, paramId(Macro::Tape), 0.0});
+            phrase(t, 0, 60);
+            t.add({16, paramId(Macro::Tape), 0.85});
+            phrase(t, 16, 60);
+            scenes.emplace_back(11, t);
+        }
+        { // 12: House Piano pumping at 1/4, then 1/8D
+            Take t{36};
+            t.add({0, typeId, type("House Piano")});
+            t.add({0, paramId(Macro::Sidechain), 0.75});
+            const auto rate = [](int index) { return Ranges::fromChoice(index, static_cast<int>(sidechain::kRates.size())); };
+            t.add({0, paramId(Macro::SidechainRate), rate(5)});
+            heldChords(t, 0, 8, 4.0, 105);
+            t.add({16, paramId(Macro::SidechainRate), rate(4)});
+            scenes.emplace_back(12, t);
+        }
+        { // 13: the riff again (the video fades it out)
+            Take t{36};
+            t.add({0, typeId, type("Big House Piano")});
+            houseRiff(t, 0, 8);
+            scenes.emplace_back(13, t);
+        }
+        for (const auto& [number, take] : scenes) {
+            Synth synth;
+            synth.useRecordings(Source::Grand, grand);
+            synth.useRecordings(Source::Upright, upright);
+            synth.prepare(video::kRate, video::kBlock);
+            const std::vector<float> sound = video::render(synth, take);
+            const QString path = u"%1/sound_%2.wav"_s.arg(folder).arg(number, 2, 10, QLatin1Char('0'));
+            QVERIFY2(video::writeWav(path, sound), qPrintable(path));
+            qInfo().noquote() << path << u"%1 s"_s.arg(static_cast<double>(sound.size()) / 2.0 / video::kRate, 0, 'f', 1);
+        }
     }
 
     void itIsInTheInstrumentList()

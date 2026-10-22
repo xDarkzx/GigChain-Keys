@@ -5,6 +5,7 @@
 #include "PluginNode.h"
 #include "SawStack.h"
 #include "SawStackNode.h"
+#include "VideoSounds.h"
 
 #include "gigchain/engine/SidechainCurves.h"
 
@@ -787,6 +788,168 @@ private slots:
             }
             const auto bytes = static_cast<qint64>(interleaved.size() * sizeof(float));
             QCOMPARE(file.write(reinterpret_cast<const char*>(interleaved.data()), bytes), bytes); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): raw samples to a file
+        }
+    }
+
+    // Feature video 6's sound, scene by scene (its script.md): made only
+    // when GIGCHAIN_VIDEO_SOUNDS names the folder to write sound_NN.wav into.
+    void renderVideoSounds()
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_VIDEO_SOUNDS");
+        if (folder.isEmpty()) QSKIP("Set GIGCHAIN_VIDEO_SOUNDS to a folder to make the video's sounds");
+        using video::Take;
+        const auto type = [](const char* name) { return typeValue(typeNamed(name)); };
+        const uint32_t typeId = paramId(Macro::Type);
+        // A minor: Am, F, C, G, a bar each.
+        const std::vector<std::vector<int>> chords{{45, 57, 60, 64, 69}, {41, 57, 60, 65, 69}, {48, 55, 60, 64, 67}, {43, 55, 59, 62, 67}};
+        const auto progression = [&](Take& t, double from, int bars, double hold = 4.0, int velocity = 105) {
+            for (int bar = 0; bar < bars; ++bar) {
+                for (const int key : chords.at(static_cast<std::size_t>(bar) % chords.size())) {
+                    t.notes.push_back({.beat = from + (bar * 4.0), .key = key, .velocity = velocity, .length = hold - 0.1});
+                }
+            }
+        };
+        const auto lead = [](Take& t, double from) {
+            const std::vector<std::array<double, 3>> riff{{0, 76, .5}, {.5, 74, .5}, {1, 72, .5}, {1.5, 74, .5}, {2, 76, 1},
+                                                          {3, 79, .5}, {3.5, 76, .5}, {4, 74, 1.5}, {5.5, 72, .5}, {6, 71, 1}, {7, 69, .9}};
+            for (const auto& [beat, key, length] : riff) {
+                t.notes.push_back({.beat = from + beat, .key = static_cast<int>(key), .velocity = 110, .length = length - 0.05});
+            }
+        };
+        const auto pluck = [](Take& t, double from) {
+            const std::vector<int> arp{57, 60, 64, 69, 64, 60, 57, 60, 57, 60, 65, 69, 65, 60, 57, 60};
+            for (std::size_t i = 0; i < arp.size(); ++i) {
+                t.notes.push_back({.beat = from + (static_cast<double>(i) * 0.5), .key = arp.at(i), .velocity = 105, .length = 0.4});
+            }
+        };
+        const auto on = [](int layer) { return paramId(layer, LayerParam::On); };
+        std::vector<std::pair<int, Take>> scenes;
+        { // 01: the drop
+            Take t{36};
+            t.add({0, typeId, type("Future Bass Chords")});
+            progression(t, 0, 8);
+            scenes.emplace_back(1, t);
+        }
+        { // 02: one held chord
+            Take t{12};
+            t.add({0, typeId, type("Supersaw Chords")});
+            chord(t, 0, {45, 57, 60, 64, 69}, 8);
+            scenes.emplace_back(2, t);
+        }
+        { // 03: Supersaw Chords, then Future Bass Chords
+            Take t{34};
+            t.add({0, typeId, type("Supersaw Chords")});
+            progression(t, 0, 4);
+            t.add({16, typeId, type("Future Bass Chords")});
+            progression(t, 16, 4);
+            scenes.emplace_back(3, t);
+        }
+        { // 04: the leads, two bars each
+            Take t{34};
+            const std::array<const char*, 4> leads{"Supersaw Lead", "Trance Lead", "Anthem Lead", "Big Room Lead"};
+            for (std::size_t i = 0; i < leads.size(); ++i) {
+                t.add({static_cast<double>(i) * 8.0, typeId, type(leads.at(i))});
+                lead(t, static_cast<double>(i) * 8.0);
+            }
+            scenes.emplace_back(4, t);
+        }
+        { // 05: the pad, the pluck, the reese
+            Take t{36};
+            t.add({0, typeId, type("Supersaw Pad")});
+            chord(t, 0, {45, 57, 60, 64, 69}, 11.5, 90);
+            t.add({16, typeId, type("Supersaw Pluck")});
+            pluck(t, 16);
+            t.add({25, typeId, type("Reese Bass")});
+            chord(t, 25, {33}, 8, 110);
+            scenes.emplace_back(5, t);
+        }
+        { // 06: air on, off, on; pluck on, off, on
+            Take t{50};
+            t.add({0, typeId, type("Supersaw Chords")});
+            progression(t, 0, 12, 4.0);
+            t.add({8, on(kNoiseLayer), 0.0});
+            t.add({16, on(kNoiseLayer), 1.0});
+            t.add({32, on(6), 0.0});
+            t.add({40, on(6), 1.0});
+            scenes.emplace_back(6, t);
+        }
+        { // 07: the cutoff swept down and up, then resonance
+            Take t{34};
+            t.add({0, typeId, type("Supersaw Chords")});
+            for (int bar = 0; bar < 8; ++bar) chord(t, bar * 4.0, {45, 57, 60, 64, 69}, 3.9);
+            t.add({0, 8, paramId(Macro::Cutoff), 1.0, 0.35});
+            t.add({8, 16, paramId(Macro::Cutoff), 0.35, 1.0});
+            t.add({16, paramId(Macro::Cutoff), 0.62});
+            t.add({16, 24, paramId(Macro::Resonance), 0.0, 0.75});
+            scenes.emplace_back(7, t);
+        }
+        { // 08: spread, attack, release
+            Take t{34};
+            t.add({0, typeId, type("Supersaw Chords")});
+            chord(t, 0, {45, 57, 60, 64, 69}, 6);
+            t.add({8, paramId(Macro::Spread), 1.0});
+            chord(t, 8, {45, 57, 60, 64, 69}, 6);
+            t.add({16, paramId(Macro::Attack), Ranges::fromSeconds(0.8)});
+            chord(t, 16, {45, 57, 60, 64, 69}, 6);
+            t.add({24, paramId(Macro::Release), Ranges::fromSeconds(2.5)});
+            chord(t, 24, {45, 57, 60, 64, 69}, 3);
+            scenes.emplace_back(8, t);
+        }
+        { // 09: dry, then OTT, width, delay, reverb come in one by one
+            Take t{36};
+            t.add({0, typeId, type("Supersaw Chords")});
+            for (const Macro m : {Macro::Reverb, Macro::Delay, Macro::Ott, Macro::Width}) t.add({0, paramId(m), 0.0});
+            progression(t, 0, 8, 2.0);
+            t.add({4, paramId(Macro::Ott), 0.8});
+            t.add({12, paramId(Macro::Width), 0.8});
+            t.add({20, paramId(Macro::Delay), 0.35});
+            t.add({28, paramId(Macro::Reverb), 0.5});
+            scenes.emplace_back(9, t);
+        }
+        { // 10: the curves: classic, smooth, suction, gate
+            Take t{34};
+            t.add({0, typeId, type("Supersaw Chords")});
+            t.add({0, paramId(Macro::Sidechain), 0.85});
+            progression(t, 0, 8);
+            const auto curve = [](int index) { return Ranges::fromChoice(index, static_cast<int>(sidechain::kCurves.size())); };
+            t.add({0, paramId(Macro::SidechainCurve), curve(0)});
+            t.add({8, paramId(Macro::SidechainCurve), curve(1)});
+            t.add({16, paramId(Macro::SidechainCurve), curve(8)});
+            t.add({24, paramId(Macro::SidechainCurve), curve(10)});
+            scenes.emplace_back(10, t);
+        }
+        { // 11: 1/4, then 1/8D, then off, then on
+            Take t{34};
+            t.add({0, typeId, type("Supersaw Chords")});
+            t.add({0, paramId(Macro::Sidechain), 0.85});
+            progression(t, 0, 8);
+            const auto rate = [](int index) { return Ranges::fromChoice(index, static_cast<int>(sidechain::kRates.size())); };
+            t.add({0, paramId(Macro::SidechainRate), rate(5)});
+            t.add({8, paramId(Macro::SidechainRate), rate(4)});
+            t.add({16, paramId(Macro::SidechainOn), 0.0});
+            t.add({24, paramId(Macro::SidechainOn), 1.0});
+            scenes.emplace_back(11, t);
+        }
+        { // 12: a build, the filter opening into the drop
+            Take t{36};
+            t.add({0, typeId, type("Future Bass Chords")});
+            progression(t, 0, 8);
+            t.add({0, 16, paramId(Macro::Cutoff), 0.3, 1.0});
+            scenes.emplace_back(12, t);
+        }
+        { // 13: the drop again (the video fades it out)
+            Take t{36};
+            t.add({0, typeId, type("Future Bass Chords")});
+            progression(t, 0, 8);
+            scenes.emplace_back(13, t);
+        }
+        for (const auto& [number, take] : scenes) {
+            Synth synth;
+            synth.prepare(video::kRate, video::kBlock);
+            const std::vector<float> sound = video::render(synth, take);
+            const QString path = u"%1/sound_%2.wav"_s.arg(folder).arg(number, 2, 10, QLatin1Char('0'));
+            QVERIFY2(video::writeWav(path, sound), qPrintable(path));
+            qInfo().noquote() << path << u"%1 s"_s.arg(static_cast<double>(sound.size()) / 2.0 / video::kRate, 0, 'f', 1);
         }
     }
 
