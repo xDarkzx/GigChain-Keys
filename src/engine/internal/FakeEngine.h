@@ -125,11 +125,16 @@ public:
     }
     void setBackingTrackVolume(double) override {}
     [[nodiscard]] BackingTrackState backingTrack() const override { return m_track; }
-    [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId&, int) const override
-    {
-        return {{.id = 1, .name = QStringLiteral("Cutoff")}, {.id = 2, .name = QStringLiteral("Resonance")}};
-    }
+    // Saw Stack Pro's own (its type and knobs, as the real one has them);
+    // any other instrument: two made-up ones.
+    [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId& id, int target) const override;
     std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId&, int) override { return std::nullopt; }
+    [[nodiscard]] double pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const override;
+    core::Result<void> setPluginParameter(const core::ChannelId&, int, uint32_t parameter, double value) override
+    {
+        m_parameterValues[parameter] = std::clamp(value, 0.0, 1.0);
+        return {};
+    }
     std::optional<std::pair<int, int>> takeMovedController() override { return std::exchange(m_moved, std::nullopt); }
     [[nodiscard]] std::vector<AudioInputDevice> audioInputDevices() const override
     {
@@ -285,6 +290,7 @@ public:
 
 private:
     std::optional<std::pair<int, int>> m_moved; // the last controller injected (channel 1-16, number), not yet taken
+    std::map<uint32_t, double> m_parameterValues; // set through setPluginParameter (any plugin)
     MidiTrigger m_learned;                      // the last pad, key or button pressed, not yet taken (Learn)
     PanelTriggers m_panel;                      // the panel's pads
     std::vector<PanelPress> m_panelPresses;     // pressed since last asked
@@ -309,6 +315,7 @@ private:
         double volumeDb = 0.0;
         bool mute = false;
         bool solo = false;
+        QString builtin; // plays one of the app's own instruments (this id): its real knobs are shown
     };
 
     ChannelState* find(const core::ChannelId& id);

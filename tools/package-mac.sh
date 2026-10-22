@@ -45,6 +45,15 @@ cp "$BUILD/_deps/vst3sdk-src/LICENSE.txt" "$RES/licenses/vst3sdk.txt"
 for port in rtaudio rtmidi tl-expected; do
     cp "$BUILD/vcpkg_installed/$TRIPLET/share/$port/copyright" "$RES/licenses/$port.txt"
 done
+# Piano Pro's recorded pianos (VCSL, CC0) and their licence, where the app
+# looks on a Mac (Contents/Resources/samples/piano). Signed with the rest.
+SAMPLES="$BUILD/samples/piano"
+for file in "Grand Piano, K.sfz" "Upright Piano, Y.sfz" "LICENSE-VCSL.txt"; do
+    [ -f "$SAMPLES/$file" ] || { echo "Piano Pro's samples are missing: $SAMPLES/$file (cmake/PianoSamples.cmake)" >&2; exit 1; }
+done
+rm -rf "$RES/samples"
+mkdir -p "$RES/samples"
+cp -R "$SAMPLES" "$RES/samples/"
 # Ad-hoc signed as a whole (no hardened runtime: plugins signed by anyone
 # load), then checked: a bundle that fails the check is never shipped.
 codesign --force --deep --sign - "$APP"

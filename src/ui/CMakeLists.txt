@@ -109,6 +109,14 @@ qt_add_qml_module(gigchain_ui
         LoopsPill.qml
         LoopControlsDialog.qml
         PanelBar.qml
+        SawStackPanel.qml
+        PianoProPanel.qml
+        BuiltinPanel.qml
+        BuiltinKnob.qml
+        BuiltinCard.qml
+        BuiltinPill.qml
+        BuiltinLayerRow.qml
+        SidechainCard.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/layout-grid.svg

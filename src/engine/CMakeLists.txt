@@ -52,10 +52,34 @@ add_library(gigchain_engine STATIC
     internal/PluginLoadGuard.cpp
     internal/ComponentHandler.h
     internal/SafetyLimiter.h
+    internal/SawStackDsp.h
+    internal/SawStackFx.h
+    internal/SawStackTypes.h
+    internal/SawStackTypes.cpp
+    internal/SawStack.h
+    internal/SawStack.cpp
+    internal/SawStackNode.h
+    internal/SawStackNode.cpp
+    internal/FxChain.h
+    internal/FxChain.cpp
+    internal/Sfz.h
+    internal/Sfz.cpp
+    internal/PianoSamples.h
+    internal/PianoSamples.cpp
+    internal/PianoTypes.h
+    internal/PianoTypes.cpp
+    internal/PianoLibrary.h
+    internal/PianoLibrary.cpp
+    internal/PianoPro.h
+    internal/PianoPro.cpp
+    internal/PianoProNode.h
+    internal/PianoProNode.cpp
     internal/RealEngine.h
     internal/RealEngine.cpp
     include/gigchain/engine/RealEngineFactory.h
     include/gigchain/engine/IPluginEditor.h
+    include/gigchain/engine/SidechainCurves.h
+    include/gigchain/engine/BuiltinReadings.h
 )
 add_library(gigchain::engine ALIAS gigchain_engine)
 target_include_directories(gigchain_engine

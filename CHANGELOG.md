@@ -8,6 +8,50 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-23 (alpha)
+
+Two instruments of its own, so the sounds of EDM need no paid plugin.
+
+### Added
+
+- **Saw Stack Pro:** a built-in saw-stack synth for the big layered EDM saws.
+  Pick a type: *Supersaw Lead, Supersaw Chords, Future Bass Chords, Melodic
+  Dubstep Lead, Trance Lead, Anthem Lead, Big Room Lead, Supersaw Pad,
+  Supersaw Pluck* or *Reese Bass*. Behind each type are up to eight layers
+  (sub, low saw, main, wide, octave up, body, pluck and air noise), each with
+  up to 16 detuned saws, finished with the type's own drive, OTT, chorus,
+  width, delay and reverb. Shape it with **Cutoff, Resonance, Spread, Attack**
+  and **Release**, and finish it with **Reverb, Delay, OTT** and **Width**.
+  Each knob can be learned to a knob on your keyboard. It is under
+  **Instruments**, by *GigChain*.
+- **A sidechain in both,** the way Kickstart does it. Choose from 12
+  curves: duck, sub, reverse "suction" and rhythm. Set the length from 1/16 to
+  a whole bar, including dotted and triplet lengths. Use **Mix** for how hard it
+  ducks, and **Slope** (drag the display) for how long each dip lasts. It can
+  follow the song's beat (**Sync**) or restart on every note you play
+  (**Note**). A live display shows the curve with a moving playhead. A light
+  by its name switches it off and on, keeping its settings.
+- **Piano Pro:** a built-in EDM piano, with the same window, effects and
+  sidechain as Saw Stack Pro. It has ten types: *House Piano, Big House
+  Piano, Prog House Piano, Emotional Piano, Felt Piano, Grand Piano, Upright
+  Piano, Electric Piano, DX Piano* and *Lo-fi Keys*. The acoustic types play
+  a real recorded Kawai grand or Yamaha upright from Versilian Studios' VCSL,
+  which is free to use (CC0). They play with loudness layers, the release
+  sound when you let go, and the sustain pedal. The electric types are FM
+  pianos in the Rhodes and DX7 style. Each piano can add an octave-up copy,
+  soft strings and a sub, as big house pianos do. The knobs are **Tone,
+  Resonance, Attack, Release, Width, Reverb, Delay, OTT** and the new
+  **Tape** (wobble, warmth and hiss), and each can be learned to a knob on
+  your keyboard. It is under **Instruments**, by *GigChain*.
+- **Their windows** are the app's own, flat and modern: every layer shown at
+  once with its light and level bar, the sound knobs, the effects and the
+  sidechain each on its own card. The user guide (Help) has a page on both.
+
+### Fixed
+
+- **Panic** no longer resets the instruments when the audio would not pause
+  first (that could crash the app); it still lets every note go.
+
 ## [0.5.0] - 2026-10-16 (alpha)
 
 ### Added

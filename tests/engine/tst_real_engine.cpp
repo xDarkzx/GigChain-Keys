@@ -9,6 +9,7 @@
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/PluginSharing.h"
 #include "gigchain/engine/RealEngineFactory.h"
+#include "gigchain/engine/SidechainCurves.h"
 
 #include "TestPlugins.h"
 
@@ -1633,6 +1634,46 @@ private slots:
         QVERIFY(engine.pluginParameters(piano, 0).empty());                        // no effect there
         QVERIFY(engine.pluginParameters(core::ChannelId::generate(), -1).empty()); // no such channel
         QVERIFY(!engine.takeTouchedParameter(piano, -1).has_value());               // nothing moved
+    }
+
+    // Saw Stack Pro, the app's own instrument: listed with the instruments,
+    // loaded from a setlist with nothing installed, heard when played, and
+    // its type and knobs set from the app's window.
+    void sawStackProIsListedPlaysAndTakesItsKnobs()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        const QString id = u"builtin:saw-stack-pro"_s;
+        QVERIFY(std::ranges::any_of(engine.availablePlugins(), [&id](const PluginInfo& p) { return p.id == id; }));
+        core::Patch patch = core::makePatch(u"Drop"_s);
+        core::Channel channel = core::makeChannel(u"Stack"_s);
+        channel.instrument = slot(id, u"Saw Stack Pro"_s);
+        patch.channels.push_back(channel);
+        engine.applyPatch(patch);
+        QVERIFY(engine.poll().empty()); // loaded without problems
+        const core::ChannelId& stack = patch.channels.front().id;
+
+        const std::vector<PluginParameter> parameters = engine.pluginParameters(stack, -1);
+        QCOMPARE(parameters.size(), std::size_t{16});
+        QCOMPARE(parameters.front().name, u"Type"_s);
+        QCOMPARE(parameters.front().choices.size(), qsizetype{10});
+        const uint32_t cutoff = parameters.at(1).id;
+        QVERIFY(engine.setPluginParameter(stack, -1, cutoff, 0.3).has_value());
+        QVERIFY(std::abs(engine.pluginParameterValue(stack, -1, cutoff) - 0.3) < 1e-6);
+        const auto touched = engine.takeTouchedParameter(stack, -1); // for MIDI Learn
+        QCOMPARE(touched.value_or(PluginParameter{}).name, u"Cutoff"_s);
+
+        engine.setMasterVolume(-90.0); // inaudible, but measurable
+        engine.injectNote(1, 60, 110);
+        const float peak = loudestUntilAbove(engine, [&] { return engine.channelLevel(stack).peak; }, 0.001F);
+        engine.injectNote(1, 60, 0);
+        QVERIFY2(peak > 0.001F, "Saw Stack Pro stayed silent");
+        // Its window's sidechain playhead moves with the sound.
+        const double position = engine.pluginParameterValue(stack, -1, sidechain::kPositionParameter);
+        QVERIFY(position >= 0.0 && position < 1.0);
+        QTRY_VERIFY(engine.pluginParameterValue(stack, -1, sidechain::kPositionParameter) != position);
     }
 
     void bundledPluginsAreFoundWithTheInstalledOnes()

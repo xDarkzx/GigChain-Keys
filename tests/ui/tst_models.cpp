@@ -8,6 +8,8 @@
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
 #include "SpyEngine.h"
+#include "gigchain/engine/BuiltinReadings.h"
+#include "gigchain/engine/SidechainCurves.h"
 
 #include <QAbstractItemModelTester>
 #include <QSettings>
@@ -282,6 +284,44 @@ private slots:
 
         m_doc->setSelectedChannel(-1);
         QCOMPARE(service.emptyReason(), u"Select a channel in the mixer"_s);
+    }
+
+    void theAppsOwnInstrumentIsShownByTheApp()
+    {
+        // Saw Stack Pro has no window of its own: the main area draws its
+        // knobs, which reach the engine; a plugin with a window is not one.
+        EditorService service(*m_engine, *m_doc);
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Spy Piano"_s));
+        QVERIFY(m_doc->addChannel(u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s));
+        m_doc->setSelectedChannel(0);
+        QVERIFY(!service.builtinSelected());
+        QVERIFY(service.builtinParameters().isEmpty());
+        m_doc->setSelectedChannel(1);
+        QVERIFY(service.builtinSelected());
+        QCOMPARE(service.builtinName(), u"Saw Stack Pro"_s);
+        const QVariantList parameters = service.builtinParameters();
+        QCOMPARE(parameters.size(), static_cast<qsizetype>(m_engine->parameters.size()));
+        QCOMPARE(parameters.front().toMap().value(u"name"_s).toString(), u"Cutoff"_s);
+        service.setBuiltinValue(7, 0.25);
+        QCOMPARE(m_engine->parameterValues.at(7), 0.25);
+        QCOMPARE(service.builtinValue(7), 0.25);
+        // The sidechain's window draws the engine's own curves (not a copy of
+        // them) and its playhead where the engine is.
+        const QVariantList classic = service.sidechainCurve(0, 0.5, 33);
+        QCOMPARE(classic.size(), qsizetype{33});
+        for (int i = 0; i < 33; ++i) QCOMPARE(classic.at(i).toDouble(), engine::sidechain::curveGain(0, i / 32.0, 0.5));
+        QVERIFY(service.sidechainCurve(10, 0.5, 33) != classic);
+        m_engine->parameterValues[engine::sidechain::kPositionParameter] = 0.375;
+        QCOMPARE(service.sidechainPosition(), 0.375);
+        // Which of the app's own it is (its window is chosen by it), and what it shows besides its settings.
+        QCOMPARE(service.builtinId(), u"builtin:saw-stack-pro"_s);
+        m_engine->parameterValues[engine::readings::kPianoRecordings] = 0.5;
+        m_engine->parameterValues[engine::readings::kPianoSource] = 1.0 / 3.0;
+        QCOMPARE(service.builtinReading(u"pianoRecordings"_s), 0.5);
+        QCOMPARE(service.builtinReading(u"pianoSource"_s), 1.0 / 3.0);
+        QCOMPARE(service.builtinReading(u"no such reading"_s), -1.0);
+        m_doc->setSelectedChannel(0);
+        QCOMPARE(service.builtinId(), QString());
     }
 
     void mixerMovesDoNotRebuildTheEditor()

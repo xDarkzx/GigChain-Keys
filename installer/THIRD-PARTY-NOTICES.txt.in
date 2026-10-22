@@ -29,6 +29,16 @@ VST 3 SDK (Steinberg Media Technologies GmbH)
 tl::expected (Sy Brand)
   CC0 1.0 (public domain dedication): licenses/tl-expected.txt
 
+Vital (Matt Tytel)
+  Saw Stack Pro's and Piano Pro's compressor, reverb and chorus are ported
+  from Vital's, under the GNU General Public License v3.
+  https://github.com/mtytel/vital
+
+VCSL Keys (Versilian Studios LLC)
+  Piano Pro's recorded grand and upright pianos, in samples/piano.
+  CC0 1.0 (public domain dedication): samples/piano/LICENSE-VCSL.txt
+  https://github.com/sgossner/VCSL
+
 @NOTICE_RUNTIME@VST is a registered trademark and ASIO a trademark of Steinberg Media
 Technologies GmbH. Windows is a trademark of the Microsoft group of
 companies; macOS is a trademark of Apple Inc. All other names are

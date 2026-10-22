@@ -118,6 +118,66 @@ core::Result<AudioClip> decodeAudioFile(const QString& path, double sampleRate, 
     return clip;
 }
 
+core::Result<SampleClip> decodeSampleFile(const QString& path, double sampleRate, double keepSeconds, const std::atomic<bool>* cancel)
+{
+    const QString name = QFileInfo(path).fileName();
+    if (!QFileInfo::exists(path)) return core::fail(core::ErrorCode::FileNotFound, u"Sample not found: %1"_s.arg(path));
+    if (!std::isfinite(sampleRate) || sampleRate <= 0.0 || !std::isfinite(keepSeconds) || keepSeconds <= 0.0) {
+        return core::fail(core::ErrorCode::InvalidData, u"Cannot read %1 without an audio output running"_s.arg(name));
+    }
+    // Its own channels and rate first (one buffer tells).
+    int sourceChannels = 0;
+    double sourceRate = 0.0;
+    {
+        QAudioDecoder probe;
+        const QString problem = runDecoder(probe, path, [&](const QAudioBuffer& buffer) {
+            sourceChannels = buffer.format().channelCount();
+            sourceRate = buffer.format().sampleRate();
+            return false;
+        });
+        if (sourceChannels <= 0 || sourceRate <= 0.0) {
+            return core::fail(core::ErrorCode::InvalidData,
+                              u"Cannot read the sample %1: %2"_s.arg(name, problem.isEmpty() ? u"it holds no audio"_s : problem));
+        }
+    }
+    const int channels = std::min(sourceChannels, 2);
+    QAudioFormat format;
+    format.setSampleRate(static_cast<int>(std::lround(sampleRate)));
+    format.setChannelCount(channels);
+    format.setSampleFormat(QAudioFormat::Float);
+
+    SampleClip read;
+    read.sourceRate = sourceRate;
+    read.clip.path = path;
+    read.clip.sampleRate = sampleRate;
+    const auto keepFrames = static_cast<std::size_t>(keepSeconds * sampleRate);
+    QString stopped;
+    QAudioDecoder decoder;
+    decoder.setAudioFormat(format);
+    QString problem = runDecoder(decoder, path, [&](const QAudioBuffer& buffer) {
+        if (buffer.format().sampleFormat() != QAudioFormat::Float || buffer.format().channelCount() != channels) {
+            stopped = u"it came out in an unexpected sample format"_s;
+            return false;
+        }
+        const std::span<const float> samples(buffer.constData<float>(), static_cast<std::size_t>(buffer.sampleCount()));
+        const auto step = static_cast<std::size_t>(channels);
+        for (std::size_t i = 0; i + step - 1 < samples.size() && read.clip.left.size() < keepFrames; i += step) {
+            const float left = samples.subspan(i).front();
+            read.clip.left.push_back(left);
+            read.clip.right.push_back(channels == 2 ? samples.subspan(i + 1).front() : left);
+        }
+        if (cancel != nullptr && cancel->load(std::memory_order_relaxed)) {
+            stopped = u"reading it was cancelled"_s;
+            return false;
+        }
+        return read.clip.left.size() < keepFrames; // enough: the rest is never decoded
+    });
+    if (!stopped.isEmpty()) problem = stopped;
+    if (!problem.isEmpty()) return core::fail(core::ErrorCode::InvalidData, u"Cannot read the sample %1: %2"_s.arg(name, problem));
+    if (read.clip.left.empty()) return core::fail(core::ErrorCode::InvalidData, u"Cannot read the sample %1: it holds no audio"_s.arg(name));
+    return read;
+}
+
 TrackRead readTrackSet(const std::vector<QString>& paths, double sampleRate, const std::atomic<bool>* cancel)
 {
     TrackRead read;

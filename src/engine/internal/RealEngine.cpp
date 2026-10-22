@@ -156,6 +156,8 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
         }
         qCInfo(lcEngine).noquote() << "Plugins that come with the app:" << added << "from" << options.bundledPluginFolder;
     }
+    // The app's own instruments (built in, nothing to scan).
+    std::ranges::move(PluginNode::builtins(), std::back_inserter(engine->m_plugins));
     return engine;
 }
 
@@ -326,6 +328,13 @@ bool RealEngine::isInstalledPlugin(const QString& pluginId) const
 
 core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QString& name) const
 {
+    // The app's own instruments run no outside code: always there.
+    if (PluginNode::isBuiltin(pluginId)) {
+        if (std::ranges::any_of(PluginNode::builtins(), [&](const PluginInfo& p) { return p.id == pluginId; })) return {};
+        const QString problem = u"%1 (%2) is not one of this version's own instruments: not loaded"_s.arg(name, pluginId);
+        qCWarning(lcEngine).noquote() << problem;
+        return core::fail(core::ErrorCode::InvalidData, problem);
+    }
     // A VST2 plugin is a plain library, and loading one runs its code before
     // anything can check it: only one the (sandboxed) scan found and read as
     // a VST2 plugin, never just any file a setlist names in a plugin folder.
@@ -861,6 +870,7 @@ std::vector<Notice> RealEngine::poll()
         }
     }
     for (const auto& [key, node] : m_nodes) {
+        node->serviceMainThread();
         const auto problems = node->takeProblems();
         if (!problems.any()) continue;
         qCWarning(lcEngine).noquote() << node->name() << "problems: process failures" << problems.processFailures
@@ -1221,9 +1231,13 @@ void RealEngine::panic()
     GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
-    // No render callback may touch a plugin while it is reset.
-    if (auto paused = m_audio.pause(); !paused) {
-        m_pendingNotices.push_back(Notice::error(paused.error().message));
+    // No render callback may touch a plugin while it is reset: when the
+    // audio would not pause, notes are let go but nothing is reset (resetting
+    // a plugin the audio thread is using could crash the app).
+    bool paused = true;
+    if (auto pausing = m_audio.pause(); !pausing) {
+        paused = false;
+        m_pendingNotices.push_back(Notice::error(pausing.error().message));
         qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
     }
     const double rate = m_audio.sampleRate();
@@ -1233,6 +1247,7 @@ void RealEngine::panic()
     for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes}) {
         for (const auto& [key, node] : *nodes) {
             node->releaseAllNotes();
+            if (!paused) continue;
             // Deactivate + activate: VST3's reset, clearing voices and tails.
             if (auto prepared = node->prepare(rate, block); !prepared) {
                 m_pendingNotices.push_back(Notice::error(prepared.error().message));
@@ -1786,8 +1801,25 @@ std::vector<PluginParameter> RealEngine::pluginParameters(const core::ChannelId&
     const auto node = currentNode(id, target);
     if (!node) return list;
     std::ranges::transform(node->parameters(), std::back_inserter(list),
-                           [](const PluginNode::Parameter& p) { return PluginParameter{.id = p.id, .name = p.name}; });
+                           [](const PluginNode::Parameter& p) { return PluginParameter{.id = p.id, .name = p.name, .choices = p.choices}; });
     return list;
+}
+
+double RealEngine::pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto node = currentNode(id, target);
+    return node ? node->parameterValue(parameter) : -1.0;
+}
+
+core::Result<void> RealEngine::setPluginParameter(const core::ChannelId& id, int target, uint32_t parameter, double value)
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto node = currentNode(id, target);
+    if (!node) return core::fail(core::ErrorCode::InvalidData, u"That plugin is not loaded"_s);
+    auto set = node->setParameter(parameter, value);
+    if (!set) qCWarning(lcEngine).noquote() << "Setting a parameter:" << set.error().message;
+    return set;
 }
 
 std::optional<PluginParameter> RealEngine::takeTouchedParameter(const core::ChannelId& id, int target)

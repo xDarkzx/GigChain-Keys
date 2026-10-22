@@ -12,6 +12,57 @@ version). A plugin's details in the browser say which it is ("Built with VST
 2.4"). VST2 "shell" plugins, which hold several plugins in one file (as
 Waves' do), are not played yet.
 
+## The built-in instruments: Saw Stack Pro and Piano Pro
+
+Two instruments come with GigChain Keys, in the **Instruments** list as
+*Built into GigChain Keys*. Their windows are the app's own, in the same
+style, and work the same way:
+
+- **The type**, in the middle of the top bar: click its name for the list, or
+  step with **‹ ›**. A new type brings its own layers and effects, and sets
+  the knobs where it starts them.
+- **Master**, top right, sets its level.
+- **Layers:** click a layer's light to switch it on or off, and drag its bar
+  for its level.
+- **Knobs:** drag up or right for more, or use the mouse wheel. Hover a knob
+  to read its value. **MIDI Learn** above the window learns any of them to a
+  knob on your keyboard.
+
+**Saw Stack Pro** is the big layered saw sound of EDM: *Supersaw Lead,
+Supersaw Chords, Future Bass Chords, Melodic Dubstep Lead, Trance Lead,
+Anthem Lead, Big Room Lead, Supersaw Pad, Supersaw Pluck* and *Reese Bass*.
+Each is up to eight layers (sub, low saw, main, wide, octave up, body, pluck
+and air noise). **Cutoff, Resonance, Spread, Attack** and **Release** shape
+the sound; **Reverb, Delay, OTT** and **Width** finish it.
+
+**Piano Pro** is the piano of EDM records: *House Piano, Big House Piano,
+Prog House Piano, Emotional Piano, Felt Piano, Grand Piano, Upright Piano,
+Electric Piano, DX Piano* and *Lo-fi Keys*. The acoustic types play a
+recorded Kawai grand or Yamaha upright: struck softly or hard, let go (you
+hear the dampers) and held with the sustain pedal. The electric types are
+FM pianos. Its layers are the piano, the same piano an octave up, soft
+strings and a sub. The **Piano** card says which piano plays. The first
+time a recorded piano is used it takes a few seconds to load ("Loading…"),
+and the FM piano plays meanwhile. **Tone, Resonance, Attack, Release** and
+**Width** shape it; **Reverb, Delay, OTT** and **Tape** (wobble, warmth and
+hiss) finish it.
+
+### The sidechain
+
+Both have the pumping of a dance track built in, on the **Sidechain** card:
+
+- **The light** by its name switches it on (yellow) or off (grey); its
+  settings are kept while it is off.
+- **Sync** ducks on the song's beat; **Note** starts again on every note you
+  play.
+- **The length:** how often it ducks, from **1/16** to a whole bar **1/1**,
+  with dotted (**D**) and triplet (**T**) lengths.
+- **The display** shows the duck as it happens. **Drag across it** to make
+  each dip shorter or longer (**Slope**).
+- **The curves** under it: ordinary ducks, slower ones for bass, reverse
+  "suction" swells, and rhythmic gates.
+- **Mix** sets how far it ducks.
+
 ## No instruments yet?
 
 Free ones cover everything a keys player needs to start. **Help > Get free

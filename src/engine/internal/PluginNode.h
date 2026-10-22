@@ -3,6 +3,7 @@
 #include "INode.h"
 
 #include "gigchain/core/Error.h"
+#include "gigchain/engine/EngineTypes.h"
 #include "gigchain/engine/IPluginEditor.h"
 
 #include <QByteArray>
@@ -28,16 +29,28 @@ public:
     // Main thread. The plugin's own editor, or nullptr when it has none. The
     // editor keeps `node` alive until it is destroyed.
     static core::Result<std::unique_ptr<IPluginEditor>> createEditor(const std::shared_ptr<PluginNode>& node);
-    // Whether `pluginId` is a VST2 plugin (else VST3).
+    // Whether `pluginId` is a VST2 plugin (else VST3 or built in).
     [[nodiscard]] static bool isVst2(const QString& pluginId);
+    // Whether `pluginId` is one of the app's own instruments ("builtin:...").
+    [[nodiscard]] static bool isBuiltin(const QString& pluginId);
+    // The app's own instruments, as the instrument list shows them.
+    [[nodiscard]] static std::vector<PluginInfo> builtins();
 
     // Main thread: the parameters a knob can be mapped to, as {id, name}.
     struct Parameter
     {
         uint32_t id = 0;
         QString name;
+        QStringList choices; // a stepped parameter's settings by name (PluginParameter::choices)
     };
     [[nodiscard]] virtual std::vector<Parameter> parameters() const = 0;
+    // Main thread: sets a parameter (0-1) as the plugin's own window would:
+    // for the app's own instruments, whose window the app draws. A plugin
+    // with a window of its own refuses (it is changed there).
+    virtual core::Result<void> setParameter(uint32_t /*id*/, double /*value*/)
+    {
+        return core::fail(core::ErrorCode::InvalidData, QStringLiteral("%1 is set in its own window").arg(name()));
+    }
     // Main thread: the parameter a MIDI controller on `midiChannel` (0-15)
     // moves, as the plugin assigned it; nothing when it does not say.
     [[nodiscard]] virtual std::optional<uint32_t> controllerParameter(int /*midiChannel*/, int /*controller*/) const
@@ -59,6 +72,10 @@ public:
         [[nodiscard]] bool any() const { return processFailures || droppedEvents || oversizedBlocks; }
     };
     virtual Problems takeProblems() = 0;
+    // Main thread, several times a second (the engine's poll): work the
+    // audio thread asked for and cannot do itself (Piano Pro: reading the
+    // piano a type changed from a keyboard knob needs).
+    virtual void serviceMainThread() {}
     // Main thread: the next block starts with every held note let go.
     virtual void releaseAllNotes() = 0;
 

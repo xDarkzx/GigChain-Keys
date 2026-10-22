@@ -49,6 +49,13 @@ jobs:
           key: vcpkg-${{ matrix.preset }}-${{ hashFiles('vcpkg.json', 'triplets/**') }}
           restore-keys: vcpkg-${{ matrix.preset }}-
 
+      # Piano Pro's samples (cmake/PianoSamples.cmake downloads them, ~650 MB, once).
+      - name: Piano samples
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}\..\piano-samples
+          key: piano-samples-2e91c9aa7b16d936f035963149df1fe4cbd65911116fb3e3ea6daca52e92024b
+
       # Configure, build (/W4 /WX: warnings fail the build) and run every
       # test. Tests needing an audio device, MIDI keyboard or installed
       # plugins skip themselves on the runner.

@@ -60,7 +60,8 @@ Invoke-Step 'windeployqt' {
 Write-Output '== checks'
 $problems = @()
 foreach ($required in "$exeName.exe", "$($exeName)Scan.exe", 'Qt6Core.dll', 'Qt6Quick.dll', 'Qt6Network.dll', 'Qt6Multimedia.dll',
-    'vcruntime140.dll', 'msvcp140.dll', 'LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'platforms\qwindows.dll', 'qml\QtQuick\Controls') {
+    'vcruntime140.dll', 'msvcp140.dll', 'LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'platforms\qwindows.dll', 'qml\QtQuick\Controls',
+    'samples\piano\Grand Piano, K.sfz', 'samples\piano\Upright Piano, Y.sfz', 'samples\piano\LICENSE-VCSL.txt') {
     if (-not (Test-Path (Join-Path $stage $required))) { $problems += "missing: $required" }
 }
 if (-not (Get-ChildItem $stage -Filter 'rtaudio*.dll')) { $problems += 'missing: the RtAudio library' }

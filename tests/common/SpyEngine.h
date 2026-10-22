@@ -290,6 +290,17 @@ public:
     {
         return std::exchange(touched, std::nullopt);
     }
+    std::map<uint32_t, double> parameterValues; // what setPluginParameter set
+    [[nodiscard]] double pluginParameterValue(const core::ChannelId&, int, uint32_t parameter) const override
+    {
+        const auto found = parameterValues.find(parameter);
+        return found != parameterValues.end() ? found->second : -1.0;
+    }
+    core::Result<void> setPluginParameter(const core::ChannelId&, int, uint32_t parameter, double value) override
+    {
+        parameterValues[parameter] = value;
+        return {};
+    }
     std::optional<std::pair<int, int>> movedController;
     std::optional<std::pair<int, int>> takeMovedController() override { return std::exchange(movedController, std::nullopt); }
     [[nodiscard]] std::vector<engine::AudioInputDevice> audioInputDevices() const override
