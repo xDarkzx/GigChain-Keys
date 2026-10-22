@@ -1,0 +1,20 @@
+// a comment
+<global>
+global_volume=2
+amp_veltrack=88
+<group> trigger=attack ampeg_attack=0.004 ampeg_release=0.4
+<region>
+lovel=0 hivel=54
+sample=Grand Piano, K/Sustains/GPiano_sus_A#-1_v2.flac
+pitch_keycenter=22
+lokey=21
+hikey=23
+tune=81
+volume=21.8
+offset=122
+<group>
+trigger=release
+rt_decay=4
+<region>
+sample=rel.flac
+lokey=21 hikey=23 pitch_keycenter=22 seq_length=2 seq_position=2

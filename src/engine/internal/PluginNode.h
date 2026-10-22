@@ -72,6 +72,10 @@ public:
         [[nodiscard]] bool any() const { return processFailures || droppedEvents || oversizedBlocks; }
     };
     virtual Problems takeProblems() = 0;
+    // Main thread, several times a second (the engine's poll): work the
+    // audio thread asked for and cannot do itself (Piano Pro: reading the
+    // piano a type changed from a keyboard knob needs).
+    virtual void serviceMainThread() {}
     // Main thread: the next block starts with every held note let go.
     virtual void releaseAllNotes() = 0;
 

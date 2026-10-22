@@ -2,9 +2,13 @@
 
 #include "DocumentController.h"
 
+#include "gigchain/engine/BuiltinReadings.h"
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/engine/SidechainCurves.h"
 
 #include <QVariantMap>
+
+#include <algorithm>
 
 using namespace Qt::StringLiterals;
 
@@ -98,6 +102,32 @@ void EditorService::setBuiltinValue(int parameter, double value)
     if (auto set = m_engine.setPluginParameter(channel->id, -1, static_cast<uint32_t>(parameter), value); !set) {
         m_document.reportMessage(set.error().message);
     }
+}
+
+QVariantList EditorService::sidechainCurve(int curve, double slope, int points) const
+{
+    QVariantList levels;
+    const int count = std::clamp(points, 2, 1024);
+    for (int i = 0; i < count; ++i) levels.append(engine::sidechain::curveGain(curve, i / static_cast<double>(count - 1), slope));
+    return levels;
+}
+
+double EditorService::sidechainPosition() const
+{
+    return builtinValue(static_cast<int>(engine::sidechain::kPositionParameter));
+}
+
+double EditorService::builtinReading(const QString& name) const
+{
+    if (name == u"pianoRecordings"_s) return builtinValue(static_cast<int>(engine::readings::kPianoRecordings));
+    if (name == u"pianoSource"_s) return builtinValue(static_cast<int>(engine::readings::kPianoSource));
+    return -1.0;
+}
+
+QString EditorService::builtinId() const
+{
+    const core::Channel* channel = builtinChannel();
+    return channel != nullptr && channel->instrument ? channel->instrument->pluginId : QString();
 }
 
 } // namespace gigchain::ui

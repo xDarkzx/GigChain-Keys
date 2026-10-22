@@ -35,6 +35,7 @@ if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
 
+include(PianoSamples)
 enable_testing()
 
 add_subdirectory(src/core)

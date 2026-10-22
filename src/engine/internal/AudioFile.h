@@ -31,6 +31,18 @@ struct AudioClip
 // error. The file's problems (missing, unreadable, too long) are errors.
 core::Result<AudioClip> decodeAudioFile(const QString& path, double sampleRate, const std::atomic<bool>* cancel = nullptr);
 
+// One recording of an instrument (Piano Pro's pianos), read as
+// decodeAudioFile reads a track but only its first `keepSeconds` (the rest
+// is never decoded), with the rate it was recorded at. Nothing is logged
+// per file (an instrument has hundreds); its problems are errors naming it.
+struct SampleClip
+{
+    AudioClip clip;
+    double sourceRate = 0.0;
+};
+core::Result<SampleClip> decodeSampleFile(const QString& path, double sampleRate, double keepSeconds,
+                                          const std::atomic<bool>* cancel = nullptr);
+
 // The longest file read: 20 minutes (a stereo float copy of that is ~460 MB at 48 kHz).
 inline constexpr double kMaxClipSeconds = 20.0 * 60.0;
 // A song's backing track and stems together: at most 45 minutes of audio

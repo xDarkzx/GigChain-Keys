@@ -18,6 +18,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQuickItem>
+#include <QQuickItemGrabResult>
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QSettings>
@@ -1638,13 +1639,88 @@ private slots:
             QVERIFY2(item(u"sawStackKnob_%1"_s.arg(QLatin1StringView(knob))) != nullptr, knob);
         }
         shoot(u"saw-stack-pro"_s);
-        // The types are under the knobs: scrolled to in a short window.
+        // (For looking at: the whole panel, as big as it is drawn.)
+        if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
+            const QSharedPointer<QQuickItemGrabResult> grab = item(u"sawStackPanel"_s)->grabToImage();
+            QVERIFY(grab);
+            QSignalSpy ready(grab.data(), &QQuickItemGrabResult::ready);
+            QVERIFY(ready.wait(5000));
+            QVERIFY(grab->image().save(folder + u"/saw-stack-pro-full.png"_s));
+        }
+        // The sidechain's lengths, triggers and curves are buttons that stay
+        // lit once chosen (read back from the instrument).
+        for (const char* knob : {"Sidechain", "SidechainSlope", "Reverb", "Delay", "OTT", "Width"}) {
+            QVERIFY2(item(u"sawStackKnob_%1"_s.arg(QLatin1StringView(knob))) != nullptr, knob);
+        }
+        QVERIFY(item(u"sawStackSidechainDisplay"_s) != nullptr);
         QQuickItem* scroll = item(u"sawStackScroll"_s);
         QVERIFY(scroll != nullptr);
-        scroll->setProperty("contentY", std::max(0.0, scroll->property("contentHeight").toDouble() - scroll->height()));
+        auto* content = scroll->property("contentItem").value<QQuickItem*>();
+        QVERIFY(content != nullptr);
+        for (const QString& name : {u"sawStackRate_4"_s, u"sawStackTrigger_1"_s, u"sawStackCurve_10"_s}) {
+            QQuickItem* button = item(name);
+            QVERIFY2(button != nullptr, qPrintable(name));
+            QVERIFY2(!button->property("selected").toBool(), qPrintable(name));
+            // Scrolled to, as a player would when the panel is shown small.
+            scroll->setProperty("contentY", std::max(0.0, button->mapToItem(content, QPointF(0, 0)).y() - 20.0));
+            settle();
+            click(name);
+            QTRY_VERIFY2(button->property("selected").toBool(), qPrintable(name));
+        }
+        // A layer's light switches it.
+        QVERIFY(item(u"sawStackLayerOn_7"_s) != nullptr);
+        // The sidechain's light, by its name, switches it off (greyed) and on.
+        QQuickItem* sidechainOn = item(u"sawStackSidechainOn"_s);
+        QVERIFY(sidechainOn != nullptr);
+        QVERIFY(sidechainOn->property("lit").toBool());
+        scroll->setProperty("contentY", 0.0);
         settle();
-        click(u"sawStackType_2"_s);
+        click(u"sawStackSidechainOn"_s);
+        QTRY_VERIFY(!sidechainOn->property("lit").toBool());
+        click(u"sawStackSidechainOn"_s);
+        QTRY_VERIFY(sidechainOn->property("lit").toBool());
+        // The display's arrow (back at the top) steps to the next type.
+        scroll->setProperty("contentY", 0.0);
+        settle();
+        click(u"sawStackNext"_s);
         QTRY_COMPARE(display->property("text").toString(), u"Future Bass Chords"_s);
+        settle();
+    }
+
+    void pianoProShowsItsPianoLayersKnobsAndSidechain()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"builtin:piano-pro"_s, u"Piano Pro"_s));
+        doc.setSelectedChannel(static_cast<int>(doc.currentPatch()->channels.size()) - 1);
+        auto* tabs = window()->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(tabs != nullptr);
+        tabs->setProperty("currentIndex", 1); // the Instrument tab
+        settle();
+        QTRY_VERIFY(item(u"pianoProPanel"_s) != nullptr && item(u"pianoProPanel"_s)->isVisible());
+        QVERIFY(item(u"sawStackPanel"_s) == nullptr || !item(u"sawStackPanel"_s)->isVisible()); // one window at a time
+        QQuickItem* display = item(u"pianoProTypeShown"_s);
+        QVERIFY(display != nullptr);
+        QCOMPARE(display->property("text").toString(), u"House Piano"_s);
+        for (const char* knob : {"Tone", "Resonance", "Attack", "Release", "Width", "Reverb", "Delay", "OTT", "Tape", "Sidechain",
+                                 "SidechainSlope"}) {
+            QVERIFY2(item(u"pianoProKnob_%1"_s.arg(QLatin1StringView(knob))) != nullptr, knob);
+        }
+        for (int layer = 0; layer < 4; ++layer) QVERIFY(item(u"pianoProLayerOn_%1"_s.arg(layer)) != nullptr);
+        // It says what plays (here, with no recordings in the test app: that they are missing).
+        QQuickItem* status = item(u"pianoProStatus"_s);
+        QVERIFY(status != nullptr);
+        QTRY_VERIFY(!status->property("text").toString().isEmpty());
+        QVERIFY(item(u"pianoProSidechainDisplay"_s) != nullptr);
+        shoot(u"piano-pro"_s);
+        if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
+            const QSharedPointer<QQuickItemGrabResult> grab = item(u"pianoProPanel"_s)->grabToImage();
+            QVERIFY(grab);
+            QSignalSpy ready(grab.data(), &QQuickItemGrabResult::ready);
+            QVERIFY(ready.wait(5000));
+            QVERIFY(grab->image().save(folder + u"/piano-pro-full.png"_s));
+        }
+        click(u"pianoProNext"_s);
+        QTRY_COMPARE(display->property("text").toString(), u"Big House Piano"_s);
         settle();
     }
 

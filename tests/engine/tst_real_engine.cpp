@@ -9,6 +9,7 @@
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/PluginSharing.h"
 #include "gigchain/engine/RealEngineFactory.h"
+#include "gigchain/engine/SidechainCurves.h"
 
 #include "TestPlugins.h"
 
@@ -1655,7 +1656,7 @@ private slots:
         const core::ChannelId& stack = patch.channels.front().id;
 
         const std::vector<PluginParameter> parameters = engine.pluginParameters(stack, -1);
-        QCOMPARE(parameters.size(), std::size_t{6});
+        QCOMPARE(parameters.size(), std::size_t{16});
         QCOMPARE(parameters.front().name, u"Type"_s);
         QCOMPARE(parameters.front().choices.size(), qsizetype{10});
         const uint32_t cutoff = parameters.at(1).id;
@@ -1669,6 +1670,10 @@ private slots:
         const float peak = loudestUntilAbove(engine, [&] { return engine.channelLevel(stack).peak; }, 0.001F);
         engine.injectNote(1, 60, 0);
         QVERIFY2(peak > 0.001F, "Saw Stack Pro stayed silent");
+        // Its window's sidechain playhead moves with the sound.
+        const double position = engine.pluginParameterValue(stack, -1, sidechain::kPositionParameter);
+        QVERIFY(position >= 0.0 && position < 1.0);
+        QTRY_VERIFY(engine.pluginParameterValue(stack, -1, sidechain::kPositionParameter) != position);
     }
 
     void bundledPluginsAreFoundWithTheInstalledOnes()

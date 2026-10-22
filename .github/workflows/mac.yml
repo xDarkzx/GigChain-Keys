@@ -59,6 +59,13 @@ jobs:
           key: vcpkg-mac-${{ steps.xcode.outputs.version }}-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
           restore-keys: vcpkg-mac-${{ steps.xcode.outputs.version }}-
 
+      # Piano Pro's samples (cmake/PianoSamples.cmake downloads them, ~650 MB, once).
+      - name: Piano samples
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/../piano-samples
+          key: piano-samples-2e91c9aa7b16d936f035963149df1fe4cbd65911116fb3e3ea6daca52e92024b
+
       - name: Configure
         run: cmake --preset mac-release
 

@@ -84,6 +84,17 @@ foreach(_port rtaudio rtmidi tl-expected)
     install(FILES ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/${_port}/copyright
             DESTINATION licenses RENAME ${_port}.txt)
 endforeach()
+# Piano Pro's recorded pianos and their licence (cmake/PianoSamples.cmake),
+# where pianoSampleFolder() looks: next to the app (in a Mac app, its Resources).
+if(EXISTS ${CMAKE_BINARY_DIR}/samples/piano)
+    if(APPLE)
+        install(DIRECTORY ${CMAKE_BINARY_DIR}/samples DESTINATION ${PRODUCT_NAME}.app/Contents/Resources)
+    else()
+        install(DIRECTORY ${CMAKE_BINARY_DIR}/samples DESTINATION .)
+    endif()
+else()
+    message(WARNING "Piano samples are not in ${CMAKE_BINARY_DIR}/samples: the installed app plays Piano Pro's FM piano only")
+endif()
 # The installer's names (installer/setup.iss includes it) and its note to testers.
 configure_file(${PROJECT_SOURCE_DIR}/installer/branding.iss.in ${CMAKE_BINARY_DIR}/installer/branding.iss @ONLY)
 configure_file(${PROJECT_SOURCE_DIR}/installer/ALPHA.txt.in ${CMAKE_BINARY_DIR}/installer/ALPHA.txt @ONLY)

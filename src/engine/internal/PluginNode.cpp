@@ -1,6 +1,7 @@
 #include "PluginNode.h"
 
 #include "EngineLog.h"
+#include "PianoProNode.h"
 #include "SawStackNode.h"
 #include "Vst2Node.h"
 #include "Vst3Node.h"
@@ -23,7 +24,7 @@ bool PluginNode::isBuiltin(const QString& pluginId)
 
 std::vector<PluginInfo> PluginNode::builtins()
 {
-    return {SawStackNode::info()};
+    return {SawStackNode::info(), PianoProNode::info()};
 }
 
 core::Result<std::shared_ptr<PluginNode>> PluginNode::load(const QString& pluginId, double sampleRate, int maxBlock)
@@ -31,6 +32,9 @@ core::Result<std::shared_ptr<PluginNode>> PluginNode::load(const QString& plugin
     if (isBuiltin(pluginId)) {
         if (pluginId == QLatin1StringView(SawStackNode::kPluginId)) {
             return std::shared_ptr<PluginNode>(SawStackNode::create(sampleRate, maxBlock));
+        }
+        if (pluginId == QLatin1StringView(PianoProNode::kPluginId)) {
+            return std::shared_ptr<PluginNode>(PianoProNode::create(sampleRate, maxBlock));
         }
         const QString why = u"%1 is not one of the app's own instruments (a newer version's, maybe)"_s.arg(pluginId);
         qCWarning(lcEngine).noquote() << why;

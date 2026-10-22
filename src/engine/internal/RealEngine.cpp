@@ -870,6 +870,7 @@ std::vector<Notice> RealEngine::poll()
         }
     }
     for (const auto& [key, node] : m_nodes) {
+        node->serviceMainThread();
         const auto problems = node->takeProblems();
         if (!problems.any()) continue;
         qCWarning(lcEngine).noquote() << node->name() << "problems: process failures" << problems.processFailures
@@ -1230,9 +1231,13 @@ void RealEngine::panic()
     GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
-    // No render callback may touch a plugin while it is reset.
-    if (auto paused = m_audio.pause(); !paused) {
-        m_pendingNotices.push_back(Notice::error(paused.error().message));
+    // No render callback may touch a plugin while it is reset: when the
+    // audio would not pause, notes are let go but nothing is reset (resetting
+    // a plugin the audio thread is using could crash the app).
+    bool paused = true;
+    if (auto pausing = m_audio.pause(); !pausing) {
+        paused = false;
+        m_pendingNotices.push_back(Notice::error(pausing.error().message));
         qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
     }
     const double rate = m_audio.sampleRate();
@@ -1242,6 +1247,7 @@ void RealEngine::panic()
     for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes}) {
         for (const auto& [key, node] : *nodes) {
             node->releaseAllNotes();
+            if (!paused) continue;
             // Deactivate + activate: VST3's reset, clearing voices and tails.
             if (auto prepared = node->prepare(rate, block); !prepared) {
                 m_pendingNotices.push_back(Notice::error(prepared.error().message));

@@ -34,12 +34,15 @@ class EditorService : public QObject
     // Pro): the app draws its window (builtinParameters and the like).
     Q_PROPERTY(bool builtinSelected READ builtinSelected NOTIFY targetChanged)
     Q_PROPERTY(QString builtinName READ builtinName NOTIFY targetChanged)
+    // Which one ("builtin:saw-stack-pro", "builtin:piano-pro"): its window is chosen by it.
+    Q_PROPERTY(QString builtinId READ builtinId NOTIFY targetChanged)
 
 public:
     EditorService(engine::IEngine& engine, DocumentController& document, QObject* parent = nullptr);
 
     [[nodiscard]] bool builtinSelected() const;
     [[nodiscard]] QString builtinName() const;
+    [[nodiscard]] QString builtinId() const;
     // The selected built-in instrument's parameters: [{id, name, choices}]
     // (choices: a stepped one's settings by name); empty when none is selected or loaded.
     Q_INVOKABLE [[nodiscard]] QVariantList builtinParameters() const;
@@ -47,6 +50,14 @@ public:
     Q_INVOKABLE [[nodiscard]] double builtinValue(int parameter) const;
     // Sets it as the instrument's window does. Problems are shown and logged.
     Q_INVOKABLE void setBuiltinValue(int parameter, double value);
+    // Saw Stack Pro's sidechain curve `curve` at `slope`, as `points` levels
+    // (0-1) over one cycle: the engine's own shapes, for its window to draw.
+    Q_INVOKABLE [[nodiscard]] QVariantList sidechainCurve(int curve, double slope, int points) const;
+    // Where the selected Saw Stack Pro's sidechain is in its cycle (0-1), below 0 when not known.
+    Q_INVOKABLE [[nodiscard]] double sidechainPosition() const;
+    // What the selected built-in shows besides its settings (engine::readings),
+    // by name: "pianoRecordings", "pianoSource". Below 0 when not known.
+    Q_INVOKABLE [[nodiscard]] double builtinReading(const QString& name) const;
 
     // nullptr when there is nothing to show. Failures are shown to the user
     // (banner) and logged, and returned.

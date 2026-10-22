@@ -6,7 +6,10 @@
 #include "SawStack.h"
 #include "SawStackNode.h"
 
+#include "gigchain/engine/SidechainCurves.h"
+
 #include <QElapsedTimer>
+#include <QFile>
 #include <QTest>
 
 #include <cmath>
@@ -121,6 +124,9 @@ void soloPlain(Synth& synth, int layer, Wave wave = Wave::Saw)
 {
     synth.setParam(paramId(Macro::Type), typeValue(typeNamed("Reese Bass")));
     synth.setParam(paramId(Macro::Spread), 0.5);
+    for (const Macro effect : {Macro::Reverb, Macro::Delay, Macro::Ott, Macro::Width, Macro::Sidechain}) {
+        synth.setParam(paramId(effect), 0.0); // the oscillator as it is
+    }
     for (int l = 0; l < kLayers; ++l) synth.setParam(paramId(l, LayerParam::On), l == layer ? 1.0 : 0.0);
     synth.setParam(paramId(layer, LayerParam::Voices), Ranges::fromVoices(1));
     synth.setParam(paramId(layer, LayerParam::Octave), Ranges::fromOctave(0));
@@ -132,6 +138,26 @@ void soloPlain(Synth& synth, int layer, Wave wave = Wave::Saw)
     synth.setParam(paramId(layer, LayerParam::Sustain), 1.0);
 }
 
+// One steady 440 Hz sine, ducked by the sidechain full on with `curve` at `rate` (120 bpm).
+void steadySineUnderTheSidechain(Synth& synth, int curve, int rate)
+{
+    soloPlain(synth, 2, Wave::Sine);
+    synth.setParam(paramId(Macro::Sidechain), 1.0);
+    synth.setParam(paramId(Macro::SidechainSlope), 0.5);
+    synth.setParam(paramId(Macro::SidechainCurve), Ranges::fromChoice(curve, static_cast<int>(sidechain::kCurves.size())));
+    synth.setParam(paramId(Macro::SidechainRate), Ranges::fromChoice(rate, static_cast<int>(sidechain::kRates.size())));
+}
+
+// Its level, one 440 Hz cycle at a time.
+std::vector<double> levelPerCycle(const std::vector<float>& s)
+{
+    constexpr std::size_t kCycle = 109; // 48000 / 440
+    std::vector<double> levels;
+    const std::span<const float> all(s);
+    for (std::size_t at = 0; at + kCycle <= all.size(); at += kCycle) levels.push_back(rms(all.subspan(at, kCycle)));
+    return levels;
+}
+
 } // namespace
 
 class TestSawStack : public QObject
@@ -139,6 +165,90 @@ class TestSawStack : public QObject
     Q_OBJECT
 
 private slots:
+    // The proof that no control on the panel is dead: each one, turned, makes
+    // the sound measurably different (the difference at least -20 dB of the
+    // sound itself). Same notes, same start, only that control changed.
+    void everyControlOnThePanelChangesTheSound_data()
+    {
+        QTest::addColumn<QString>("control");
+        QTest::addColumn<uint32_t>("id");
+        QTest::addColumn<double>("from");
+        QTest::addColumn<double>("to");
+        QTest::addColumn<bool>("tail"); // measured after the notes are let go
+        const auto row = [](const char* name, uint32_t id, double from, double to, bool tail = false) {
+            QTest::newRow(name) << QString::fromLatin1(name) << id << from << to << tail;
+        };
+        row("Cutoff", paramId(Macro::Cutoff), 1.0, 0.45);
+        row("Resonance", paramId(Macro::Resonance), 0.0, 0.9);
+        row("Spread", paramId(Macro::Spread), 0.5, 1.0);
+        row("Attack", paramId(Macro::Attack), Ranges::fromSeconds(0.003), Ranges::fromSeconds(0.5));
+        row("Release", paramId(Macro::Release), Ranges::fromSeconds(0.1), Ranges::fromSeconds(2.0), true);
+        row("Reverb", paramId(Macro::Reverb), 0.0, 0.8, true);
+        row("Delay", paramId(Macro::Delay), 0.0, 0.7, true);
+        row("OTT", paramId(Macro::Ott), 0.0, 1.0);
+        row("Width", paramId(Macro::Width), 0.0, 1.0);
+        row("Sidechain", paramId(Macro::Sidechain), 0.0, 1.0);
+        row("Sidechain Rate", paramId(Macro::SidechainRate), Ranges::fromChoice(5, 9), 0.0);
+        row("Sidechain Slope", paramId(Macro::SidechainSlope), 0.5, 1.0);
+        row("Sidechain Curve", paramId(Macro::SidechainCurve), 0.0, 1.0);
+        row("Sidechain Trigger", paramId(Macro::SidechainTrigger), 0.0, 1.0);
+        row("Sidechain On", paramId(Macro::SidechainOn), 1.0, 0.0);
+        row("Master", paramId(GlobalParam::Level), Ranges::fromLevelDb(-14.0), Ranges::fromLevelDb(-24.0));
+        for (int l = 0; l < kLayers; ++l) {
+            row(qPrintable(u"Layer %1 on"_s.arg(layerName(l))), paramId(l, LayerParam::On), 1.0, 0.0);
+        }
+    }
+
+    void everyControlOnThePanelChangesTheSound()
+    {
+        QFETCH(QString, control);
+        QFETCH(uint32_t, id);
+        QFETCH(double, from);
+        QFETCH(double, to);
+        QFETCH(bool, tail);
+        const auto render = [&](double value) {
+            Synth synth;
+            synth.prepare(kRate, kBlock);
+            synth.setParam(paramId(Macro::Type), typeValue(kDefaultType));
+            // Every layer on (each layer's light is tested on its own), and
+            // the sidechain's settings heard with it full on, the chord
+            // played off the beat (so following the notes differs from the beat).
+            for (int l = 0; l < kLayers; ++l) synth.setParam(paramId(l, LayerParam::On), 1.0);
+            const bool sidechain = id == paramId(Macro::SidechainRate) || id == paramId(Macro::SidechainSlope)
+                                   || id == paramId(Macro::SidechainCurve) || id == paramId(Macro::SidechainTrigger)
+                                   || id == paramId(Macro::SidechainOn);
+            if (sidechain) synth.setParam(paramId(Macro::Sidechain), 1.0);
+            if (id == paramId(Macro::Resonance)) synth.setParam(paramId(Macro::Cutoff), 0.6); // heard at the cutoff
+            synth.setParam(id, value);
+            if (sidechain) (void)play(synth, {}, 0.13);
+            const Audio held = play(synth, {noteOn(48), noteOn(60), noteOn(64), noteOn(67)}, 1.0);
+            if (!tail) return held.left;
+            return play(synth, {noteOff(48), noteOff(60), noteOff(64), noteOff(67)}, 1.5).left;
+        };
+        const std::vector<float> a = render(from);
+        const std::vector<float> same = render(from);
+        std::vector<float> nothing(a.size());
+        std::ranges::transform(a, same, nothing.begin(), std::minus<>());
+        QCOMPARE(rms(nothing), 0.0); // the same settings play exactly the same (so a difference is the control's)
+        const std::vector<float> b = render(to);
+        std::vector<float> difference(a.size());
+        std::ranges::transform(a, b, difference.begin(), std::minus<>());
+        // Where it changes most, a tenth of a second at a time (a pluck is
+        // a hit at the start of the chord, not the whole second); measured
+        // against the sound there, never against near-silence.
+        const std::span<const float> sa(a);
+        const std::span<const float> sb(b);
+        const std::span<const float> sd(difference);
+        const double overall = std::max(rms(a), rms(b));
+        double ratio = 0.0;
+        for (std::size_t at = 0; at + kTenthOfASecond <= sd.size(); at += kTenthOfASecond) {
+            const double level = std::max({rms(sa.subspan(at, kTenthOfASecond)), rms(sb.subspan(at, kTenthOfASecond)), 0.25 * overall});
+            ratio = std::max(ratio, rms(sd.subspan(at, kTenthOfASecond)) / level);
+        }
+        qInfo().noquote() << u"%1: the sound changes by %2 dB"_s.arg(control).arg(20.0 * std::log10(std::max(ratio, 1e-9)), 0, 'f', 1);
+        QVERIFY2(ratio > 0.1, qPrintable(u"%1 barely changes the sound (%2)"_s.arg(control).arg(ratio)));
+    }
+
     void theDetuneFollowsTheMeasuredCurve()
     {
         // Barely any spread over the first half of the knob, all of it at the top.
@@ -248,7 +358,7 @@ private slots:
         play(synth, sixNotes(), 4.0);
         const double share = static_cast<double>(timer.nsecsElapsed()) / 4.0e9;
         qInfo().noquote() << u"Six notes, every layer at sixteen saws: %1% of one core"_s.arg(share * 100.0, 0, 'f', 1);
-#ifdef NDEBUG // (a debug build is many times slower)
+#if defined(NDEBUG) && !defined(__SANITIZE_ADDRESS__) // (debug and AddressSanitizer builds are many times slower)
         QVERIFY2(share < 0.5, qPrintable(QString::number(share)));
 #endif
     }
@@ -278,9 +388,11 @@ private slots:
         const Audio tail = play(synth, {noteOff(60)}, 3.0);
         QVERIFY(!synth.holdsNotes());
         QVERIFY(rms(tail.left) > 0.0);      // it rings out
-        QCOMPARE(synth.soundingNotes(), 0); // then it is gone
+        QCOMPARE(synth.soundingNotes(), 0); // then the note is gone
+        // ...and the reverb's tail fades out below hearing (-80 dB).
+        play(synth, {}, 6.0);
         const Audio after = play(synth, {}, 0.1);
-        QCOMPARE(peak(after), 0.0F);
+        QVERIFY2(peak(after) < 1e-4F, qPrintable(QString::number(peak(after))));
     }
 
     void theSustainPedalHoldsNotesUntilItIsLifted()
@@ -311,10 +423,13 @@ private slots:
         auto* node = dynamic_cast<SawStackNode*>(loaded->get());
         QVERIFY(node != nullptr);
         QVERIFY(node->isInstrument());
-        // Players see the type and five knobs, nothing else.
+        // Players see the type, five sound knobs and five effect knobs, nothing else.
         QStringList names;
         for (const auto& p : node->parameters()) names << p.name;
-        QCOMPARE(names, (QStringList{u"Type"_s, u"Cutoff"_s, u"Resonance"_s, u"Attack"_s, u"Release"_s, u"Spread"_s}));
+        QCOMPARE(names, (QStringList{u"Type"_s, u"Cutoff"_s, u"Resonance"_s, u"Attack"_s, u"Release"_s, u"Spread"_s,
+                                     u"Reverb"_s, u"Delay"_s, u"OTT"_s, u"Width"_s, u"Sidechain"_s,
+                                     u"Sidechain Rate"_s, u"Sidechain Slope"_s, u"Sidechain Curve"_s,
+                                     u"Sidechain Trigger"_s, u"Sidechain On"_s}));
         const uint32_t type = paramId(Macro::Type);
         const uint32_t cutoff = paramId(Macro::Cutoff);
         QVERIFY(node->setParameter(type, typeValue(typeNamed("Trance Lead"))).has_value());
@@ -338,6 +453,162 @@ private slots:
         const auto wrong = (*other)->restoreEncodedState(QByteArray("GCS1garbage"));
         QVERIFY(!wrong.has_value());
         QVERIFY(wrong.error().message.contains(u"damaged"_s));
+    }
+
+    // The sidechain as Nicky Romero's Kickstart has it (a bank of curves, the
+    // length, the slope, sync or triggered by the notes), with the dotted and
+    // triplet lengths Kickstart lacks.
+    void theSidechainOffersCurvesLengthsAndTriggers()
+    {
+        auto loaded = PluginNode::load(QString::fromLatin1(SawStackNode::kPluginId), kRate, kBlock);
+        QVERIFY(loaded.has_value());
+        const auto params = (*loaded)->parameters();
+        const auto choicesOf = [&](Macro m) {
+            const auto found = std::ranges::find_if(params, [&](const PluginNode::Parameter& p) { return p.id == paramId(m); });
+            return found != params.end() ? found->choices : QStringList{u"(missing)"_s};
+        };
+        QCOMPARE(choicesOf(Macro::SidechainRate),
+                 (QStringList{u"1/16"_s, u"1/8T"_s, u"1/8"_s, u"1/4T"_s, u"1/8D"_s, u"1/4"_s, u"1/4D"_s, u"1/2"_s, u"1/1"_s}));
+        QCOMPARE(choicesOf(Macro::SidechainTrigger), (QStringList{u"Sync"_s, u"Note"_s}));
+        QStringList curves;
+        for (const sidechain::Curve& c : sidechain::kCurves) curves << QString::fromLatin1(c.name);
+        QCOMPARE(choicesOf(Macro::SidechainCurve), curves);
+        QCOMPARE(curves.size(), 12);
+        // A new stack ducks every quarter note, as Kickstart starts.
+        Synth synth;
+        QCOMPARE(sidechain::kRates.at(static_cast<std::size_t>(Ranges::choice(synth.param(paramId(Macro::SidechainRate)), 9))).beats,
+                 1.0);
+    }
+
+    void eachLengthDucksThatOften_data()
+    {
+        QTest::addColumn<int>("rate");
+        QTest::addColumn<double>("seconds"); // between ducks at 120 bpm
+        for (std::size_t r = 0; r < sidechain::kRates.size(); ++r) {
+            QTest::newRow(sidechain::kRates.at(r).name) << static_cast<int>(r) << sidechain::kRates.at(r).beats * 0.5;
+        }
+    }
+
+    void eachLengthDucksThatOften()
+    {
+        QFETCH(int, rate);
+        QFETCH(double, seconds);
+        Synth synth;
+        synth.prepare(kRate, kBlock);
+        steadySineUnderTheSidechain(synth, 0, rate);
+        const std::vector<double> levels = levelPerCycle(play(synth, {noteOn(69)}, 6.2).left); // three 1/1 ducks after the start
+        const double loudest = *std::ranges::max_element(levels);
+        // Where it goes down (past a fifth of the level), after the first half second.
+        std::vector<double> downs;
+        for (std::size_t i = 1; i < levels.size(); ++i) {
+            const double at = static_cast<double>(i) * 109.0 / kRate;
+            if (at > 0.5 && levels.at(i) < 0.2 * loudest && levels.at(i - 1) >= 0.2 * loudest) downs.push_back(at);
+        }
+        QVERIFY2(downs.size() >= 3, qPrintable(u"only %1 ducks"_s.arg(downs.size())));
+        const double apart = (downs.back() - downs.front()) / static_cast<double>(downs.size() - 1);
+        QVERIFY2(std::abs(apart - seconds) < 0.004, qPrintable(u"ducks %1 s apart, not %2"_s.arg(apart).arg(seconds)));
+    }
+
+    void noteTriggerRestartsTheDuckOnEachNote()
+    {
+        // The note comes 0.2 s after the beat: following the beat, the duck
+        // is already over; following the note, it ducks as the note starts.
+        const auto start = [](double trigger) {
+            Synth synth;
+            synth.prepare(kRate, kBlock);
+            steadySineUnderTheSidechain(synth, 0, 5);
+            synth.setParam(paramId(Macro::SidechainTrigger), trigger);
+            (void)play(synth, {}, 0.2);
+            const std::vector<float> s = play(synth, {noteOn(69)}, 0.3).left;
+            return std::pair{rms(std::span<const float>(s).subspan(240, 960)), rms(std::span<const float>(s).subspan(9600, 2400))};
+        };
+        const auto [syncStart, syncLater] = start(0.0);
+        const auto [noteStart, noteLater] = start(1.0);
+        QVERIFY2(noteStart < 0.3 * syncStart, qPrintable(u"note %1, sync %2"_s.arg(noteStart).arg(syncStart)));
+        QVERIFY(noteLater > 3.0 * noteStart); // and comes back up after it
+    }
+
+    void followingTheNotesItKeepsDuckingWhenTheSongJumpsBack()
+    {
+        // A chord at beat 100, then the song's clock goes back to 0 (a jump to
+        // an earlier section, a clock Start): the duck goes on as it was,
+        // never stuck at its lowest.
+        Sidechain duck;
+        duck.set(1.0, 0, 1.0, 0.5, true);
+        duck.noteAt(100.0);
+        for (int step = 0; step < 500; ++step) (void)duck.gain(100.0 + (step * 0.001));
+        float loudest = 0.0F;
+        for (int step = 0; step < 1000; ++step) loudest = std::max(loudest, duck.gain(step * 0.001));
+        QVERIFY2(loudest > 0.9F, qPrintable(u"stuck at %1"_s.arg(loudest)));
+    }
+
+    void theSidechainSwitchesOffAndBackOnWithItsSettingsKept()
+    {
+        // Off: the sound is steady, as with no sidechain at all; on again:
+        // it ducks as it was set, Mix and all.
+        const auto ducking = [](double on) {
+            Synth synth;
+            synth.prepare(kRate, kBlock);
+            steadySineUnderTheSidechain(synth, 0, 5);
+            synth.setParam(paramId(Macro::SidechainOn), on);
+            const std::vector<double> levels = levelPerCycle(play(synth, {noteOn(69)}, 1.2).left);
+            const auto [quietest, loudest] = std::ranges::minmax(std::span<const double>(levels).subspan(50));
+            return quietest / loudest;
+        };
+        QVERIFY2(ducking(0.0) > 0.95, "still ducks when off");
+        QVERIFY2(ducking(1.0) < 0.2, "does not duck when on");
+        const Synth fresh;
+        QVERIFY(fresh.param(paramId(Macro::SidechainOn)) >= 0.5); // a new stack has it on
+        QVERIFY(fresh.param(paramId(Macro::Sidechain)) > 0.0);   // its Mix kept whether on or off
+    }
+
+    void everySidechainCurveIsItsOwnShape()
+    {
+        constexpr int kPoints = 64;
+        const auto shape = [](std::size_t curve, double slope) {
+            std::vector<double> points;
+            points.reserve(kPoints);
+            for (int i = 0; i < kPoints; ++i) points.push_back(sidechain::curveGain(static_cast<int>(curve), i / static_cast<double>(kPoints), slope));
+            return points;
+        };
+        for (std::size_t a = 0; a < sidechain::kCurves.size(); ++a) {
+            const std::vector<double> pa = shape(a, 0.5);
+            QVERIFY(std::ranges::all_of(pa, [](double g) { return g >= 0.0 && g <= 1.0; }));
+            for (std::size_t b = a + 1; b < sidechain::kCurves.size(); ++b) {
+                const std::vector<double> pb = shape(b, 0.5);
+                double most = 0.0;
+                for (int i = 0; i < kPoints; ++i) most = std::max(most, std::abs(pa.at(i) - pb.at(i)));
+                QVERIFY2(most > 0.1, qPrintable(u"%1 looks like %2"_s.arg(sidechain::kCurves.at(a).name, sidechain::kCurves.at(b).name)));
+            }
+            const sidechain::Curve& c = sidechain::kCurves.at(a);
+            const double begin = sidechain::curveGain(static_cast<int>(a), 0.0, 0.5);
+            const double middle = sidechain::curveGain(static_cast<int>(a), 0.5, 0.5);
+            const double end = sidechain::curveGain(static_cast<int>(a), 0.97, 0.5);
+            switch (c.group) {
+            case sidechain::Group::Duck:
+            case sidechain::Group::Sub: // down on the beat, back up before the next
+                QVERIFY2(begin < 0.1 && end > 0.9, c.name);
+                break;
+            case sidechain::Group::Reverse: // swells up into the next beat
+                QVERIFY2(middle < 0.5 && end > 0.8, c.name);
+                break;
+            case sidechain::Group::Rhythm: // more than one dip in a cycle
+            {
+                int dips = 0;
+                for (int i = 1; i < kPoints; ++i) dips += pa.at(i) < 0.3 && pa.at(i - 1) >= 0.3 ? 1 : 0;
+                QVERIFY2(dips + (pa.front() < 0.3 ? 1 : 0) >= 2, c.name);
+                break;
+            }
+            }
+        }
+        // Slope stretches the dip: the classic curve is back to half later.
+        const auto half = [](double slope) {
+            int i = 0;
+            while (i < 1000 && sidechain::curveGain(0, i / 1000.0, slope) < 0.5) ++i;
+            return i;
+        };
+        QVERIFY(half(0.0) < half(0.5));
+        QVERIFY(half(0.5) < half(1.0));
     }
 
     void theTypesHaveTheirCommonNames()
@@ -395,9 +666,10 @@ private slots:
             std::adjacent_difference(a.left.begin(), a.left.end(), change.begin());
             return rms(change, kTenthOfASecond) / std::max(rms(a.left, kTenthOfASecond), 1e-9);
         };
-        const double dark = brightness(0.1);
-        const double asDesigned = brightness(0.5);
-        const double bright = brightness(0.9);
+        // The knob is the main filter's frequency: about 480 Hz, 2.5 kHz, open.
+        const double dark = brightness(0.45);
+        const double asDesigned = brightness(0.7);
+        const double bright = brightness(1.0);
         QVERIFY2(dark < asDesigned && asDesigned < bright, qPrintable(u"%1 %2 %3"_s.arg(dark).arg(asDesigned).arg(bright)));
     }
 
@@ -436,25 +708,25 @@ private slots:
         QCOMPARE(synth.param(paramId(Macro::Cutoff)), 0.2F);
         synth.setParam(paramId(Macro::Type), typeValue(typeNamed("Trance Lead")));
         QCOMPARE(synth.param(paramId(0, LayerParam::On)), 0.0); // a lead has none
-        QCOMPARE(synth.param(paramId(Macro::Cutoff)), 0.5F);    // and its knobs start where it starts them
+        QCOMPARE(synth.param(paramId(Macro::Cutoff)), 1.0F);    // and its knobs start where it starts them (the filter open)
     }
 
-    void theGlueLeavesSilenceSilentAndSquashesBothWays()
+    void theOttLeavesSilenceSilentAndSquashesBothWays()
     {
-        Glue glue;
-        glue.prepare(kRate);
-        glue.setDepth(1.0);
+        Ott ott;
+        ott.prepare(kRate);
+        ott.setMix(1.0);
         for (std::size_t i = 0; i < kTenthOfASecond; ++i) {
             float l = 0.0F;
             float r = 0.0F;
-            glue.tick(l, r);
+            ott.tick(l, r);
             QCOMPARE(l, 0.0F);
         }
         // A quiet steady tone comes up, a loud one comes down.
         const auto through = [](float amplitude) {
-            Glue g;
+            Ott g;
             g.prepare(kRate);
-            g.setDepth(1.0);
+            g.setMix(1.0);
             double in = 0.0;
             double out = 0.0;
             for (int i = 0; i < 48000; ++i) {
@@ -468,6 +740,54 @@ private slots:
         };
         QVERIFY(through(0.005F) > 1.5); // -46 dB: pulled up
         QVERIFY(through(0.8F) < 0.7);   // -2 dB: pulled down
+    }
+
+    // For listening and measuring: with GIGCHAIN_SAWSTACK_RENDER set to a
+    // folder, every type plays a chord progression (Am F C G, a bar each at
+    // 128 BPM) into <key>.f32 (stereo, 48 kHz, 32-bit float). Off otherwise.
+    void renderEveryTypeForListening()
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_SAWSTACK_RENDER");
+        if (folder.isEmpty()) QSKIP("Set GIGCHAIN_SAWSTACK_RENDER to a folder to render every type");
+        const std::vector<std::vector<int>> chords{{57, 60, 64, 69}, {53, 57, 60, 65}, {48, 55, 60, 64}, {55, 59, 62, 67}};
+        const double bar = 4 * 60.0 / 128.0;
+        const int count = static_cast<int>(stackTypes().size());
+        for (int t = 0; t < count; ++t) {
+            Synth synth;
+            synth.prepare(kRate, kBlock);
+            synth.setParam(paramId(Macro::Type), typeValue(t));
+            const bool bass = t == typeNamed("Reese Bass");
+            Audio all;
+            for (const std::vector<int>& chord : chords) {
+                std::vector<MidiEvent> on;
+                for (int note : chord) {
+                    on.push_back(noteOn(bass ? note - 24 : note));
+                    if (bass) break;
+                }
+                Audio held = play(synth, on, bar * 0.9);
+                std::vector<MidiEvent> off;
+                std::ranges::transform(on, std::back_inserter(off), [](const MidiEvent& e) { return noteOff(e.data1); });
+                const Audio gap = play(synth, off, bar * 0.1);
+                for (const Audio* part : std::array<const Audio*, 2>{&held, &gap}) {
+                    all.left.insert(all.left.end(), part->left.begin(), part->left.end());
+                    all.right.insert(all.right.end(), part->right.begin(), part->right.end());
+                }
+            }
+            const Audio tail = play(synth, {}, 2.0);
+            all.left.insert(all.left.end(), tail.left.begin(), tail.left.end());
+            all.right.insert(all.right.end(), tail.right.begin(), tail.right.end());
+            QFile file(folder + u'/' + QString::fromLatin1(stackType(t).key) + u".f32"_s);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            std::vector<float> interleaved;
+            interleaved.reserve(all.left.size() * 2);
+            auto right = all.right.begin();
+            for (const float l : all.left) {
+                interleaved.push_back(l);
+                interleaved.push_back(*right++);
+            }
+            const auto bytes = static_cast<qint64>(interleaved.size() * sizeof(float));
+            QCOMPARE(file.write(reinterpret_cast<const char*>(interleaved.data()), bytes), bytes); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): raw samples to a file
+        }
     }
 
     void itIsInTheInstrumentList()

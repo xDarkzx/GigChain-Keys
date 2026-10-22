@@ -40,3 +40,7 @@ gigchain_add_fuzzer(fuzz_plugin_files SOURCES fuzz_plugin_files.cpp LIBS gigchai
 target_include_directories(fuzz_plugin_files PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_fuzzer(fuzz_midi SOURCES fuzz_midi.cpp LIBS gigchain::engine)
 target_include_directories(fuzz_midi PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_fuzzer(fuzz_builtin_state SOURCES fuzz_builtin_state.cpp LIBS gigchain::engine)
+target_include_directories(fuzz_builtin_state PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_fuzzer(fuzz_sfz SOURCES fuzz_sfz.cpp LIBS gigchain::engine)
+target_include_directories(fuzz_sfz PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)

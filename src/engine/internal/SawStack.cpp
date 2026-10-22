@@ -17,8 +17,15 @@ constexpr std::array<const char*, kLayerParams> kParamKeys{
     "resonance", "filterEnv", "filterDecay", "attack", "decay", "sustain", "release", "lowCut", "lowestOnly"};
 constexpr std::array<const char*, kGlobalParams> kGlobalNames{"Level", "Bend Range", "Velocity"};
 constexpr std::array<const char*, kGlobalParams> kGlobalKeys{"level", "bendRange", "velocity"};
-constexpr std::array<const char*, kMacros> kMacroNames{"Type", "Cutoff", "Resonance", "Attack", "Release", "Spread"};
-constexpr std::array<const char*, kMacros> kMacroKeys{"type", "cutoff", "resonance", "attack", "release", "spread"};
+constexpr std::array<const char*, kMacros> kMacroNames{"Type",   "Cutoff", "Resonance", "Attack", "Release",        "Spread",
+                                                       "Reverb", "Delay",  "OTT",       "Width",  "Sidechain",      "Sidechain Rate",
+                                                       "Sidechain Slope", "Sidechain Curve", "Sidechain Trigger", "Sidechain On"};
+constexpr std::array<const char*, kMacros> kMacroKeys{"type",   "cutoff", "resonance", "attack", "release",       "spread",
+                                                      "reverb", "delay",  "ott",       "width",  "sidechain",     "sidechainRate",
+                                                      "sidechainSlope", "sidechainCurve", "sidechainTrigger", "sidechainOn"};
+constexpr auto kSidechainRates = static_cast<int>(sidechain::kRates.size());
+constexpr auto kSidechainCurves = static_cast<int>(sidechain::kCurves.size());
+constexpr auto kSidechainTriggers = static_cast<int>(sidechain::kTriggers.size());
 
 constexpr float kSmoothing = 0.002F;       // per sample: about 10 ms at 48 kHz
 constexpr std::size_t kSubLayer = 0;       // stays one clean sine whatever Spread says
@@ -76,15 +83,29 @@ std::array<float, kParamCount> typeParams(int which)
         set(LayerParam::LowestOnly, d.lowestOnly ? 1.0 : 0.0);
     }
     const auto set = [&](uint32_t id, double v) { p.at(index(id)) = static_cast<float>(v); };
-    set(paramId(GlobalParam::Level), Ranges::fromLevelDb(kOutputDb + type.fx.trimDb));
+    set(paramId(GlobalParam::Level), Ranges::fromLevelDb(kOutputDb));
     set(paramId(GlobalParam::BendRange), 2.0 / 12.0);
     set(paramId(GlobalParam::Velocity), 0.3);
     set(paramId(Macro::Type), typeValue(which));
-    set(paramId(Macro::Cutoff), 0.5);
+    set(paramId(Macro::Cutoff), 1.0); // the main filter starts open
     set(paramId(Macro::Resonance), 0.0);
     set(paramId(Macro::Attack), Ranges::fromSeconds(type.attack));
     set(paramId(Macro::Release), Ranges::fromSeconds(type.release));
     set(paramId(Macro::Spread), 0.5);
+    set(paramId(Macro::Reverb), type.fx.reverb);
+    set(paramId(Macro::Delay), type.fx.delay);
+    set(paramId(Macro::Ott), type.fx.ott);
+    set(paramId(Macro::Width), type.fx.width);
+    set(paramId(Macro::Sidechain), type.fx.sidechain);
+    const auto rate = std::ranges::find(sidechain::kRates, type.fx.sidechainBeats, &sidechain::Rate::beats);
+    set(paramId(Macro::SidechainRate),
+        Ranges::fromChoice(rate != sidechain::kRates.end() ? static_cast<int>(std::distance(sidechain::kRates.begin(), rate))
+                                                           : sidechain::kDefaultRate,
+                           kSidechainRates));
+    set(paramId(Macro::SidechainSlope), type.fx.sidechainSlope);
+    set(paramId(Macro::SidechainCurve), Ranges::fromChoice(type.fx.sidechainCurve, kSidechainCurves));
+    set(paramId(Macro::SidechainTrigger), 0.0); // the song's beat
+    set(paramId(Macro::SidechainOn), 1.0);
     return p;
 }
 
@@ -141,13 +162,14 @@ void Synth::prepare(double sampleRate, int maxBlock)
     m_rate = sampleRate > 0.0 ? sampleRate : 48000.0;
     m_layerL.assign(static_cast<std::size_t>(std::max(maxBlock, 1)), 0.0F);
     m_layerR.assign(m_layerL.size(), 0.0F);
-    m_glue.prepare(m_rate);
-    m_chorus.prepare(m_rate);
+    m_subL.assign(m_layerL.size(), 0.0F);
+    m_subR.assign(m_layerL.size(), 0.0F);
+    m_fx.prepare(m_rate);
     m_seen.fill(-1.0F);
     m_fxType = -1;
     applyParams();
+    m_fx.snap();
     for (std::size_t l = 0; l < m_bus.size(); ++l) m_bus.at(l).gain = m_d.layers.at(l).on ? m_d.layers.at(l).gain : 0.0F;
-    m_masterGain = m_d.masterGain;
 }
 
 void Synth::loadType(int which) noexcept
@@ -173,6 +195,7 @@ void Synth::setParam(uint32_t id, double value) noexcept
 
 double Synth::param(uint32_t id) const noexcept
 {
+    if (id == kSidechainPositionId) return m_sidechainPosition.load(std::memory_order_relaxed);
     return id < static_cast<uint32_t>(kParamCount) ? m_params.at(index(id)).load(std::memory_order_relaxed) : -1.0;
 }
 
@@ -194,9 +217,8 @@ void Synth::applyParams() noexcept
     m_seen = now;
     const auto v = [&](int l, LayerParam p) { return static_cast<double>(now.at(index(paramId(l, p)))); };
     const auto knob = [&](Macro m) { return static_cast<double>(now.at(index(paramId(m)))); };
-    // The five knobs, over every layer as the type designed it.
-    const double brighter = std::exp2((knob(Macro::Cutoff) - 0.5) * 10.0); // +-5 octaves
-    const double resonance = knob(Macro::Resonance);
+    // The knobs over the whole stack: the spread, the envelope (the filter,
+    // on everything as a synth's main filter, is the effects').
     const double spread = 2.0 * knob(Macro::Spread);
     const double attack = Ranges::seconds(knob(Macro::Attack));
     const double release = Ranges::seconds(knob(Macro::Release));
@@ -211,8 +233,8 @@ void Synth::applyParams() noexcept
         s.spread.set(Ranges::voices(v(l, LayerParam::Voices)),
                      spreads ? std::min(v(l, LayerParam::Detune) * spread, 1.0) : v(l, LayerParam::Detune), v(l, LayerParam::Mix),
                      spreads ? std::min(v(l, LayerParam::Width) * spread, 1.0) : v(l, LayerParam::Width));
-        s.cutoff = std::clamp(Ranges::hz(v(l, LayerParam::Cutoff)) * brighter, 20.0, 20000.0);
-        s.q = Ranges::q(std::min(v(l, LayerParam::Resonance) + resonance, 1.0));
+        s.cutoff = Ranges::hz(v(l, LayerParam::Cutoff));
+        s.q = Ranges::q(v(l, LayerParam::Resonance));
         s.filterOctaves = Ranges::filterOctaves(v(l, LayerParam::FilterEnv));
         s.highpass = Ranges::hz(v(l, LayerParam::Highpass));
         s.lowestOnly = at != kAir && v(l, LayerParam::LowestOnly) >= 0.5;
@@ -247,16 +269,25 @@ void Synth::applyParams() noexcept
     for (LayerVoice& mono : m_mono) setEnvelopes(mono, *setup++);
     // The air swells in with the Attack knob when that is slower than its own.
     m_noiseEnv.set(std::max(Ranges::seconds(v(kNoiseLayer, LayerParam::Attack)), attack), air.decay, air.sustain, release, m_rate);
-    // The effects behind the scenes, when the type changes.
+    // The effects: what the type fixes, when it changes; what the knobs set, always.
     const int type = typeIndex(knob(Macro::Type));
     if (type != m_fxType) {
         m_fxType = type;
-        const FxDesign& fx = stackType(type).fx;
-        m_driveL.set(fx.driveDb);
-        m_driveR.set(fx.driveDb);
-        m_glue.setDepth(fx.glue);
-        m_chorus.setMix(fx.chorus);
+        m_fx.setDesign(stackType(type).fx);
     }
+    m_fx.setKnobs({.masterGain = m_d.masterGain,
+                   .cutoffHz = Ranges::hz(knob(Macro::Cutoff)),
+                   .q = 0.7071 + 9.0 * knob(Macro::Resonance),
+                   .reverb = knob(Macro::Reverb),
+                   .delay = knob(Macro::Delay),
+                   .ott = knob(Macro::Ott),
+                   .width = knob(Macro::Width),
+                   .tape = 0.0,
+                   .sidechain = knob(Macro::SidechainOn) >= 0.5 ? knob(Macro::Sidechain) : 0.0,
+                   .curve = Ranges::choice(knob(Macro::SidechainCurve), kSidechainCurves),
+                   .beats = sidechain::kRates.at(static_cast<std::size_t>(Ranges::choice(knob(Macro::SidechainRate), kSidechainRates))).beats,
+                   .slope = knob(Macro::SidechainSlope),
+                   .fromNotes = Ranges::choice(knob(Macro::SidechainTrigger), kSidechainTriggers) == 1});
 }
 
 void Synth::setEnvelopes(LayerVoice& lv, const LayerSetup& setup) const noexcept
@@ -271,9 +302,13 @@ double Synth::noteHz(int note, const LayerSetup& setup) const noexcept
     return 440.0 * std::pow(2.0, (note - 69 + 12 * setup.octave + m_bend) / 12.0);
 }
 
-void Synth::process(std::span<const MidiEvent> events, const AudioBlock& io) noexcept
+void Synth::process(std::span<const MidiEvent> events, const AudioBlock& io, const TimeInfo& time) noexcept
 {
     applyParams();
+    m_tempo = time.tempo > 0.0 ? time.tempo : 120.0;
+    m_ppqStep = m_tempo / 60.0 / m_rate;
+    // Where the beat is (the host's when it has one; else counted here).
+    if (time.samplePosition > 0 || time.ppqPosition > 0.0) m_ppq = time.ppqPosition;
     if (m_releaseAll.exchange(false, std::memory_order_acquire)) releaseAll(false);
     const auto total = static_cast<std::size_t>(std::max(io.frames, 0));
     const std::span<float> left(io.left, total);
@@ -371,6 +406,7 @@ void Synth::noteOn(int note, int velocity) noexcept
         lv.filter.gateOn();
     }
     m_noiseEnv.gateOn(); // the air comes in again with each chord
+    m_fx.noteAt(m_ppq);
     updateMono();
 }
 
@@ -460,6 +496,8 @@ void Synth::render(std::span<float> left, std::span<float> right) noexcept
     const std::size_t frames = left.size();
     const std::span<float> layerL(m_layerL.data(), frames);
     const std::span<float> layerR(m_layerR.data(), frames);
+    std::ranges::fill(std::span<float>(m_subL.data(), frames), 0.0F);
+    std::ranges::fill(std::span<float>(m_subR.data(), frames), 0.0F);
     for (std::size_t l = 0; l < m_bus.size(); ++l) {
         const LayerSetup& setup = m_d.layers.at(l);
         LayerBus& bus = m_bus.at(l);
@@ -488,27 +526,23 @@ void Synth::render(std::span<float> left, std::span<float> right) noexcept
                 std::ranges::transform(layerR, layerR.begin(), [&bus](float s) { return bus.lowCutR.highPass(s); });
             }
         }
+        // The sub goes round the effects (as producers keep it): the OTT's
+        // low band and the reverb would only make it boom.
+        const bool sub = l == kSubLayer;
         auto fromL = layerL.begin();
         auto fromR = layerR.begin();
-        auto toR = right.begin();
-        for (float& out : left) {
+        auto toL = sub ? std::span<float>(m_subL.data(), frames).begin() : left.begin();
+        auto toR = sub ? std::span<float>(m_subR.data(), frames).begin() : right.begin();
+        for (std::size_t i = 0; i < frames; ++i) {
             bus.gain += (target - bus.gain) * kSmoothing;
-            out += *fromL++ * bus.gain;
+            *toL++ += *fromL++ * bus.gain;
             *toR++ += *fromR++ * bus.gain;
         }
     }
-    // Behind the scenes: drive, then level, glue and the wide doubling.
-    auto toR = right.begin();
-    for (float& outL : left) {
-        float& outR = *toR++;
-        m_masterGain += (m_d.masterGain - m_masterGain) * kSmoothing;
-        float l = m_driveL.tick(outL) * m_masterGain;
-        float r = m_driveR.tick(outR) * m_masterGain;
-        m_glue.tick(l, r);
-        m_chorus.tick(l, r);
-        outL = l;
-        outR = r;
-    }
+    // The sub goes round the effects, added after them.
+    m_fx.process(left, right, std::span<const float>(m_subL.data(), frames), std::span<const float>(m_subR.data(), frames), m_tempo, m_ppq,
+                 m_ppqStep, m_random);
+    m_sidechainPosition.store(static_cast<float>(m_fx.sidechainPosition()), std::memory_order_relaxed);
 }
 
 void Synth::renderLayer(LayerVoice& lv, const LayerSetup& setup, int note, float velocity, std::size_t frames) noexcept

@@ -71,10 +71,15 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            // The app's own instrument: its window is the app's.
+            // The app's own instruments: their windows are the app's.
             SawStackPanel {
                 anchors.fill: parent
-                visible: area.editorService.builtinSelected
+                visible: area.editorService.builtinId === "builtin:saw-stack-pro"
+                service: area.editorService
+            }
+            PianoProPanel {
+                anchors.fill: parent
+                visible: area.editorService.builtinId === "builtin:piano-pro"
                 service: area.editorService
             }
 

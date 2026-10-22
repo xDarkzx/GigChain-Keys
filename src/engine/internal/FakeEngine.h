@@ -312,7 +312,7 @@ private:
         double volumeDb = 0.0;
         bool mute = false;
         bool solo = false;
-        bool sawStack = false; // plays Saw Stack Pro (the app's own instrument: its real knobs are shown)
+        QString builtin; // plays one of the app's own instruments (this id): its real knobs are shown
     };
 
     ChannelState* find(const core::ChannelId& id);

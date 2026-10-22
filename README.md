@@ -82,7 +82,7 @@ Get-FileHash .\GigChainKeys-0.1.0-x64-setup.exe -Algorithm SHA256   # Windows (P
 
 ```bash
 shasum -a 256 GigChainKeys-0.1.0-arm64.dmg                          # macOS (Terminal)
-sha256sum GigChainKeys-0.5.0-x86_64.AppImage                         # Linux
+sha256sum GigChainKeys-0.6.0-x86_64.AppImage                         # Linux
 ```
 
 ### First start on Linux
@@ -118,8 +118,9 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
 ### What you need
 
-- **Instruments:** any VST3 or VST2 instruments and effects. GigChain Keys
-  finds them in the usual plugin folders by itself. No instruments yet? These free ones
+- **Instruments:** two come built in (**Saw Stack Pro** and **Piano Pro**,
+  below), and any VST3 or VST2 instruments and effects play too. GigChain Keys
+  finds them in the usual plugin folders by itself. Want more? These free ones
   cover pianos, synths and pads:
 
   | Instrument | What it gives you | Get it |
@@ -141,6 +142,7 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
 | | |
 |---|---|
+| 🔊 **Its own EDM instruments** | **Saw Stack Pro**: the big layered supersaws of EDM (future bass chords, trance and big room leads, pads, plucks, a reese bass), eight layers each, finished with OTT, chorus, width, delay and reverb. **Piano Pro**: the pianos of EDM records (house, big house, prog house, emotional, felt, grand, upright, electric, DX, lo-fi), from a real recorded grand and upright. Both have a Kickstart-style sidechain (12 curves, 1/16 to a bar, dotted and triplet, from the beat or from each note), and every knob can be learned to your keyboard. No plugin to buy. |
 | 🎹 **Plays your plugins** | Hosts VST3 and VST2 instruments and effects with their own windows. Every sound in the setlist is loaded up front, so switching songs is instant, and held notes and reverb tails ring on across the change. |
 | 🎚️ **A real mixer** | Logic-style channel strips: instrument, effects, pan, fader, meters, mute and solo. An Aux strip for one shared reverb or delay, fed by each channel's Send knob. A master strip with its own effects, and a safety limiter before your speakers. Any channel, the click or a stem can go to outputs of its own (your in-ears, the sound desk). |
 | 🎼 **Splits, layers and knobs** | Key zones, transpose and velocity layers per instrument; a layer can ignore the sustain pedal, expression, mod wheel, pitch bend or aftertouch. A chord trigger and an arpeggiator per channel. Right-click any fader, pan knob or plugin setting and learn a knob, fader or pedal on your keyboard for it; learned knobs pick up where the sound is (no jumps) and can have a curve. One instrument can be shared by many songs, loaded once. |
@@ -258,6 +260,7 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
+| 0.6.0 | Alpha: two instruments of its own: Saw Stack Pro (EDM supersaw stacks) and Piano Pro (EDM pianos from a real recorded grand and upright), with a Kickstart-style sidechain |
 | 0.5.0 | Alpha: the panel (your sounds and parts as buttons, on your keyboard's pads); splits set by playing; teach a backup keyboard your controls; no clicks or cut-off tails when the sound changes; Panic stops everything |
 | 0.4.0 | Alpha: a new MainStage-style look; VST2 plugins; stems and markers for backing tracks; one shared reverb (aux send); hardware synths; more outputs; chord trigger and arpeggiator; record the gig; one instrument for many songs |
 | 0.3.0 | Alpha: Linux AppImage and .deb; you move the song (Perform's Play, Next part, Loop part, made for touch screens); MIDI Learn and keyboard transport buttons; instruments named for their sound; Practice warm-ups |
@@ -293,10 +296,12 @@ It is built with:
 - the [Steinberg VST3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT)
 - the Steinberg ASIO SDK (GPL-3.0)
 - [RtAudio](https://github.com/thestk/rtaudio) and [RtMidi](https://github.com/thestk/rtmidi) (MIT-style)
+- effects ported from [Vital](https://github.com/mtytel/vital) (GPL-3.0) in Saw Stack Pro and Piano Pro
+- Piano Pro's recorded grand and upright from Versilian Studios' [VCSL](https://github.com/sgossner/VCSL) (CC0, public domain)
 
 The full notices ship with the app (`THIRD-PARTY-NOTICES.txt`).
 
 VST is a registered trademark of Steinberg Media Technologies GmbH. ASIO is a
-trademark of Steinberg Media Technologies GmbH. MainStage, Logic and Gig
-Performer are trademarks of their owners; GigChain Keys is not affiliated with
-them.
+trademark of Steinberg Media Technologies GmbH. MainStage, Logic, Gig
+Performer, Kickstart, Korg M1, Rhodes and DX7 are trademarks of their owners;
+GigChain Keys is not affiliated with them.

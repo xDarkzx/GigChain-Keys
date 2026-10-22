@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FxChain.h"
 #include "INode.h"
 #include "SawStackDsp.h"
 #include "SawStackFx.h"
@@ -73,10 +74,23 @@ enum class Macro : uint8_t
     Attack,    // seconds, as Ranges::seconds (each type sets where it starts)
     Release,   // likewise
     Spread,    // 0.5: as designed; wider and more detuned above, narrower below
+    Reverb,    // the reverb's mix (each type sets where it starts)
+    Delay,     // the echo's level
+    Ott,       // the 3-band squash's depth
+    Width,     // the widening
+    Sidechain,        // how far the sound ducks (Kickstart's Mix)
+    SidechainRate,    // how often: sidechain::kRates (Ranges::choice), 1/16 to a bar, dotted and triplet too
+    SidechainSlope,   // how long the dip lasts (0.5: as the curve is)
+    SidechainCurve,   // which shape: sidechain::kCurves (Ranges::choice)
+    SidechainTrigger, // from the song's beat, or from each note played (sidechain::kTriggers)
+    SidechainOn,      // 1: on, 0: off (its settings kept for when it comes back on)
     Count,
 };
 inline constexpr int kMacros = static_cast<int>(Macro::Count);
 inline constexpr int kParamCount = kLayers * kLayerParams + kGlobalParams + kMacros;
+// Read only (not a setting): where the sidechain is in its cycle, 0-1, for the window's playhead.
+inline constexpr uint32_t kSidechainPositionId = sidechain::kPositionParameter;
+static_assert(kSidechainPositionId >= static_cast<uint32_t>(kParamCount));
 
 [[nodiscard]] constexpr uint32_t paramId(int layer, LayerParam p)
 {
@@ -148,8 +162,8 @@ public:
     // Main thread: every held note is let go at the next block.
     void requestReleaseAll() noexcept { m_releaseAll.store(true, std::memory_order_release); }
 
-    // Audio thread.
-    void process(std::span<const MidiEvent> events, const AudioBlock& io) noexcept;
+    // Audio thread. `time`: the tempo and the beat, for the echo and the sidechain.
+    void process(std::span<const MidiEvent> events, const AudioBlock& io, const TimeInfo& time = {}) noexcept;
     [[nodiscard]] bool holdsNotes() const noexcept;
     // Notes sounding (held, or ringing out), for tests.
     [[nodiscard]] int soundingNotes() const noexcept;
@@ -239,15 +253,17 @@ private:
     std::array<float, 7> m_pinkL{}, m_pinkR{};
 
     std::array<LayerBus, kLayers> m_bus{};
-    float m_masterGain = 0.0F;
     std::atomic<int> m_type{-1};
 
-    // Behind the scenes, as the type sets them.
-    Drive m_driveL, m_driveR;
-    Glue m_glue;
-    Chorus m_chorus;
+    // The effects (the main filter is Cutoff and Resonance, on the whole stack but the sub).
+    FxChain m_fx;
+    std::atomic<float> m_sidechainPosition{0.0F}; // for the window, at each block's end
     int m_fxType = -1;
+    double m_tempo = 120.0;
+    double m_ppq = 0.0;
+    double m_ppqStep = 0.0; // quarter notes per sample
     std::vector<float> m_layerL{}, m_layerR{};
+    std::vector<float> m_subL{}, m_subR{}; // the sub, kept out of the effects
 };
 
 } // namespace gigchain::engine::sawstack

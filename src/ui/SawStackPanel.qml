@@ -1,284 +1,124 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
 
-// Saw Stack Pro's window, drawn by the app (it is the app's own instrument):
-// the type of stack, as keys with a light, and its five knobs. Everything
-// else (its eight layers and the effects behind them) is the type's.
-// A knob turned here can be learned to a keyboard knob with MIDI Learn above.
-Item {
+// Saw Stack Pro's window (BuiltinPanel: its top bar, its values). On the
+// left, the eight layers that make the stack (each one's light, wave, voices
+// and level), and under them the sound knobs and the effects. On the right
+// the sidechain, as Kickstart has it. Every control here changes the sound;
+// the knobs can be learned to a keyboard's knobs with MIDI Learn above.
+BuiltinPanel {
     id: panel
 
-    required property EditorService service
+    namePrefix: "sawStack"
+    logoText: "SAW STACK"
+    // The master level follows the eight layers' (18 parameters apart).
+    masterId: 8 * kLayerParams
+    categories: [["Bass", "BASS"], ["Pad", "PAD"], ["Pluck", "PLUCK"], ["Chords", "CHORDS"]]
+    otherCategory: "LEAD"
 
-    // [{id, name, choices}], the type first (the one with choices).
-    property var parameters: []
-    readonly property var typeParameter: parameters.find((p) => p.choices.length > 0)
-    readonly property var knobs: parameters.filter((p) => p.choices.length === 0)
-    property real typeValue: 0
-    readonly property int typeIndex: typeParameter ? Math.round(typeValue * (typeParameter.choices.length - 1)) : -1
-    property var values: ({})
+    // A layer's parameters are 18 apart (sawstack::paramId(layer, LayerParam)).
+    readonly property int kLayerParams: 18
+    readonly property var lp: ({ on: 0, level: 1, voices: 3, wave: 7 })
+    readonly property var layers: [
+        { name: qsTr("Sub"), role: qsTr("Weight under the lowest note") },
+        { name: qsTr("Low Saw"), role: qsTr("Body under the chord") },
+        { name: qsTr("Main Saw"), role: qsTr("The stack itself") },
+        { name: qsTr("Wide Saw"), role: qsTr("Width at the sides") },
+        { name: qsTr("Octave Up"), role: qsTr("Shine on top") },
+        { name: qsTr("Body"), role: qsTr("Hollow square weight") },
+        { name: qsTr("Pluck"), role: qsTr("The hit as a chord starts") },
+        { name: qsTr("Air"), role: qsTr("Noise, one for the chord") }
+    ]
+    readonly property var layerColours: ["#4f7dff", "#3fa9ff", "#4cc3ff", "#38d6c4", "#7be07a", "#c6e05a", "#ffb547", "#ff7a9c"]
 
-    function reload() {
-        parameters = service.builtinParameters()
-        refresh()
-    }
-    // The values as the instrument has them now (a learned keyboard knob, a
-    // new type, a loaded song move them).
-    function refresh() {
-        if (typeParameter) typeValue = service.builtinValue(typeParameter.id)
-        const next = {}
-        for (const k of knobs) next[k.id] = service.builtinValue(k.id)
-        values = next
-    }
-    function chooseType(index) {
-        service.setBuiltinValue(typeParameter.id, index / Math.max(1, typeParameter.choices.length - 1))
-        refresh() // its knobs start where the type starts them
-    }
+    function pidOf(layer, param) { return layer * kLayerParams + lp[param] }
 
-    Component.onCompleted: reload()
-    Connections {
-        target: panel.service
-        function onTargetChanged() { panel.reload() }
-    }
-    Timer {
-        interval: 150
-        repeat: true
-        running: panel.visible
-        onTriggered: panel.refresh()
-    }
-
-    // How a knob's value reads, as players think of it.
-    function describe(name, v) {
-        if (v < 0) return ""
-        const seconds = 0.0005 * Math.pow(16000, v)
-        switch (name) {
-        case "Cutoff": {
-            const octaves = (v - 0.5) * 10
-            return Math.abs(octaves) < 0.05 ? qsTr("As designed") : (octaves > 0 ? "+" : "") + octaves.toFixed(1) + qsTr(" oct")
+    // ================= The left: the layers, the sound, the effects.
+    BuiltinCard {
+        id: layersCard
+        owner: panel
+        title: qsTr("LAYERS")
+        x: 14
+        y: panel.contentTop
+        width: 620
+        height: 316
+        headerRight: Text {
+            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+            text: qsTr("Click a light to switch a layer, drag its bar for its level")
+            color: panel.muted
+            font.family: Theme.fontFamily
+            font.pixelSize: 9
         }
-        case "Attack":
-        case "Release":
-            return seconds < 1 ? Math.round(seconds * 1000) + " ms" : seconds.toFixed(2) + " s"
-        case "Spread":
-            return Math.abs(v - 0.5) < 0.005 ? qsTr("As designed") : Math.round(v * 200) + "%"
-        default:
-            return Math.round(v * 100) + "%"
-        }
-    }
-
-    // From the top, scrolling when the area is shorter than the panel (the
-    // chart and the mixer share the screen with it).
-    Flickable {
-        objectName: "sawStackScroll"
-        anchors.fill: parent
-        contentHeight: card.height + 2 * Theme.spacing
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
-
-    Rectangle {
-        id: card
-        objectName: "sawStackPanel"
-        x: (panel.width - width) / 2
-        y: Theme.spacing
-        width: Math.min(panel.width - 2 * Theme.spacing, 820)
-        height: column.implicitHeight + 28
-        radius: Theme.radiusCard
-        border.color: Theme.outline
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: Theme.panelTop }
-            GradientStop { position: 1.0; color: Theme.panelBottom }
-        }
-        Rectangle { x: 2; y: 1; width: parent.width - 4; height: 1; color: Theme.bevelLight }
-
-        ColumnLayout {
-            id: column
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 14 }
-            spacing: 12
-
-            // The name, and the type playing on a little display.
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 14
-                Text {
-                    text: qsTr("SAW STACK PRO")
-                    color: Theme.text
-                    font.pixelSize: Theme.headerFontSize
-                    font.bold: true
-                    font.letterSpacing: 2
+        Column {
+            anchors.fill: parent
+            anchors.topMargin: -4
+            spacing: 3
+            Repeater {
+                model: 8
+                delegate: BuiltinLayerRow {
+                    required property int index
+                    owner: panel
+                    width: parent.width
+                    onId: panel.pidOf(index, "on")
+                    levelId: panel.pidOf(index, "level")
+                    title: panel.layers[index].name
+                    role: panel.layers[index].role
+                    colour: panel.layerColours[index]
+                    // 0 saw, 1 square, 2 sine (sawstack::Wave); the air layer is noise.
+                    shape: index === 7 ? 3 : Math.round(Math.max(0, panel.value(panel.pidOf(index, "wave"))) * 2)
+                    note: index === 7 ? "" : (1 + Math.round(Math.max(0, panel.value(panel.pidOf(index, "voices"))) * 15)) + "v"
+                    lightName: "sawStackLayerOn_" + index
+                    levelName: "sawStackLayerLevel_" + index
                 }
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 34
-                    radius: Theme.radius
-                    border.color: Theme.outline
-                    gradient: Gradient {
-                        GradientStop { position: 0; color: Theme.lcdTop }
-                        GradientStop { position: 1; color: Theme.lcdBottom }
-                    }
-                    Text {
-                        objectName: "sawStackTypeShown"
-                        anchors.centerIn: parent
-                        text: panel.typeParameter && panel.typeIndex >= 0 ? panel.typeParameter.choices[panel.typeIndex] : ""
-                        color: Theme.lcdText
-                        font.pixelSize: Theme.fontSize + 3
-                        font.bold: true
-                    }
-                }
-            }
-
-            // The knobs first: what is turned while playing stays in sight
-            // when the area is short.
-            StripSection {
-                Layout.fillWidth: true
-                label: qsTr("SOUND")
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.margins: 6
-                    Layout.topMargin: 16
-                    spacing: 6
-                    Repeater {
-                        model: panel.knobs
-                        delegate: ColumnLayout {
-                            id: slot
-                            required property var modelData
-                            readonly property real current: panel.values[modelData.id] !== undefined ? panel.values[modelData.id] : -1
-                            Layout.fillWidth: true
-                            spacing: 4
-                            Dial {
-                                id: dial
-                                objectName: "sawStackKnob_" + slot.modelData.name
-                                Layout.alignment: Qt.AlignHCenter
-                                implicitWidth: 64
-                                implicitHeight: 64
-                                from: 0
-                                to: 1
-                                focusPolicy: Qt.NoFocus
-                                Binding on value {
-                                    value: Math.max(0, slot.current)
-                                    when: !knobMouse.pressed
-                                    restoreMode: Binding.RestoreNone
-                                }
-                                function moveTo(v) {
-                                    const clamped = Math.max(0, Math.min(1, v))
-                                    if (clamped === value) return
-                                    value = clamped
-                                    panel.service.setBuiltinValue(slot.modelData.id, clamped)
-                                }
-                                background: KnobFace {
-                                    implicitWidth: 64
-                                    implicitHeight: 64
-                                    position: dial.position
-                                    // Cutoff and Spread are "as designed" in the middle: their arc starts at the top.
-                                    arcFrom: slot.modelData.name === "Cutoff" || slot.modelData.name === "Spread" ? 0.5 : 0
-                                    ledColor: Theme.ledBlue
-                                }
-                                handle: Item {}
-                                MouseArea {
-                                    id: knobMouse
-                                    anchors.fill: parent
-                                    preventStealing: true
-                                    cursorShape: Qt.SizeVerCursor
-                                    property point start
-                                    property real startValue: 0
-                                    onPressed: (mouse) => {
-                                        start = Qt.point(mouse.x, mouse.y)
-                                        startValue = dial.value
-                                    }
-                                    onPositionChanged: (mouse) => {
-                                        if (!pressed) return
-                                        // 150 px across the knob's travel; up/right = more.
-                                        dial.moveTo(startValue + ((mouse.x - start.x) - (mouse.y - start.y)) / 150)
-                                    }
-                                    onWheel: (wheel) => dial.moveTo(dial.value + (wheel.angleDelta.y > 0 ? 0.02 : -0.02))
-                                }
-                            }
-                            Text {
-                                Layout.alignment: Qt.AlignHCenter
-                                text: slot.modelData.name.toUpperCase()
-                                color: Theme.engraved
-                                font.pixelSize: Theme.tinyFontSize
-                                font.bold: true
-                                font.letterSpacing: 1.2
-                            }
-                            Text {
-                                Layout.alignment: Qt.AlignHCenter
-                                text: panel.describe(slot.modelData.name, knobMouse.pressed ? dial.value : slot.current)
-                                color: Theme.text
-                                font.pixelSize: Theme.smallFontSize
-                            }
-                        }
-                    }
-                }
-            }
-
-            StripSection {
-                Layout.fillWidth: true
-                label: qsTr("TYPE")
-                GridLayout {
-                    Layout.fillWidth: true
-                    Layout.margins: 6
-                    Layout.topMargin: 14
-                    columns: 5
-                    rowSpacing: 6
-                    columnSpacing: 6
-                    Repeater {
-                        model: panel.typeParameter ? panel.typeParameter.choices : []
-                        delegate: Rectangle {
-                            id: key
-                            required property string modelData
-                            required property int index
-                            readonly property bool lit: index === panel.typeIndex
-                            objectName: "sawStackType_" + index
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 40
-                            radius: Theme.radius
-                            border.color: Theme.outline
-                            gradient: Gradient {
-                                GradientStop { position: 0; color: keyMouse.pressed ? Theme.buttonBottom : Theme.buttonTop }
-                                GradientStop { position: 1; color: Theme.buttonBottom }
-                            }
-                            Rectangle { x: 1; y: 1; width: parent.width - 2; height: 1; color: Theme.bevelLight }
-                            Rectangle {
-                                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 5 }
-                                height: 3
-                                radius: 1.5
-                                color: key.lit ? Theme.ledBlue : Theme.ledOff
-                            }
-                            Text {
-                                anchors { left: parent.left; right: parent.right; leftMargin: 6; rightMargin: 6 }
-                                y: (parent.height - height) / 2 + 3
-                                horizontalAlignment: Text.AlignHCenter
-                                wrapMode: Text.WordWrap
-                                maximumLineCount: 2
-                                text: key.modelData
-                                font.pixelSize: Theme.smallFontSize
-                                font.bold: true
-                                color: key.lit ? Theme.text : Theme.textDim
-                            }
-                            MouseArea {
-                                id: keyMouse
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: panel.chooseType(key.index)
-                            }
-                        }
-                    }
-                }
-            }
-
-            Text {
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                text: qsTr("Pick a type, shape it with the knobs. Add reverb or delay in the channel's effects. To play a knob from your keyboard: MIDI Learn, turn it here, then turn yours.")
-                color: Theme.textDim
-                font.pixelSize: Theme.smallFontSize
             }
         }
     }
+
+    BuiltinCard {
+        id: soundCard
+        owner: panel
+        title: qsTr("SOUND")
+        x: layersCard.x
+        y: layersCard.y + layersCard.height + 12
+        width: 330
+        height: panel.frameHeight - 14 - y
+        Row {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: 4
+            spacing: 0
+            BuiltinKnob { objectName: "sawStackKnob_Cutoff"; owner: panel; pid: panel.macro("Cutoff"); text: "CUTOFF"; kind: "hz" }
+            BuiltinKnob { objectName: "sawStackKnob_Resonance"; owner: panel; pid: panel.macro("Resonance"); text: "RES" }
+            BuiltinKnob { objectName: "sawStackKnob_Spread"; owner: panel; pid: panel.macro("Spread"); text: "SPREAD"; bipolar: true }
+            BuiltinKnob { objectName: "sawStackKnob_Attack"; owner: panel; pid: panel.macro("Attack"); text: "ATTACK"; kind: "time" }
+            BuiltinKnob { objectName: "sawStackKnob_Release"; owner: panel; pid: panel.macro("Release"); text: "RELEASE"; kind: "time" }
+        }
+    }
+
+    BuiltinCard {
+        owner: panel
+        title: qsTr("EFFECTS")
+        colour: panel.fxColour
+        x: soundCard.x + soundCard.width + 12
+        y: soundCard.y
+        width: layersCard.x + layersCard.width - x
+        height: soundCard.height
+        Row {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: 4
+            BuiltinKnob { objectName: "sawStackKnob_Reverb"; owner: panel; pid: panel.macro("Reverb"); text: "REVERB"; colour: panel.fxColour }
+            BuiltinKnob { objectName: "sawStackKnob_Delay"; owner: panel; pid: panel.macro("Delay"); text: "DELAY"; colour: panel.fxColour }
+            BuiltinKnob { objectName: "sawStackKnob_OTT"; owner: panel; pid: panel.macro("OTT"); text: "OTT"; colour: panel.fxColour }
+            BuiltinKnob { objectName: "sawStackKnob_Width"; owner: panel; pid: panel.macro("Width"); text: "WIDTH"; colour: panel.fxColour }
+        }
+    }
+
+    // ================= The right: the sidechain, as Kickstart.
+    SidechainCard {
+        owner: panel
+        x: layersCard.x + layersCard.width + 12
+        y: layersCard.y
+        width: panel.frameWidth - 14 - x
+        height: panel.frameHeight - 14 - y
     }
 }

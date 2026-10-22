@@ -26,10 +26,22 @@ struct LayerDesign
 // never see them, each type sets them.
 struct FxDesign
 {
-    double driveDb = 0.0; // saturation: warmth and edge
-    double glue = 0.0;    // the 3-band squash that brings the quiet detail up (0-1)
-    double chorus = 0.0;  // a wide doubling (0-1)
-    double trimDb = 0.0;  // evens the types' loudness out
+    double driveDb = 0.0;       // soft clipping before the rest: warmth, then edge
+    bool cutMud = true;         // the producers' EQ: -2.5 dB at 500 Hz, -2 dB at 3.5 kHz, +2 dB air at 10 kHz
+    double chorus = 0.0;        // thickness (0-1)
+    double ott = 0.0;           // the 3-band "OTT" squash, its depth (0-1)
+    double width = 0.0;         // the Dimension-style widening (0-1)
+    double delay = 0.0;         // the echo's level (0-1)
+    double delayFeedback = 0.3;
+    double delayBeats = 0.75;   // the echo's length in quarter notes (0.75: a dotted eighth)
+    double reverb = 0.0;        // the reverb's mix (0-1)
+    double reverbDecay = 3.0;   // seconds
+    double reverbSize = 0.7;    // 0-1
+    double sidechain = 0.0;      // how far it ducks on each beat (0-1)
+    double sidechainBeats = 1.0; // one duck per this many quarter notes (one of sidechain::kRates)
+    double sidechainSlope = 0.5; // how long the dip lasts (0.5: as the curve is)
+    int sidechainCurve = 0;      // its shape: sidechain::kCurves (0: Classic)
+    double trimDb = 0.0;        // evens the types' loudness out (after the effects)
 };
 
 // A kind of saw stack: its eight layers, its effects, and where its knobs start.

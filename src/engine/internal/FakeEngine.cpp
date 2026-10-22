@@ -3,6 +3,7 @@
 #include "FakeEngine.h"
 
 #include "EngineLog.h"
+#include "PianoProNode.h"
 #include "SawStackNode.h"
 
 #include "gigchain/core/Branding.h"
@@ -76,19 +77,36 @@ void FakeEngine::applyPatch(const core::SongId&, const core::Patch& patch)
                             .volumeDb = channel.volumeDb,
                             .mute = channel.mute,
                             .solo = channel.solo,
-                            .sawStack = channel.instrument && channel.instrument->pluginId == QLatin1StringView(SawStackNode::kPluginId)};
+                            .builtin = channel.instrument && PluginNode::isBuiltin(channel.instrument->pluginId)
+                                           ? channel.instrument->pluginId
+                                           : QString()};
     });
 }
+
+namespace {
+
+// One of the app's own instruments, unprepared (nothing loaded, nothing
+// played): for its knobs and their starting values.
+std::unique_ptr<PluginNode> builtinNode(const QString& pluginId)
+{
+    if (pluginId == QLatin1StringView(SawStackNode::kPluginId)) return std::make_unique<SawStackNode>();
+    if (pluginId == QLatin1StringView(PianoProNode::kPluginId)) return std::make_unique<PianoProNode>();
+    return nullptr;
+}
+
+} // namespace
 
 std::vector<PluginParameter> FakeEngine::pluginParameters(const core::ChannelId& id, int target) const
 {
     const auto it = std::ranges::find_if(m_channels, [&id](const ChannelState& state) { return state.id == id; });
-    if (target < 0 && it != m_channels.end() && it->sawStack) {
-        std::vector<PluginParameter> list;
-        std::ranges::transform(SawStackNode().parameters(), std::back_inserter(list), [](const PluginNode::Parameter& p) {
-            return PluginParameter{.id = p.id, .name = p.name, .choices = p.choices};
-        });
-        return list;
+    if (target < 0 && it != m_channels.end()) {
+        if (const auto node = builtinNode(it->builtin)) {
+            std::vector<PluginParameter> list;
+            std::ranges::transform(node->parameters(), std::back_inserter(list), [](const PluginNode::Parameter& p) {
+                return PluginParameter{.id = p.id, .name = p.name, .choices = p.choices};
+            });
+            return list;
+        }
     }
     return {{.id = 1, .name = u"Cutoff"_s, .choices = {}}, {.id = 2, .name = u"Resonance"_s, .choices = {}}};
 }
@@ -97,7 +115,9 @@ double FakeEngine::pluginParameterValue(const core::ChannelId& id, int target, u
 {
     if (const auto set = m_parameterValues.find(parameter); set != m_parameterValues.end()) return set->second;
     const auto it = std::ranges::find_if(m_channels, [&id](const ChannelState& state) { return state.id == id; });
-    if (target < 0 && it != m_channels.end() && it->sawStack) return SawStackNode().parameterValue(parameter); // its defaults
+    if (target < 0 && it != m_channels.end()) {
+        if (const auto node = builtinNode(it->builtin)) return node->parameterValue(parameter); // its defaults
+    }
     return 0.5;
 }
 
