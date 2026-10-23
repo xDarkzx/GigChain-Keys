@@ -4,7 +4,9 @@
 #include "StartupProgress.h"
 
 #include "gigchain/core/Branding.h"
+#include "gigchain/engine/BuiltinReadings.h"
 #include "gigchain/engine/FakeEngineFactory.h"
+#include "gigchain/engine/SidechainCurves.h"
 
 #include <QClipboard>
 #include <QElapsedTimer>
@@ -3802,6 +3804,414 @@ private slots:
             // ---- 14: the close ----------------------------------------------------------------------------------
             closing(u"14"_s, 3.0); // the logo and links stay a little after the last word
             setPads(false);
+        }
+
+        if (feature == u"6"_s || feature == u"7"_s) {
+            // ================= 6, 7: Saw Stack Pro, Piano Pro: the app's own instruments =================
+            // The sound under each scene is the instrument itself (sound_NN.wav,
+            // rendered by tst_saw_stack / tst_piano_pro at 124 BPM from the
+            // scene's start): what changes in it (a type, a layer, a knob)
+            // changes here on that beat; the rest follows the narration.
+            const bool saw = feature == u"6"_s;
+            const QString pluginId = saw ? u"builtin:saw-stack-pro"_s : u"builtin:piano-pro"_s;
+            const QString prefix = saw ? u"sawStack"_s : u"pianoPro"_s;
+            constexpr double kBeat = 60.0 / 124.0; // seconds (the sounds' tempo)
+            toEdit(0);
+            QVERIFY(doc.addChannel(pluginId, saw ? u"Saw Stack Pro"_s : u"Piano Pro"_s));
+            const int channel = static_cast<int>(doc.currentPatch()->channels.size()) - 1;
+            const core::ChannelId instrument = doc.currentPatch()->channels.at(static_cast<std::size_t>(channel)).id;
+            const std::vector<engine::PluginParameter> params = m_engine->pluginParameters(instrument, -1);
+            QVERIFY(!params.empty() && params.front().name == u"Type"_s);
+            const auto pid = [&](const QString& name) {
+                const auto found = std::ranges::find_if(params, [&](const engine::PluginParameter& p) { return p.name == name; });
+                if (found == params.end()) qWarning().noquote() << "Scene: no parameter" << name;
+                return found != params.end() ? found->id : 0U;
+            };
+            const auto setValue = [&](const QString& name, double value) {
+                QVERIFY(m_engine->setPluginParameter(instrument, -1, pid(name), value).has_value());
+            };
+            // The type, fresh: its layers and knobs where it starts them (by way of
+            // another type: choosing the type it already is changes nothing).
+            const auto setType = [&](const QString& name) {
+                const QStringList types = params.front().choices;
+                QVERIFY2(types.contains(name), qPrintable(name));
+                const auto index = types.indexOf(name);
+                const auto value = [&](qsizetype i) { return static_cast<double>(i) / static_cast<double>(types.size() - 1); };
+                setValue(u"Type"_s, value(index == 0 ? 1 : 0));
+                setValue(u"Type"_s, value(index));
+            };
+            const auto choiceValue = [](int index, std::size_t count) { return static_cast<double>(index) / static_cast<double>(count - 1); };
+            const auto piece = [&](const QString& name) -> QQuickItem* { return shownOne(prefix + name); };
+            // The demo engine plays nothing: the sidechain's playhead is moved here with the beat.
+            const auto tick = [&] {
+                const double rate = m_engine->pluginParameterValue(instrument, -1, pid(u"Sidechain Rate"_s));
+                const auto index = static_cast<std::size_t>(std::lround(rate * static_cast<double>(engine::sidechain::kRates.size() - 1)));
+                const double beats = engine::sidechain::kRates.at(std::min(index, engine::sidechain::kRates.size() - 1)).beats;
+                const double beat = m_recorder->now() / kBeat;
+                (void)m_engine->setPluginParameter(instrument, -1, engine::sidechain::kPositionParameter, std::fmod(beat, beats) / beats);
+            };
+            // Waits until `seconds` into the voice, the playhead moving meanwhile.
+            const auto runTo = [&](double seconds) {
+                while (m_recorder->now() < seconds + SceneRecorder::kLead) {
+                    tick();
+                    QTest::qWait(25);
+                }
+            };
+            const auto onWord = [&](const QString& wanted, double fallback, int nth = 1) { runTo(word(wanted, fallback, nth)); };
+            // Beat `beat` of the scene's sound (which starts with the picture, before the voice).
+            const auto onBeat = [&](double beat) { runTo((beat * kBeat) - SceneRecorder::kLead); };
+            // The beat of the sound on or after `wanted` is said: where the sound
+            // changes for it (video::Cues::beatOf, which made the sound).
+            const auto cue = [&](const QString& wanted, int nth = 1) {
+                return std::ceil((word(wanted, 0.5, nth) + SceneRecorder::kLead) / kBeat);
+            };
+            // A knob turned from `from` to `to` between two beats of the sound.
+            const auto turn = [&](const QString& name, double from, double to, double fromBeat, double toBeat) {
+                if (const QQuickItem* knob = piece(u"Knob_"_s + QString(name).remove(u' '))) glide(centre(knob), 400);
+                onBeat(fromBeat);
+                while (m_recorder->now() < (toBeat * kBeat)) {
+                    const double t = std::clamp(((m_recorder->now() / kBeat) - fromBeat) / (toBeat - fromBeat), 0.0, 1.0);
+                    setValue(name, from + ((to - from) * t));
+                    tick();
+                    QTest::qWait(25);
+                }
+                setValue(name, to);
+            };
+            // The scene ends a little after the voice: the instrument heard on its own.
+            const auto finish = [&] {
+                runTo(scene.value(u"duration"_s).toDouble() + 2.6);
+                QVERIFY2(recorder.stop(), qPrintable(recorder.problem()));
+            };
+            // The instrument's window, as big as it gets (no mixer, no keyboard).
+            const auto showWindow = [&] {
+                toEdit(0);
+                root->setProperty("editMixerOpen", false);
+                QVERIFY(root->setProperty("editKeyboardOpen", false));
+                doc.setSelectedChannel(channel);
+                tabs->setProperty("currentIndex", 1);
+                if (!saw) { // the recorded pianos are read (the demo engine reads none): its card says so
+                    (void)m_engine->setPluginParameter(instrument, -1, engine::readings::kPianoRecordings, 1.0);
+                }
+                QTest::qWait(700);
+            };
+            // An item shown in a popup (the type list), by name.
+            const auto popupPart = [&](const QString& name) -> QQuickItem* {
+                const QList<QQuickItem*> named = findAll(layer != nullptr ? layer : w->contentItem(), prefix + name);
+                const auto found = std::ranges::find_if(named, &QQuickItem::isVisible);
+                return found != named.end() ? *found : nullptr;
+            };
+            // The type picked from the list that drops down (pressed on the sound's beat).
+            const auto pickType = [&](const QString& name, double beat) {
+                onBeat(beat - 2.0);
+                press(piece(u"Menu"_s), Qt::LeftButton, 400);
+                const int index = static_cast<int>(params.front().choices.indexOf(name));
+                QTRY_VERIFY(popupPart(u"Type_%1"_s.arg(index)) != nullptr);
+                const QQuickItem* entryItem = popupPart(u"Type_%1"_s.arg(index));
+                glide(centre(entryItem), 500);
+                onBeat(beat);
+                press(entryItem, Qt::LeftButton, 60);
+            };
+            const auto nextTypeOn = [&](double beat) {
+                glide(centre(piece(u"Next"_s)), 500);
+                onBeat(beat);
+                press(piece(u"Next"_s), Qt::LeftButton, 60);
+            };
+            const auto pressOn = [&](QQuickItem* target, double beat) {
+                QVERIFY(target != nullptr);
+                glide(centre(target), 500);
+                onBeat(beat);
+                press(target, Qt::LeftButton, 60);
+            };
+            // The instrument in the Instruments list, pointed at and double-clicked (shown, not added again).
+            const auto inTheList = [&](double atSeconds, double clickSeconds) {
+                runTo(atSeconds);
+                sideTabs->setProperty("currentIndex", 1);
+                QTest::qWait(400);
+                QQuickItem* card = nullptr;
+                const std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+                    if (card == nullptr && item->isVisible() && item->property("pluginId").toString() == pluginId) card = item;
+                    for (QQuickItem* inner : item->childItems()) walk(inner);
+                };
+                walk(w->contentItem());
+                if (card == nullptr) {
+                    qWarning("Scene: the instrument is not in the Instruments list");
+                    return;
+                }
+                spot(card);
+                glide(centre(card), 600);
+                runTo(clickSeconds);
+                QVERIFY(QMetaObject::invokeMethod(m_overlay, "click"));
+                QTest::qWait(120);
+                QVERIFY(QMetaObject::invokeMethod(m_overlay, "click"));
+                QTest::qWait(250);
+                unspot();
+            };
+            const auto layerRows = [&](int first, int last) {
+                QRectF area = rectOf(piece(u"LayerOn_%1"_s.arg(first)));
+                for (int l = first; l <= last; ++l) area = area.united(rectOf(piece(u"LayerLevel_%1"_s.arg(l))));
+                return area.adjusted(-8, -6, 8, 6);
+            };
+
+            if (saw) {
+                // ---- 01: welcome back: the drop --------------------------------------------------------
+                showWindow();
+                setType(u"Future Bass Chords"_s);
+                if (begin(u"01"_s)) {
+                    onWord(u"synth"_s, 0.25);
+                    spot(piece(u"Panel"_s));
+                    onWord(u"listen"_s, 0.85);
+                    spot(piece(u"SidechainDisplay"_s));
+                    finish();
+                }
+                // ---- 02: where to find it ----------------------------------------------------------------
+                showWindow();
+                setType(u"Supersaw Chords"_s);
+                if (begin(u"02"_s)) {
+                    inTheList(word(u"instruments"_s, 0.05), word(u"double"_s, 0.4));
+                    doc.setSelectedChannel(channel);
+                    tabs->setProperty("currentIndex", 1);
+                    onWord(u"window"_s, 0.5);
+                    spot(piece(u"Panel"_s));
+                    finish();
+                }
+                // ---- 03: pick a type: Supersaw Chords, then "switch to Future Bass Chords" -------------------------
+                showWindow();
+                setType(u"Supersaw Chords"_s);
+                if (begin(u"03"_s)) {
+                    onWord(u"top"_s, 0.1);
+                    spot(piece(u"Menu"_s)->parentItem());
+                    nextTypeOn(cue(u"switch"_s));
+                    finish();
+                }
+                // ---- 04: the leads, each on its name ------------------------------------------------------------
+                showWindow();
+                setType(u"Supersaw Lead"_s);
+                if (begin(u"04"_s)) {
+                    spot(piece(u"Menu"_s)->parentItem());
+                    pickType(u"Trance Lead"_s, cue(u"trance"_s));
+                    pickType(u"Anthem Lead"_s, cue(u"anthem"_s));
+                    pickType(u"Big Room Lead"_s, cue(u"big"_s));
+                    finish();
+                }
+                // ---- 05: pad, pluck, reese, each on its name ------------------------------------------------------
+                showWindow();
+                setType(u"Supersaw Pad"_s);
+                if (begin(u"05"_s)) {
+                    spot(piece(u"Menu"_s)->parentItem());
+                    nextTypeOn(cue(u"pluck"_s));
+                    nextTypeOn(cue(u"dark"_s) - 1.0); // ("Reese Bass is that dark...")
+                    finish();
+                }
+                // ---- 06: a whole stack: "switch a layer off": the air off, then on again ----------------------------
+                showWindow();
+                setType(u"Supersaw Chords"_s);
+                if (begin(u"06"_s)) {
+                    spot(layerRows(0, 7));
+                    const double off = cue(u"switch"_s);
+                    pressOn(piece(u"LayerOn_7"_s), off);
+                    pressOn(piece(u"LayerOn_7"_s), std::max(cue(u"doing"_s), off + 2.0));
+                    finish();
+                }
+                // ---- 07: "turn it down", "open it up", then "resonance" -------------------------------------------
+                showWindow();
+                setType(u"Supersaw Chords"_s);
+                if (begin(u"07"_s)) {
+                    spot(piece(u"Knob_Cutoff"_s));
+                    const double up = cue(u"open"_s);
+                    const double resonance = cue(u"resonance"_s);
+                    turn(u"Cutoff"_s, 1.0, 0.3, cue(u"down"_s), up - 0.5);
+                    turn(u"Cutoff"_s, 0.3, 1.0, up, resonance - 0.5);
+                    setValue(u"Cutoff"_s, 0.62);
+                    spot(piece(u"Knob_Resonance"_s));
+                    turn(u"Resonance"_s, 0.0, 0.8, resonance, resonance + 4.0);
+                    finish();
+                }
+                // ---- 08: spread, attack, release, each on its name ---------------------------------------------------
+                showWindow();
+                setType(u"Supersaw Chords"_s);
+                if (begin(u"08"_s)) {
+                    for (const auto& [name, value] : {std::pair{u"Spread"_s, 1.0}, std::pair{u"Attack"_s, 0.69}, std::pair{u"Release"_s, 0.88}}) {
+                        const double beat = std::max(1.0, cue(name));
+                        spot(piece(u"Knob_"_s + name));
+                        turn(name, m_engine->pluginParameterValue(instrument, -1, pid(name)), value, beat - 1.0, beat);
+                    }
+                    finish();
+                }
+                // ---- 09: the effects: dry, then OTT, width, delay, reverb, each on its name --------------------------
+                showWindow();
+                setType(u"Supersaw Chords"_s);
+                for (const QString& fx : {u"Reverb"_s, u"Delay"_s, u"OTT"_s, u"Width"_s}) setValue(fx, 0.0);
+                if (begin(u"09"_s)) {
+                    for (const auto& [name, value] : {std::pair{u"OTT"_s, 0.8}, std::pair{u"Width"_s, 0.8}, std::pair{u"Delay"_s, 0.35},
+                                                      std::pair{u"Reverb"_s, 0.5}}) {
+                        const double beat = cue(name);
+                        spot(piece(u"Knob_"_s + name));
+                        turn(name, 0.0, value, beat - 1.0, beat);
+                    }
+                    finish();
+                }
+                // ---- 10: the sidechain's curves, each on its name -----------------------------------------------------
+                showWindow();
+                setType(u"Supersaw Chords"_s);
+                setValue(u"Sidechain"_s, 0.85);
+                if (begin(u"10"_s)) {
+                    spot(piece(u"SidechainDisplay"_s));
+                    pressOn(piece(u"Curve_1"_s), cue(u"softer"_s));
+                    pressOn(piece(u"Curve_8"_s), cue(u"reverse"_s));
+                    pressOn(piece(u"Curve_10"_s), cue(u"rhythmic"_s));
+                    finish();
+                }
+                // ---- 11: timing and feel: "dotted" 1/8D, note, "click the light": off ---------------------------------
+                showWindow();
+                setType(u"Supersaw Chords"_s);
+                setValue(u"Sidechain"_s, 0.85);
+                if (begin(u"11"_s)) {
+                    spot(piece(u"Rate_4"_s));
+                    pressOn(piece(u"Rate_4"_s), cue(u"dotted"_s));
+                    onWord(u"note"_s, 0.6);
+                    spot(piece(u"Trigger_1"_s));
+                    spot(piece(u"SidechainOn"_s));
+                    pressOn(piece(u"SidechainOn"_s), cue(u"light"_s));
+                    finish();
+                }
+                // ---- 12: on your keyboard: MIDI Learn, the filter swept by hand into the drop -------------------------
+                showWindow();
+                setType(u"Future Bass Chords"_s);
+                setValue(u"Cutoff"_s, 0.3);
+                if (begin(u"12"_s)) {
+                    const QQuickItem* learn = shownOne(u"pluginMidiLearn"_s);
+                    spot(learn);
+                    glide(centre(learn), 500);
+                    const double sweep = cue(u"sweep"_s);
+                    spot(piece(u"Knob_Cutoff"_s));
+                    turn(u"Cutoff"_s, 0.3, 1.0, sweep, std::max(cue(u"drop"_s), sweep + 4.0));
+                    finish();
+                }
+                // ---- 13: thanks for watching -------------------------------------------------------------------
+                setType(u"Future Bass Chords"_s);
+                closing(u"13"_s, 3.0);
+            } else {
+                // ---- 01: welcome back: the house riff ------------------------------------------------------------
+                showWindow();
+                setType(u"Big House Piano"_s);
+                if (begin(u"01"_s)) {
+                    onWord(u"piano"_s, 0.2);
+                    spot(piece(u"Panel"_s));
+                    onWord(u"listen"_s, 0.85);
+                    spot(piece(u"SidechainDisplay"_s));
+                    finish();
+                }
+                // ---- 02: a real piano: the grand, then "a real upright" ----------------------------------------
+                showWindow();
+                setType(u"Grand Piano"_s);
+                if (begin(u"02"_s)) {
+                    inTheList(word(u"instruments"_s, 0.05), word(u"saw"_s, 0.2));
+                    doc.setSelectedChannel(channel);
+                    tabs->setProperty("currentIndex", 1);
+                    onWord(u"acoustic"_s, 0.3);
+                    spot(piece(u"Status"_s));
+                    nextTypeOn(cue(u"upright"_s));
+                    spot(piece(u"Status"_s));
+                    finish();
+                }
+                // ---- 03: it plays like a piano --------------------------------------------------------------------
+                showWindow();
+                setType(u"Grand Piano"_s);
+                if (begin(u"03"_s)) {
+                    spot(piece(u"Panel"_s));
+                    onWord(u"pedal"_s, 0.75);
+                    spot(layerRows(0, 0));
+                    finish();
+                }
+                // ---- 04-06: House, Big House, Prog House --------------------------------------------------------------
+                showWindow();
+                setType(u"House Piano"_s);
+                if (begin(u"04"_s)) {
+                    onWord(u"octave"_s, 0.6);
+                    spot(layerRows(0, 1));
+                    finish();
+                }
+                showWindow();
+                setType(u"Big House Piano"_s);
+                if (begin(u"05"_s)) {
+                    onWord(u"octave"_s, 0.25);
+                    spot(layerRows(0, 2));
+                    finish();
+                }
+                showWindow();
+                setType(u"Prog House Piano"_s);
+                if (begin(u"06"_s)) {
+                    onWord(u"cuts"_s, 0.2);
+                    spot(piece(u"Knob_Tone"_s));
+                    finish();
+                }
+                // ---- 07: Emotional, then "felt piano" -----------------------------------------------------------------
+                showWindow();
+                setType(u"Emotional Piano"_s);
+                if (begin(u"07"_s)) {
+                    spot(piece(u"Menu"_s)->parentItem());
+                    nextTypeOn(cue(u"felt"_s));
+                    spot(piece(u"Knob_Tape"_s));
+                    finish();
+                }
+                // ---- 08: Electric Piano ---------------------------------------------------------------------------
+                showWindow();
+                setType(u"Electric Piano"_s);
+                if (begin(u"08"_s)) {
+                    spot(piece(u"Status"_s));
+                    finish();
+                }
+                // ---- 09: DX, then "Lo-fi Keys" -------------------------------------------------------------------
+                showWindow();
+                setType(u"DX Piano"_s);
+                if (begin(u"09"_s)) {
+                    spot(piece(u"Menu"_s)->parentItem());
+                    nextTypeOn(cue(u"lo"_s));
+                    finish();
+                }
+                // ---- 10: layers: octave, strings, sub, each on its name ---------------------------------------------------
+                showWindow();
+                setType(u"House Piano"_s);
+                for (const QString& l : {u"Octave On"_s, u"Strings On"_s, u"Sub On"_s}) setValue(l, 0.0);
+                if (begin(u"10"_s)) {
+                    spot(layerRows(0, 3));
+                    pressOn(piece(u"LayerOn_1"_s), cue(u"octave"_s));
+                    pressOn(piece(u"LayerOn_2"_s), cue(u"strings"_s));
+                    pressOn(piece(u"LayerOn_3"_s), cue(u"sub"_s));
+                    finish();
+                }
+                // ---- 11: shape it: tone, release, width, then tape in on its name -------------------------------------------
+                showWindow();
+                setType(u"Felt Piano"_s);
+                setValue(u"Tape"_s, 0.0);
+                if (begin(u"11"_s)) {
+                    onWord(u"tone"_s, 0.1);
+                    spot(piece(u"Knob_Tone"_s));
+                    onWord(u"release"_s, 0.3);
+                    spot(piece(u"Knob_Release"_s));
+                    onWord(u"width"_s, 0.5);
+                    spot(piece(u"Knob_Width"_s));
+                    spot(piece(u"Knob_Tape"_s));
+                    turn(u"Tape"_s, 0.0, 0.85, cue(u"tape"_s) - 1.0, cue(u"tape"_s));
+                    finish();
+                }
+                // ---- 12: the pump: 1/4, then 1/8D at "timings" ----------------------------------------------------------------
+                showWindow();
+                setType(u"House Piano"_s);
+                setValue(u"Sidechain"_s, 0.75);
+                setValue(u"Sidechain Rate"_s, choiceValue(5, engine::sidechain::kRates.size()));
+                if (begin(u"12"_s)) {
+                    spot(piece(u"SidechainDisplay"_s));
+                    pressOn(piece(u"Rate_4"_s), cue(u"timings"_s));
+                    onWord(u"midi"_s, 0.8);
+                    spot(shownOne(u"pluginMidiLearn"_s));
+                    finish();
+                }
+                // ---- 13: thanks for watching -------------------------------------------------------------------------------
+                setType(u"Big House Piano"_s);
+                closing(u"13"_s, 3.0);
+            }
+            QVERIFY(doc.removeChannel(channel));
         }
     }
 

@@ -22,6 +22,7 @@ Item {
     property var categories: []
     property string otherCategory
     function category(name) {
+        if (!name) return ""
         for (const c of categories) {
             if (name.indexOf(c[0]) >= 0) return c[1]
         }
@@ -38,6 +39,8 @@ Item {
     readonly property var typeParameter: parameters.find((p) => p.name === "Type")
     readonly property var typeNames: typeParameter ? typeParameter.choices : []
     readonly property int typeIndex: choiceOf("Type")
+    // The type's name ("" while the values and the list catch up with each other).
+    readonly property string typeName: typeIndex >= 0 && typeIndex < typeNames.length ? typeNames[typeIndex] : ""
     property var values: ({})
 
     // ---- Its face.
@@ -222,7 +225,7 @@ Item {
                                 Text {
                                     id: kindText
                                     anchors.centerIn: parent
-                                    text: panel.typeIndex >= 0 ? panel.category(panel.typeNames[panel.typeIndex]) : ""
+                                    text: panel.category(panel.typeName)
                                     color: panel.soundColour
                                     font.family: Theme.fontFamily
                                     font.pixelSize: 9
@@ -233,7 +236,7 @@ Item {
                             Text {
                                 objectName: panel.namePrefix + "TypeShown"
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: panel.typeIndex >= 0 ? panel.typeNames[panel.typeIndex] : ""
+                                text: panel.typeName
                                 color: panel.text
                                 font.family: Theme.fontFamily
                                 font.pixelSize: 15
