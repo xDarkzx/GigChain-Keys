@@ -11,8 +11,9 @@ Releases, where the README's **Download** links point.
 
 The stage goes in the release's title, not the number (the installer and the
 Mac app need plain numbers): **alpha** now (open testing, features still
-changing), then **beta** (feature-complete for 1.0), then **1.0**. Until 1.0
-every release is marked *pre-release* on GitHub.
+changing), then **beta** (feature-complete for 1.0), then **1.0**. Each
+release is published as GitHub's **Latest** (not as a pre-release): the
+README's **Download** links open the latest release, which skips pre-releases.
 
 The tag is the version with a `v`: `v0.1.0`.
 
@@ -63,7 +64,7 @@ The tag is the version with a `v`: `v0.1.0`.
    files and the checksums:
 
    ```powershell
-   gh release create v0.1.0 --prerelease --title "GigChain Keys 0.1.0 (alpha)" `
+   gh release create v0.1.0 --latest --title "GigChain Keys 0.1.0 (alpha)" `
        --notes-file notes.md `
        release\GigChainKeys-0.1.0-x64-setup.exe `
        release\GigChainKeys-0.1.0-x64-portable.zip `
@@ -75,7 +76,6 @@ The tag is the version with a `v`: `v0.1.0`.
 
    `notes.md` is that version's section of the changelog, with the
    *About code signing* and *First start* notes from the README under it.
-   Drop `--prerelease` from 1.0 on.
 8. **Check the README links:** the **Download** links open the release page,
    and the badge shows the new version.
 
