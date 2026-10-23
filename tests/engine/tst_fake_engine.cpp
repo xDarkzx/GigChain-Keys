@@ -1,5 +1,6 @@
 #include "gigchain/engine/FakeEngineFactory.h"
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/engine/SidechainCurves.h"
 
 #include <QtTest>
 
@@ -76,6 +77,9 @@ private slots:
         QVERIFY(effects > 0);
         QVERIFY(ids.count(u"fake.grand-piano"_s) == 1);
         QVERIFY(ids.count(u"fake.reverb"_s) == 1);
+        // The app's own instruments too, as the real engine offers them.
+        QVERIFY(ids.count(u"builtin:saw-stack-pro"_s) == 1);
+        QVERIFY(ids.count(u"builtin:piano-pro"_s) == 1);
     }
 
     void levelsStayInRange()
@@ -195,6 +199,39 @@ private slots:
         clock.now += 3.0;
         QCOMPARE(engine->loops().at(0).bar, 2);
         QVERIFY(std::abs(engine->loops().at(0).progress - 3.0 / 8.0) < 1e-9);
+    }
+
+    // The demo's own instruments behave as the real ones: a type chosen
+    // brings its own settings (Felt Piano: its tape on, its sidechain off), a
+    // setting stays as set; a reading for the window (not a setting) is
+    // shown as the demo sets it.
+    void theAppsOwnInstrumentsKeepTheirSettingsAsTheRealOnes()
+    {
+        const auto engine = engine::createFakeEngine();
+        core::Patch patch = core::makePatch(u"Drop"_s);
+        core::Channel channel = core::makeChannel(u"Piano Pro"_s);
+        channel.instrument = core::PluginSlot{.pluginId = u"builtin:piano-pro"_s, .displayName = u"Piano Pro"_s, .bypass = false, .state = {}, .shareId = {}};
+        patch.channels.push_back(channel);
+        engine->applyPatch(patch);
+        const auto parameters = engine->pluginParameters(channel.id, -1);
+        const auto idOf = [&](const QString& name) {
+            const auto found = std::ranges::find_if(parameters, [&](const engine::PluginParameter& p) { return p.name == name; });
+            return found != parameters.end() ? found->id : std::numeric_limits<uint32_t>::max();
+        };
+        const engine::PluginParameter& type = parameters.front();
+        QCOMPARE(type.name, u"Type"_s);
+        QCOMPARE(engine->pluginParameterValue(channel.id, -1, idOf(u"Tape"_s)), 0.0); // House Piano: no tape
+        const auto felt = static_cast<double>(type.choices.indexOf(u"Felt Piano"_s)) / static_cast<double>(type.choices.size() - 1);
+        QVERIFY(engine->setPluginParameter(channel.id, -1, type.id, felt).has_value());
+        QVERIFY(engine->pluginParameterValue(channel.id, -1, idOf(u"Tape"_s)) > 0.3);
+        QCOMPARE(engine->pluginParameterValue(channel.id, -1, idOf(u"Sidechain On"_s)), 0.0);
+        QVERIFY(engine->setPluginParameter(channel.id, -1, idOf(u"Tone"_s), 0.25).has_value());
+        QVERIFY(std::abs(engine->pluginParameterValue(channel.id, -1, idOf(u"Tone"_s)) - 0.25) < 1e-6);
+        // A reading the window shows (where the sidechain is), as the demo sets it.
+        QVERIFY(engine->setPluginParameter(channel.id, -1, engine::sidechain::kPositionParameter, 0.4).has_value());
+        QCOMPARE(engine->pluginParameterValue(channel.id, -1, engine::sidechain::kPositionParameter), 0.4);
+        engine->applyPatch(patch); // the same channel again: its settings kept
+        QVERIFY(std::abs(engine->pluginParameterValue(channel.id, -1, idOf(u"Tone"_s)) - 0.25) < 1e-6);
     }
 };
 

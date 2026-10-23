@@ -195,6 +195,16 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 The [**Getting started**](docs/help/getting-started.md) page walks through
 it step by step. Inside the app, press **F1** (or click **Help**) at any time.
 
+## Watch it
+
+Short videos, each showing one part of GigChain Keys
+([all of them](https://www.youtube.com/playlist?list=PLQp8ULNqWrb4)):
+
+- [**The overview**](https://youtu.be/bb21ucoV7Og): the whole app, start to finish
+- [Loop station](https://youtu.be/TWUITn0vhzE) · [Chord charts and lyrics](https://youtu.be/JhIZuH2CdhM) · [The 10-minute warm-up](https://youtu.be/UxjiNPtMoQw)
+- [Layers, splits and effects](https://youtu.be/GbwlgxBf-Es) · [Sounds on your pads](https://youtu.be/Wopcyn-vZmU)
+- [Saw Stack Pro, the EDM synth](https://youtu.be/Jzs7xDTOtDw) · [Piano Pro, the EDM piano](https://youtu.be/adO6-4LwoiI)
+
 ## Documentation
 
 The user guide is built into the app (**Help → User guide**, or **F1**) and

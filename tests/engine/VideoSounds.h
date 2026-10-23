@@ -9,6 +9,9 @@
 
 #include <QDataStream>
 #include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QString>
 
 #include <algorithm>
@@ -65,6 +68,48 @@ struct Take
     std::vector<Move> moves;
     std::vector<Sweep> sweeps;
     std::vector<Pedal> pedals;
+};
+
+// The video's narration (its subs.json, from make_subs.py): when each word
+// is said, so what changes in the sound changes on the word that names it,
+// on the beat after it (feature video scenes start their picture, and so
+// their sound, kLead before the voice).
+class Cues
+{
+public:
+    static constexpr double kLead = 0.35; // seconds of picture (and sound) before the voice
+    static constexpr double kTail = 2.6;  // a scene goes on this long past its last word
+
+    explicit Cues(const QString& folder)
+    {
+        QFile file(folder + QStringLiteral("/subs.json"));
+        if (file.open(QIODevice::ReadOnly)) m_scenes = QJsonDocument::fromJson(file.readAll()).object();
+    }
+    [[nodiscard]] bool loaded() const { return !m_scenes.isEmpty(); }
+    // The beat (of the scene's sound) on or after `word`'s `nth` saying;
+    // `fallback` when the narration does not say it.
+    [[nodiscard]] double beatOf(const QString& scene, const QString& wanted, double fallback, int nth = 1) const
+    {
+        int seen = 0;
+        const QJsonArray words = m_scenes.value(scene).toObject().value(QStringLiteral("words")).toArray();
+        for (const QJsonValue& v : words) {
+            QString said = v.toObject().value(QStringLiteral("word")).toString().toLower();
+            said.removeIf([](QChar c) { return !c.isLetterOrNumber() && c != u'\''; });
+            if (said.startsWith(wanted.toLower()) && ++seen == nth) {
+                return std::ceil((v.toObject().value(QStringLiteral("start")).toDouble() + kLead) / (60.0 / kTempo));
+            }
+        }
+        return fallback;
+    }
+    // How many beats the scene's sound runs: past the scene's end.
+    [[nodiscard]] double beatsOf(const QString& scene, double fallback) const
+    {
+        const double seconds = m_scenes.value(scene).toObject().value(QStringLiteral("duration")).toDouble(-1.0);
+        return seconds < 0.0 ? fallback : std::ceil((seconds + kLead + kTail + 1.0) / (60.0 / kTempo));
+    }
+
+private:
+    QJsonObject m_scenes;
 };
 
 // One chord: every key at `beat`, held `length` beats.

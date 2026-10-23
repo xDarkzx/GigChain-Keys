@@ -7,11 +7,14 @@
 #include <chrono>
 #include <cmath>
 #include <map>
+#include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
 
 namespace gigchain::engine {
+
+class PluginNode;
 
 // The demo engine, for tests and as a no-sound safety net: see
 // FakeEngineFactory.h for why it exists. It plays nothing; the app's sound
@@ -130,11 +133,9 @@ public:
     [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId& id, int target) const override;
     std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId&, int) override { return std::nullopt; }
     [[nodiscard]] double pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const override;
-    core::Result<void> setPluginParameter(const core::ChannelId&, int, uint32_t parameter, double value) override
-    {
-        m_parameterValues[parameter] = std::clamp(value, 0.0, 1.0);
-        return {};
-    }
+    // The app's own instruments: their settings go through the real (unprepared)
+    // instrument, so a type brings its own; a reading (not a setting) is kept as set.
+    core::Result<void> setPluginParameter(const core::ChannelId& id, int target, uint32_t parameter, double value) override;
     std::optional<std::pair<int, int>> takeMovedController() override { return std::exchange(m_moved, std::nullopt); }
     [[nodiscard]] std::vector<AudioInputDevice> audioInputDevices() const override
     {
@@ -290,7 +291,8 @@ public:
 
 private:
     std::optional<std::pair<int, int>> m_moved; // the last controller injected (channel 1-16, number), not yet taken
-    std::map<uint32_t, double> m_parameterValues; // set through setPluginParameter (any plugin)
+    std::map<uint32_t, double> m_parameterValues; // set through setPluginParameter (any plugin; the built-ins' readings)
+    std::map<QString, std::shared_ptr<PluginNode>> m_builtins; // each built-in channel's instrument (never played), by channel id
     MidiTrigger m_learned;                      // the last pad, key or button pressed, not yet taken (Learn)
     PanelTriggers m_panel;                      // the panel's pads
     std::vector<PanelPress> m_panelPresses;     // pressed since last asked
@@ -319,6 +321,8 @@ private:
     };
 
     ChannelState* find(const core::ChannelId& id);
+    // The channel's own instrument (Saw Stack Pro, Piano Pro), or nullptr.
+    [[nodiscard]] PluginNode* builtinOf(const core::ChannelId& id, int target) const;
 
     Clock m_clock;
     std::vector<ChannelState> m_channels;

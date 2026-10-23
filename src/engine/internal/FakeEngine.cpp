@@ -81,32 +81,30 @@ void FakeEngine::applyPatch(const core::SongId&, const core::Patch& patch)
                                            ? channel.instrument->pluginId
                                            : QString()};
     });
+    // Each of the app's own instruments: one per channel, kept while the
+    // channel is (its settings with it), unprepared: nothing loaded or played.
+    for (const ChannelState& c : m_channels) {
+        if (c.builtin.isEmpty() || m_builtins.contains(c.id.value())) continue;
+        if (c.builtin == QLatin1StringView(SawStackNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<SawStackNode>();
+        if (c.builtin == QLatin1StringView(PianoProNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<PianoProNode>();
+    }
 }
 
-namespace {
-
-// One of the app's own instruments, unprepared (nothing loaded, nothing
-// played): for its knobs and their starting values.
-std::unique_ptr<PluginNode> builtinNode(const QString& pluginId)
+PluginNode* FakeEngine::builtinOf(const core::ChannelId& id, int target) const
 {
-    if (pluginId == QLatin1StringView(SawStackNode::kPluginId)) return std::make_unique<SawStackNode>();
-    if (pluginId == QLatin1StringView(PianoProNode::kPluginId)) return std::make_unique<PianoProNode>();
-    return nullptr;
+    if (target >= 0) return nullptr;
+    const auto found = m_builtins.find(id.value());
+    return found != m_builtins.end() ? found->second.get() : nullptr;
 }
-
-} // namespace
 
 std::vector<PluginParameter> FakeEngine::pluginParameters(const core::ChannelId& id, int target) const
 {
-    const auto it = std::ranges::find_if(m_channels, [&id](const ChannelState& state) { return state.id == id; });
-    if (target < 0 && it != m_channels.end()) {
-        if (const auto node = builtinNode(it->builtin)) {
-            std::vector<PluginParameter> list;
-            std::ranges::transform(node->parameters(), std::back_inserter(list), [](const PluginNode::Parameter& p) {
-                return PluginParameter{.id = p.id, .name = p.name, .choices = p.choices};
-            });
-            return list;
-        }
+    if (const PluginNode* node = builtinOf(id, target)) {
+        std::vector<PluginParameter> list;
+        std::ranges::transform(node->parameters(), std::back_inserter(list), [](const PluginNode::Parameter& p) {
+            return PluginParameter{.id = p.id, .name = p.name, .choices = p.choices};
+        });
+        return list;
     }
     return {{.id = 1, .name = u"Cutoff"_s, .choices = {}}, {.id = 2, .name = u"Resonance"_s, .choices = {}}};
 }
@@ -114,11 +112,17 @@ std::vector<PluginParameter> FakeEngine::pluginParameters(const core::ChannelId&
 double FakeEngine::pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const
 {
     if (const auto set = m_parameterValues.find(parameter); set != m_parameterValues.end()) return set->second;
-    const auto it = std::ranges::find_if(m_channels, [&id](const ChannelState& state) { return state.id == id; });
-    if (target < 0 && it != m_channels.end()) {
-        if (const auto node = builtinNode(it->builtin)) return node->parameterValue(parameter); // its defaults
-    }
+    if (const PluginNode* node = builtinOf(id, target)) return node->parameterValue(parameter);
     return 0.5;
+}
+
+core::Result<void> FakeEngine::setPluginParameter(const core::ChannelId& id, int target, uint32_t parameter, double value)
+{
+    // A built-in's setting goes to it (a type brings its own settings); what
+    // it refuses is a reading (the sidechain's place, the piano's state): kept as set.
+    if (PluginNode* node = builtinOf(id, target); node != nullptr && node->setParameter(parameter, value)) return {};
+    m_parameterValues[parameter] = std::clamp(value, 0.0, 1.0);
+    return {};
 }
 
 LevelReading FakeEngine::masterLevel()
@@ -134,7 +138,10 @@ LevelReading FakeEngine::masterLevel()
 
 std::vector<PluginInfo> FakeEngine::availablePlugins() const
 {
-    return demoPlugins();
+    // The demo's made-up plugins, and the app's own instruments (as the real engine lists them).
+    std::vector<PluginInfo> plugins = demoPlugins();
+    std::ranges::move(PluginNode::builtins(), std::back_inserter(plugins));
+    return plugins;
 }
 
 LevelReading FakeEngine::channelLevel(const core::ChannelId& id)

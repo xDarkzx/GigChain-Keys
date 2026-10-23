@@ -553,108 +553,127 @@ private slots:
             t.notes.push_back({.beat = from, .key = 48, .velocity = velocity - 10, .length = 7.8});
             t.notes.push_back({.beat = from + 4, .key = 43, .velocity = velocity - 10, .length = 3.8});
         };
+        // What changes in a scene's sound changes on the word that names it
+        // (the narration's timing, subs.json); each sound runs past its scene's end.
+        const video::Cues cues(folder);
+        QVERIFY2(cues.loaded(), "the video's subs.json (make_subs.py) is needed: its words time the sound");
+        const auto at = [&](const char* scene, const char* word, double fallback, int nth = 1) {
+            return cues.beatOf(QString::fromLatin1(scene), QString::fromLatin1(word), fallback, nth);
+        };
+        const auto takeFor = [&](const char* scene) { return Take{cues.beatsOf(QString::fromLatin1(scene), 36)}; };
+        const auto bars = [](const Take& t) { return static_cast<int>(std::ceil(t.beats / 4.0)); };
+        // A melody every two bars, from `from` until `until`.
+        const auto phrases = [&](Take& t, double from, double until, int velocity) {
+            for (int n = 0; from + (n * 8.0) + 6 <= until; ++n) phrase(t, from + (n * 8.0), velocity);
+        };
         std::vector<std::pair<int, Take>> scenes;
         { // 01: Big House Piano, the riff
-            Take t{36};
+            Take t = takeFor("01");
             t.add({0, typeId, type("Big House Piano")});
-            houseRiff(t, 0, 8);
+            houseRiff(t, 0, bars(t));
             scenes.emplace_back(1, t);
         }
-        { // 02: the grand, then the upright
-            Take t{36};
+        { // 02: the grand, then "a real upright"
+            Take t = takeFor("02");
+            const double toUpright = at("02", "upright", 16);
             t.add({0, typeId, type("Grand Piano")});
-            phrase(t, 0, 85);
-            t.add({16, typeId, type("Upright Piano")});
-            phrase(t, 16, 85);
+            phrases(t, 0, toUpright, 85);
+            t.add({toUpright, typeId, type("Upright Piano")});
+            phrases(t, toUpright, t.beats, 85);
             scenes.emplace_back(2, t);
         }
-        { // 03: soft, hard, pedalled
-            Take t{36};
+        { // 03: "play softly", "hit it hard", "the sustain pedal"
+            Take t = takeFor("03");
+            const double soft = at("03", "softly", 6);
+            const double hard = at("03", "hard", 12);
+            const double pedal = at("03", "pedal", 24);
             t.add({0, typeId, type("Grand Piano")});
-            phrase(t, 0, 40);
-            chord(t, 9, {36, 48, 55, 64, 67, 72}, 3, 125);
-            t.add({14, true});
-            heldChords(t, 14, 4, 4.0, 80);
-            t.add({30, false});
+            chord(t, 0, {48, 60, 64, 67}, 4, 75);
+            chord(t, soft, {48, 60, 64, 67}, hard - soft - 1, 35);
+            chord(t, hard, {36, 48, 55, 64, 67, 72}, 3, 125);
+            t.add({pedal, true});
+            heldChords(t, pedal, std::max(1, static_cast<int>((t.beats - pedal - 3) / 2)), 2.0, 80);
             scenes.emplace_back(3, t);
         }
         { // 04: House Piano
-            Take t{20};
+            Take t = takeFor("04");
             t.add({0, typeId, type("House Piano")});
-            houseRiff(t, 0, 4);
+            houseRiff(t, 0, bars(t));
             scenes.emplace_back(4, t);
         }
         { // 05: Big House Piano
-            Take t{20};
+            Take t = takeFor("05");
             t.add({0, typeId, type("Big House Piano")});
-            houseRiff(t, 0, 4);
+            houseRiff(t, 0, bars(t));
             scenes.emplace_back(5, t);
         }
         { // 06: Prog House Piano
-            Take t{20};
+            Take t = takeFor("06");
             t.add({0, typeId, type("Prog House Piano")});
-            houseRiff(t, 0, 4);
+            houseRiff(t, 0, bars(t));
             scenes.emplace_back(6, t);
         }
-        { // 07: Emotional Piano's slow held chords, then Felt Piano's quiet melody
-            Take t{40};
+        { // 07: Emotional Piano's slow held chords, then "felt piano"'s quiet melody
+            Take t = takeFor("07");
+            const double felt = at("07", "felt", 20);
             t.add({0, typeId, type("Emotional Piano")});
             t.add({0, true});
-            heldChords(t, 0, 2, 8.0, 75);
-            t.add({16, false});
-            t.add({20, typeId, type("Felt Piano")});
-            phrase(t, 20, 60);
-            phrase(t, 28, 55);
+            heldChords(t, 0, std::max(1, static_cast<int>((felt - 1) / 8)), 8.0, 75);
+            t.add({felt - 1, false});
+            t.add({felt, typeId, type("Felt Piano")});
+            phrases(t, felt, t.beats, 60);
             scenes.emplace_back(7, t);
         }
-        { // 08: Electric Piano, soft then hard
-            Take t{36};
+        { // 08: Electric Piano, soft, then "the harder you play"
+            Take t = takeFor("08");
+            const double harder = at("08", "harder", 16);
             t.add({0, typeId, type("Electric Piano")});
-            heldChords(t, 0, 4, 4.0, 45);
-            heldChords(t, 16, 4, 4.0, 120);
+            const int softBars = static_cast<int>(harder / 4);
+            const int hardBars = static_cast<int>((t.beats - harder) / 4);
+            heldChords(t, 0, softBars, 4.0, 45);
+            heldChords(t, harder, hardBars, 4.0, 120);
             scenes.emplace_back(8, t);
         }
-        { // 09: DX Piano, then Lo-fi Keys
-            Take t{36};
+        { // 09: DX Piano, then "Lo-fi Keys"
+            Take t = takeFor("09");
+            const double lofi = at("09", "lo", 10);
             t.add({0, typeId, type("DX Piano")});
-            heldChords(t, 0, 4, 4.0, 100);
-            t.add({16, typeId, type("Lo-fi Keys")});
-            heldChords(t, 16, 4, 4.0, 100);
+            heldChords(t, 0, bars(t), 4.0, 100);
+            t.add({lofi, typeId, type("Lo-fi Keys")});
             scenes.emplace_back(9, t);
         }
-        { // 10: House Piano plain, then octave, strings and sub come in
-            Take t{36};
+        { // 10: House Piano plain, then the octave, the strings and the sub, each on its name
+            Take t = takeFor("10");
             t.add({0, typeId, type("House Piano")});
             for (const Layer l : {Layer::Octave, Layer::Strings, Layer::Sub}) t.add({0, paramId(l, LayerParam::On), 0.0});
-            houseRiff(t, 0, 8);
-            t.add({8, paramId(Layer::Octave, LayerParam::On), 1.0});
-            t.add({16, paramId(Layer::Strings, LayerParam::On), 1.0});
-            t.add({24, paramId(Layer::Sub, LayerParam::On), 1.0});
+            houseRiff(t, 0, bars(t));
+            t.add({at("10", "octave", 8), paramId(Layer::Octave, LayerParam::On), 1.0});
+            t.add({at("10", "strings", 12), paramId(Layer::Strings, LayerParam::On), 1.0});
+            t.add({at("10", "sub", 16), paramId(Layer::Sub, LayerParam::On), 1.0});
             scenes.emplace_back(10, t);
         }
-        { // 11: Felt Piano, tape off then on
-            Take t{36};
+        { // 11: Felt Piano, tape off, then on at "tape"
+            Take t = takeFor("11");
             t.add({0, typeId, type("Felt Piano")});
             t.add({0, paramId(Macro::Tape), 0.0});
-            phrase(t, 0, 60);
-            t.add({16, paramId(Macro::Tape), 0.85});
-            phrase(t, 16, 60);
+            phrases(t, 0, t.beats, 60);
+            t.add({at("11", "tape", 20), paramId(Macro::Tape), 0.85});
             scenes.emplace_back(11, t);
         }
-        { // 12: House Piano pumping at 1/4, then 1/8D
-            Take t{36};
+        { // 12: House Piano pumping at 1/4, then 1/8D at "timings"
+            Take t = takeFor("12");
             t.add({0, typeId, type("House Piano")});
             t.add({0, paramId(Macro::Sidechain), 0.75});
             const auto rate = [](int index) { return Ranges::fromChoice(index, static_cast<int>(sidechain::kRates.size())); };
             t.add({0, paramId(Macro::SidechainRate), rate(5)});
-            heldChords(t, 0, 8, 4.0, 105);
-            t.add({16, paramId(Macro::SidechainRate), rate(4)});
+            heldChords(t, 0, bars(t), 4.0, 105);
+            t.add({at("12", "timings", 12), paramId(Macro::SidechainRate), rate(4)});
             scenes.emplace_back(12, t);
         }
         { // 13: the riff again (the video fades it out)
-            Take t{36};
+            Take t = takeFor("13");
             t.add({0, typeId, type("Big House Piano")});
-            houseRiff(t, 0, 8);
+            houseRiff(t, 0, bars(t));
             scenes.emplace_back(13, t);
         }
         for (const auto& [number, take] : scenes) {
