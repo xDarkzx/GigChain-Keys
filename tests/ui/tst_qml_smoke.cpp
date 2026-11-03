@@ -2718,6 +2718,8 @@ private slots:
         QVERIFY(!scenes.isEmpty());
         const QImage splash(QFileInfo(folder).absolutePath() + u"/../splash.png"_s);
         QVERIFY2(!splash.isNull(), "splash.png is not in the folder above the short's");
+        // Which: Detach and Reattach (two screens), or Enhance (the app and a close-up of its dial).
+        const bool enhanceShort = QFileInfo(folder).fileName().contains(u"enhance"_s);
 
         QQuickWindow* w = window();
         w->setGeometry(0, 0, SceneRecorder::kWindowWidth, SceneRecorder::kWindowHeight);
@@ -2727,16 +2729,36 @@ private slots:
         ui::DocumentController& doc = m_session->document();
         QVERIFY(root->setProperty("editKeyboardOpen", false)); // (the room goes to the instrument)
         QVERIFY(root->setProperty("editPanelOpen", false));
+        // Enhance: the whole instrument in sight, Enhance's row too (no mixer: nothing is picked in it).
+        if (enhanceShort) QVERIFY(root->setProperty("editMixerOpen", false));
         if (auto* engineName = w->findChild<QQuickItem*>(u"statusAudio"_s)) engineName->setVisible(false);
         QVERIFY(doc.renameSong(0, u"Saturday Night"_s));
         QVERIFY(doc.addChannel(u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s));
-        QVERIFY(doc.addChannel(u"builtin:piano-pro"_s, u"Piano Pro"_s));
+        if (!enhanceShort) QVERIFY(doc.addChannel(u"builtin:piano-pro"_s, u"Piano Pro"_s));
         QVERIFY(doc.saveAs(m_dir->filePath(u"Saturday Gig.gigchain.json"_s))); // (the title bar names it)
         doc.setSelectedChannel(0);
         auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
         QVERIFY(tabs != nullptr);
         tabs->setProperty("currentIndex", 1); // the Instrument tab
         QTest::qWait(1500);
+        // The close-up (Enhance): the Enhance button and its dial, as big as they go (16:9, the window's units).
+        QRectF crop;
+        if (enhanceShort) {
+            click(u"sawStackNext"_s); // Future Bass Chords, as the sound plays
+            const QQuickItem* face = item(u"sawStackEnhance"_s);
+            auto* dial = w->findChild<QObject*>(u"sawStackEnhanceDial"_s);
+            QVERIFY(face != nullptr && dial != nullptr);
+            // Where the dial will open (it sits above the button), from its size: it stays closed until the scene opens it.
+            const auto* dialParent = dial->property("parent").value<QQuickItem*>();
+            QVERIFY(dialParent != nullptr);
+            const QSizeF dialSize(dial->property("width").toDouble(), dial->property("implicitHeight").toDouble());
+            QVERIFY2(dialSize.height() > 0, "the dial's height is not known while it is closed");
+            const QRectF dialRect(dialParent->mapToScene(QPointF((dialParent->width() - dialSize.width()) / 2, -dialSize.height() - 8)), dialSize);
+            const QRectF both = dialRect.united(rectOf(face)).adjusted(-60, -70, 60, 40);
+            const double h = std::max(both.height(), both.width() * 9.0 / 16.0);
+            crop = QRectF(0, 0, h * 16.0 / 9.0, h);
+            crop.moveCenter(both.center());
+        }
 
         // ---- The frame: two screens, the windows on them ------------------
         constexpr QSize kFrame(1080, 1920);
@@ -2751,6 +2773,7 @@ private slots:
         double clickedAt = -10.0;
         QString keys; // a key combination shown, until keysUntil
         double keysUntil = -1.0;
+        QString badge; // what the close-up shows (Enhance: off, A, B...)
         double logo = 0.0;
         SceneRecorder recorder(w, &captions, nullptr);
         m_recorder = &recorder;
@@ -2781,17 +2804,35 @@ private slots:
             p.fillRect(frame.rect(), back);
             p.setPen(Qt::white);
             p.setFont(font(58, true));
-            p.drawText(QRectF(0, 80, kFrame.width(), 76), Qt::AlignCenter, u"Your instrument on a second screen"_s);
+            p.drawText(QRectF(0, 80, kFrame.width(), 76), Qt::AlignCenter,
+                       enhanceShort ? u"One knob, a bigger sound"_s : u"Your instrument on a second screen"_s);
             p.setPen(QColor(0x4c, 0xc3, 0xff));
             p.setFont(font(30, true));
-            p.drawText(QRectF(0, 160, kFrame.width(), 44), Qt::AlignCenter, u"GigChain Keys  ·  Detach & Reattach"_s);
-            screen(p, top, u"SCREEN 1  ·  THE APP"_s);
-            p.drawImage(top, w->grabWindow());
-            screen(p, bottom, u"SCREEN 2"_s);
-            QLinearGradient desk(bottom.topLeft(), bottom.bottomRight());
-            desk.setColorAt(0, QColor(0x1b, 0x26, 0x38));
-            desk.setColorAt(1, QColor(0x0d, 0x12, 0x1b));
-            p.fillRect(bottom, desk);
+            p.drawText(QRectF(0, 160, kFrame.width(), 44), Qt::AlignCenter,
+                       enhanceShort ? u"GigChain Keys  ·  Enhance"_s : u"GigChain Keys  ·  Detach & Reattach"_s);
+            const QImage app = w->grabWindow();
+            screen(p, top, enhanceShort ? u"THE APP"_s : u"SCREEN 1  ·  THE APP"_s);
+            p.drawImage(top, app);
+            screen(p, bottom, enhanceShort ? u"CLOSE-UP"_s : u"SCREEN 2"_s);
+            if (enhanceShort) {
+                const double ratio = app.width() / static_cast<double>(w->width()); // (the grab is in pixels)
+                p.drawImage(bottom, app, QRectF(crop.topLeft() * ratio, crop.size() * ratio));
+                if (!badge.isEmpty()) {
+                    p.setFont(font(40, true));
+                    // (Under the close-up: nothing of the dial covered.)
+                    const QRectF used = p.boundingRect(QRectF(bottom.left(), bottom.bottom() + 24, bottom.width(), 64), Qt::AlignCenter, badge);
+                    p.setPen(Qt::NoPen);
+                    p.setBrush(QColor(0xb2, 0x8c, 0xff));
+                    p.drawRoundedRect(used.adjusted(-18, -8, 18, 8), 14, 14);
+                    p.setPen(QColor(0x10, 0x0a, 0x1c));
+                    p.drawText(used, Qt::AlignCenter, badge);
+                }
+            } else {
+                QLinearGradient desk(bottom.topLeft(), bottom.bottomRight());
+                desk.setColorAt(0, QColor(0x1b, 0x26, 0x38));
+                desk.setColorAt(1, QColor(0x0d, 0x12, 0x1b));
+                p.fillRect(bottom, desk);
+            }
             if (own && own->isVisible() && !ownRect.isEmpty()) {
                 p.setPen(Qt::NoPen);
                 p.setBrush(QColor(0, 0, 0, 140));
@@ -2808,26 +2849,35 @@ private slots:
             }
             if (recorder.now() < keysUntil) {
                 p.setFont(font(54, true));
-                const QRectF badge(140, 1610, 800, 96);
+                const QRectF keyCap(140, 1610, 800, 96);
                 p.setPen(Qt::NoPen);
                 p.setBrush(QColor(0x4c, 0xc3, 0xff));
-                p.drawRoundedRect(badge, 20, 20);
+                p.drawRoundedRect(keyCap, 20, 20);
                 p.setPen(QColor(0x06, 0x12, 0x1f));
-                p.drawText(badge, Qt::AlignCenter, keys);
+                p.drawText(keyCap, Qt::AlignCenter, keys);
             }
-            // The pointer: a ring spreading out where it clicked, then the arrow.
+            // The pointer: a ring spreading out where it clicked, then the arrow
+            // (in the close-up too, bigger, when it is in there).
             const double since = recorder.now() - clickedAt;
-            if (since >= 0.0 && since < 0.45) {
-                const double grown = since / 0.45;
-                p.setPen(QPen(QColor(255, 255, 255, static_cast<int>(220 * (1.0 - grown))), 5));
-                p.setBrush(Qt::NoBrush);
-                p.drawEllipse(pointer, 12 + (48 * grown), 12 + (48 * grown));
+            const auto drawPointer = [&p, since](QPointF at, double size) {
+                if (since >= 0.0 && since < 0.45) {
+                    const double grown = since / 0.45;
+                    p.setPen(QPen(QColor(255, 255, 255, static_cast<int>(220 * (1.0 - grown))), 5));
+                    p.setBrush(Qt::NoBrush);
+                    p.drawEllipse(at, (12 + (48 * grown)) * size, (12 + (48 * grown)) * size);
+                }
+                QPolygonF arrow({QPointF(0, 0), QPointF(0, 40), QPointF(10, 31), QPointF(18, 49), QPointF(25, 46),
+                                 QPointF(17, 28), QPointF(31, 28)});
+                std::ranges::transform(arrow, arrow.begin(), [size](QPointF corner) { return corner * size; });
+                p.setPen(QPen(Qt::black, 3));
+                p.setBrush(Qt::white);
+                p.drawPolygon(arrow.translated(at));
+            };
+            drawPointer(pointer, 1.0);
+            if (enhanceShort && top.contains(pointer)) {
+                const QPointF inWindow = (pointer - top.topLeft()) / kScale;
+                if (crop.contains(inWindow)) drawPointer(bottom.topLeft() + ((inWindow - crop.topLeft()) * (bottom.width() / crop.width())), 1.4);
             }
-            const QPolygonF arrow({QPointF(0, 0), QPointF(0, 40), QPointF(10, 31), QPointF(18, 49), QPointF(25, 46),
-                                   QPointF(17, 28), QPointF(31, 28)});
-            p.setPen(QPen(Qt::black, 3));
-            p.setBrush(Qt::white);
-            p.drawPolygon(arrow.translated(pointer));
             // The line being said, big, under the screens.
             if (const QString sub = captions.property("sub").toString(); !sub.isEmpty() && logo < 0.5) {
                 p.setFont(font(60, true));
@@ -2915,6 +2965,96 @@ private slots:
         const auto onOwn = [&](QPointF scenePoint) { return ownRect.topLeft() + (scenePoint * (ownRect.width() / own->width())); };
         const auto inOwn = [&](const QString& name) { return own ? own->findChild<QQuickItem*>(name) : nullptr; };
 
+        // ================= Enhance =================
+        if (enhanceShort) {
+            // A rect of the window, where the close-up shows it (frame units).
+            const auto closeUp = [&](const QRectF& inWindow) {
+                const double zoom = bottom.width() / crop.width();
+                return QRectF(bottom.topLeft() + ((inWindow.topLeft() - crop.topLeft()) * zoom), inWindow.size() * zoom);
+            };
+            QQuickItem* face = item(u"sawStackEnhance"_s);
+            auto* dial = w->findChild<QObject*>(u"sawStackEnhanceDial"_s);
+            QVERIFY(face != nullptr && dial != nullptr);
+            const auto clickOn = [&](QQuickItem* target) {
+                glideTo(onMain(centre(target)), 450);
+                clickedAt = recorder.now();
+                QTest::mouseClick(w, Qt::LeftButton, {}, centre(target).toPoint());
+            };
+            const auto mode = [&](int index, const QString& said, double fallback, const QString& shown) {
+                QQuickItem* pill = item(u"sawStackEnhanceMode_%1"_s.arg(index));
+                QVERIFY(pill != nullptr);
+                atWord(said, fallback);
+                clickOn(pill);
+                badge = shown;
+            };
+            // ---- 01: the hook: before, after ----------------------------------
+            if (begin(u"01"_s)) {
+                badge = u"ENHANCE  OFF"_s;
+                atWord(u"listen"_s, 0.3);
+                glideTo(onMain(centre(face)) + QPointF(-70, 50), 700);
+                atWord(u"after"_s, 0.75);
+                clickOn(face); // on, A, and its dial opens
+                QTRY_VERIFY(dial->property("opened").toBool());
+                badge = u"ENHANCE  ON  ·  A"_s;
+                end();
+            }
+            QVERIFY(QMetaObject::invokeMethod(dial, "close"));
+            // ---- 02: where it is: beside OTT -----------------------------------
+            if (begin(u"02"_s)) {
+                badge = QString();
+                const QQuickItem* ott = item(u"sawStackKnob_OTT"_s);
+                QVERIFY(ott != nullptr);
+                atWord(u"next"_s, 0.4);
+                ring = closeUp(rectOf(ott));
+                glideTo(onMain(centre(ott)) + QPointF(30, 40), 500);
+                atWord(u"click"_s, 0.65);
+                ring = QRectF();
+                clickOn(face);
+                QTRY_VERIFY(dial->property("opened").toBool());
+                badge = u"ENHANCE  ·  A"_s;
+                end();
+            }
+            // ---- 03: A, B, C, D -------------------------------------------------
+            if (begin(u"03"_s)) {
+                mode(0, u"tightens"_s, 0.1, u"A  ·  TIGHT LOWS, BRIGHT TOP"_s);
+                mode(1, u"adds"_s, 0.35, u"B  ·  WARMTH & GRIT"_s);
+                mode(2, u"pushes"_s, 0.6, u"C  ·  THE MIDDLE FORWARD"_s);
+                mode(3, u"glues"_s, 0.85, u"D  ·  GLUE"_s);
+                end();
+            }
+            // ---- 04: Amount: dragged up (as a knob is) --------------------------
+            if (begin(u"04"_s)) {
+                const QQuickItem* amount = item(u"sawStackKnob_Enhance"_s);
+                QVERIFY(amount != nullptr);
+                atWord(u"amount"_s, 0.1);
+                glideTo(onMain(centre(amount)), 450);
+                badge = u"AMOUNT"_s;
+                const QPoint from = centre(amount).toPoint();
+                QTest::mousePress(w, Qt::LeftButton, {}, from);
+                for (int step = 1; step <= 40; ++step) {
+                    const QPoint now = from - QPoint(0, step * 2);
+                    QTest::mouseMove(w, now);
+                    pointer = onMain(QPointF(now));
+                    QTest::qWait(30);
+                }
+                QTest::mouseRelease(w, Qt::LeftButton, {}, from - QPoint(0, 80));
+                atWord(u"volume"_s, 0.75);
+                badge = u"SAME VOLUME  ·  FULLER"_s;
+                end();
+            }
+            // ---- 05: the close: the logo -----------------------------------------
+            if (begin(u"05"_s)) {
+                atWord(u"free"_s, 0.3);
+                for (int step = 1; step <= 20; ++step) {
+                    logo = step / 20.0;
+                    QTest::qWait(20);
+                }
+                end(1.5);
+            }
+            logo = 0.0;
+            return;
+        }
+
         // ================= Detach and Reattach =================
         // ---- 01: the hook: the instrument on the app's screen ---------------
         QQuickItem* detach = item(u"instrumentPopOut"_s);
@@ -2994,6 +3134,7 @@ private slots:
             keys = u"Ctrl + Shift + D"_s;
             keysUntil = word(u"both"_s, 0.95) + SceneRecorder::kLead + 1.6;
             end();
+            keysUntil = -1.0; // (each scene's clock starts again)
         }
         // ---- 06: the close: the logo ----------------------------------------
         if (begin(u"06"_s)) {

@@ -1115,6 +1115,78 @@ private slots:
         }
     }
 
+    // The Enhance Short's sounds (GIGCHAIN_SHORT_SOUNDS=<its folder>): one WAV
+    // per scene, as renderVideoSounds, Future Bass Chords throughout. Heard
+    // where the narration pauses: dry after "before", Enhance after "after",
+    // then each setting after the words that describe it.
+    void renderShortSounds()
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_SHORT_SOUNDS");
+        if (folder.isEmpty()) QSKIP("Set GIGCHAIN_SHORT_SOUNDS to a short's folder to make its sounds");
+        using video::Take;
+        const video::Cues cues(folder);
+        QVERIFY2(cues.loaded(), "the short's subs.json (make_subs.py) is needed: its words time the sound");
+        const auto at = [&](const char* scene, const char* word, double fallback) {
+            return cues.beatOf(QString::fromLatin1(scene), QString::fromLatin1(word), fallback);
+        };
+        const auto takeFor = [&](const char* scene) {
+            Take t{cues.beatsOf(QString::fromLatin1(scene), 36)};
+            t.add({0, paramId(Macro::Type), typeValue(typeNamed("Future Bass Chords"))});
+            t.add({0, paramId(Macro::Enhance), 1.0});
+            // A minor: Am, F, C, G, a bar each.
+            const std::vector<std::vector<int>> chords{{45, 57, 60, 64, 69}, {41, 57, 60, 65, 69}, {48, 55, 60, 64, 67}, {43, 55, 59, 62, 67}};
+            for (int bar = 0; bar * 4.0 < t.beats - 4.0; ++bar) {
+                for (const int key : chords.at(static_cast<std::size_t>(bar) % chords.size())) {
+                    t.notes.push_back({.beat = bar * 4.0, .key = key, .velocity = 105, .length = 3.9});
+                }
+            }
+            return t;
+        };
+        const auto enhance = [](Take& t, double beat, int mode) {
+            t.add({beat, paramId(Macro::EnhanceOn), 1.0});
+            t.add({beat, paramId(Macro::EnhanceMode), Ranges::fromChoice(mode, Enhance::kModes)});
+        };
+        std::vector<std::pair<int, Take>> scenes;
+        { // 01: before (dry), then after (A)
+            Take t = takeFor("01");
+            enhance(t, at("01", "after", 12), 0);
+            scenes.emplace_back(1, t);
+        }
+        { // 02: on (A)
+            Take t = takeFor("02");
+            enhance(t, 0, 0);
+            scenes.emplace_back(2, t);
+        }
+        { // 03: A, then B, C and D, each as it is described
+            Take t = takeFor("03");
+            enhance(t, 0, 0);
+            enhance(t, at("03", "adds", 12), 1);
+            enhance(t, at("03", "pushes", 20), 2);
+            enhance(t, at("03", "glues", 28), 3);
+            scenes.emplace_back(3, t);
+        }
+        { // 04: the amount turned up (on D, where the picture left it)
+            Take t = takeFor("04");
+            enhance(t, 0, 3);
+            const double from = at("04", "amount", 1);
+            t.add({from, std::max(from + 4.0, at("04", "fuller", from + 8.0)), paramId(Macro::Enhance), 0.2, 1.0});
+            scenes.emplace_back(4, t);
+        }
+        { // 05: the close (the video fades it out)
+            Take t = takeFor("05");
+            enhance(t, 0, 3);
+            scenes.emplace_back(5, t);
+        }
+        for (const auto& [number, take] : scenes) {
+            Synth synth;
+            synth.prepare(video::kRate, video::kBlock);
+            const std::vector<float> sound = video::render(synth, take);
+            const QString path = u"%1/sound_%2.wav"_s.arg(folder).arg(number, 2, 10, QLatin1Char('0'));
+            QVERIFY2(video::writeWav(path, sound), qPrintable(path));
+            qInfo().noquote() << path << u"%1 s"_s.arg(static_cast<double>(sound.size()) / 2.0 / video::kRate, 0, 'f', 1);
+        }
+    }
+
     void itIsInTheInstrumentList()
     {
         const auto list = PluginNode::builtins();
