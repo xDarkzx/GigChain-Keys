@@ -14,6 +14,7 @@ void FxChain::prepare(double sampleRate)
     m_rate = sampleRate;
     m_chorus.prepare(m_rate);
     m_ott.prepare(m_rate);
+    m_enhance.prepare(m_rate);
     m_dimension.prepare(m_rate);
     m_tape.prepare(m_rate);
     m_delay.prepare(m_rate);
@@ -44,6 +45,7 @@ void FxChain::setKnobs(const Knobs& knobs)
     m_reverb.setMix(knobs.reverb);
     m_delay.set(knobs.delay, m_delayFeedback, m_delayBeats);
     m_ott.setMix(knobs.ott);
+    m_enhance.set(knobs.enhance, knobs.enhanceMode);
     m_dimension.setAmount(knobs.width);
     m_tape.setAmount(knobs.tape);
     m_sidechain.set(knobs.sidechain, knobs.curve, knobs.beats, knobs.slope, knobs.fromNotes);
@@ -91,6 +93,7 @@ void FxChain::process(std::span<float> left, std::span<float> right, std::span<c
         }
         m_chorus.tick(l, r);
         m_ott.tick(l, r);
+        m_enhance.tick(l, r);
         m_dimension.tick(l, r);
         m_tape.tick(l, r, random);
         m_delay.tick(l, r, tempo);

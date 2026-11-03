@@ -120,6 +120,7 @@ qt_add_qml_module(gigchain_ui
         BuiltinPill.qml
         BuiltinLayerRow.qml
         SidechainCard.qml
+        EnhanceButton.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/layout-grid.svg

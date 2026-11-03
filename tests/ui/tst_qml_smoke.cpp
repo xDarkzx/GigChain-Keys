@@ -1752,6 +1752,30 @@ private slots:
         QTRY_VERIFY(!sidechainOn->property("lit").toBool());
         click(u"sawStackSidechainOn"_s);
         QTRY_VERIFY(sidechainOn->property("lit").toBool());
+        // Enhance, beside the OTT: off; a click switches it on and opens its
+        // dial (A-D and the amount); its light there switches it off again.
+        QQuickItem* enhance = item(u"sawStackEnhance"_s);
+        QVERIFY(enhance != nullptr);
+        QVERIFY(!enhance->property("lit").toBool());
+        scroll->setProperty("contentY", std::max(0.0, enhance->mapToItem(content, QPointF(0, 0)).y() - 20.0));
+        settle();
+        auto* dial = window()->findChild<QObject*>(u"sawStackEnhanceDial"_s);
+        QVERIFY(dial != nullptr);
+        QVERIFY(!dial->property("opened").toBool());
+        click(u"sawStackEnhance"_s);
+        QTRY_VERIFY(enhance->property("lit").toBool());
+        QTRY_VERIFY(dial->property("opened").toBool());
+        QVERIFY(item(u"sawStackKnob_Enhance"_s) != nullptr && item(u"sawStackKnob_Enhance"_s)->isVisible());
+        QQuickItem* modeD = item(u"sawStackEnhanceMode_3"_s);
+        QVERIFY(modeD != nullptr);
+        QVERIFY(!modeD->property("selected").toBool());
+        click(u"sawStackEnhanceMode_3"_s);
+        QTRY_VERIFY(modeD->property("selected").toBool());
+        shoot(u"saw-stack-pro-enhance"_s);
+        click(u"sawStackEnhanceOn"_s);
+        QTRY_VERIFY(!enhance->property("lit").toBool());
+        QVERIFY(QMetaObject::invokeMethod(dial, "close"));
+        QTRY_VERIFY(!dial->property("opened").toBool());
         // The display's arrow (back at the top) steps to the next type.
         scroll->setProperty("contentY", 0.0);
         settle();
@@ -1779,6 +1803,7 @@ private slots:
             QVERIFY2(item(u"pianoProKnob_%1"_s.arg(QLatin1StringView(knob))) != nullptr, knob);
         }
         for (int layer = 0; layer < 4; ++layer) QVERIFY(item(u"pianoProLayerOn_%1"_s.arg(layer)) != nullptr);
+        QVERIFY(item(u"pianoProEnhance"_s) != nullptr); // Enhance, beside the OTT (as Saw Stack Pro's)
         // It says what plays (here, with no recordings in the test app: that they are missing).
         QQuickItem* status = item(u"pianoProStatus"_s);
         QVERIFY(status != nullptr);

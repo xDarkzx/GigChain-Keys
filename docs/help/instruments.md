@@ -47,6 +47,23 @@ and the FM piano plays meanwhile. **Tone, Resonance, Attack, Release** and
 **Width** shape it; **Reverb, Delay, OTT** and **Tape** (wobble, warmth and
 hiss) finish it.
 
+### Enhance
+
+Both have **Enhance** next to the OTT: one knob that makes a sound fuller
+and more finished, the way FL Studio's Soundgoodizer does. Click it to
+switch it on and open its dial. Its four settings:
+
+- **A:** tighter, mono lows, a little more width in the middle, and brighter
+  highs. Light compression and saturation.
+- **B:** mostly warmth and grit (saturation on the lows and highs).
+- **C:** every band compressed, with the middle pushed forward. Good on keys
+  and strings.
+- **D:** one compressor into a limiter, to glue any sound together.
+
+**Amount** blends from the sound as it was to the full effect. Enhance keeps
+the sound at the same volume, so it gets fuller without getting louder. To
+switch it off, click the light in its dial.
+
 ### The sidechain
 
 Both have the pumping of a dance track built in, on the **Sidechain** card:

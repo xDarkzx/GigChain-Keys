@@ -143,6 +143,7 @@ BuiltinPanel {
             BuiltinKnob { objectName: "pianoProKnob_Reverb"; owner: panel; pid: panel.macro("Reverb"); text: "REVERB"; colour: panel.fxColour; size: 52 }
             BuiltinKnob { objectName: "pianoProKnob_Delay"; owner: panel; pid: panel.macro("Delay"); text: "DELAY"; colour: panel.fxColour; size: 52 }
             BuiltinKnob { objectName: "pianoProKnob_OTT"; owner: panel; pid: panel.macro("OTT"); text: "OTT"; colour: panel.fxColour; size: 52 }
+            EnhanceButton { owner: panel; size: 52 }
             BuiltinKnob { objectName: "pianoProKnob_Tape"; owner: panel; pid: panel.macro("Tape"); text: "TAPE"; colour: panel.fxColour; size: 52 }
         }
     }

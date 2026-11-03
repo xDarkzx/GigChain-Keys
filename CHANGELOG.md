@@ -19,6 +19,13 @@ Downloads for every version are on the
   it above other windows. The window opens where you left it next time,
   unless that screen is gone. Works with VST3 and VST2 plugins, Saw Stack Pro
   and Piano Pro.
+- **Enhance in Saw Stack Pro and Piano Pro,** next to the OTT: one knob that
+  makes a sound fuller and more finished, the way FL Studio's Soundgoodizer
+  does. Click it to open its dial, then choose one of four settings (**A**
+  punchy and bright with mono lows, **B** warm and gritty, **C** compressed
+  with the middle forward, **D** a compressor into a limiter) and set how much.
+  It keeps the sound at the same volume. It starts off, so songs you have
+  already made sound exactly as before.
 
 ## [0.6.0] - 2026-10-23 (alpha)
 

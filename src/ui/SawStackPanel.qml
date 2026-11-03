@@ -81,7 +81,7 @@ BuiltinPanel {
         title: qsTr("SOUND")
         x: layersCard.x
         y: layersCard.y + layersCard.height + 12
-        width: 330
+        width: 316 // (the effects beside it hold five)
         height: panel.frameHeight - 14 - y
         Row {
             anchors.centerIn: parent
@@ -109,6 +109,7 @@ BuiltinPanel {
             BuiltinKnob { objectName: "sawStackKnob_Reverb"; owner: panel; pid: panel.macro("Reverb"); text: "REVERB"; colour: panel.fxColour }
             BuiltinKnob { objectName: "sawStackKnob_Delay"; owner: panel; pid: panel.macro("Delay"); text: "DELAY"; colour: panel.fxColour }
             BuiltinKnob { objectName: "sawStackKnob_OTT"; owner: panel; pid: panel.macro("OTT"); text: "OTT"; colour: panel.fxColour }
+            EnhanceButton { owner: panel }
             BuiltinKnob { objectName: "sawStackKnob_Width"; owner: panel; pid: panel.macro("Width"); text: "WIDTH"; colour: panel.fxColour }
         }
     }

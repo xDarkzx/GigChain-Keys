@@ -26,14 +26,17 @@ constexpr std::array<const char*, kGlobalParams> kGlobalKeys{"level", "bendRange
 constexpr std::array<const char*, kMacros> kMacroNames{"Type",    "Tone",      "Resonance",       "Attack",          "Release",
                                                        "Width",   "Reverb",    "Delay",           "OTT",             "Tape",
                                                        "Sidechain", "Sidechain Rate", "Sidechain Slope", "Sidechain Curve",
-                                                       "Sidechain Trigger", "Sidechain On"};
+                                                       "Sidechain Trigger", "Sidechain On", "Enhance", "Enhance Mode",
+                                                       "Enhance On"};
 constexpr std::array<const char*, kMacros> kMacroKeys{"type",    "tone",      "resonance",     "attack",         "release",
                                                       "width",   "reverb",    "delay",         "ott",            "tape",
                                                       "sidechain", "sidechainRate", "sidechainSlope", "sidechainCurve",
-                                                      "sidechainTrigger", "sidechainOn"};
+                                                      "sidechainTrigger", "sidechainOn", "enhance", "enhanceMode",
+                                                      "enhanceOn"};
 constexpr auto kRates = static_cast<int>(sidechain::kRates.size());
 constexpr auto kCurves = static_cast<int>(sidechain::kCurves.size());
 constexpr auto kTriggers = static_cast<int>(sidechain::kTriggers.size());
+constexpr double kEnhanceStart = 0.75; // where Enhance's knob is when it is first switched on
 
 constexpr double kOutputDb = -14.0;  // every type's level before its own trim
 // Each piano brought to about the same level going into the effects
@@ -164,6 +167,9 @@ std::array<float, kParamCount> typeParams(int which)
     set(paramId(Macro::SidechainCurve), Ranges::fromChoice(type.fx.sidechainCurve, kCurves));
     set(paramId(Macro::SidechainTrigger), 0.0);
     set(paramId(Macro::SidechainOn), type.sidechainOn ? 1.0 : 0.0);
+    set(paramId(Macro::Enhance), kEnhanceStart);
+    set(paramId(Macro::EnhanceMode), 0.0); // A
+    set(paramId(Macro::EnhanceOn), 0.0);   // off: every type as it was designed
     return p;
 }
 
@@ -279,6 +285,8 @@ void Synth::applyParams() noexcept
                    .ott = knob(Macro::Ott),
                    .width = knob(Macro::Width),
                    .tape = knob(Macro::Tape),
+                   .enhance = knob(Macro::EnhanceOn) >= 0.5 ? knob(Macro::Enhance) : 0.0,
+                   .enhanceMode = Ranges::choice(knob(Macro::EnhanceMode), sawstack::Enhance::kModes),
                    .sidechain = knob(Macro::SidechainOn) >= 0.5 ? knob(Macro::Sidechain) : 0.0,
                    .curve = Ranges::choice(knob(Macro::SidechainCurve), kCurves),
                    .beats = sidechain::kRates.at(static_cast<std::size_t>(Ranges::choice(knob(Macro::SidechainRate), kRates))).beats,

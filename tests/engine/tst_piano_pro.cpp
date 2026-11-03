@@ -334,6 +334,9 @@ private slots:
         row("Sidechain Curve", paramId(Macro::SidechainCurve), 0.0, 1.0);
         row("Sidechain Trigger", paramId(Macro::SidechainTrigger), 0.0, 1.0);
         row("Sidechain On", paramId(Macro::SidechainOn), 1.0, 0.0);
+        row("Enhance On", paramId(Macro::EnhanceOn), 0.0, 1.0);
+        row("Enhance", paramId(Macro::Enhance), 0.1, 1.0);
+        row("Enhance Mode", paramId(Macro::EnhanceMode), 0.0, 1.0);
         row("Master", paramId(GlobalParam::Level), Ranges::fromLevelDb(-14.0), Ranges::fromLevelDb(-24.0));
         for (const Layer l : {Layer::Piano, Layer::Octave, Layer::Strings, Layer::Sub}) {
             row(qPrintable(u"%1 on"_s.arg(layerName(l))), paramId(l, LayerParam::On), 1.0, 0.0);
@@ -354,6 +357,7 @@ private slots:
             for (const Layer l : {Layer::Piano, Layer::Octave, Layer::Strings, Layer::Sub}) synth.setParam(paramId(l, LayerParam::On), 1.0);
             synth.setParam(paramId(Macro::Sidechain), 1.0);
             if (id == paramId(Macro::Resonance)) synth.setParam(paramId(Macro::Tone), 0.6); // heard at the cutoff
+            if (id == paramId(Macro::Enhance) || id == paramId(Macro::EnhanceMode)) synth.setParam(paramId(Macro::EnhanceOn), 1.0);
             synth.setParam(id, value);
             (void)play(synth, {}, 0.13); // the chord off the beat (following the notes differs from the beat)
             const std::vector<MidiEvent> chord{noteOn(48), noteOn(60), noteOn(64), noteOn(67)};
@@ -431,7 +435,8 @@ private slots:
         for (const auto& p : node->parameters()) names << p.name;
         QCOMPARE(names, (QStringList{u"Type"_s, u"Tone"_s, u"Resonance"_s, u"Attack"_s, u"Release"_s, u"Width"_s, u"Reverb"_s,
                                      u"Delay"_s, u"OTT"_s, u"Tape"_s, u"Sidechain"_s, u"Sidechain Rate"_s, u"Sidechain Slope"_s,
-                                     u"Sidechain Curve"_s, u"Sidechain Trigger"_s, u"Sidechain On"_s, u"Piano On"_s, u"Piano Level"_s,
+                                     u"Sidechain Curve"_s, u"Sidechain Trigger"_s, u"Sidechain On"_s, u"Enhance"_s, u"Enhance Mode"_s,
+                                     u"Enhance On"_s, u"Piano On"_s, u"Piano Level"_s,
                                      u"Octave On"_s, u"Octave Level"_s, u"Strings On"_s, u"Strings Level"_s, u"Sub On"_s,
                                      u"Sub Level"_s, u"Level"_s}));
         QCOMPARE(node->parameters().front().choices.size(), static_cast<qsizetype>(pianoTypes().size()));
