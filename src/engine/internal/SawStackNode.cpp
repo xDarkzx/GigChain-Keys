@@ -87,6 +87,7 @@ std::vector<PluginNode::Parameter> SawStackNode::parameters() const
     choose(sawstack::Macro::SidechainRate, names(sidechain::kRates, [](const sidechain::Rate& r) { return r.name; }));
     choose(sawstack::Macro::SidechainCurve, names(sidechain::kCurves, [](const sidechain::Curve& c) { return c.name; }));
     choose(sawstack::Macro::SidechainTrigger, names(sidechain::kTriggers, [](const char* t) { return t; }));
+    choose(sawstack::Macro::EnhanceMode, names(sawstack::Enhance::kModeNames, [](const char* m) { return m; }));
     return list;
 }
 

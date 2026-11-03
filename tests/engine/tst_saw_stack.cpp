@@ -14,6 +14,7 @@
 #include <QTest>
 
 #include <cmath>
+#include <numbers>
 #include <numeric>
 #include <vector>
 
@@ -149,6 +150,51 @@ void steadySineUnderTheSidechain(Synth& synth, int curve, int rate)
     synth.setParam(paramId(Macro::SidechainRate), Ranges::fromChoice(rate, static_cast<int>(sidechain::kRates.size())));
 }
 
+// A second of what Enhance (setting `mode`, at `amount`) makes of
+// `signal(i)` (left, right), after a second to settle in.
+template <typename Signal>
+Audio throughEnhance(int mode, double amount, Signal signal)
+{
+    Enhance enhance;
+    enhance.prepare(kRate);
+    enhance.set(amount, mode);
+    Audio out;
+    const auto second = static_cast<int>(kRate);
+    for (int i = 0; i < 2 * second; ++i) {
+        auto [l, r] = signal(i);
+        enhance.tick(l, r);
+        if (i < second) continue;
+        out.left.push_back(l);
+        out.right.push_back(r);
+    }
+    return out;
+}
+
+float sine(double hz, int i)
+{
+    return static_cast<float>(std::sin(2.0 * std::numbers::pi * hz * i / kRate));
+}
+
+// How strong `hz` is in a second of sound (its amplitude).
+double toneLevel(const std::vector<float>& s, double hz)
+{
+    double re = 0.0;
+    double im = 0.0;
+    for (std::size_t i = 0; i < s.size(); ++i) {
+        const double phase = 2.0 * std::numbers::pi * hz * static_cast<double>(i) / kRate;
+        re += s.at(i) * std::cos(phase);
+        im -= s.at(i) * std::sin(phase);
+    }
+    return 2.0 * std::hypot(re, im) / static_cast<double>(s.size());
+}
+
+std::vector<float> sides(const Audio& a)
+{
+    std::vector<float> side(a.left.size());
+    std::ranges::transform(a.left, a.right, side.begin(), [](float l, float r) { return 0.5F * (l - r); });
+    return side;
+}
+
 // Its level, one 440 Hz cycle at a time.
 std::vector<double> levelPerCycle(const std::vector<float>& s)
 {
@@ -194,6 +240,9 @@ private slots:
         row("Sidechain Curve", paramId(Macro::SidechainCurve), 0.0, 1.0);
         row("Sidechain Trigger", paramId(Macro::SidechainTrigger), 0.0, 1.0);
         row("Sidechain On", paramId(Macro::SidechainOn), 1.0, 0.0);
+        row("Enhance On", paramId(Macro::EnhanceOn), 0.0, 1.0);
+        row("Enhance", paramId(Macro::Enhance), 0.1, 1.0);
+        row("Enhance Mode", paramId(Macro::EnhanceMode), 0.0, 1.0);
         row("Master", paramId(GlobalParam::Level), Ranges::fromLevelDb(-14.0), Ranges::fromLevelDb(-24.0));
         for (int l = 0; l < kLayers; ++l) {
             row(qPrintable(u"Layer %1 on"_s.arg(layerName(l))), paramId(l, LayerParam::On), 1.0, 0.0);
@@ -220,6 +269,7 @@ private slots:
                                    || id == paramId(Macro::SidechainOn);
             if (sidechain) synth.setParam(paramId(Macro::Sidechain), 1.0);
             if (id == paramId(Macro::Resonance)) synth.setParam(paramId(Macro::Cutoff), 0.6); // heard at the cutoff
+            if (id == paramId(Macro::Enhance) || id == paramId(Macro::EnhanceMode)) synth.setParam(paramId(Macro::EnhanceOn), 1.0);
             synth.setParam(id, value);
             if (sidechain) (void)play(synth, {}, 0.13);
             const Audio held = play(synth, {noteOn(48), noteOn(60), noteOn(64), noteOn(67)}, 1.0);
@@ -430,7 +480,8 @@ private slots:
         QCOMPARE(names, (QStringList{u"Type"_s, u"Cutoff"_s, u"Resonance"_s, u"Attack"_s, u"Release"_s, u"Spread"_s,
                                      u"Reverb"_s, u"Delay"_s, u"OTT"_s, u"Width"_s, u"Sidechain"_s,
                                      u"Sidechain Rate"_s, u"Sidechain Slope"_s, u"Sidechain Curve"_s,
-                                     u"Sidechain Trigger"_s, u"Sidechain On"_s}));
+                                     u"Sidechain Trigger"_s, u"Sidechain On"_s, u"Enhance"_s, u"Enhance Mode"_s,
+                                     u"Enhance On"_s}));
         const uint32_t type = paramId(Macro::Type);
         const uint32_t cutoff = paramId(Macro::Cutoff);
         QVERIFY(node->setParameter(type, typeValue(typeNamed("Trance Lead"))).has_value());
@@ -741,6 +792,107 @@ private slots:
         };
         QVERIFY(through(0.005F) > 1.5); // -46 dB: pulled up
         QVERIFY(through(0.8F) < 0.7);   // -2 dB: pulled down
+    }
+
+    // Enhance off (or at nothing) leaves the sound exactly as it was; on, it
+    // leaves silence silent, whatever its setting.
+    void enhanceOffLeavesTheSoundUntouched()
+    {
+        const auto chord = [](int i) { return std::pair{0.3F * sine(220.0, i), 0.2F * sine(330.0, i)}; };
+        const Audio off = throughEnhance(0, 0.0, chord);
+        for (std::size_t i = 0; i < off.left.size(); ++i) {
+            const auto [l, r] = chord(static_cast<int>(i) + static_cast<int>(kRate));
+            QCOMPARE(off.left.at(i), l);
+            QCOMPARE(off.right.at(i), r);
+        }
+        for (int mode = 0; mode < Enhance::kModes; ++mode) {
+            QCOMPARE(peak(throughEnhance(mode, 1.0, [](int) { return std::pair{0.0F, 0.0F}; })), 0.0F);
+        }
+    }
+
+    // A: the lows in mono (the mids keep their width), the highs lifted most.
+    void enhanceAPutsTheLowsInMonoAndLiftsTheHighs()
+    {
+        const auto side = [](double hz) {
+            const Audio out = throughEnhance(0, 1.0, [hz](int i) { return std::pair{0.1F * sine(hz, i), -0.1F * sine(hz, i)}; });
+            return rms(sides(out)) / (0.1 / std::numbers::sqrt2);
+        };
+        QVERIFY2(side(60.0) < 0.1, qPrintable(QString::number(side(60.0))));   // the lows: mono
+        QVERIFY2(side(1000.0) > 0.8, qPrintable(QString::number(side(1000.0)))); // the mids: as wide
+        // 1 kHz and 8 kHz, as loud going in: the 8 kHz comes out louder.
+        const Audio both = throughEnhance(0, 1.0, [](int i) {
+            const float s = 0.05F * (sine(1000.0, i) + sine(8000.0, i));
+            return std::pair{s, s};
+        });
+        const double lift = 20.0 * std::log10(toneLevel(both.left, 8000.0) / toneLevel(both.left, 1000.0));
+        QVERIFY2(lift > 2.0, qPrintable(u"the highs %1 dB over the mids"_s.arg(lift)));
+    }
+
+    // B: warmth and grit: a clean low note comes out with its harmonics.
+    void enhanceBSaturates()
+    {
+        const auto harmonics = [](int mode) {
+            const Audio out = throughEnhance(mode, 1.0, [](int i) { return std::pair{0.25F * sine(100.0, i), 0.25F * sine(100.0, i)}; });
+            return 20.0 * std::log10(toneLevel(out.left, 300.0) / toneLevel(out.left, 100.0));
+        };
+        QVERIFY2(harmonics(1) > -30.0, qPrintable(u"the third harmonic at %1 dB"_s.arg(harmonics(1))));
+        QVERIFY2(harmonics(1) > harmonics(3) + 10.0, qPrintable(u"%1 vs %2 dB"_s.arg(harmonics(1)).arg(harmonics(3))));
+    }
+
+    // C and D: loud and quiet brought closer together (the compressors).
+    void enhanceCAndDEvenOutLoudAndQuiet()
+    {
+        // 1 kHz, a quarter of a second loud (-6 dB), a quarter quiet (-30 dB), over and over.
+        constexpr int kStretch = 12000;
+        const auto loudThenQuiet = [](int i) {
+            const float s = ((i / kStretch) % 2 == 0 ? 0.5F : 0.03F) * sine(1000.0, i);
+            return std::pair{s, s};
+        };
+        const auto range = [&](int mode, double amount) {
+            const Audio out = throughEnhance(mode, amount, loudThenQuiet);
+            const std::span<const float> all(out.left);
+            double loud = 0.0;
+            double quiet = 0.0;
+            for (std::size_t at = 0; at + kStretch <= all.size(); at += kStretch) {
+                const auto part = all.subspan(at + 2400, kStretch - 2400); // (each part once it has settled)
+                (((at / kStretch) % 2 == 0) ? loud : quiet) += rms(part);
+            }
+            return 20.0 * std::log10(loud / quiet);
+        };
+        const double before = range(0, 0.0);
+        for (const int mode : {2, 3}) {
+            const double after = range(mode, 1.0);
+            QVERIFY2(after < before - 4.0, qPrintable(u"%1: %2 dB apart, %3 before"_s.arg(QLatin1StringView(Enhance::kModeNames.at(mode))).arg(after).arg(before)));
+        }
+    }
+
+    // Every setting fuller, never just louder: a chord with Enhance full on
+    // is within a decibel or so of the chord without it, and clean.
+    void enhanceKeepsTheLevel()
+    {
+        const auto level = [](bool on, int mode) {
+            Synth synth;
+            synth.prepare(kRate, kBlock);
+            synth.setParam(paramId(Macro::EnhanceOn), on ? 1.0 : 0.0);
+            synth.setParam(paramId(Macro::Enhance), 1.0);
+            synth.setParam(paramId(Macro::EnhanceMode), Ranges::fromChoice(mode, Enhance::kModes));
+            const Audio a = play(synth, {noteOn(48), noteOn(60), noteOn(64), noteOn(67)}, 3.0);
+            if (!allFinite(a) || peak(a) >= 1.0F) return 99.0;
+            return 20.0 * std::log10(rms(a.left, static_cast<std::size_t>(kRate)));
+        };
+        const double off = level(false, 0);
+        for (int mode = 0; mode < Enhance::kModes; ++mode) {
+            const double on = level(true, mode);
+            qInfo().noquote() << u"Enhance %1: %2 dB (off: %3 dB)"_s.arg(QLatin1StringView(Enhance::kModeNames.at(mode))).arg(on, 0, 'f', 1).arg(off, 0, 'f', 1);
+            QVERIFY2(std::abs(on - off) < 1.5, qPrintable(u"%1: %2 dB, off %3 dB"_s.arg(mode).arg(on).arg(off)));
+        }
+        // Its settings by name, A to D.
+        auto loaded = PluginNode::load(QString::fromLatin1(SawStackNode::kPluginId), kRate, kBlock);
+        QVERIFY(loaded.has_value());
+        const auto params = (*loaded)->parameters();
+        const auto mode = std::ranges::find_if(params, [](const PluginNode::Parameter& p) { return p.id == paramId(Macro::EnhanceMode); });
+        QVERIFY(mode != params.end());
+        QCOMPARE(mode->choices, (QStringList{u"A"_s, u"B"_s, u"C"_s, u"D"_s}));
     }
 
     // For listening and measuring: with GIGCHAIN_SAWSTACK_RENDER set to a

@@ -122,6 +122,7 @@ std::vector<PluginNode::Parameter> PianoProNode::parameters() const
     choose(piano::Macro::SidechainRate, names(sidechain::kRates, [](const sidechain::Rate& r) { return r.name; }));
     choose(piano::Macro::SidechainCurve, names(sidechain::kCurves, [](const sidechain::Curve& c) { return c.name; }));
     choose(piano::Macro::SidechainTrigger, names(sidechain::kTriggers, [](const char* t) { return t; }));
+    choose(piano::Macro::EnhanceMode, names(sawstack::Enhance::kModeNames, [](const char* m) { return m; }));
     return list;
 }
 

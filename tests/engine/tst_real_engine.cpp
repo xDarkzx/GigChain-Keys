@@ -1656,7 +1656,7 @@ private slots:
         const core::ChannelId& stack = patch.channels.front().id;
 
         const std::vector<PluginParameter> parameters = engine.pluginParameters(stack, -1);
-        QCOMPARE(parameters.size(), std::size_t{16});
+        QCOMPARE(parameters.size(), std::size_t{19});
         QCOMPARE(parameters.front().name, u"Type"_s);
         QCOMPARE(parameters.front().choices.size(), qsizetype{10});
         const uint32_t cutoff = parameters.at(1).id;

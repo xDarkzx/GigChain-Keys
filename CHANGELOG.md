@@ -8,6 +8,16 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **Enhance in Saw Stack Pro and Piano Pro,** next to the OTT: one knob that
+  makes a sound fuller and more finished, the way FL Studio's Soundgoodizer
+  does. Click it to open its dial, then choose one of four settings (**A**
+  punchy and bright with mono lows, **B** warm and gritty, **C** compressed
+  with the middle forward, **D** a compressor into a limiter) and set how much.
+  It keeps the sound at the same volume. It starts off, so songs you have
+  already made sound exactly as before.
+
 ## [0.6.0] - 2026-10-23 (alpha)
 
 Two instruments of its own, so the sounds of EDM need no paid plugin.
