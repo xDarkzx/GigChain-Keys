@@ -3,6 +3,7 @@
 #include "EditorService.h"
 #include "OfficialArtwork.h"
 #include "EngineStatus.h"
+#include "MixerLayout.h"
 #include "Notifications.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
@@ -354,6 +355,35 @@ private slots:
         QVERIFY(target.wait(500));
         QTest::qWait(20);
         QCOMPARE(target.count(), 1);
+    }
+
+    // Where the mixer is, remembered for next time: its place, detached or
+    // not, and how wide it is down a side (never too narrow for a strip,
+    // nor wider than makes sense).
+    void theMixersPlaceIsRemembered()
+    {
+        {
+            MixerLayout layout(*m_settings);
+            QCOMPARE(layout.placement(), MixerLayout::Placement::Bottom); // as it always was
+            QVERIFY(!layout.detached());
+            QSignalSpy placed(&layout, &MixerLayout::placementChanged);
+            layout.setPlacement(MixerLayout::Placement::Right);
+            layout.setPlacement(MixerLayout::Placement::Right);
+            QCOMPARE(placed.count(), 1);
+            layout.toggleDetached();
+            layout.setSideWidth(100); // too narrow for a strip
+            QCOMPARE(layout.sideWidth(), MixerLayout::kMinSideWidth);
+            layout.setSideWidth(700); // (not the default: remembered, not just started with)
+        }
+        MixerLayout again(*m_settings);
+        QCOMPARE(again.placement(), MixerLayout::Placement::Right);
+        QVERIFY(again.detached());
+        QCOMPARE(again.sideWidth(), 700);
+        again.toggleDetached();
+        QVERIFY(!MixerLayout(*m_settings).detached());
+        // A place it never had (a newer version's, an edited file): along the bottom.
+        m_settings->setValue(u"mixer/placement"_s, 9);
+        QCOMPARE(MixerLayout(*m_settings).placement(), MixerLayout::Placement::Bottom);
     }
 
     void engineStatusPollsAndForwardsNotices()

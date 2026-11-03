@@ -38,6 +38,7 @@ The single letters (Space, N, T, C, M, P, R, L) are the same on both.
 | **Tab** | Swap between Edit and Perform |
 | **Esc** | Back to Edit (from Perform or Practice) |
 | **Ctrl+Shift+D** | Detach the instrument into a window of its own, or reattach it |
+| **Ctrl+Shift+M** | Detach the mixer into a window of its own, or reattach it |
 | **F1** | This guide, at the page for what you are doing |
 
 ## Loop station

@@ -212,6 +212,25 @@ Click **Audio input** after the last channel and pick the input. The channel
 plays what comes in, through its effects: a vocal with reverb, a guitar
 through an amp plugin. Choose the input device first in **Settings > Audio**.
 
+## Where the mixer goes
+
+Click the **Mixer** button in the toolbar (the sliders) and choose where it
+goes:
+
+- **Hide the mixer.**
+- **Along the bottom:** where it starts.
+- **Down the left side** or **Down the right side:** the same strips, the
+  loop station over them and the Aux and Master beside them, using the
+  window's full height, so the faders are longer. Drag the mixer's edge to
+  make it wider or narrower.
+- **In a window of its own** (or **Ctrl+Shift+M**): the whole mixer goes
+  into a window to drag onto another screen. Close that window (or press
+  Ctrl+Shift+M again) to put it back.
+
+GigChain Keys remembers where you put the mixer, and its window opens again
+where you left it, unless that screen isn't plugged in (then it opens over
+the main window). It works the same in Edit and in Perform.
+
 ## Show and hide
 
 The **Mixer** and **Keys** buttons in the top bar show or hide the mixer and

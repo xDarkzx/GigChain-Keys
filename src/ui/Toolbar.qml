@@ -15,6 +15,7 @@ ToolBar {
     required property bool practiceMode
     required property bool sidePanelOpen
     required property bool mixerOpen
+    property MixerLayout mixerLayout: null // where the mixer goes (its button's menu)
     required property bool keyboardOpen
     required property LoopController loops
 
@@ -619,13 +620,71 @@ ToolBar {
                      : qsTr("All instruments together (layers): every strip plays on every note. Click for one at a time")
             onClicked: bar.doc.setPlayMode(one ? 0 : 1)
         }
+        // The mixer: a click drops down where it goes (hidden, along the
+        // bottom, down the left or right side, or a window of its own).
         StageButton {
+            id: mixerButton
+            objectName: "mixerButton"
             iconSource: "icons/adjustments-horizontal.svg"
             visible: !bar.performMode && !bar.practiceMode
-            checkable: true
-            checked: bar.mixerOpen
-            tip: qsTr("Show or hide the mixer")
-            onClicked: bar.toggleMixer()
+            readonly property bool detached: bar.mixerLayout !== null && bar.mixerLayout.detached
+            readonly property int place: bar.mixerLayout !== null ? bar.mixerLayout.placement : MixerLayout.Bottom
+            checked: bar.mixerOpen || detached
+            tip: qsTr("The mixer: hide it, or choose where it goes (%1 for its own window)").arg(Theme.keys("Ctrl+Shift+M"))
+            onClicked: mixerMenu.popup(0, height)
+            // Shown here, in its place in the window (from its own window, or hidden).
+            function placeAt(where) {
+                bar.mixerLayout.detached = false
+                bar.mixerLayout.placement = where
+                if (!bar.mixerOpen) bar.toggleMixer()
+            }
+            StageMenu {
+                id: mixerMenu
+                objectName: "mixerMenu"
+                StageMenuItem {
+                    objectName: "mixerHide"
+                    text: qsTr("Hide the mixer")
+                    checkable: true
+                    checked: !bar.mixerOpen && !mixerButton.detached
+                    onTriggered: {
+                        if (bar.mixerLayout !== null) bar.mixerLayout.detached = false
+                        if (bar.mixerOpen) bar.toggleMixer()
+                    }
+                }
+                MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+                StageMenuItem {
+                    objectName: "mixerAtBottom"
+                    text: qsTr("Along the bottom")
+                    icon.source: "icons/layout-bottombar.svg"
+                    checkable: true
+                    checked: bar.mixerOpen && !mixerButton.detached && mixerButton.place === MixerLayout.Bottom
+                    onTriggered: mixerButton.placeAt(MixerLayout.Bottom)
+                }
+                StageMenuItem {
+                    objectName: "mixerAtLeft"
+                    text: qsTr("Down the left side")
+                    icon.source: "icons/layout-sidebar.svg"
+                    checkable: true
+                    checked: bar.mixerOpen && !mixerButton.detached && mixerButton.place === MixerLayout.Left
+                    onTriggered: mixerButton.placeAt(MixerLayout.Left)
+                }
+                StageMenuItem {
+                    objectName: "mixerAtRight"
+                    text: qsTr("Down the right side")
+                    icon.source: "icons/layout-sidebar-right.svg"
+                    checkable: true
+                    checked: bar.mixerOpen && !mixerButton.detached && mixerButton.place === MixerLayout.Right
+                    onTriggered: mixerButton.placeAt(MixerLayout.Right)
+                }
+                StageMenuItem {
+                    objectName: "mixerInWindow"
+                    text: qsTr("In a window of its own")
+                    icon.source: "icons/app-window.svg"
+                    checkable: true
+                    checked: mixerButton.detached
+                    onTriggered: bar.mixerLayout.detached = true
+                }
+            }
         }
         StageButton {
             objectName: "panelButton"

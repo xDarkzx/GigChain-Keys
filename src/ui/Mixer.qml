@@ -20,6 +20,10 @@ Rectangle {
     property LoopController loops: null
     // Channels may be removed from the computer keyboard (false on stage).
     property bool editable: true
+    // Its strips as tall as the mixer (down a side of the window, where it
+    // has the height): longer faders. Otherwise a strip's own height.
+    property bool tall: false
+    readonly property real stripCap: tall ? 100000 : Theme.stripHeight
 
     // The console's floor: darker at the bottom, strips standing on it.
     gradient: Gradient {
@@ -154,7 +158,7 @@ Rectangle {
                 editable: mixer.editable
                 engineStatus: mixer.engineStatus
                 songSection: mixer.engineStatus.songSection
-                height: Math.min(ListView.view.height, Theme.stripHeight)
+                height: Math.min(ListView.view.height, mixer.stripCap)
                 doc: mixer.doc
                 pluginModel: mixer.pluginModel
                 effectWindows: mixer.effectWindows
@@ -164,7 +168,7 @@ Rectangle {
             }
             footer: Item {
                 width: Theme.stripWidth + 8
-                height: Math.min(strips.height, Theme.stripHeight)
+                height: Math.min(strips.height, mixer.stripCap)
                 // Add a channel: pick an instrument (grouped by maker)
                 EffectSlot {
                     id: newChannelSlot
@@ -245,7 +249,7 @@ Rectangle {
             visible: mixer.auxBus !== null
             Layout.alignment: Qt.AlignTop
             Layout.fillHeight: true // (the row's height, up to a strip's: never sized from the strips, a loop)
-            Layout.maximumHeight: Theme.stripHeight
+            Layout.maximumHeight: mixer.stripCap
             Layout.preferredWidth: Theme.stripWidth
             radius: Theme.radiusCard
             border.color: Theme.stripBorder
@@ -305,7 +309,7 @@ Rectangle {
             property int menuEffect: -1
             Layout.alignment: Qt.AlignTop
             Layout.fillHeight: true
-            Layout.maximumHeight: Theme.stripHeight
+            Layout.maximumHeight: mixer.stripCap
             Layout.preferredWidth: Theme.stripWidth
             radius: Theme.radiusCard
             border.color: Theme.stripBorder

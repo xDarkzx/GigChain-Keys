@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -16,6 +18,7 @@ ApplicationWindow {
     required property PanelController panel
     required property EditorService editorService
     required property InstrumentWindows instrumentWindows
+    required property MixerLayout mixerLayout
     required property EffectWindows effectWindows
     required property MasterBus masterBus
     property MasterBus auxBus: null // the shared effects the channels' Send knobs feed
@@ -37,6 +40,10 @@ ApplicationWindow {
     property bool performMixerOpen: false
     property bool performKeyboardOpen: false
     readonly property bool mixerOpen: performMode ? performMixerOpen : editMixerOpen
+    // Where the mixer is in this window (none while it is in a window of its own).
+    readonly property bool mixerAtBottom: mixerOpen && !mixerLayout.detached && mixerLayout.placement === MixerLayout.Bottom
+    readonly property bool mixerAtLeft: mixerOpen && !mixerLayout.detached && mixerLayout.placement === MixerLayout.Left
+    readonly property bool mixerAtRight: mixerOpen && !mixerLayout.detached && mixerLayout.placement === MixerLayout.Right
     // The panel bar (sounds, parts, ASSIGN): shown in Edit; in Perform the
     // chart comes first, so it is hidden until shown (its pads work either way).
     property bool editPanelOpen: true
@@ -285,6 +292,8 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+N"; enabled: !root.performMode && !root.typing; onActivated: root.doc.addSong() }
     // The instrument in a window of its own (a second screen), or back in the tab.
     Shortcut { objectName: "keyInstrumentWindow"; sequence: "Ctrl+Shift+D"; enabled: !root.typing; onActivated: root.instrumentWindows.toggle() }
+    // The mixer the same way.
+    Shortcut { objectName: "keyMixerWindow"; sequence: "Ctrl+Shift+M"; enabled: !root.typing; onActivated: root.mixerLayout.toggleDetached() }
     Shortcut { sequences: [StandardKey.HelpContents, "F1"]; onActivated: root.openHelp("") }
     Shortcut { sequence: "Tab"; enabled: root.keysFree; onActivated: root.toggleMode() }
     Shortcut { sequence: "Esc"; enabled: (root.performMode || root.practiceMode) && !learnBanner.visible; onActivated: root.editMode() }
@@ -303,6 +312,7 @@ ApplicationWindow {
         practiceMode: root.practiceMode
         sidePanelOpen: root.sidePanelOpen
         mixerOpen: root.mixerOpen
+        mixerLayout: root.mixerLayout
         keyboardOpen: root.keyboardOpen
         loops: root.loops
         onToggleKeyboard: {
@@ -343,6 +353,53 @@ ApplicationWindow {
         engineStatus: root.engineStatus
         owner: root
     }
+    // The mixer in a window of its own (the toolbar's Mixer menu, Ctrl+Shift+M).
+    Loader {
+        objectName: "mixerWindowLoader"
+        active: root.mixerLayout.detached
+        sourceComponent: MixerWindow {
+            layout: root.mixerLayout
+            owner: root
+            editable: !root.performMode
+            doc: root.doc
+            channelModel: root.channelModel
+            pluginModel: root.pluginModel
+            engineStatus: root.engineStatus
+            effectWindows: root.effectWindows
+            instrumentWindows: root.instrumentWindows
+            masterBus: root.masterBus
+            auxBus: root.auxBus
+            loops: root.loops
+        }
+    }
+    // The mixer down a side of the window: the same upright strips, aux and master.
+    Component {
+        id: sideMixerComponent
+        Mixer {
+            tall: true // (the window's height: longer faders)
+            editable: !root.performMode
+            doc: root.doc
+            channelModel: root.channelModel
+            pluginModel: root.pluginModel
+            engineStatus: root.engineStatus
+            effectWindows: root.effectWindows
+            instrumentWindows: root.instrumentWindows
+            masterBus: root.masterBus
+            auxBus: root.auxBus
+            loops: root.loops
+        }
+    }
+    // How wide it was dragged, remembered (once the drag settles).
+    function rememberSideWidth(width) {
+        if (width >= Theme.sideMixerMinWidth) sideWidthTimer.pending = width
+        sideWidthTimer.restart()
+    }
+    Timer {
+        id: sideWidthTimer
+        property int pending: 0
+        interval: 500
+        onTriggered: if (pending > 0) root.mixerLayout.sideWidth = pending
+    }
     AboutDialog {
         id: aboutDialog
         onGuideRequested: root.openHelp("")
@@ -370,6 +427,17 @@ ApplicationWindow {
                     setlistModel: root.setlistModel
                     pluginModel: root.pluginModel
                     editable: true
+                }
+
+                // The mixer down the left (drag its edge to size it).
+                Loader {
+                    objectName: "mixerLeft"
+                    visible: root.mixerAtLeft
+                    active: root.mixerAtLeft
+                    SplitView.preferredWidth: root.mixerLayout.sideWidth
+                    SplitView.minimumWidth: Theme.sideMixerMinWidth
+                    sourceComponent: sideMixerComponent
+                    onWidthChanged: if (active) root.rememberSideWidth(width)
                 }
 
                 // The plugin above, the mixer below (drag the divider).
@@ -407,7 +475,8 @@ ApplicationWindow {
                         pluginModel: root.pluginModel
                     }
                     Mixer {
-                        visible: root.mixerOpen
+                        objectName: "mixerBottom"
+                        visible: root.mixerAtBottom
                         // A whole strip, but never more than about half the room (a small screen keeps its chart).
                         SplitView.preferredHeight: Math.min(Theme.mixerHeight + (root.loops.stripVisible ? Theme.looperHeight : 0),
                                                             editSplit.height * 0.6)
@@ -423,6 +492,17 @@ ApplicationWindow {
                         loops: root.loops
                     }
                 }
+
+                // The mixer down the right.
+                Loader {
+                    objectName: "mixerRight"
+                    visible: root.mixerAtRight
+                    active: root.mixerAtRight
+                    SplitView.preferredWidth: root.mixerLayout.sideWidth
+                    SplitView.minimumWidth: Theme.sideMixerMinWidth
+                    sourceComponent: sideMixerComponent
+                    onWidthChanged: if (active) root.rememberSideWidth(width)
+                }
             }
 
             PerformView {
@@ -436,6 +516,7 @@ ApplicationWindow {
                 setlistModel: root.setlistModel
                 channelModel: root.channelModel
                 mixerOpen: root.mixerOpen
+                mixerLayout: root.mixerLayout
                 pluginModel: root.pluginModel
                 engineStatus: root.engineStatus
                 sidePanelOpen: root.sidePanelOpen

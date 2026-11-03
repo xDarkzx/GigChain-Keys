@@ -33,6 +33,10 @@ Rectangle {
     property MasterBus masterBus: null
     property MasterBus auxBus: null
     property LoopController loops: null
+    // Where the mixer is (MixerLayout): along the bottom, down a side, or in its own window.
+    property MixerLayout mixerLayout: null
+    readonly property bool mixerHere: mixerOpen && (mixerLayout === null || !mixerLayout.detached)
+    readonly property int mixerPlace: mixerLayout !== null ? mixerLayout.placement : MixerLayout.Bottom
     property PanelController panel: null
     property bool panelOpen: true
 
@@ -61,6 +65,16 @@ Rectangle {
                 setlistModel: perform.setlistModel
                 pluginModel: perform.pluginModel
                 editable: false
+            }
+
+            // The mixer down the left.
+            Loader {
+                objectName: "performMixerLeft"
+                Layout.fillHeight: true
+                Layout.preferredWidth: perform.mixerLayout !== null ? perform.mixerLayout.sideWidth : Theme.sideMixerMinWidth
+                visible: active
+                active: perform.mixerHere && perform.mixerPlace === MixerLayout.Left
+                sourceComponent: performSideMixer
             }
 
             ColumnLayout {
@@ -453,6 +467,16 @@ Rectangle {
                     }
                 }
             }
+
+            // The mixer down the right.
+            Loader {
+                objectName: "performMixerRight"
+                Layout.fillHeight: true
+                Layout.preferredWidth: perform.mixerLayout !== null ? perform.mixerLayout.sideWidth : Theme.sideMixerMinWidth
+                visible: active
+                active: perform.mixerHere && perform.mixerPlace === MixerLayout.Right
+                sourceComponent: performSideMixer
+            }
         }
 
         PanelBar {
@@ -464,10 +488,29 @@ Rectangle {
         }
 
         Mixer {
+            objectName: "performMixerBottom"
             editable: false
-            visible: perform.mixerOpen
+            visible: perform.mixerHere && perform.mixerPlace === MixerLayout.Bottom
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.mixerHeight + (perform.loops !== null && perform.loops.stripVisible ? Theme.looperHeight : 0)
+            doc: perform.doc
+            channelModel: perform.channelModel
+            pluginModel: perform.pluginModel
+            engineStatus: perform.engineStatus
+            effectWindows: perform.effectWindows
+            instrumentWindows: perform.instrumentWindows
+            masterBus: perform.masterBus
+            auxBus: perform.auxBus
+            loops: perform.loops
+        }
+    }
+
+    // The mixer down a side, as in Edit: the same upright strips, aux and master.
+    Component {
+        id: performSideMixer
+        Mixer {
+            tall: true // (the window's height: longer faders)
+            editable: false
             doc: perform.doc
             channelModel: perform.channelModel
             pluginModel: perform.pluginModel

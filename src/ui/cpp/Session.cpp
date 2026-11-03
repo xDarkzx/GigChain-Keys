@@ -19,6 +19,7 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_effectWindows(engine, m_document),
       m_masterBus(engine, m_document, settings, m_effectWindows, EffectWindows::Bus::Master),
       m_auxBus(engine, m_document, settings, m_effectWindows, EffectWindows::Bus::Aux),
+      m_mixerLayout(settings),
       m_settingsController(engine, m_document, settings),
       m_practice(engine, m_document),
       m_warmup(engine, m_practice, settings)
@@ -54,6 +55,7 @@ QVariantMap Session::initialProperties()
         {u"effectWindows"_s, QVariant::fromValue(&m_effectWindows)},
         {u"masterBus"_s, QVariant::fromValue(&m_masterBus)},
         {u"auxBus"_s, QVariant::fromValue(&m_auxBus)},
+        {u"mixerLayout"_s, QVariant::fromValue(&m_mixerLayout)},
         {u"settings"_s, QVariant::fromValue(&m_settingsController)},
         {u"loading"_s, QVariant::fromValue(&m_loading)},
         {u"practice"_s, QVariant::fromValue(&m_practice)},

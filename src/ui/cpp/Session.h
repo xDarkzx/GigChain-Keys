@@ -7,6 +7,7 @@
 #include "EffectWindows.h"
 #include "InstrumentWindows.h"
 #include "MasterBus.h"
+#include "MixerLayout.h"
 #include "EngineStatus.h"
 #include "LoopController.h"
 #include "PanelController.h"
@@ -64,6 +65,7 @@ private:
     EffectWindows m_effectWindows;
     MasterBus m_masterBus; // after the windows it opens
     MasterBus m_auxBus;    // the effects the channels' sends feed
+    MixerLayout m_mixerLayout; // where the mixer is: bottom, a side, or a window of its own
     SettingsController m_settingsController;
     StartupProgress m_loading; // the loading overlay (after start-up)
     PracticeController m_practice; // the Practice tab (after the document it reads)

@@ -712,6 +712,107 @@ private slots:
         QTRY_VERIFY(!m_engine->songPosition().playing);
     }
 
+    // Picks `entry` in the toolbar's Mixer menu, as a player would.
+    void pickMixerPlace(const QString& entry)
+    {
+        click(u"mixerButton"_s);
+        QTRY_VERIFY2(item(entry) != nullptr && item(entry)->isVisible(), qPrintable(entry));
+        click(entry);
+        settle();
+    }
+
+    // The mixer's place, from the toolbar's Mixer button (one button: its
+    // menu): down the right or left side, its strips upright as along the
+    // bottom (channels, then the aux and the master); hidden; back.
+    void theMixerGoesDownASideFromItsButtonsMenu()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        QVERIFY(doc.addChannel(u"fake.analog-pad"_s, u"Analog Pad"_s));
+        window()->resize(1600, 1000);
+        settle();
+        auto* layout = m_qml->rootObjects().value(0)->property("mixerLayout").value<QObject*>();
+        QVERIFY(layout != nullptr);
+        QVERIFY(item(u"mixerBottom"_s)->isVisible());
+        // "" when its strips stand upright (the fader taller than wide) with the aux and master in sight, else what was found.
+        const auto notUpright = [](QQuickItem* in) -> QString {
+            auto* strips = in->findChild<QQuickItem*>(u"mixerStrips"_s);
+            if (strips == nullptr) return u"no strips"_s;
+            QQuickItem* fader = findItem(strips, u"channelFader"_s);
+            if (fader == nullptr) return u"no fader in %1 strips"_s.arg(strips->property("count").toInt());
+            if (!fader->isVisible() || fader->height() <= fader->width()) return u"a fader %1x%2"_s.arg(fader->width()).arg(fader->height());
+            for (const QString& bus : {u"auxStrip"_s, u"masterFader"_s}) {
+                auto* busItem = in->findChild<QQuickItem*>(bus);
+                if (busItem == nullptr || !busItem->isVisible() || busItem->width() <= 0) return bus + u" not in sight"_s;
+            }
+            return {};
+        };
+        pickMixerPlace(u"mixerAtRight"_s);
+        auto* right = qobject_cast<QQuickItem*>(window()->findChild<QObject*>(u"mixerRight"_s));
+        QVERIFY(right != nullptr);
+        QTRY_VERIFY(right->isVisible() && right->property("item").value<QQuickItem*>() != nullptr);
+        auto* side = right->property("item").value<QQuickItem*>();
+        QVERIFY(!item(u"mixerBottom"_s)->isVisible());
+        QTRY_VERIFY2(notUpright(side).isEmpty(), qPrintable(notUpright(side)));
+        QVERIFY(right->mapToScene({0, 0}).x() > window()->width() / 2.0); // down the right
+        QCOMPARE(layout->property("placement").toInt(), 2);
+        shoot(u"mixer-right"_s);
+        pickMixerPlace(u"mixerAtLeft"_s);
+        auto* left = qobject_cast<QQuickItem*>(window()->findChild<QObject*>(u"mixerLeft"_s));
+        QTRY_VERIFY(left != nullptr && left->isVisible() && left->property("item").value<QQuickItem*>() != nullptr);
+        QTRY_VERIFY2(notUpright(left->property("item").value<QQuickItem*>()).isEmpty(),
+                     qPrintable(notUpright(left->property("item").value<QQuickItem*>())));
+        QVERIFY(left->mapToScene({0, 0}).x() < window()->width() / 2.0); // down the left
+        QVERIFY(!right->isVisible());
+        // Hidden: nowhere; then along the bottom again (shown by picking it).
+        pickMixerPlace(u"mixerHide"_s);
+        QVERIFY(!left->isVisible() && !item(u"mixerBottom"_s)->isVisible());
+        pickMixerPlace(u"mixerAtBottom"_s);
+        QTRY_VERIFY(item(u"mixerBottom"_s)->isVisible());
+        QVERIFY(notUpright(item(u"mixerBottom"_s)).isEmpty());
+        QVERIFY(!left->isVisible());
+    }
+
+    // Its own window, from the same menu: the whole mixer there, gone from
+    // the main window; closing it (or the key) brings it back.
+    void theMixerDetachesIntoItsOwnWindow()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        settle();
+        const auto mixerWindow = [] {
+            const QWindowList all = QGuiApplication::topLevelWindows();
+            const auto it = std::ranges::find_if(all, [](const QWindow* w) { return w->objectName() == u"mixerWindow"_s && w->isVisible(); });
+            return it != all.end() ? qobject_cast<QQuickWindow*>(*it) : nullptr;
+        };
+        QVERIFY(mixerWindow() == nullptr);
+        pickMixerPlace(u"mixerInWindow"_s);
+        QTRY_VERIFY(mixerWindow() != nullptr);
+        QQuickWindow* own = mixerWindow();
+        QVERIFY(!item(u"mixerBottom"_s)->isVisible()); // not in the main window as well
+        auto* strips = own->findChild<QQuickItem*>(u"mixerStrips"_s);
+        QVERIFY(strips != nullptr && strips->property("count").toInt() == 1);
+        QVERIFY(own->findChild<QQuickItem*>(u"auxStrip"_s)->isVisible());
+        if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
+            QVERIFY(own->grabWindow().save(folder + u"/mixer-window.png"_s));
+        }
+        // Closed: the window goes, the mixer is back in its place.
+        own->close();
+        QTRY_VERIFY(mixerWindow() == nullptr);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete); // the window really gone, quietly
+        settle();
+        QTRY_VERIFY(item(u"mixerBottom"_s)->isVisible());
+        // The key does both.
+        auto* key = window()->findChild<QObject*>(u"keyMixerWindow"_s);
+        QVERIFY(key != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(key, "activated"));
+        QTRY_VERIFY(mixerWindow() != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(key, "activated"));
+        QTRY_VERIFY(mixerWindow() == nullptr);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        settle();
+    }
+
     // A short window (a laptop, the keyboard shown): the mixer takes at most
     // its share, and each strip fits inside it, its fader shorter, its mute,
     // solo and name plate still in sight (they were pushed under the keyboard).

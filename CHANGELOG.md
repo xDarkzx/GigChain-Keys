@@ -8,6 +8,14 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **The mixer where you want it:** the toolbar's Mixer button now drops
+  down every place for it: hidden, along the bottom (as before), down the
+  left or right side (the same strips at the window's full height, so the
+  faders are longer), or in a window of its own for another screen
+  (Ctrl+Shift+M). It is remembered, in Edit and Perform.
+
 ## [0.7.0] - 2026-11-03 (alpha)
 
 Your instrument on a second screen, and one knob for a bigger sound.
