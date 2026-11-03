@@ -5,6 +5,7 @@
 #include "DocumentController.h"
 #include "EditorService.h"
 #include "EffectWindows.h"
+#include "InstrumentWindows.h"
 #include "MasterBus.h"
 #include "EngineStatus.h"
 #include "LoopController.h"
@@ -59,6 +60,7 @@ private:
     LoopController m_loops;
     PanelController m_panel; // the panel bar: sounds and parts, and their pads
     EditorService m_editorService;
+    InstrumentWindows m_instrumentWindows; // after the Instrument tab's service it shares instruments with
     EffectWindows m_effectWindows;
     MasterBus m_masterBus; // after the windows it opens
     MasterBus m_auxBus;    // the effects the channels' sends feed

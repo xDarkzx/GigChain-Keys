@@ -39,6 +39,7 @@ Rectangle {
     required property PluginListModel pluginModel
     // Clicking an effect opens its own window (floating, as in a DAW).
     property EffectWindows effectWindows: null
+    property InstrumentWindows instrumentWindows: null
     // Audio input channels open now (for "Play Audio Input").
     property int inputChannels: 0
     property int outputChannels: 2 // the interface's outputs open
@@ -172,6 +173,13 @@ Rectangle {
         id: channelMenuComponent
         StageMenu {
             StageMenuItem { text: qsTr("Open %1").arg(strip.instrumentName || qsTr("instrument")); onTriggered: strip.doc.selectedChannel = strip.index }
+            // As Gig Performer's plugin windows: this instrument on a screen of its own.
+            StageMenuItem {
+                objectName: "openInOwnWindow"
+                text: qsTr("Open %1 in its own window").arg(strip.instrumentName || qsTr("instrument"))
+                enabled: strip.instrumentWindows !== null && strip.instrumentName !== ""
+                onTriggered: strip.instrumentWindows.openFor(strip.index)
+            }
             StageMenuItem {
                 text: qsTr("Rename…")
                 enabled: strip.editable

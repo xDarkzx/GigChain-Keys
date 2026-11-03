@@ -1,5 +1,6 @@
 gigchain_add_test(tst_document_controller SOURCES tst_document_controller.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_models SOURCES tst_models.cpp LIBS gigchain_ui)
+gigchain_add_test(tst_instrument_windows SOURCES tst_instrument_windows.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_qml_smoke SOURCES tst_qml_smoke.cpp LIBS gigchain_ui gigchain_uiplugin Qt6::QuickControls2)
 gigchain_add_test(tst_plugin_icons SOURCES tst_plugin_icons.cpp LIBS gigchain_ui)
 gigchain_add_test(tst_official_artwork SOURCES tst_official_artwork.cpp LIBS gigchain_ui)

@@ -29,6 +29,7 @@ Rectangle {
     required property bool mixerOpen
     property SettingsController settings: null
     property EffectWindows effectWindows: null
+    property InstrumentWindows instrumentWindows: null
     property MasterBus masterBus: null
     property MasterBus auxBus: null
     property LoopController loops: null
@@ -472,6 +473,7 @@ Rectangle {
             pluginModel: perform.pluginModel
             engineStatus: perform.engineStatus
             effectWindows: perform.effectWindows
+            instrumentWindows: perform.instrumentWindows
             masterBus: perform.masterBus
             auxBus: perform.auxBus
             loops: perform.loops
