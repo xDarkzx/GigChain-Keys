@@ -23,18 +23,79 @@ EditorService::EditorService(engine::IEngine& engine, DocumentController& docume
     const auto schedule = [this] { m_coalesce.start(); };
     connect(&m_document, &DocumentController::channelsChanged, this, schedule);
     connect(&m_document, &DocumentController::selectedChannelChanged, this, schedule);
+    connect(&m_document, &DocumentController::currentChanged, this, schedule); // (a kept channel: another song)
     // Not channelUpdated: volume, pan, mute, solo, name, key range and effects
     // never change which instrument plugin (and so which editor) is shown.
+    // The name, though, is shown above a window.
+    connect(&m_document, &DocumentController::channelUpdated, this, &EditorService::labelChanged);
+    connect(this, &EditorService::targetChanged, this, &EditorService::labelChanged);
+}
+
+void EditorService::pin(const std::optional<core::ChannelId>& channel)
+{
+    if (m_pinned == channel) return;
+    const std::optional<core::ChannelId> before = targetId();
+    m_pinned = channel;
+    const core::Channel* kept = targetChannel();
+    m_pinnedName = kept != nullptr ? kept->name : QString();
+    emit linkedChanged();
+    // Kept on what it shows (Link switched off): the same editor stays open.
+    if (targetId() != before) m_coalesce.start();
+}
+
+const core::Channel* EditorService::targetChannel() const
+{
+    const core::Patch* patch = m_document.currentPatch();
+    if (patch == nullptr) return nullptr;
+    if (m_pinned) {
+        const auto it = std::ranges::find_if(patch->channels, [this](const core::Channel& c) { return c.id == *m_pinned; });
+        return it != patch->channels.end() ? &*it : nullptr;
+    }
+    const int index = m_document.selectedChannel();
+    if (index < 0 || static_cast<std::size_t>(index) >= patch->channels.size()) return nullptr;
+    return &patch->channels.at(static_cast<std::size_t>(index));
+}
+
+std::optional<core::ChannelId> EditorService::targetId() const
+{
+    const core::Channel* channel = targetChannel();
+    return channel != nullptr ? std::optional(channel->id) : std::nullopt;
+}
+
+int EditorService::channelIndex() const
+{
+    const core::Patch* patch = m_document.currentPatch();
+    const core::Channel* channel = targetChannel();
+    if (patch == nullptr || channel == nullptr) return -1;
+    return static_cast<int>(channel - patch->channels.data());
+}
+
+QString EditorService::channelName() const
+{
+    const core::Channel* channel = targetChannel();
+    if (channel != nullptr) return channel->name;
+    return m_pinned ? m_pinnedName : QString();
+}
+
+void EditorService::setElsewhereCheck(std::function<bool()> check)
+{
+    m_elsewhere = std::move(check);
+    recheckElsewhere();
+}
+
+void EditorService::recheckElsewhere()
+{
+    const bool now = shownElsewhere();
+    if (now == m_wasElsewhere) return;
+    m_wasElsewhere = now;
+    emit shownElsewhereChanged();
 }
 
 core::Result<std::unique_ptr<engine::IPluginEditor>> EditorService::createForSelection()
 {
-    const core::Patch* patch = m_document.currentPatch();
-    const int index = m_document.selectedChannel();
-    if (patch == nullptr || index < 0 || static_cast<std::size_t>(index) >= patch->channels.size()) {
-        return std::unique_ptr<engine::IPluginEditor>();
-    }
-    auto editor = m_engine.createEditor(patch->channels.at(static_cast<std::size_t>(index)).id);
+    const core::Channel* channel = targetChannel();
+    if (channel == nullptr || shownElsewhere()) return std::unique_ptr<engine::IPluginEditor>();
+    auto editor = m_engine.createEditor(channel->id);
     if (!editor) m_document.reportMessage(editor.error().message);
     return editor;
 }
@@ -47,22 +108,19 @@ void EditorService::reportFailure(const QString& message)
 QString EditorService::emptyReason() const
 {
     const core::Patch* patch = m_document.currentPatch();
-    const int index = m_document.selectedChannel();
+    const core::Channel* channel = targetChannel();
+    if (m_pinned && channel == nullptr) return tr("%1 is not in this song").arg(m_pinnedName);
     if (patch == nullptr || patch->channels.empty()) return tr("Drag an instrument here to start this sound");
-    if (index < 0 || static_cast<std::size_t>(index) >= patch->channels.size()) return tr("Select a channel in the mixer");
-    const core::Channel& channel = patch->channels.at(static_cast<std::size_t>(index));
-    if (!channel.instrument) return tr("This channel has no instrument");
-    return tr("%1 has no editor to show").arg(channel.instrument->displayName);
+    if (channel == nullptr) return tr("Select a channel in the mixer");
+    if (!channel->instrument) return tr("This channel has no instrument");
+    return tr("%1 has no editor to show").arg(channel->instrument->displayName);
 }
 
 const core::Channel* EditorService::builtinChannel() const
 {
-    const core::Patch* patch = m_document.currentPatch();
-    const int index = m_document.selectedChannel();
-    if (patch == nullptr || index < 0 || static_cast<std::size_t>(index) >= patch->channels.size()) return nullptr;
-    const core::Channel& channel = patch->channels.at(static_cast<std::size_t>(index));
-    const bool builtin = channel.instrument && channel.instrument->pluginId.startsWith(u"builtin:");
-    return builtin ? &channel : nullptr;
+    const core::Channel* channel = targetChannel();
+    const bool builtin = channel != nullptr && channel->instrument && channel->instrument->pluginId.startsWith(u"builtin:");
+    return builtin ? channel : nullptr;
 }
 
 bool EditorService::builtinSelected() const

@@ -14,6 +14,7 @@ Rectangle {
     required property PluginListModel pluginModel
     required property EngineStatus engineStatus
     property EffectWindows effectWindows: null
+    property InstrumentWindows instrumentWindows: null
     property MasterBus masterBus: null
     property MasterBus auxBus: null // the shared effects the Send knobs feed
     property LoopController loops: null
@@ -157,6 +158,7 @@ Rectangle {
                 doc: mixer.doc
                 pluginModel: mixer.pluginModel
                 effectWindows: mixer.effectWindows
+                instrumentWindows: mixer.instrumentWindows
                 inputChannels: mixer.engineStatus.audioInputChannels
                 outputChannels: mixer.engineStatus.audioOutputChannels
             }

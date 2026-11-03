@@ -30,8 +30,11 @@
 #include <QtTest>
 
 #include <QPainter>
+#include <QPointer>
+#include <QPolygonF>
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -105,6 +108,13 @@ public:
         m_timer.setInterval(5);
         QObject::connect(&m_timer, &QTimer::timeout, [this] { tick(); });
     }
+    // Frames of `size` drawn by `compose` instead of the window (the Shorts:
+    // two screens in one tall frame). Before start().
+    void setCompose(QSize size, std::function<QImage()> compose)
+    {
+        m_size = size;
+        m_compose = std::move(compose);
+    }
 
     bool start(const QString& path, const QJsonArray& lines)
     {
@@ -121,7 +131,7 @@ public:
     bool prepare(const QString& path)
     {
         m_ffmpeg.start(u"ffmpeg"_s, {u"-y"_s, u"-loglevel"_s, u"error"_s, u"-f"_s, u"rawvideo"_s, u"-pix_fmt"_s, u"bgra"_s,
-                                     u"-s"_s, u"%1x%2"_s.arg(kWidth).arg(kHeight), u"-r"_s, QString::number(kFps), u"-i"_s, u"-"_s,
+                                     u"-s"_s, u"%1x%2"_s.arg(m_size.width()).arg(m_size.height()), u"-r"_s, QString::number(kFps), u"-i"_s, u"-"_s,
                                      u"-c:v"_s, u"libx264"_s, u"-preset"_s, u"veryfast"_s, u"-crf"_s, u"14"_s, u"-pix_fmt"_s,
                                      u"yuv420p"_s, path});
         if (!m_ffmpeg.waitForStarted(10000)) {
@@ -171,14 +181,14 @@ private:
         if (m_frames < due) {
             QElapsedTimer took;
             took.start();
-            QImage frame = m_window->grabWindow();
+            QImage frame = m_compose ? m_compose() : m_window->grabWindow();
             m_grabMs = std::max(m_grabMs, took.elapsed());
             // The messages are a window of their own, at the main window's bottom right: drawn in where they show.
-            if (m_toasts != nullptr && m_toasts->isVisible() && m_toasts->height() > 1) {
+            if (!m_compose && m_toasts != nullptr && m_toasts->isVisible() && m_toasts->height() > 1) {
                 QPainter painter(&frame);
                 painter.drawImage(QPoint(m_toasts->x() - m_window->x(), m_toasts->y() - m_window->y()), m_toasts->grabWindow());
             }
-            if (frame.size() != QSize(kWidth, kHeight)) frame = frame.scaled(kWidth, kHeight, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            if (frame.size() != m_size) frame = frame.scaled(m_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
             frame = frame.convertToFormat(QImage::Format_RGB32); // (blue, green, red, 255 in memory: ffmpeg's bgra)
             QByteArray bytes(frame.sizeInBytes(), Qt::Uninitialized);
             std::memcpy(bytes.data(), frame.constBits(), static_cast<std::size_t>(frame.sizeInBytes()));
@@ -193,6 +203,8 @@ private:
     QQuickWindow* m_window;
     QObject* m_overlay;
     QQuickWindow* m_toasts;
+    QSize m_size{kWidth, kHeight};
+    std::function<QImage()> m_compose;
     QProcess m_ffmpeg;
     QElapsedTimer m_clock;
     QTimer m_timer;
@@ -1620,6 +1632,65 @@ private slots:
     // The old red bar is gone: messages are notifications now.
     void thereIsNoRedBar() { QVERIFY(window()->findChild<QQuickItem*>(u"messageBanner"_s) == nullptr); }
 
+    // The open instrument window (InstrumentWindow.qml), if any.
+    static QQuickWindow* instrumentWindow()
+    {
+        const QWindowList all = QGuiApplication::topLevelWindows();
+        const auto it = std::ranges::find_if(all, [](const QWindow* w) { return w->objectName().startsWith(u"instrumentWindow"_s) && w->isVisible(); });
+        return it != all.end() ? qobject_cast<QQuickWindow*>(*it) : nullptr;
+    }
+
+    // Detach: the instrument leaves the main window for one of its own (to
+    // drag to a second screen), with its header (Link, which channel, MIDI
+    // Learn, On top, Reattach); the Instrument tab says where it went.
+    // Reattach puts it back.
+    void anInstrumentDetachesIntoItsOwnWindowAndReattaches()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s));
+        doc.setSelectedChannel(0);
+        auto* tabs = window()->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(tabs != nullptr);
+        tabs->setProperty("currentIndex", 1); // the Instrument tab
+        settle();
+        QTRY_VERIFY(item(u"instrumentPopOut"_s) != nullptr && item(u"instrumentPopOut"_s)->isVisible());
+        QVERIFY(instrumentWindow() == nullptr);
+        click(u"instrumentPopOut"_s);
+        settle();
+        QTRY_VERIFY(instrumentWindow() != nullptr);
+        QQuickWindow* own = instrumentWindow();
+        QCOMPARE(own->objectName(), u"instrumentWindowLinked"_s);
+        const auto inOwn = [own](const QString& name) { return own->findChild<QQuickItem*>(name); };
+        QVERIFY(inOwn(u"instrumentWindowChannel"_s) != nullptr);
+        QCOMPARE(inOwn(u"instrumentWindowChannel"_s)->property("text").toString(), doc.currentPatch()->channels.at(0).name);
+        QVERIFY(inOwn(u"instrumentLink"_s)->property("checked").toBool());
+        QTRY_VERIFY(inOwn(u"sawStackPanel"_s) != nullptr && inOwn(u"sawStackPanel"_s)->isVisible());
+        // Not in the main window any more: the tab says where it is.
+        QVERIFY(item(u"instrumentDetached"_s)->isVisible());
+        for (QQuickItem* panel : window()->findChildren<QQuickItem*>(u"sawStackPanel"_s)) {
+            if (panel->window() == window()) QVERIFY(!panel->isVisible()); // (the window's own is a child too)
+        }
+        if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
+            QVERIFY(own->grabWindow().save(folder + u"/instrument-window.png"_s));
+            shoot(u"instrument-detached"_s);
+        }
+        // Reattach: back in the tab, the window gone.
+        QVERIFY(QMetaObject::invokeMethod(inOwn(u"instrumentDock"_s), "clicked"));
+        QTRY_VERIFY(instrumentWindow() == nullptr);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete); // the window and its panel really gone, quietly
+        settle();
+        QTRY_VERIFY(item(u"sawStackPanel"_s) != nullptr && item(u"sawStackPanel"_s)->isVisible());
+        QVERIFY(!item(u"instrumentDetached"_s)->isVisible());
+        // The key does both.
+        auto* key = window()->findChild<QObject*>(u"keyInstrumentWindow"_s);
+        QVERIFY(key != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(key, "activated"));
+        QTRY_VERIFY(instrumentWindow() != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(key, "activated"));
+        QTRY_VERIFY(instrumentWindow() == nullptr);
+        settle();
+    }
+
     // Dropping an instrument on the mixer loads it and shows it.
     // Saw Stack Pro (the app's own instrument) shows its window in the main
     // area: its types as keys, the one playing lit and on the display, and
@@ -2601,6 +2672,314 @@ private slots:
         m_overlay->setProperty("logoLine2", u"github.com/xDarkzx/GigChain-Keys"_s);
         QTest::qWait(600);
         if (begin(u"11"_s)) end();
+    }
+
+    // The Shorts (vertical, about a minute each). With GIGCHAIN_SHORT_VIDEO
+    // set to a short's folder (features\<n>-<name>-short: its subs.json from
+    // make_subs.py; splash.png in the folder above), the scenes are played and
+    // recorded to scene_NN.mp4, each action on its word of the narration.
+    // The frame is two screens stacked: the main window on the top one, the
+    // second screen below, where an instrument's own window is drawn where
+    // the scene puts it; the pointer, its clicks and the captions over them.
+    // GIGCHAIN_DEMO_SCENES=03,05 records only those. Off otherwise.
+    void shortVideo()
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_SHORT_VIDEO");
+        if (folder.isEmpty()) QSKIP("Set GIGCHAIN_SHORT_VIDEO to a short's folder to record it");
+        const QStringList only = qEnvironmentVariable("GIGCHAIN_DEMO_SCENES").split(u',', Qt::SkipEmptyParts);
+        QFile subsFile(folder + u"/subs.json"_s);
+        QVERIFY2(subsFile.open(QIODevice::ReadOnly), qPrintable(subsFile.errorString()));
+        const QJsonObject scenes = QJsonDocument::fromJson(subsFile.readAll()).object();
+        QVERIFY(!scenes.isEmpty());
+        const QImage splash(QFileInfo(folder).absolutePath() + u"/../splash.png"_s);
+        QVERIFY2(!splash.isNull(), "splash.png is not in the folder above the short's");
+
+        QQuickWindow* w = window();
+        w->setGeometry(0, 0, SceneRecorder::kWindowWidth, SceneRecorder::kWindowHeight);
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        QObject* root = m_qml->rootObjects().value(0);
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(root->setProperty("editKeyboardOpen", false)); // (the room goes to the instrument)
+        QVERIFY(root->setProperty("editPanelOpen", false));
+        if (auto* engineName = w->findChild<QQuickItem*>(u"statusAudio"_s)) engineName->setVisible(false);
+        QVERIFY(doc.renameSong(0, u"Saturday Night"_s));
+        QVERIFY(doc.addChannel(u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s));
+        QVERIFY(doc.addChannel(u"builtin:piano-pro"_s, u"Piano Pro"_s));
+        QVERIFY(doc.saveAs(m_dir->filePath(u"Saturday Gig.gigchain.json"_s))); // (the title bar names it)
+        doc.setSelectedChannel(0);
+        auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(tabs != nullptr);
+        tabs->setProperty("currentIndex", 1); // the Instrument tab
+        QTest::qWait(1500);
+
+        // ---- The frame: two screens, the windows on them ------------------
+        constexpr QSize kFrame(1080, 1920);
+        constexpr double kScale = 0.65; // the windows' units to the frame's (1600 x 900: 1040 x 585)
+        const QRectF top(20, 300, 1040, 585);
+        const QRectF bottom(20, 990, 1040, 585);
+        QObject captions; // the line being said ("sub", set by the recorder)
+        QPointer<QQuickWindow> own; // the instrument's own window, drawn at ownRect
+        QRectF ownRect;
+        QPointF pointer(kFrame.width() + 60.0, 1200.0);
+        QRectF ring; // a highlight round a control (frame units), empty: none
+        double clickedAt = -10.0;
+        QString keys; // a key combination shown, until keysUntil
+        double keysUntil = -1.0;
+        double logo = 0.0;
+        SceneRecorder recorder(w, &captions, nullptr);
+        m_recorder = &recorder;
+        const auto cleanUp = qScopeGuard([this] { m_recorder = nullptr; });
+
+        const auto font = [](int pixels, bool bold) {
+            QFont f(u"Segoe UI"_s);
+            f.setPixelSize(pixels);
+            f.setBold(bold);
+            return f;
+        };
+        const auto screen = [&font](QPainter& p, const QRectF& area, const QString& label) {
+            p.setPen(Qt::NoPen);
+            p.setBrush(QColor(0x05, 0x06, 0x0a));
+            p.drawRoundedRect(area.adjusted(-8, -8, 8, 8), 14, 14);
+            p.setPen(QColor(0x85, 0x90, 0xa2));
+            p.setFont(font(26, true));
+            p.drawText(QRectF(area.left() + 4, area.top() - 54, area.width(), 36), Qt::AlignLeft | Qt::AlignVCenter, label);
+        };
+        recorder.setCompose(kFrame, [&]() -> QImage {
+            QImage frame(kFrame, QImage::Format_RGB32);
+            QPainter p(&frame);
+            p.setRenderHint(QPainter::Antialiasing);
+            p.setRenderHint(QPainter::SmoothPixmapTransform);
+            QLinearGradient back(0, 0, 0, kFrame.height());
+            back.setColorAt(0, QColor(0x0b, 0x0d, 0x12));
+            back.setColorAt(1, QColor(0x16, 0x1b, 0x26));
+            p.fillRect(frame.rect(), back);
+            p.setPen(Qt::white);
+            p.setFont(font(58, true));
+            p.drawText(QRectF(0, 80, kFrame.width(), 76), Qt::AlignCenter, u"Your instrument on a second screen"_s);
+            p.setPen(QColor(0x4c, 0xc3, 0xff));
+            p.setFont(font(30, true));
+            p.drawText(QRectF(0, 160, kFrame.width(), 44), Qt::AlignCenter, u"GigChain Keys  ·  Detach & Reattach"_s);
+            screen(p, top, u"SCREEN 1  ·  THE APP"_s);
+            p.drawImage(top, w->grabWindow());
+            screen(p, bottom, u"SCREEN 2"_s);
+            QLinearGradient desk(bottom.topLeft(), bottom.bottomRight());
+            desk.setColorAt(0, QColor(0x1b, 0x26, 0x38));
+            desk.setColorAt(1, QColor(0x0d, 0x12, 0x1b));
+            p.fillRect(bottom, desk);
+            if (own && own->isVisible() && !ownRect.isEmpty()) {
+                p.setPen(Qt::NoPen);
+                p.setBrush(QColor(0, 0, 0, 140));
+                p.drawRoundedRect(ownRect.translated(0, 12).adjusted(-8, -8, 8, 8), 12, 12); // its shadow
+                p.drawImage(ownRect, own->grabWindow());
+                p.setPen(QPen(QColor(0x4c, 0xc3, 0xff), 2));
+                p.setBrush(Qt::NoBrush);
+                p.drawRect(ownRect);
+            }
+            if (!ring.isEmpty()) {
+                p.setPen(QPen(QColor(0xff, 0xc8, 0x3d), 5));
+                p.setBrush(Qt::NoBrush);
+                p.drawRoundedRect(ring.adjusted(-8, -8, 8, 8), 10, 10);
+            }
+            if (recorder.now() < keysUntil) {
+                p.setFont(font(54, true));
+                const QRectF badge(140, 1610, 800, 96);
+                p.setPen(Qt::NoPen);
+                p.setBrush(QColor(0x4c, 0xc3, 0xff));
+                p.drawRoundedRect(badge, 20, 20);
+                p.setPen(QColor(0x06, 0x12, 0x1f));
+                p.drawText(badge, Qt::AlignCenter, keys);
+            }
+            // The pointer: a ring spreading out where it clicked, then the arrow.
+            const double since = recorder.now() - clickedAt;
+            if (since >= 0.0 && since < 0.45) {
+                const double grown = since / 0.45;
+                p.setPen(QPen(QColor(255, 255, 255, static_cast<int>(220 * (1.0 - grown))), 5));
+                p.setBrush(Qt::NoBrush);
+                p.drawEllipse(pointer, 12 + (48 * grown), 12 + (48 * grown));
+            }
+            const QPolygonF arrow({QPointF(0, 0), QPointF(0, 40), QPointF(10, 31), QPointF(18, 49), QPointF(25, 46),
+                                   QPointF(17, 28), QPointF(31, 28)});
+            p.setPen(QPen(Qt::black, 3));
+            p.setBrush(Qt::white);
+            p.drawPolygon(arrow.translated(pointer));
+            // The line being said, big, under the screens.
+            if (const QString sub = captions.property("sub").toString(); !sub.isEmpty() && logo < 0.5) {
+                p.setFont(font(60, true));
+                const QRectF room(60, 1720, kFrame.width() - 120.0, 170);
+                const QRectF used = p.boundingRect(room, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap, sub);
+                p.setPen(Qt::NoPen);
+                p.setBrush(QColor(0, 0, 0, 170));
+                p.drawRoundedRect(used.adjusted(-24, -10, 24, 10), 16, 16);
+                p.setPen(Qt::white);
+                p.drawText(room, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap, sub);
+            }
+            if (logo > 0.0) {
+                p.setOpacity(logo);
+                p.fillRect(frame.rect(), QColor(0x0b, 0x0d, 0x12));
+                const QSizeF logoSize = QSizeF(splash.size()).scaled(900, 900, Qt::KeepAspectRatio);
+                p.drawImage(QRectF(QPointF((kFrame.width() - logoSize.width()) / 2, 560), logoSize), splash);
+                p.setPen(Qt::white);
+                p.setFont(font(56, true));
+                p.drawText(QRectF(0, 1240, kFrame.width(), 80), Qt::AlignCenter, u"Free  ·  Open source"_s);
+                p.setPen(QColor(0x4c, 0xc3, 0xff));
+                p.setFont(font(40, true));
+                p.drawText(QRectF(0, 1330, kFrame.width(), 60), Qt::AlignCenter, u"github.com/xDarkzx/GigChain-Keys"_s);
+                p.setOpacity(1.0);
+            }
+            return frame;
+        });
+
+        // ---- The scene machinery (as featureVideo's) ------------------------
+        QJsonObject scene;
+        const auto begin = [&](const QString& key) {
+            if (!only.isEmpty() && !only.contains(key)) return false;
+            scene = scenes.value(key).toObject();
+            if (scene.isEmpty()) return false;
+            if (!recorder.start(folder + u"/scene_"_s + key + u".mp4"_s, scene.value(u"lines"_s).toArray())) {
+                qWarning().noquote() << recorder.problem();
+                return false;
+            }
+            return true;
+        };
+        const auto end = [&](double hold = 0.0) {
+            at(scene.value(u"duration"_s).toDouble() + 0.45 + hold);
+            QVERIFY2(recorder.stop(), qPrintable(recorder.problem()));
+        };
+        const auto word = [&](const QString& wanted, double fallback, int nth = 1) {
+            int seen = 0;
+            for (const auto& v : scene.value(u"words"_s).toArray()) {
+                const QString said = v.toObject().value(u"word"_s).toString().toLower().remove(QRegularExpression(u"[^a-z0-9']"_s));
+                if (said.startsWith(wanted.toLower()) && ++seen == nth) return v.toObject().value(u"start"_s).toDouble();
+            }
+            qWarning().noquote() << "Scene: the narration does not say" << wanted << "- at" << fallback << "of it";
+            return fallback * scene.value(u"duration"_s).toDouble();
+        };
+        const auto atWord = [&](const QString& wanted, double fallback, int nth = 1) { at(word(wanted, fallback, nth)); };
+        // The pointer glides there (frame units), easing in and out.
+        const auto glideTo = [&](QPointF to, int ms = 600) {
+            const QPointF from = pointer;
+            QElapsedTimer t;
+            t.start();
+            while (t.elapsed() < ms) {
+                const double x = static_cast<double>(t.elapsed()) / ms;
+                const double eased = x < 0.5 ? 2 * x * x : 1 - (std::pow((-2 * x) + 2, 2) / 2);
+                pointer = from + ((to - from) * eased);
+                QTest::qWait(4);
+            }
+            pointer = to;
+        };
+        // The own window moves (and grows) to `to`; the pointer, holding it at `grip` (from its corner), moves with it.
+        const auto moveOwn = [&](const QRectF& to, int ms, bool held) {
+            const QRectF from = ownRect;
+            const QPointF grip = pointer - from.topLeft();
+            QElapsedTimer t;
+            t.start();
+            while (t.elapsed() < ms) {
+                const double x = static_cast<double>(t.elapsed()) / ms;
+                const double eased = x < 0.5 ? 2 * x * x : 1 - (std::pow((-2 * x) + 2, 2) / 2);
+                ownRect = QRectF(from.topLeft() + ((to.topLeft() - from.topLeft()) * eased),
+                                 from.size() + ((to.size() - from.size()) * eased));
+                if (held) pointer = ownRect.topLeft() + grip;
+                QTest::qWait(4);
+            }
+            ownRect = to;
+            if (held) pointer = ownRect.topLeft() + grip;
+        };
+        const auto onMain = [&](QPointF scenePoint) { return top.topLeft() + (scenePoint * kScale); };
+        const auto onOwn = [&](QPointF scenePoint) { return ownRect.topLeft() + (scenePoint * (ownRect.width() / own->width())); };
+        const auto inOwn = [&](const QString& name) { return own ? own->findChild<QQuickItem*>(name) : nullptr; };
+
+        // ================= Detach and Reattach =================
+        // ---- 01: the hook: the instrument on the app's screen ---------------
+        QQuickItem* detach = item(u"instrumentPopOut"_s);
+        QVERIFY(detach != nullptr && detach->isVisible());
+        if (begin(u"01"_s)) {
+            atWord(u"second"_s, 0.3);
+            glideTo(QPointF(bottom.center().x(), bottom.center().y()), 900);
+            atWord(u"watch"_s, 0.8);
+            glideTo(onMain(centre(detach)) + QPointF(-90, 60), 700);
+            end();
+        }
+        // ---- 02: Detach: its own window ------------------------------------
+        if (begin(u"02"_s)) {
+            atWord(u"detach"_s, 0.5);
+            glideTo(onMain(centre(detach)), 450);
+            clickedAt = recorder.now();
+            QTest::mouseClick(w, Qt::LeftButton, {}, centre(detach).toPoint());
+            QTRY_VERIFY(instrumentWindow() != nullptr);
+            own = instrumentWindow();
+            const QSizeF size(own->width() * kScale, own->height() * kScale);
+            const QRectF over(top.center() - QPointF(size.width() / 2, size.height() / 2) + QPointF(0, 30), size);
+            ownRect = QRectF(over.center() - QPointF(size.width() * 0.45, size.height() * 0.45), size * 0.9);
+            moveOwn(over, 220, false);
+            end();
+        }
+        QTRY_VERIFY(own != nullptr);
+        // ---- 03: dragged onto the second screen, made big -------------------
+        if (begin(u"03"_s)) {
+            atWord(u"grab"_s, 0.15);
+            glideTo(ownRect.topLeft() + QPointF(ownRect.width() * 0.35, 14), 500);
+            atWord(u"drag"_s, 0.3);
+            const QRectF onSecond(bottom.center() - QPointF(ownRect.width() / 2, ownRect.height() / 2), ownRect.size());
+            moveOwn(onSecond, 1500, true);
+            atWord(u"big"_s, 0.8);
+            own->resize(SceneRecorder::kWindowWidth, SceneRecorder::kWindowHeight); // maximised on a screen as big as the first
+            moveOwn(bottom, 450, false);
+            glideTo(bottom.center() + QPointF(220, 120), 500);
+            end();
+        }
+        // ---- 04: Link: it follows the channel picked ------------------------
+        if (begin(u"04"_s)) {
+            atWord(u"link"_s, 0.1);
+            QQuickItem* link = inOwn(u"instrumentLink"_s);
+            QVERIFY(link != nullptr);
+            glideTo(onOwn(centre(link)), 500);
+            ring = QRectF(onOwn(link->mapToScene(QPointF(0, 0))), QSizeF(link->width(), link->height()) * (ownRect.width() / own->width()));
+            atWord(u"piano"_s, 0.55);
+            ring = QRectF();
+            QQuickItem* pianoStrip = strip(1);
+            QVERIFY(pianoStrip != nullptr);
+            const QPointF stripTop = pianoStrip->mapToScene(QPointF(pianoStrip->width() / 2, 14));
+            glideTo(onMain(stripTop), 600);
+            clickedAt = recorder.now();
+            doc.setSelectedChannel(1); // (what a click on the strip's name does)
+            QTRY_VERIFY(inOwn(u"pianoProPanel"_s) != nullptr && inOwn(u"pianoProPanel"_s)->isVisible());
+            atWord(u"there"_s, 0.8);
+            glideTo(bottom.center() + QPointF(200, 100), 600);
+            end();
+        }
+        // ---- 05: Reattach: back into the main window ------------------------
+        if (begin(u"05"_s)) {
+            atWord(u"reattach"_s, 0.2);
+            QQuickItem* dock = inOwn(u"instrumentDock"_s);
+            QVERIFY(dock != nullptr);
+            glideTo(onOwn(centre(dock)), 600);
+            clickedAt = recorder.now();
+            QTest::qWait(150);
+            const QQuickItem* area = item(u"pluginEditorHost"_s);
+            QVERIFY(area != nullptr);
+            moveOwn(QRectF(onMain(area->mapToScene(QPointF(0, 0))), QSizeF(area->width(), area->height()) * kScale), 450, false);
+            QVERIFY(QMetaObject::invokeMethod(dock, "clicked"));
+            QTRY_VERIFY(instrumentWindow() == nullptr);
+            ownRect = QRectF();
+            QTRY_VERIFY(item(u"pianoProPanel"_s) != nullptr && item(u"pianoProPanel"_s)->isVisible());
+            glideTo(onMain(centre(item(u"instrumentPopOut"_s))) + QPointF(-60, 70), 700);
+            atWord(u"control"_s, 0.75);
+            keys = u"Ctrl + Shift + D"_s;
+            keysUntil = word(u"both"_s, 0.95) + SceneRecorder::kLead + 1.6;
+            end();
+        }
+        // ---- 06: the close: the logo ----------------------------------------
+        if (begin(u"06"_s)) {
+            atWord(u"gigchain"_s, 0.4);
+            for (int step = 1; step <= 20; ++step) {
+                logo = step / 20.0;
+                QTest::qWait(20);
+            }
+            end(1.5);
+        }
+        logo = 0.0;
     }
 
     // The feature videos (one feature each, about two minutes). With

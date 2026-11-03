@@ -9,6 +9,7 @@ Rectangle {
 
     required property DocumentController doc
     required property EditorService editorService
+    required property InstrumentWindows instrumentWindows
     required property EngineStatus engineStatus
     property bool suspended: false
     property alias currentTab: tabs.currentIndex
@@ -29,6 +30,11 @@ Rectangle {
             tabs.currentIndex = 1
             area.engineStatus.startMappingLearn(channel, -1)
         }
+    }
+    // An instrument's window docked: it is shown here again.
+    Connections {
+        target: area.instrumentWindows
+        function onDocked() { tabs.currentIndex = 1 }
     }
 
     // Nothing is open yet: start a setlist or open one.
@@ -71,6 +77,7 @@ Rectangle {
                 doc: area.doc
                 engineStatus: area.engineStatus
                 editorService: area.editorService
+                instrumentWindows: area.instrumentWindows
                 // The plugin's window sits above everything: hide it behind the chart tab and dialogs.
                 suspended: area.suspended || tabs.currentIndex !== 1 || !area.doc.hasSetlist
             }

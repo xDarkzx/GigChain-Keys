@@ -33,9 +33,31 @@ void PluginEditorHost::setService(EditorService* to)
     if (m_service == to) return;
     if (m_service) disconnect(m_service, nullptr, this, nullptr);
     m_service = to;
-    if (m_service) connect(m_service, &EditorService::targetChanged, this, &PluginEditorHost::rebuild);
+    if (m_service) {
+        connect(m_service, &EditorService::targetChanged, this, &PluginEditorHost::rebuild);
+        connect(m_service, &EditorService::shownElsewhereChanged, this, &PluginEditorHost::elsewhereChanged);
+    }
     emit serviceChanged();
     rebuild();
+}
+
+void PluginEditorHost::elsewhereChanged()
+{
+    if (!m_service) return;
+    if (m_service->shownElsewhere()) {
+        if (!m_editor && !m_window) return;
+        teardown(); // now: the plugin draws in one place at a time
+        emit editorChanged();
+    } else if (!m_editor) {
+        rebuild();
+    }
+}
+
+void PluginEditorHost::setEditorSize(QSize size)
+{
+    if (m_editorSize == size) return;
+    m_editorSize = size;
+    emit editorSizeChanged();
 }
 
 void PluginEditorHost::setSuspended(bool suspended)
@@ -82,7 +104,7 @@ void PluginEditorHost::rebuild()
     teardown();
     const qint64 closing = timer.elapsed();
     QQuickWindow* host = window();
-    if (!m_service || host == nullptr) {
+    if (!m_service || host == nullptr || m_service->shownElsewhere()) {
         emit editorChanged();
         return;
     }
@@ -156,12 +178,14 @@ void PluginEditorHost::teardown()
         m_window = nullptr;
     }
     m_windowSize = {};
+    setEditorSize({});
 }
 
 QSize PluginEditorHost::fit(QSize wanted)
 {
     if (!m_window || window() == nullptr || wanted.isEmpty()) return {};
     const double dpr = platform::pluginPixelRatio(*window()); // (points on the Mac: 1.0)
+    setEditorSize(QSize(static_cast<int>(std::ceil(wanted.width() / dpr)), static_cast<int>(std::ceil(wanted.height() / dpr))));
     if (width() < 1 || height() < 1) {
         m_windowSize = {}; // no room yet: fitted when the layout gives it one
         updateVisibility();

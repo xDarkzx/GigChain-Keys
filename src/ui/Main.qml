@@ -15,6 +15,7 @@ ApplicationWindow {
     required property LoopController loops
     required property PanelController panel
     required property EditorService editorService
+    required property InstrumentWindows instrumentWindows
     required property EffectWindows effectWindows
     required property MasterBus masterBus
     property MasterBus auxBus: null // the shared effects the channels' Send knobs feed
@@ -282,6 +283,8 @@ ApplicationWindow {
     Shortcut { sequences: [StandardKey.Quit]; onActivated: root.close() }
     Shortcut { sequence: "Ctrl+M"; enabled: Theme.mac; onActivated: root.showMinimized() }
     Shortcut { sequence: "Ctrl+Shift+N"; enabled: !root.performMode && !root.typing; onActivated: root.doc.addSong() }
+    // The instrument in a window of its own (a second screen), or back in the tab.
+    Shortcut { objectName: "keyInstrumentWindow"; sequence: "Ctrl+Shift+D"; enabled: !root.typing; onActivated: root.instrumentWindows.toggle() }
     Shortcut { sequences: [StandardKey.HelpContents, "F1"]; onActivated: root.openHelp("") }
     Shortcut { sequence: "Tab"; enabled: root.keysFree; onActivated: root.toggleMode() }
     Shortcut { sequence: "Esc"; enabled: (root.performMode || root.practiceMode) && !learnBanner.visible; onActivated: root.editMode() }
@@ -332,6 +335,14 @@ ApplicationWindow {
     }
 
     HelpWindow { id: helpWindow }
+
+    // Instruments in windows of their own: one per open window.
+    InstrumentWindowList {
+        windows: root.instrumentWindows
+        doc: root.doc
+        engineStatus: root.engineStatus
+        owner: root
+    }
     AboutDialog {
         id: aboutDialog
         onGuideRequested: root.openHelp("")
@@ -375,6 +386,7 @@ ApplicationWindow {
                         SplitView.minimumHeight: 120
                         doc: root.doc
                         editorService: root.editorService
+                        instrumentWindows: root.instrumentWindows
                         engineStatus: root.engineStatus
                         onNewRequested: root.guarded("new")
                         onOpenRequested: root.guarded("open")
@@ -405,6 +417,7 @@ ApplicationWindow {
                         pluginModel: root.pluginModel
                         engineStatus: root.engineStatus
                         effectWindows: root.effectWindows
+                        instrumentWindows: root.instrumentWindows
                         masterBus: root.masterBus
                         auxBus: root.auxBus
                         loops: root.loops
@@ -427,6 +440,7 @@ ApplicationWindow {
                 engineStatus: root.engineStatus
                 sidePanelOpen: root.sidePanelOpen
                 effectWindows: root.effectWindows
+                instrumentWindows: root.instrumentWindows
                 masterBus: root.masterBus
                 auxBus: root.auxBus
                 loops: root.loops

@@ -8,6 +8,18 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **Instruments on a second screen:** **Detach** takes the instrument out of
+  the main window into a window of its own, to drag to another screen;
+  **Reattach** (or closing it) puts it back. Ctrl+Shift+D does both. With
+  **Link** lit, the window follows the channel you select; with it off, the
+  window stays on its instrument, and each instrument can have its own window
+  (right-click a channel strip: **Open … in its own window**). A pin keeps
+  it above other windows. The window opens where you left it next time,
+  unless that screen is gone. Works with VST3 and VST2 plugins, Saw Stack Pro
+  and Piano Pro.
+
 ## [0.6.0] - 2026-10-23 (alpha)
 
 Two instruments of its own, so the sounds of EDM need no paid plugin.
