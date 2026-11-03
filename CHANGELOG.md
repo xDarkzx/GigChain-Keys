@@ -8,6 +8,10 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-03 (alpha)
+
+Your instrument on a second screen, and one knob for a bigger sound.
+
 ### Added
 
 - **Instruments on a second screen:** **Detach** takes the instrument out of
