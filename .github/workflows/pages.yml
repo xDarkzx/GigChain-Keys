@@ -1,0 +1,43 @@
+name: Pages
+
+# The download page (site/), on GitHub Pages: built from site/index.html and
+# the screenshots in docs/images. Its buttons read the latest release's files
+# from the GitHub API when the page opens, so a new release needs no new page.
+"on":
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["site/**", "docs/images/**", "branding/app-icon.png", ".github/workflows/pages.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Put the page together
+        run: |
+          mkdir -p _site/images
+          cp site/index.html _site/
+          cp docs/images/edit.png docs/images/perform.png docs/images/practice.png _site/images/
+          cp branding/app-icon.png _site/images/
+
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v5
