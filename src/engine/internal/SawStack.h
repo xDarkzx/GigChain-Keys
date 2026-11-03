@@ -84,6 +84,9 @@ enum class Macro : uint8_t
     SidechainCurve,   // which shape: sidechain::kCurves (Ranges::choice)
     SidechainTrigger, // from the song's beat, or from each note played (sidechain::kTriggers)
     SidechainOn,      // 1: on, 0: off (its settings kept for when it comes back on)
+    Enhance,          // Enhance's amount (Soundgoodizer's knob)
+    EnhanceMode,      // its setting: Enhance::kModeNames (Ranges::choice)
+    EnhanceOn,        // 1: on, 0: off (as the sidechain's)
     Count,
 };
 inline constexpr int kMacros = static_cast<int>(Macro::Count);

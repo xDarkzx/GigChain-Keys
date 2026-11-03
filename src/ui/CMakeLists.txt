@@ -30,6 +30,7 @@ qt_add_qml_module(gigchain_ui
         cpp/SingleInstance.h cpp/SingleInstance.cpp
         cpp/EditorService.h cpp/EditorService.cpp
         cpp/EffectWindows.h cpp/EffectWindows.cpp
+        cpp/InstrumentWindows.h cpp/InstrumentWindows.cpp
         cpp/MasterBus.h cpp/MasterBus.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
         cpp/PluginIcons.h cpp/PluginIcons.cpp
@@ -44,6 +45,8 @@ qt_add_qml_module(gigchain_ui
         PayloadDropArea.qml
         PluginBrowser.qml
         PluginArea.qml
+        InstrumentWindow.qml
+        InstrumentWindowList.qml
         ChannelStrip.qml
         Mixer.qml
         PanKnob.qml
@@ -117,6 +120,7 @@ qt_add_qml_module(gigchain_ui
         BuiltinPill.qml
         BuiltinLayerRow.qml
         SidechainCard.qml
+        EnhanceButton.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/layout-grid.svg
@@ -144,6 +148,9 @@ qt_add_qml_module(gigchain_ui
         icons/undo.svg
         icons/guitar-pick.svg
         icons/keyboard.svg
+        icons/link.svg
+        icons/pin.svg
+        icons/app-window.svg
         icons/microphone.svg
         icons/music.svg
         icons/piano.svg

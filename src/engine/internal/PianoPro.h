@@ -50,6 +50,9 @@ enum class Macro : uint8_t
     SidechainCurve,
     SidechainTrigger,
     SidechainOn,
+    Enhance,     // as Saw Stack Pro's: the amount, the setting (A-D), on or off
+    EnhanceMode,
+    EnhanceOn,
     Count,
 };
 inline constexpr int kMacros = static_cast<int>(Macro::Count);

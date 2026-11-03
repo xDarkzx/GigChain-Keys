@@ -60,6 +60,7 @@ add_library(gigchain_engine STATIC
     internal/SawStack.cpp
     internal/SawStackNode.h
     internal/SawStackNode.cpp
+    internal/Enhance.h
     internal/FxChain.h
     internal/FxChain.cpp
     internal/Sfz.h

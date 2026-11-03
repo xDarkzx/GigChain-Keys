@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/engine/IPluginEditor.h"
 
 #include <algorithm>
 #include <array>
@@ -10,6 +11,47 @@
 #include <vector>
 
 namespace gigchain::test {
+
+// A plugin's window that draws nothing, counted while it lives: how many of
+// each channel's plugin windows are open, and the most ever open at once.
+class SpyEditor final : public engine::IPluginEditor
+{
+public:
+    SpyEditor(QString channel, std::map<QString, int>& open, std::map<QString, int>& most)
+        : m_channel(std::move(channel)), m_open(open), m_most(most)
+    {
+        const int now = ++m_open[m_channel];
+        m_most[m_channel] = std::max(m_most[m_channel], now);
+    }
+    ~SpyEditor() override { --m_open[m_channel]; }
+    SpyEditor(const SpyEditor&) = delete;
+    SpyEditor& operator=(const SpyEditor&) = delete;
+    SpyEditor(SpyEditor&&) = delete;
+    SpyEditor& operator=(SpyEditor&&) = delete;
+
+    [[nodiscard]] QString title() const override { return m_channel; }
+    [[nodiscard]] QSize preferredSize() const override { return {640, 400}; }
+    [[nodiscard]] bool isAttached() const override { return m_attached; }
+    core::Result<void> attach(engine::NativeParent) override
+    {
+        m_attached = true;
+        return {};
+    }
+    void detach() override { m_attached = false; }
+    void setFitter(Fitter fitter) override { m_fitter = std::move(fitter); }
+    void setContentScale(double) override {}
+    void updateGeometry() override
+    {
+        if (m_fitter) m_fitter(preferredSize());
+    }
+
+private:
+    QString m_channel;
+    std::map<QString, int>& m_open;
+    std::map<QString, int>& m_most;
+    bool m_attached = false;
+    Fitter m_fitter;
+};
 
 // An IEngine that records what the UI asked of it.
 class SpyEngine final : public engine::IEngine
@@ -172,9 +214,13 @@ public:
     core::Result<std::unique_ptr<engine::IPluginEditor>> createEditor(const core::ChannelId& id) override
     {
         editorRequests.push_back(id.value());
+        if (editorsWithWindows) return std::unique_ptr<engine::IPluginEditor>(std::make_unique<SpyEditor>(id.value(), openEditors, mostEditors));
         return std::unique_ptr<engine::IPluginEditor>();
     }
     std::vector<QString> editorRequests;
+    bool editorsWithWindows = false;     // instruments have windows (SpyEditor), counted:
+    std::map<QString, int> openEditors;  // by channel id, now
+    std::map<QString, int> mostEditors;  // by channel id, the most at once
     std::vector<std::pair<QString, int>> effectEditorRequests;
     core::Result<std::unique_ptr<engine::IPluginEditor>> createEffectEditor(const core::ChannelId& id, int effect) override
     {

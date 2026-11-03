@@ -34,6 +34,9 @@ class PluginEditorHost : public QQuickItem
     Q_PROPERTY(bool hasEditor READ hasEditor NOTIFY editorChanged)
     Q_PROPERTY(QString title READ title NOTIFY editorChanged)
     Q_PROPERTY(QString emptyReason READ emptyReason NOTIFY editorChanged)
+    // The plugin's own size, in the screen's units (empty: none open): a
+    // window of its own takes this size, as DAWs size plugin windows.
+    Q_PROPERTY(QSize editorSize READ editorSize NOTIFY editorSizeChanged)
 
 public:
     explicit PluginEditorHost(QQuickItem* parent = nullptr);
@@ -50,11 +53,13 @@ public:
     [[nodiscard]] bool hasEditor() const { return m_editor != nullptr; }
     [[nodiscard]] QString title() const { return m_editor ? m_editor->title() : QString(); }
     [[nodiscard]] QString emptyReason() const;
+    [[nodiscard]] QSize editorSize() const { return m_editorSize; }
 
 signals:
     void serviceChanged();
     void suspendedChanged();
     void editorChanged();
+    void editorSizeChanged();
 
 protected:
     void geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry) override;
@@ -63,6 +68,10 @@ protected:
 private:
     void rebuild();
     void teardown();
+    // Its instrument went to a window of its own (closed here at once, before
+    // that window opens it), or came back.
+    void elsewhereChanged();
+    void setEditorSize(QSize size);
     void place();
     void updateVisibility();
     // The window side of VstView::resizeView: the size the window takes for
@@ -77,6 +86,7 @@ private:
     std::unique_ptr<engine::IPluginEditor> m_editor;
     QPointer<QWindow> m_window; // the plugin draws here; Qt-owned by the main window
     QSize m_windowSize;         // the window's size, in the screen's units
+    QSize m_editorSize;         // the plugin's own size, in the screen's units
     // Every frame the scene changes (afterAnimating) the window follows its
     // item: ancestors move it without a geometry change (splitter drags).
     QMetaObject::Connection m_frameConnection;

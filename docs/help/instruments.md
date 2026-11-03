@@ -47,6 +47,23 @@ and the FM piano plays meanwhile. **Tone, Resonance, Attack, Release** and
 **Width** shape it; **Reverb, Delay, OTT** and **Tape** (wobble, warmth and
 hiss) finish it.
 
+### Enhance
+
+Both have **Enhance** next to the OTT: one knob that makes a sound fuller
+and more finished, the way FL Studio's Soundgoodizer does. Click it to
+switch it on and open its dial. Its four settings:
+
+- **A:** tighter, mono lows, a little more width in the middle, and brighter
+  highs. Light compression and saturation.
+- **B:** mostly warmth and grit (saturation on the lows and highs).
+- **C:** every band compressed, with the middle pushed forward. Good on keys
+  and strings.
+- **D:** one compressor into a limiter, to glue any sound together.
+
+**Amount** blends from the sound as it was to the full effect. Enhance keeps
+the sound at the same volume, so it gets fuller without getting louder. To
+switch it off, click the light in its dial.
+
 ### The sidechain
 
 Both have the pumping of a dance track built in, on the **Sidechain** card:
@@ -101,6 +118,37 @@ song.
 - Right-click one to **Add to favourites** (kept at the top), **Rate it**, or
   **Hide from list** (bring hidden ones back in **Settings > Plugins**).
 - **Details** shows the maker, version, where it is installed and its website.
+
+## An instrument on a second screen
+
+The instrument's window can leave the main window, so you can drag it to a
+second screen (or anywhere on the first):
+
+- **Detach:** click **Detach** above the instrument in the **Instrument**
+  tab, or press **Ctrl+Shift+D**. The instrument moves into a window of its
+  own; drag it where you want it, and maximise it if you like.
+- **Reattach:** click **Reattach** in that window, or press **Ctrl+Shift+D**
+  again. It goes back into the Instrument tab. Closing the window does the same.
+
+The bar at the top of the window:
+
+- **Link** (lit): the window follows the channel you select, as the
+  Instrument tab does, so one screen can always show the instrument you are
+  playing. Switch it off and the window stays on its instrument.
+- **MIDI Learn**, as in the Instrument tab.
+- **The pin** keeps the window above every other window.
+
+For more than one, right-click a channel strip and choose **Open … in its own
+window**: each instrument can have a window of its own, on any screen.
+
+An instrument shows in one place at a time (most plugins can only draw one
+window). While it is in a window, the Instrument tab says so, with **Show
+window** and **Reattach**.
+
+The window that follows the channel you select is remembered: close GigChain
+Keys with it detached and it opens again where you left it, on the same
+screen and at the same size. If that screen isn't plugged in, it opens over
+the main window instead.
 
 ## The same instrument in several songs
 

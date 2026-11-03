@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Enhance.h"
 #include "SawStackDsp.h"
 #include "SawStackFx.h"
 #include "SawStackTypes.h"
@@ -11,7 +12,7 @@ namespace gigchain::engine::sawstack {
 
 // The effects every one of the app's own instruments (Saw Stack Pro, Piano
 // Pro) finishes its sound with, in the order producers use: level, the main
-// filter, drive, EQ, chorus, OTT, width, tape, echo, reverb, then the
+// filter, drive, EQ, chorus, OTT, Enhance, width, tape, echo, reverb, then the
 // sidechain over all of it and a soft ceiling. What the type fixes comes
 // with setDesign(), what the knobs set with setKnobs(). Audio thread:
 // process() never allocates, locks or logs.
@@ -23,6 +24,8 @@ public:
         float masterGain = 1.0F;
         double cutoffHz = 20000.0, q = 0.7071; // the main 24 dB/octave low-pass
         double reverb = 0.0, delay = 0.0, ott = 0.0, width = 0.0, tape = 0.0;
+        double enhance = 0.0; // Enhance's amount (0: off)
+        int enhanceMode = 0;  // its setting, A-D (0-3)
         double sidechain = 0.0; // how far it ducks (0: no ducking)
         int curve = 0;          // sidechain::kCurves
         double beats = 1.0, slope = 0.5;
@@ -57,6 +60,7 @@ private:
     std::array<EqBand, 3> m_eq{};
     Chorus m_chorus;
     Ott m_ott;
+    Enhance m_enhance;
     Dimension m_dimension;
     Tape m_tape;
     PingPong m_delay;

@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GigChain Keys: a free live rig for keyboard players</title>
+<meta name="description" content="Free, open-source live rig for keyboard players: your VST sounds, setlists and chord charts, a stage-ready Perform mode and practice. A free MainStage alternative for Windows, macOS and Linux.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="GigChain Keys: a free live rig for keyboard players">
+<meta property="og:description" content="Your sounds, setlist, chord charts and practice in one free app. Windows, macOS and Linux.">
+<meta property="og:url" content="https://xdarkzx.github.io/GigChain-Keys/">
+<meta property="og:image" content="https://xdarkzx.github.io/GigChain-Keys/images/edit.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="images/app-icon.png">
+<style>
+  :root {
+    --bg: #141414;
+    --panel: #1d1d1e;
+    --raised: #29292b;
+    --border: #3a3a3d;
+    --text: #e8e8ea;
+    --dim: #a0a3a9;
+    --accent: #4aa3ff;
+    --accent-dark: #2f7fd6;
+    --amber: #ffb43a;
+    --green: #43d36b;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  a { color: var(--accent); }
+  img { max-width: 100%; height: auto; display: block; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(20, 20, 20, 0.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+  }
+  header .wrap { display: flex; align-items: center; gap: 16px; height: 56px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 700; }
+  .brand img { width: 28px; height: 28px; }
+  nav { margin-left: auto; display: flex; gap: 18px; font-size: 15px; }
+  nav a { color: var(--dim); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+
+  .hero { text-align: center; padding: 56px 0 32px; }
+  .hero h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.15; margin: 0 0 14px; }
+  .hero p.lead { font-size: clamp(17px, 2.2vw, 20px); color: var(--dim); max-width: 680px; margin: 0 auto 28px; }
+  .tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 28px; padding: 0; list-style: none; }
+  .tags li { border: 1px solid var(--border); border-radius: 999px; padding: 3px 12px; font-size: 14px; color: var(--dim); }
+
+  .btn {
+    display: inline-block; text-decoration: none; font-weight: 700;
+    border-radius: 10px; padding: 14px 26px; font-size: 18px;
+    background: var(--accent); color: #06121f;
+    box-shadow: 0 6px 24px rgba(74, 163, 255, 0.25);
+  }
+  .btn:hover { background: #6db6ff; }
+  .btn small { display: block; font-weight: 500; font-size: 13px; opacity: 0.8; }
+  .other { margin-top: 14px; font-size: 15px; color: var(--dim); }
+  .alpha { margin: 22px auto 0; max-width: 620px; font-size: 14px; color: var(--dim); }
+  .alpha b { color: var(--amber); }
+
+  .shot { margin: 24px auto 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+
+  section { padding: 56px 0; border-top: 1px solid #222; scroll-margin-top: 56px; }
+  section h2 { font-size: clamp(24px, 3.5vw, 32px); margin: 0 0 8px; text-align: center; }
+  section p.sub { text-align: center; color: var(--dim); margin: 0 auto 32px; max-width: 640px; }
+
+  .video { position: relative; aspect-ratio: 16 / 9; max-width: 880px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: #000; }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .videos { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin: 18px auto 0; max-width: 880px; padding: 0; list-style: none; font-size: 15px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--dim); font-size: 15px; }
+
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 24px; }
+  figure { margin: 0; }
+  figure img { border: 1px solid var(--border); border-radius: 10px; }
+  figcaption { color: var(--dim); font-size: 14px; margin-top: 8px; text-align: center; }
+
+  .downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .dl { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .dl.mine { border-color: var(--accent); }
+  .dl h3 { margin: 0 0 2px; }
+  .dl .req { color: var(--dim); font-size: 14px; margin: 0 0 14px; }
+  .dl a.file {
+    display: block; text-decoration: none; color: var(--text);
+    background: var(--raised); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 8px; font-weight: 600;
+  }
+  .dl a.file:hover { border-color: var(--accent); }
+  .dl a.file span { display: block; font-weight: 400; font-size: 13px; color: var(--dim); }
+  .dl details { margin-top: 10px; font-size: 14px; color: var(--dim); }
+  .dl summary { cursor: pointer; color: var(--text); }
+  code { background: #0d0d0e; border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-size: 13px; }
+  .note { text-align: center; color: var(--dim); font-size: 14px; margin-top: 24px; }
+
+  .community { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .community a { text-decoration: none; font-weight: 600; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 10px; padding: 12px 20px; }
+  .community a:hover { border-color: var(--accent); }
+
+  footer { border-top: 1px solid #222; padding: 28px 0 40px; color: var(--dim); font-size: 13px; text-align: center; }
+  footer p { margin: 6px 0; }
+
+  @media (max-width: 640px) {
+    nav a.hide-small { display: none; }
+    .hero { padding-top: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="images/app-icon.png" alt="">GigChain Keys</a>
+    <nav>
+      <a href="#watch" class="hide-small">Watch</a>
+      <a href="#features" class="hide-small">Features</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/xDarkzx/GigChain-Keys">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <h1>Your whole keyboard rig on stage</h1>
+    <p class="lead">Your sounds, setlist, chord charts and practice in one free app.
+      A free alternative to MainStage, for Windows, Mac and Linux.</p>
+    <ul class="tags">
+      <li>Free</li><li>No ads</li><li>No licence keys</li><li>Open source (GPLv3)</li><li>Plays your VST plugins</li>
+    </ul>
+    <a class="btn" id="main-download" href="https://github.com/xDarkzx/GigChain-Keys/releases/latest">
+      Download<small id="main-detail">Windows · macOS · Linux</small>
+    </a>
+    <p class="other" id="other-systems"><a href="#download">Other systems and versions</a></p>
+    <p class="alpha"><b>Public alpha.</b> It works and is played on real rigs, but try it at home and in
+      rehearsal before you trust it on a gig, and
+      <a href="https://github.com/xDarkzx/GigChain-Keys/issues/new/choose">tell us what breaks</a>.</p>
+    <div class="shot">
+      <img src="images/edit.png" width="1600" height="1000"
+           alt="GigChain Keys: a song's chord chart, its sections, the mixer and the keyboard">
+    </div>
+  </div>
+
+  <section id="watch">
+    <div class="wrap">
+      <h2>See it in two minutes</h2>
+      <p class="sub">The whole app, start to finish.</p>
+      <div class="video">
+        <iframe src="https://www.youtube-nocookie.com/embed/bb21ucoV7Og" title="GigChain Keys: the overview"
+                loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      </div>
+      <ul class="videos">
+        <li><a href="https://youtu.be/TWUITn0vhzE">Loop station</a></li>
+        <li><a href="https://youtu.be/JhIZuH2CdhM">Chord charts and lyrics</a></li>
+        <li><a href="https://youtu.be/UxjiNPtMoQw">The 10-minute warm-up</a></li>
+        <li><a href="https://youtu.be/GbwlgxBf-Es">Layers, splits and effects</a></li>
+        <li><a href="https://youtu.be/Wopcyn-vZmU">Sounds on your pads</a></li>
+        <li><a href="https://youtu.be/Jzs7xDTOtDw">Saw Stack Pro</a></li>
+        <li><a href="https://youtu.be/adO6-4LwoiI">Piano Pro</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Everything a keys player needs on stage</h2>
+      <p class="sub">Load your sounds once, and the whole night is ready.</p>
+      <div class="grid">
+        <div class="card"><h3>Plays your plugins</h3><p>Your VST3 and VST2 instruments and effects. Every sound in the setlist is loaded up front, so changing songs is instant and held notes ring on.</p></div>
+        <div class="card"><h3>Setlists</h3><p>All the night's songs in one file, in order, each with its own sounds. Change songs from the keyboard, a pedal or a pad.</p></div>
+        <div class="card"><h3>Chord charts</h3><p>Paste a song from any chord website and each chord lands on its word. Big enough to read from the keys.</p></div>
+        <div class="card"><h3>Splits and layers</h3><p>Key zones, transpose and velocity layers. Each part of the song (verse, chorus, solo) can switch which sounds play.</p></div>
+        <div class="card"><h3>Perform mode</h3><p>Full screen for the stage and touch screens: the chart, big Play, Next part and Loop part buttons that land on the bar line.</p></div>
+        <div class="card"><h3>Its own instruments</h3><p>Saw Stack Pro (EDM supersaws) and Piano Pro (a real recorded grand and upright), with sidechain pumping built in. No plugin to buy.</p></div>
+        <div class="card"><h3>Practice and warm-ups</h3><p>The song's chords fall onto a keyboard, YouTube-piano style. Daily warm-ups at your level, every run scored.</p></div>
+        <div class="card"><h3>Loop station</h3><p>Record a loop of any instrument in time with the song and layer on top, street-performer style.</p></div>
+        <div class="card"><h3>Built not to fail</h3><p>Plugins are scanned in a separate process, a crashing plugin is switched off, and an unplugged keyboard comes back by itself.</p></div>
+      </div>
+      <div class="pair">
+        <figure>
+          <img src="images/perform.png" width="800" height="800" loading="lazy"
+               alt="Perform mode: big Play, Next part and Loop part buttons, the song's parts as tiles and the chart">
+          <figcaption>Perform mode: the song plays along its parts.</figcaption>
+        </figure>
+        <figure>
+          <img src="images/practice.png" width="1600" height="1000" loading="lazy"
+               alt="Practice mode: the chords falling onto a keyboard">
+          <figcaption>Practice: the chords fall onto the keys.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <h2>Download</h2>
+      <p class="sub" id="version-line">Free, for Windows, macOS and Linux.</p>
+      <div class="downloads">
+        <div class="dl" data-os="windows">
+          <h3>Windows</h3>
+          <p class="req">Windows 10 or 11, 64-bit</p>
+          <a class="file" data-asset="win-setup" href="https://github.com/xDarkzx/GigChain-Keys/releases/latest">Installer<span>Recommended</span></a>
+          <a class="file" data-asset="win-zip" href="https://github.com/xDarkzx/GigChain-Keys/releases/latest">Portable zip<span>No install: unzip anywhere, even a USB stick</span></a>
+          <details><summary>"Windows protected your PC"?</summary>
+            <p>The alpha isn't code-signed yet. Click <b>More info</b>, then <b>Run anyway</b>. This happens once.</p></details>
+        </div>
+        <div class="dl" data-os="mac">
+          <h3>macOS</h3>
+          <p class="req">macOS 13 or later, Apple Silicon (M1 or newer)</p>
+          <a class="file" data-asset="mac-dmg" href="https://github.com/xDarkzx/GigChain-Keys/releases/latest">Disk image<span>Drag GigChain Keys to Applications</span></a>
+          <details><summary>macOS won't open it?</summary>
+            <p>The alpha isn't notarized by Apple yet. Open it once, then go to <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.</p></details>
+        </div>
+        <div class="dl" data-os="linux">
+          <h3>Linux</h3>
+          <p class="req">64-bit: Ubuntu 22.04+, Fedora, Arch, Mint…</p>
+          <a class="file" data-asset="appimage" href="https://github.com/xDarkzx/GigChain-Keys/releases/latest">AppImage<span>One file for most distributions</span></a>
+          <a class="file" data-asset="deb" href="https://github.com/xDarkzx/GigChain-Keys/releases/latest">.deb<span>Ubuntu, Debian, Mint, Pop!_OS</span></a>
+          <details><summary>How to run the AppImage</summary>
+            <p>Make it executable, then run it: <code>chmod +x GigChainKeys-*.AppImage</code>. If it says FUSE is missing, install <code>libfuse2</code>.</p></details>
+        </div>
+      </div>
+      <p class="note">You'll also want a MIDI keyboard. Two instruments come built in, and
+        <a href="https://github.com/xDarkzx/GigChain-Keys#what-you-need">free ones</a> cover pianos, synths and pads.
+        Every release lists checksums and notes on the
+        <a href="https://github.com/xDarkzx/GigChain-Keys/releases">releases page</a>.</p>
+    </div>
+  </section>
+
+  <section id="community">
+    <div class="wrap">
+      <h2>Made with players</h2>
+      <p class="sub">Your feedback decides what gets fixed and built next.</p>
+      <div class="community">
+        <a href="https://discord.gg/BGn8Ujh37m">Join the Discord</a>
+        <a href="https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md">Getting started</a>
+        <a href="https://github.com/xDarkzx/GigChain-Keys/issues/new/choose">Report a bug or idea</a>
+        <a href="https://github.com/xDarkzx/GigChain-Keys">Star it on GitHub</a>
+        <a href="https://github.com/sponsors/xDarkzx">♥ Sponsor</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>GigChain Keys is free software under the GNU GPL, version 3 or later.</p>
+    <p>VST is a registered trademark of Steinberg Media Technologies GmbH. MainStage is a trademark of Apple Inc.
+      GigChain Keys is not affiliated with them.</p>
+  </div>
+</footer>
+
+<script>
+// Point every button at the latest release's own files, and lead with this
+// computer's system. Without the GitHub API (offline, rate limited) every
+// link still goes to the latest release's page.
+(function () {
+  var patterns = {
+    "win-setup": /-x64-setup\.exe$/,
+    "win-zip": /-x64-portable\.zip$/,
+    "mac-dmg": /-arm64\.dmg$/,
+    "appimage": /-x86_64\.AppImage$/,
+    "deb": /_amd64\.deb$/
+  };
+  var main = { windows: "win-setup", mac: "mac-dmg", linux: "appimage" };
+  var names = { windows: "Windows", mac: "macOS", linux: "Linux" };
+
+  function detectOs() {
+    var ua = navigator.userAgent || "";
+    if (/Android|iPhone|iPad|iPod/i.test(ua)) return null;
+    var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || ua;
+    if (/Win/i.test(platform)) return "windows";
+    if (/Mac/i.test(platform)) return "mac";
+    if (/Linux|X11/i.test(platform)) return "linux";
+    return null;
+  }
+
+  var os = detectOs();
+  var button = document.getElementById("main-download");
+  var detail = document.getElementById("main-detail");
+  if (os) {
+    button.firstChild.nodeValue = "Download for " + names[os];
+    var card = document.querySelector('.dl[data-os="' + os + '"]');
+    if (card) card.classList.add("mine");
+  } else {
+    // A phone or tablet: the app is for computers, so show every system.
+    button.href = "#download";
+    detail.textContent = "For Windows, macOS and Linux computers";
+  }
+
+  function megabytes(bytes) { return Math.round(bytes / 1048576) + " MB"; }
+
+  fetch("https://api.github.com/repos/xDarkzx/GigChain-Keys/releases/latest")
+    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function (release) {
+      var found = {};
+      (release.assets || []).forEach(function (asset) {
+        Object.keys(patterns).forEach(function (key) {
+          if (patterns[key].test(asset.name)) found[key] = asset;
+        });
+      });
+      Object.keys(found).forEach(function (key) {
+        document.querySelectorAll('[data-asset="' + key + '"]').forEach(function (link) {
+          link.href = found[key].browser_download_url;
+          link.title = found[key].name + " (" + megabytes(found[key].size) + ")";
+        });
+      });
+      var version = (release.tag_name || "").replace(/^v/, "");
+      document.getElementById("version-line").textContent =
+        "Version " + version + ", free, for Windows, macOS and Linux.";
+      if (os && found[main[os]]) {
+        button.href = found[main[os]].browser_download_url;
+        detail.textContent = "Version " + version + " · " + megabytes(found[main[os]].size) + " · free";
+      }
+    })
+    .catch(function (e) { console.warn("Latest release not read, the links go to its page:", e); });
+})();
+</script>
+</body>
+</html>

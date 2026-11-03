@@ -8,6 +8,29 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-03 (alpha)
+
+Your instrument on a second screen, and one knob for a bigger sound.
+
+### Added
+
+- **Instruments on a second screen:** **Detach** takes the instrument out of
+  the main window into a window of its own, to drag to another screen;
+  **Reattach** (or closing it) puts it back. Ctrl+Shift+D does both. With
+  **Link** lit, the window follows the channel you select; with it off, the
+  window stays on its instrument, and each instrument can have its own window
+  (right-click a channel strip: **Open … in its own window**). A pin keeps
+  it above other windows. The window opens where you left it next time,
+  unless that screen is gone. Works with VST3 and VST2 plugins, Saw Stack Pro
+  and Piano Pro.
+- **Enhance in Saw Stack Pro and Piano Pro,** next to the OTT: one knob that
+  makes a sound fuller and more finished, the way FL Studio's Soundgoodizer
+  does. Click it to open its dial, then choose one of four settings (**A**
+  punchy and bright with mono lows, **B** warm and gritty, **C** compressed
+  with the middle forward, **D** a compressor into a limiter) and set how much.
+  It keeps the sound at the same volume. It starts off, so songs you have
+  already made sound exactly as before.
+
 ## [0.6.0] - 2026-10-23 (alpha)
 
 Two instruments of its own, so the sounds of EDM need no paid plugin.

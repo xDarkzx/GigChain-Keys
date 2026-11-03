@@ -13,7 +13,10 @@ Rectangle {
     required property DocumentController doc
     required property EngineStatus engineStatus
     required property EditorService editorService
+    required property InstrumentWindows instrumentWindows
     property bool suspended: false
+    // The instrument is in a window of its own (InstrumentWindows): not here.
+    readonly property bool detached: editorService.shownElsewhere || instrumentWindows.linkedOpen
 
     color: Theme.background
 
@@ -31,7 +34,7 @@ Rectangle {
             objectName: "pluginLearnBar"
             Layout.fillWidth: true
             Layout.margins: Theme.spacing
-            visible: editorHost.hasEditor || area.editorService.builtinSelected
+            visible: (editorHost.hasEditor || area.editorService.builtinSelected) && !area.detached
             spacing: Theme.spacing
             StageButton {
                 objectName: "pluginMidiLearn"
@@ -65,6 +68,15 @@ Rectangle {
                 tip: qsTr("Give this song a copy of its own, to change it without changing the other songs (uses more memory)")
                 onClicked: area.doc.unshareInstrument(area.doc.selectedChannel)
             }
+            // Into a window of its own, to drag to another screen (MainStage's
+            // and Gig Performer's plug-in windows).
+            StageButton {
+                objectName: "instrumentPopOut"
+                text: qsTr("Detach")
+                iconSource: "icons/app-window.svg"
+                tip: qsTr("Detach the instrument into a window of its own, to drag onto another screen (Ctrl+Shift+D)")
+                onClicked: area.instrumentWindows.popOut()
+            }
         }
 
         Item {
@@ -74,22 +86,61 @@ Rectangle {
             // The app's own instruments: their windows are the app's.
             SawStackPanel {
                 anchors.fill: parent
-                visible: area.editorService.builtinId === "builtin:saw-stack-pro"
+                visible: area.editorService.builtinId === "builtin:saw-stack-pro" && !area.detached
                 service: area.editorService
             }
             PianoProPanel {
                 anchors.fill: parent
-                visible: area.editorService.builtinId === "builtin:piano-pro"
+                visible: area.editorService.builtinId === "builtin:piano-pro" && !area.detached
                 service: area.editorService
             }
 
             // Shown only where no plugin window covers the area.
             Label {
                 anchors.centerIn: parent
-                visible: !editorHost.hasEditor && !area.editorService.builtinSelected
+                visible: !editorHost.hasEditor && !area.editorService.builtinSelected && !area.detached
                 text: editorHost.emptyReason
                 color: Theme.textDim
                 font.pixelSize: Theme.headerFontSize
+            }
+
+            // In a window of its own: say so, with the way to it and back.
+            Column {
+                objectName: "instrumentDetached"
+                anchors.centerIn: parent
+                visible: area.detached
+                spacing: Theme.spacingLarge
+                Label {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: area.editorService.shownElsewhere && area.editorService.channelName !== ""
+                          ? qsTr("%1 is in its own window").arg(area.editorService.channelName)
+                          : qsTr("The instrument is in its own window")
+                    color: Theme.text
+                    font.pixelSize: Theme.headerFontSize
+                }
+                Label {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: qsTr("Drag that window to any screen. It follows the channel you select, unless its Link is off.")
+                    color: Theme.textDim
+                }
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: Theme.spacing
+                    StageButton {
+                        objectName: "instrumentShowWindow"
+                        text: qsTr("Show window")
+                        iconSource: "icons/app-window.svg"
+                        tone: "accent"
+                        onClicked: area.editorService.shownElsewhere ? area.instrumentWindows.showWindowOf(area.editorService)
+                                                                     : area.instrumentWindows.popOut()
+                    }
+                    StageButton {
+                        objectName: "instrumentBringBack"
+                        text: qsTr("Reattach")
+                        onClicked: area.editorService.shownElsewhere ? area.instrumentWindows.bringBack(area.editorService)
+                                                                     : area.instrumentWindows.toggle()
+                    }
+                }
             }
 
             PluginEditorHost {
@@ -97,7 +148,7 @@ Rectangle {
                 objectName: "pluginEditorHost"
                 anchors.fill: parent
                 service: area.editorService
-                suspended: area.suspended
+                suspended: area.suspended || area.detached
             }
 
         }
