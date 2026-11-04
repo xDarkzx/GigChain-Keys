@@ -19,6 +19,9 @@ ApplicationWindow {
     property InstrumentWindows instrumentWindows: null
     property MasterBus masterBus: null
     property MasterBus auxBus: null
+    property SustainPadsController sustainPads: null
+    property MasterBus padsBus: null
+    property SettingsController settings: null
     property LoopController loops: null
     property bool editable: true
     property Window owner: null
@@ -111,6 +114,9 @@ ApplicationWindow {
         instrumentWindows: win.instrumentWindows
         masterBus: win.masterBus
         auxBus: win.auxBus
+        sustainPads: win.sustainPads
+        padsBus: win.padsBus
+        settings: win.settings
         loops: win.loops
     }
 }

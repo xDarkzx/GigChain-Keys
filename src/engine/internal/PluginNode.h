@@ -85,6 +85,13 @@ public:
     virtual core::Result<void> restoreEncodedState(const QByteArray& bytes) = 0;
     // Main thread: true once after the plugin said its settings changed.
     virtual bool takeEdited() = 0;
+    // Main thread, polled: true once after a new sound (a preset) was chosen
+    // in the plugin's window: notes it holds may now play the old sound, or
+    // none (Sustain Pads press theirs again). A knob turned is not one.
+    virtual bool takeSoundChanged() { return false; }
+    // Parameters moved together this often between two polls (~30 a
+    // second) are a preset loading, not a knob turned.
+    static constexpr uint32_t kPresetBurst = 16;
 
     [[nodiscard]] virtual QString bundlePath() const = 0;
     [[nodiscard]] virtual QString name() const = 0;

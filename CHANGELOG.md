@@ -15,6 +15,24 @@ Downloads for every version are on the
   left or right side (the same strips at the window's full height, so the
   faders are longer), or in a window of its own for another screen
   (Ctrl+Shift+M). It is remembered, in Edit and Perform.
+- **Pads Pro,** a third built-in instrument: lush worship pads in the spirit
+  of the classic analog synths (*Warm, Lush, Dark, Air, Shimmer, Choir,
+  Strings* and *Organ*), all equally loud. A square moves the tone and the
+  shimmer; Motion, Bloom, Tail, Width, Touch and Reverb shape it.
+- **Sustain Pads,** like Sunday Keys' Tonic: a pad held on one key under the
+  song. Tap a key to play it, tap another to fade over to it, tap it again to
+  fade it out. Choose the pad, the filter and shimmer, motion, fade time and
+  octave, and let it follow each song's key. Its panel goes under the main
+  area or into a window of its own, from the toolbar's Sustain Pads button.
+  It has **its own channel strip** in the mixer: drag **your own VST
+  instrument** onto it to play the pad (a new sound chosen in its window plays
+  at once on the held chord, and is remembered), add your **reverbs, delays
+  and EQs** in its FX, with its fader, meter and mute. Panic stops it too.
+
+### Fixed
+
+- A song's key taken from a pasted or imported chart now updates everything
+  that shows it at once.
 
 ## [0.7.0] - 2026-11-03 (alpha)
 

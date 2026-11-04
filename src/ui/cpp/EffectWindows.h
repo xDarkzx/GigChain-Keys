@@ -47,11 +47,17 @@ public:
     // no window; why is shown in the banner and logged.
     Q_INVOKABLE bool open(int channel, int effect, QWindow* owner);
     // The buses with effects of their own (outside the setlist).
-    enum class Bus : int { Master = 0, Aux = 1 };
+    // (SustainPads: the instrument loaded into it; SustainPadsFx: its strip's effects.)
+    enum class Bus : int { Master = 0, Aux = 1, SustainPads = 2, SustainPadsFx = 3 };
     // The same for effect `effect` of a bus (`busSlots` as it is now).
     bool openBus(Bus bus, int effect, const std::vector<core::PluginSlot>& busSlots, QWindow* owner);
     // Closes a bus's windows whose effect is no longer there as it was.
     void sweepBus(Bus bus, const std::vector<core::PluginSlot>& busSlots);
+    // The window of the instrument loaded into Sustain Pads (`pluginId`,
+    // called `name`), opened or raised; false when it has none (said).
+    bool openSustainPads(const QString& pluginId, const QString& name, QWindow* owner);
+    // Closes it (another instrument was loaded, or Pads Pro again).
+    void closeSustainPads();
     Q_INVOKABLE void closeAll();
 
 signals:

@@ -97,6 +97,8 @@ public:
     // settings (see ComponentHandler); loading and restoring can report
     // changes too, so call it once after those to start clean.
     bool takeEdited() override;
+    // Main thread: true once after a preset was chosen in its window (see PluginNode).
+    bool takeSoundChanged() override;
 
     [[nodiscard]] QString bundlePath() const override;
     [[nodiscard]] QString name() const override;

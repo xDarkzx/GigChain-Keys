@@ -8,6 +8,7 @@
 #include "gigchain/engine/MidiSetup.h"
 #include "gigchain/engine/Notice.h"
 
+#include <QByteArray>
 #include <QSize>
 #include <QStringList>
 
@@ -298,6 +299,35 @@ public:
     virtual void seekBackingTrack(double seconds) = 0;
     virtual void setBackingTrackVolume(double volumeDb) = 0;
     [[nodiscard]] virtual BackingTrackState backingTrack() const = 0;
+
+    // ---- Sustain Pads (Sunday Keys' Tonic): a pad held on one key under the song
+    // Applies at once; switching on or off, or to another key or pad, fades
+    // over the settings' fade time.
+    virtual void setSustainPads(const SustainPadsSettings& settings) = 0;
+    // Its meter: what it played since the last call.
+    [[nodiscard]] virtual LevelReading sustainPadsLevel() = 0;
+    // A VST instrument holds the chord instead of Pads Pro: `pluginId` (""
+    // = Pads Pro again) with its settings `state` (as
+    // sustainPadsInstrumentState gave them; empty: as it loads). Fails with
+    // the cause (not installed, not an instrument, switched off after a
+    // crash) and then keeps what it had; settings it cannot take are
+    // reported through poll(), the instrument kept.
+    virtual core::Result<void> setSustainPadsInstrument(const QString& pluginId, const QByteArray& state) = 0;
+    // Its settings now (the patch chosen in its window), for keeping; empty with Pads Pro.
+    [[nodiscard]] virtual core::Result<QByteArray> sustainPadsInstrumentState() const = 0;
+    // Its own window; nullptr when it has none (or with Pads Pro).
+    virtual core::Result<std::unique_ptr<IPluginEditor>> createSustainPadsEditor() = 0;
+    // True once after its settings changed in its window (a new sound, a
+    // knob): time to keep them. (A new sound also has the chord pressed
+    // again, by the engine itself.)
+    virtual bool takeSustainPadsEdits() = 0;
+    // Its strip's effects (a reverb, a delay, an EQ...), in order, after the
+    // pad and before its fader: kept with the rig, as the aux's. A
+    // switched-off effect is not loaded; problems come through poll().
+    virtual void setSustainPadsEffects(const std::vector<core::PluginSlot>& effects) = 0;
+    virtual std::vector<QString> storeSustainPadsEffectStates(std::vector<core::PluginSlot>& effects) = 0;
+    virtual bool takeSustainPadsEffectEdits() = 0;
+    virtual core::Result<std::unique_ptr<IPluginEditor>> createSustainPadsEffectEditor(int effect) = 0;
 
     // ---- Knobs mapped to plugin parameters (MainStage's screen controls)
     // The parameters of a channel's instrument (target -1) or effect in the

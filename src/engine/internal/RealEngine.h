@@ -17,6 +17,7 @@
 #include "SafetyLimiter.h"
 #include "LoopStation.h"
 #include "SongTransport.h"
+#include "SustainPads.h"
 #include "PluginNode.h"
 
 #include "gigchain/core/PluginSharing.h"
@@ -164,6 +165,26 @@ public:
     void seekBackingTrack(double seconds) override;
     void setBackingTrackVolume(double volumeDb) override { m_trackGain.store(dbToGain(volumeDb), std::memory_order_relaxed); }
     [[nodiscard]] BackingTrackState backingTrack() const override;
+    void setSustainPads(const SustainPadsSettings& settings) override { m_sustainPads.set(settings); }
+    [[nodiscard]] LevelReading sustainPadsLevel() override { return m_sustainPads.level(); }
+    core::Result<void> setSustainPadsInstrument(const QString& pluginId, const QByteArray& state) override;
+    [[nodiscard]] core::Result<QByteArray> sustainPadsInstrumentState() const override;
+    core::Result<std::unique_ptr<IPluginEditor>> createSustainPadsEditor() override;
+    bool takeSustainPadsEdits() override { return std::exchange(m_sustainPadsEdited, false); }
+    void setSustainPadsEffects(const std::vector<core::PluginSlot>& effects) override
+    {
+        setBusEffects(m_padsFx, effects);
+        m_sustainPads.setEffects(busNodes(m_padsFx)); // (Sustain Pads play them, not the graph)
+    }
+    std::vector<QString> storeSustainPadsEffectStates(std::vector<core::PluginSlot>& effects) override
+    {
+        return storeBusEffectStates(m_padsFx, effects);
+    }
+    bool takeSustainPadsEffectEdits() override { return takeBusEdits(m_padsFx); }
+    core::Result<std::unique_ptr<IPluginEditor>> createSustainPadsEffectEditor(int effect) override
+    {
+        return createBusEffectEditor(m_padsFx, effect);
+    }
     [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId& id, int target) const override;
     std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId& id, int target) override;
     [[nodiscard]] double pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const override;
@@ -290,6 +311,7 @@ private:
     };
     EffectsBus m_master{.name = QStringLiteral("master"), .effects = {}, .nodes = {}, .edited = false};
     EffectsBus m_aux{.name = QStringLiteral("aux"), .effects = {}, .nodes = {}, .edited = false};
+    EffectsBus m_padsFx{.name = QStringLiteral("sustain pads"), .effects = {}, .nodes = {}, .edited = false};
     [[nodiscard]] static std::vector<QString> busKeys(const EffectsBus& bus);
     void setBusEffects(EffectsBus& bus, const std::vector<core::PluginSlot>& effects);
     static std::vector<QString> storeBusEffectStates(EffectsBus& bus, std::vector<core::PluginSlot>& effects);
@@ -355,6 +377,11 @@ private:
     std::atomic<int> m_timeNumerator{4};
     std::atomic<int> m_timeDenominator{4};
     Metronome m_click;
+    // Sustain Pads: under the song, prepared for the device (main thread,
+    // the audio thread not in it), played after the patch.
+    SustainPads m_sustainPads;
+    std::shared_ptr<PluginNode> m_sustainPadsNode; // its VST instrument (null: Pads Pro)
+    bool m_sustainPadsEdited = false;              // its settings changed in its window (to keep)
     // The song's sections: as set (main thread), as a timeline (to the audio
     // thread), and the play/stop/jump counting through them.
     SongSections m_sections;

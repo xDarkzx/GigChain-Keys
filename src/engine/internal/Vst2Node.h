@@ -65,6 +65,8 @@ public:
     [[nodiscard]] core::Result<QByteArray> saveEncodedState() const override;
     core::Result<void> restoreEncodedState(const QByteArray& bytes) override;
     bool takeEdited() override;
+    // Main thread: true once after a preset was chosen in its window (see PluginNode).
+    bool takeSoundChanged() override;
 
     [[nodiscard]] QString bundlePath() const override;
     [[nodiscard]] QString name() const override;

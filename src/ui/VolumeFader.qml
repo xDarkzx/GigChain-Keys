@@ -36,7 +36,7 @@ Item {
 
     // dB scale on the left
     Repeater {
-        model: [12, 6, 0, -6, -12, -24, -40, -60]
+        model: [12, 6, 0, -6, -12, -24, -40, -60].filter(db => db >= fader.minDb && db <= fader.maxDb) // (a shorter range: its own marks)
         delegate: Text {
             required property int modelData
             x: 0

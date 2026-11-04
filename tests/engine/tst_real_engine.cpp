@@ -960,6 +960,80 @@ private slots:
         engine.setClick(false, -60.0);
     }
 
+    // Sustain Pads play under the song, through the master fader, on their
+    // meter, and fade away when switched off.
+    void sustainPadsPlayThroughTheMasterFaderAndFadeAway()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.applyPatch(core::makePatch(u"Empty"_s)); // nothing else makes sound
+        engine.setMasterVolume(-60.0);                  // measurable, not heard
+        pump(engine, 100);
+        (void)engine.masterLevel();
+        (void)engine.sustainPadsLevel();
+        pump(engine, 300);
+        QCOMPARE(engine.masterLevel().peak, 0.0F);
+
+        SustainPadsSettings pads;
+        pads.active = true;
+        pads.fadeSeconds = 0.2;
+        pads.volumeDb = 0.0;
+        engine.setSustainPads(pads);
+        const float played = loudestUntilAbove(engine, [&engine] { return engine.sustainPadsLevel().peak; }, 0.01F);
+        QVERIFY2(played > 0.01F, qPrintable(QString::number(played)));
+        // In the mix at -60 dB: about a thousandth of what the pads played.
+        pump(engine, 300);
+        const float master = engine.masterLevel().peak;
+        QVERIFY2(master > 0.00001F && master < 0.002F, qPrintable(QString::number(master)));
+
+        pads.active = false;
+        engine.setSustainPads(pads);
+        QVERIFY(quietWithin(engine, [&engine] { return engine.masterLevel().peak; }, 1.0e-7F));
+    }
+
+    // An instrument loaded into Sustain Pads (here Saw Stack Pro, always
+    // there) holds the chord: it sounds, its settings can be kept and given
+    // back; one that is not installed is refused with why, and what played
+    // stays; "" is Pads Pro again.
+    void sustainPadsPlayAnInstrumentLoadedIntoThem()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.applyPatch(core::makePatch(u"Empty"_s));
+        engine.setMasterVolume(-60.0);
+        QCOMPARE(engine.sustainPadsInstrumentState().value_or(QByteArray{u"x"_s.toLatin1()}), QByteArray{}); // Pads Pro: nothing to keep
+
+        const auto loaded = engine.setSustainPadsInstrument(u"builtin:saw-stack-pro"_s, {});
+        QVERIFY2(loaded.has_value(), qPrintable(loaded ? QString() : loaded.error().message));
+        SustainPadsSettings pads;
+        pads.active = true;
+        pads.fadeSeconds = 0.2;
+        pads.volumeDb = 0.0;
+        engine.setSustainPads(pads);
+        const float played = loudestUntilAbove(engine, [&engine] { return engine.sustainPadsLevel().peak; }, 0.01F);
+        QVERIFY2(played > 0.01F, qPrintable(QString::number(played)));
+        const auto state = engine.sustainPadsInstrumentState();
+        QVERIFY(state.has_value() && !state->isEmpty());
+        // Loaded again with its settings: it takes them.
+        QVERIFY(engine.setSustainPadsInstrument(u"builtin:saw-stack-pro"_s, *state).has_value());
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Missing"_s));
+        const auto missing = engine.setSustainPadsInstrument(u"Z:/none/Missing.vst3"_s, {});
+        QVERIFY(!missing.has_value());
+        QVERIFY2(missing.error().message.contains(u"Missing"_s), qPrintable(missing.error().message));
+        QVERIFY(engine.sustainPadsInstrumentState().has_value() && !engine.sustainPadsInstrumentState()->isEmpty()); // still Saw Stack Pro
+
+        QVERIFY(engine.setSustainPadsInstrument({}, {}).has_value()); // Pads Pro again
+        QCOMPARE(engine.sustainPadsInstrumentState().value_or(QByteArray{u"x"_s.toLatin1()}), QByteArray{});
+        pads.active = false;
+        engine.setSustainPads(pads);
+        QVERIFY(quietWithin(engine, [&engine] { return engine.masterLevel().peak; }, 1.0e-7F));
+    }
+
     void aBackingTrackPlaysThroughTheMasterFader()
     {
         auto created = createQuietEngine();

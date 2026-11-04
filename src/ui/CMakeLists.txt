@@ -33,6 +33,7 @@ qt_add_qml_module(gigchain_ui
         cpp/InstrumentWindows.h cpp/InstrumentWindows.cpp
         cpp/MasterBus.h cpp/MasterBus.cpp
         cpp/MixerLayout.h cpp/MixerLayout.cpp
+        cpp/SustainPadsController.h cpp/SustainPadsController.cpp
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
         cpp/PluginIcons.h cpp/PluginIcons.cpp
         cpp/OfficialArtwork.h cpp/OfficialArtwork.cpp
@@ -116,6 +117,11 @@ qt_add_qml_module(gigchain_ui
         PanelBar.qml
         SawStackPanel.qml
         PianoProPanel.qml
+        PadsProPanel.qml
+        PadXY.qml
+        SustainPadsBar.qml
+        SustainPadsWindow.qml
+        SustainPadsStrip.qml
         BuiltinPanel.qml
         BuiltinKnob.qml
         BuiltinCard.qml

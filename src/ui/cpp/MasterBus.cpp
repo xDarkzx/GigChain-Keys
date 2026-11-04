@@ -36,23 +36,38 @@ MasterBus::MasterBus(engine::IEngine& engine, DocumentController& document, QSet
 
 QString MasterBus::busName() const
 {
-    return m_bus == EffectWindows::Bus::Master ? tr("master") : tr("aux");
+    switch (m_bus) {
+    case EffectWindows::Bus::Master: return tr("master");
+    case EffectWindows::Bus::SustainPadsFx: return tr("Sustain Pads");
+    default: return tr("aux");
+    }
 }
 
 QString MasterBus::settingsKey() const
 {
-    return m_bus == EffectWindows::Bus::Master ? kEffectsKey : u"aux/effects"_s;
+    switch (m_bus) {
+    case EffectWindows::Bus::Master: return kEffectsKey;
+    case EffectWindows::Bus::SustainPadsFx: return u"sustainPads/effects"_s;
+    default: return u"aux/effects"_s;
+    }
 }
 
 void MasterBus::playInEngine()
 {
-    if (m_bus == EffectWindows::Bus::Master) m_engine.setMasterEffects(m_effects);
-    else m_engine.setAuxEffects(m_effects);
+    switch (m_bus) {
+    case EffectWindows::Bus::Master: m_engine.setMasterEffects(m_effects); break;
+    case EffectWindows::Bus::SustainPadsFx: m_engine.setSustainPadsEffects(m_effects); break;
+    default: m_engine.setAuxEffects(m_effects); break;
+    }
 }
 
 std::vector<QString> MasterBus::storeStates()
 {
-    return m_bus == EffectWindows::Bus::Master ? m_engine.storeMasterEffectStates(m_effects) : m_engine.storeAuxEffectStates(m_effects);
+    switch (m_bus) {
+    case EffectWindows::Bus::Master: return m_engine.storeMasterEffectStates(m_effects);
+    case EffectWindows::Bus::SustainPadsFx: return m_engine.storeSustainPadsEffectStates(m_effects);
+    default: return m_engine.storeAuxEffectStates(m_effects);
+    }
 }
 
 MasterBus::~MasterBus()

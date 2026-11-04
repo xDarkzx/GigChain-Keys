@@ -39,6 +39,9 @@ Rectangle {
     readonly property int mixerPlace: mixerLayout !== null ? mixerLayout.placement : MixerLayout.Bottom
     property PanelController panel: null
     property bool panelOpen: true
+    // Sustain Pads' unit, when it is shown here (not hidden, nor in its own window).
+    property SustainPadsController sustainPads: null
+    property MasterBus padsBus: null // its strip's effects (in the mixer)
 
     // "Add lyrics & chords": to the chart editor.
     signal editChartRequested()
@@ -487,6 +490,19 @@ Rectangle {
             pluginModel: perform.pluginModel
         }
 
+        Loader {
+            objectName: "performSustainPads"
+            Layout.fillWidth: true
+            active: perform.sustainPads !== null && perform.sustainPads.shown && !perform.sustainPads.detached
+            visible: active
+            sourceComponent: SustainPadsBar {
+                pads: perform.sustainPads
+                settings: perform.settings
+                pluginModel: perform.pluginModel
+                onDetachRequested: perform.sustainPads.detached = true
+            }
+        }
+
         Mixer {
             objectName: "performMixerBottom"
             editable: false
@@ -501,6 +517,9 @@ Rectangle {
             instrumentWindows: perform.instrumentWindows
             masterBus: perform.masterBus
             auxBus: perform.auxBus
+            sustainPads: perform.sustainPads
+            padsBus: perform.padsBus
+            settings: perform.settings
             loops: perform.loops
         }
     }
@@ -519,6 +538,9 @@ Rectangle {
             instrumentWindows: perform.instrumentWindows
             masterBus: perform.masterBus
             auxBus: perform.auxBus
+            sustainPads: perform.sustainPads
+            padsBus: perform.padsBus
+            settings: perform.settings
             loops: perform.loops
         }
     }

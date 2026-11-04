@@ -17,6 +17,10 @@ Rectangle {
     property InstrumentWindows instrumentWindows: null
     property MasterBus masterBus: null
     property MasterBus auxBus: null // the shared effects the Send knobs feed
+    // Sustain Pads' strip: shown while its panel is, or it plays.
+    property SustainPadsController sustainPads: null
+    property MasterBus padsBus: null // its strip's effects
+    property SettingsController settings: null // (its outputs)
     property LoopController loops: null
     // Channels may be removed from the computer keyboard (false on stage).
     property bool editable: true
@@ -237,6 +241,26 @@ Rectangle {
                         enabled: false
                     }
                 }
+            }
+        }
+
+        // Sustain Pads' strip: its instrument, effects, fader and mute.
+        Loader {
+            objectName: "sustainPadsStripLoader"
+            readonly property bool wanted: mixer.sustainPads !== null && mixer.padsBus !== null
+                                           && (mixer.sustainPads.shown || mixer.sustainPads.active)
+            active: wanted
+            visible: wanted
+            Layout.alignment: Qt.AlignTop
+            Layout.fillHeight: true
+            Layout.maximumHeight: mixer.stripCap
+            Layout.preferredWidth: Theme.stripWidth
+            sourceComponent: SustainPadsStrip {
+                pads: mixer.sustainPads
+                bus: mixer.padsBus
+                pluginModel: mixer.pluginModel
+                settings: mixer.settings
+                stripCap: mixer.stripCap
             }
         }
 

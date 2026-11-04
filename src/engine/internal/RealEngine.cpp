@@ -82,6 +82,8 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
 
     engine->m_preparedRate = engine->m_audio.sampleRate();
     engine->m_preparedBlock = engine->m_audio.maxBlock();
+    // (The audio thread leaves Sustain Pads alone until it is first prepared.)
+    engine->m_sustainPads.prepare(engine->m_preparedRate, engine->m_preparedBlock);
     engine->m_midiSetup = options.midi;
     engine->m_midiInputs = options.midiInputs;
     std::ranges::transform(engine->openMidi(), std::back_inserter(engine->m_pendingNotices), &Notice::warning);
@@ -503,12 +505,16 @@ void RealEngine::syncPluginsToDevice()
         qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         return; // plugins stay as they were; the graph skips blocks larger than they expect
     }
-    for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes}) {
+    for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes, &m_padsFx.nodes}) {
         for (const auto& [key, node] : *nodes) {
             if (auto prepared = node->prepare(rate, block); !prepared) { // logged by prepare()
                 m_pendingNotices.push_back(Notice::error(prepared.error().message));
             }
         }
+    }
+    m_sustainPads.prepare(rate, block); // (it starts again, if it was on)
+    if (m_sustainPadsNode) {
+        if (auto prepared = m_sustainPadsNode->prepare(rate, block); !prepared) m_pendingNotices.push_back(Notice::error(prepared.error().message));
     }
     m_preparedRate = rate;
     m_preparedBlock = block;
@@ -822,6 +828,16 @@ std::vector<Notice> RealEngine::poll()
     notices.swap(m_pendingNotices);
 
     m_exchange.collectGarbage();
+    m_sustainPads.collectGarbage(); // (a Sustain Pads instrument taken out)
+    if (m_sustainPadsNode) {
+        // A new sound chosen in its window: the chord it holds pressed again
+        // (a synth plays a new sound on new notes only, or stops the old).
+        if (m_sustainPadsNode->takeSoundChanged()) {
+            m_sustainPads.restrike();
+            qCInfo(lcEngine).noquote() << "Sustain Pads:" << m_sustainPadsNode->name() << "has a new sound: its chord is pressed again";
+        }
+        if (m_sustainPadsNode->takeEdited()) m_sustainPadsEdited = true;
+    }
     std::ranges::move(m_audio.poll(), std::back_inserter(notices));
     // A lost device may have come back at another rate or block size.
     syncPluginsToDevice();
@@ -984,6 +1000,59 @@ bool RealEngine::takeBusEdits(EffectsBus& bus)
         if (node->takeEdited()) bus.edited = true;
     }
     return std::exchange(bus.edited, false);
+}
+
+core::Result<void> RealEngine::setSustainPadsInstrument(const QString& pluginId, const QByteArray& state)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (pluginId.isEmpty()) {
+        m_sustainPads.setInstrument(nullptr);
+        m_sustainPadsNode.reset();
+        qCInfo(lcEngine) << "Sustain Pads: Pads Pro";
+        return {};
+    }
+    const QString name = QFileInfo(pluginId).completeBaseName();
+    if (m_guard.isBlocked(pluginId)) {
+        return core::fail(core::ErrorCode::InvalidData, u"%1 crashed the app while loading before, so it is switched off"_s.arg(name));
+    }
+    if (auto installed = checkInstalled(pluginId, name); !installed) return tl::unexpected(installed.error());
+    const auto loading = m_guard.loading(pluginId);
+    auto node = PluginNode::load(pluginId, m_audio.sampleRate(), m_audio.maxBlock());
+    if (!node) return tl::unexpected(node.error()); // logged by the plugin's load
+    if (!(*node)->isInstrument()) {
+        const QString why = u"%1 is an effect, not an instrument: Sustain Pads need an instrument"_s.arg((*node)->name());
+        qCWarning(lcEngine).noquote() << why;
+        return core::fail(core::ErrorCode::InvalidData, why);
+    }
+    if (!state.isEmpty()) {
+        if (auto restored = (*node)->restoreEncodedState(state); !restored) {
+            m_pendingNotices.push_back(Notice::warning(u"Sustain Pads: %1's settings could not be restored (%2): it plays as it loads"_s
+                                                           .arg((*node)->name(), restored.error().message)));
+            qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
+        }
+    }
+    // (Loading and restoring may report changes: it starts clean.)
+    (void)(*node)->takeEdited();
+    (void)(*node)->takeSoundChanged();
+    m_sustainPadsNode = *node;
+    m_sustainPadsEdited = false;
+    m_sustainPads.setInstrument(m_sustainPadsNode);
+    qCInfo(lcEngine).noquote() << "Sustain Pads:" << m_sustainPadsNode->name();
+    return {};
+}
+
+core::Result<QByteArray> RealEngine::sustainPadsInstrumentState() const
+{
+    GC_ONLY_MAIN_THREAD();
+    if (!m_sustainPadsNode) return QByteArray{};
+    return m_sustainPadsNode->saveEncodedState();
+}
+
+core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createSustainPadsEditor()
+{
+    GC_ONLY_MAIN_THREAD();
+    if (!m_sustainPadsNode) return std::unique_ptr<IPluginEditor>{};
+    return PluginNode::createEditor(m_sustainPadsNode);
 }
 
 core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createBusEffectEditor(EffectsBus& bus, int effect)
@@ -1244,7 +1313,7 @@ void RealEngine::panic()
     const int block = m_audio.maxBlock();
     m_keyboard.clear(); // every key shown up again
     m_hardwareSender.allNotesOff(); // the hardware synths too
-    for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes}) {
+    for (const auto* nodes : {&m_nodes, &m_master.nodes, &m_aux.nodes, &m_padsFx.nodes}) {
         for (const auto& [key, node] : *nodes) {
             node->releaseAllNotes();
             if (!paused) continue;
@@ -1258,13 +1327,23 @@ void RealEngine::panic()
     // (where they are), and so do the loops (kept, to start again).
     m_trackPlaying.store(false, std::memory_order_relaxed);
     stopAllLoops();
+    // And Sustain Pads: off and silent at once, its VST reset as the others.
+    m_sustainPads.cut();
+    if (m_sustainPadsNode) {
+        m_sustainPadsNode->releaseAllNotes();
+        if (paused) {
+            if (auto prepared = m_sustainPadsNode->prepare(rate, block); !prepared) {
+                m_pendingNotices.push_back(Notice::error(prepared.error().message));
+            }
+        }
+    }
     if (m_audio.isOpen()) {
         if (auto resumed = m_audio.resume(); !resumed) {
             m_pendingNotices.push_back(Notice::error(resumed.error().message));
             qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         }
     }
-    qCWarning(lcEngine) << "Panic: every sound stopped (" << m_nodes.size() + m_master.nodes.size() + m_aux.nodes.size() << "plugins reset in"
+    qCWarning(lcEngine) << "Panic: every sound stopped (" << m_nodes.size() + m_master.nodes.size() + m_aux.nodes.size() + m_padsFx.nodes.size() << "plugins reset in"
                         << timer.elapsed() << "ms )";
 }
 
@@ -2091,6 +2170,11 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     }
     m_exchange.release();
     m_loops.endBlock();
+
+    // Sustain Pads, under the song: in the mix through the master fader, or
+    // on outputs of their own at their own level.
+    const AudioBlock padsTo = sendPair(sends, m_sustainPads.outputPair(), out);
+    m_sustainPads.process(padsTo, padsTo.left == out.left ? masterGain : 1.0F, time); // (the tempo: its delay, a VST)
 
     // The backing track and its stems, locked together: the track and stems
     // in the mix through the master fader, stems on outputs of their own at

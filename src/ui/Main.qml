@@ -19,9 +19,13 @@ ApplicationWindow {
     required property EditorService editorService
     required property InstrumentWindows instrumentWindows
     required property MixerLayout mixerLayout
+    required property SustainPadsController sustainPads
+    // Sustain Pads' unit in this window (shown, and not in its own window).
+    readonly property bool sustainPadsHere: sustainPads.shown && !sustainPads.detached
     required property EffectWindows effectWindows
     required property MasterBus masterBus
     property MasterBus auxBus: null // the shared effects the channels' Send knobs feed
+    property MasterBus padsBus: null // Sustain Pads' strip's effects
     required property SettingsController settings
     required property PracticeController practice
     required property WarmupController warmup
@@ -313,6 +317,7 @@ ApplicationWindow {
         sidePanelOpen: root.sidePanelOpen
         mixerOpen: root.mixerOpen
         mixerLayout: root.mixerLayout
+        sustainPads: root.sustainPads
         keyboardOpen: root.keyboardOpen
         loops: root.loops
         onToggleKeyboard: {
@@ -369,7 +374,21 @@ ApplicationWindow {
             instrumentWindows: root.instrumentWindows
             masterBus: root.masterBus
             auxBus: root.auxBus
+            sustainPads: root.sustainPads
+            padsBus: root.padsBus
+            settings: root.settings
             loops: root.loops
+        }
+    }
+    // Sustain Pads in a window of its own (the toolbar's Pads menu, its Detach).
+    Loader {
+        objectName: "sustainPadsWindowLoader"
+        active: root.sustainPads.shown && root.sustainPads.detached
+        sourceComponent: SustainPadsWindow {
+            pads: root.sustainPads
+            settings: root.settings
+            pluginModel: root.pluginModel
+            owner: root
         }
     }
     // The mixer down a side of the window: the same upright strips, aux and master.
@@ -386,6 +405,9 @@ ApplicationWindow {
             instrumentWindows: root.instrumentWindows
             masterBus: root.masterBus
             auxBus: root.auxBus
+            sustainPads: root.sustainPads
+            padsBus: root.padsBus
+            settings: root.settings
             loops: root.loops
         }
     }
@@ -474,6 +496,21 @@ ApplicationWindow {
                         doc: root.doc
                         pluginModel: root.pluginModel
                     }
+                    // Sustain Pads, under the main area (or in its own window).
+                    Loader {
+                        objectName: "sustainPadsHere"
+                        visible: root.sustainPadsHere
+                        active: root.sustainPadsHere
+                        SplitView.preferredHeight: implicitHeight
+                        SplitView.minimumHeight: implicitHeight
+                        SplitView.maximumHeight: implicitHeight
+                        sourceComponent: SustainPadsBar {
+                            pads: root.sustainPads
+                            settings: root.settings
+                            pluginModel: root.pluginModel
+                            onDetachRequested: root.sustainPads.detached = true
+                        }
+                    }
                     Mixer {
                         objectName: "mixerBottom"
                         visible: root.mixerAtBottom
@@ -489,6 +526,9 @@ ApplicationWindow {
                         instrumentWindows: root.instrumentWindows
                         masterBus: root.masterBus
                         auxBus: root.auxBus
+                        sustainPads: root.sustainPads
+                        padsBus: root.padsBus
+                        settings: root.settings
                         loops: root.loops
                     }
                 }
@@ -524,9 +564,11 @@ ApplicationWindow {
                 instrumentWindows: root.instrumentWindows
                 masterBus: root.masterBus
                 auxBus: root.auxBus
+                padsBus: root.padsBus
                 loops: root.loops
                 panel: root.panel
                 panelOpen: root.panelOpen
+                sustainPads: root.sustainPads
             }
 
             PracticeView {

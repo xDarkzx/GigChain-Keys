@@ -273,4 +273,27 @@ struct LevelReading
     float rms = 0.0F;
 };
 
+// Sustain Pads (Sunday Keys' Tonic): a Pads Pro pad held on one key under the
+// song, root, fifth and octave. It fades in and out, and from key to key or
+// pad to pad, over the fade time.
+struct SustainPadsSettings
+{
+    bool active = false;      // sounding (switched off: it fades out)
+    int key = 0;              // 0 C .. 11 B
+    int preset = 0;           // a Pads Pro pad (0 Warm .. 7 Organ)
+    int octave = 0;           // -1, 0 or +1
+    double fadeSeconds = 4.0; // in, out, and from key to key (0.1-30)
+    double tone = 0.5;        // the filter: 0 dark .. 0.5 the pad's own .. 1 bright
+    double shimmer = 0.0;     // 0-1: an octave up in the reverb
+    double motion = 0.5;      // 0-1: how much it moves
+    double volumeDb = -6.0;   // -60 .. 0
+    bool mute = false;        // its strip's mute (the volume kept)
+    int outputPair = 0;       // 0 the mix (through the master fader); n the device's outputs 2n+1 and 2n+2
+
+    bool operator==(const SustainPadsSettings&) const = default;
+};
+
+// Sustain Pads' pads, by `preset`: Pads Pro's, in its order.
+inline constexpr std::array<const char*, 8> kSustainPadPresets{"Warm", "Lush", "Dark", "Air", "Shimmer", "Choir", "Strings", "Organ"};
+
 } // namespace gigchain::engine

@@ -3,6 +3,7 @@
 #include "FakeEngine.h"
 
 #include "EngineLog.h"
+#include "PadsProNode.h"
 #include "PianoProNode.h"
 #include "SawStackNode.h"
 
@@ -87,6 +88,7 @@ void FakeEngine::applyPatch(const core::SongId&, const core::Patch& patch)
         if (c.builtin.isEmpty() || m_builtins.contains(c.id.value())) continue;
         if (c.builtin == QLatin1StringView(SawStackNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<SawStackNode>();
         if (c.builtin == QLatin1StringView(PianoProNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<PianoProNode>();
+        if (c.builtin == QLatin1StringView(PadsProNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<PadsProNode>();
     }
 }
 
