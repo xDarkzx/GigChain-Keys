@@ -65,7 +65,11 @@ Songs are split into sections: *Intro, Verse, Pre-Chorus, Chorus, Bridge,
 Solo, Outro*.
 
 - **+ Section** adds one at the end (pick a name from the list).
-- **Double-click a section's title** to rename it (*Verse 2*, *Big chorus*).
+- **Double-click a section's title** to rename it, to any name (*Verse 2*,
+  *Big chorus*, *Vamp out*). **Right-click it** to rename it or **Remove** it
+  (its lines stay, joining the section above).
+- **Right-click a note** in the chart (a grey line in italics, such as *Capo
+  2*) to **Make it a section** or **Remove** it.
 - **Click a title** to go to that section.
 
 Under each title you see which instruments play in it and how many bars it

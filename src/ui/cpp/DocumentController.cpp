@@ -414,6 +414,11 @@ bool DocumentController::renameChartSection(int line, const QString& label)
     return true;
 }
 
+bool DocumentController::removeChartSection(int line)
+{
+    return applyChartEdit(core::removeSectionTitle(currentChart(), line), {});
+}
+
 bool DocumentController::addChartSection(const QString& label)
 {
     return applyChartEdit(core::appendSection(currentChart(), label), {});

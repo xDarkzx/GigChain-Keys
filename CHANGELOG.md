@@ -8,6 +8,15 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Fixed
+
+- **A section renamed to any name stays a section** ([#23](https://github.com/xDarkzx/GigChain-Keys/issues/23)).
+  Renaming one to a name that didn't start with *Intro, Verse, Chorus…*
+  turned it into a note: the section disappeared and the line couldn't be
+  removed. Now any name works. Right-click a section's title to **Remove** it
+  (its lines stay), and right-click a note to **Make it a section** or
+  **Remove** it, which also fixes charts saved before.
+
 ## [0.7.0] - 2026-11-03 (alpha)
 
 Your instrument on a second screen, and one knob for a bigger sound.

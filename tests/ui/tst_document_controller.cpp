@@ -825,6 +825,31 @@ private slots:
         QCOMPARE(m_engine->liveControls.back(), u"part 2"_s);
     }
 
+    // Issue #23: a section renamed to any name stays a section (its part,
+    // its instruments); a section title or a note can be taken out, its
+    // words kept; an old note can be made a section.
+    void aSectionTakesAnyNameAndCanBeRemoved()
+    {
+        QVERIFY(m_doc->setSongChart(0, u"{comment: Verse}\n[C]One two\n{comment: Chorus}\n[F]Three four\n{c: Big Ending}\n[G]Five\n"_s));
+        const auto names = [this] {
+            QStringList list;
+            for (const QVariant& s : m_doc->currentSections()) list << s.toMap().value(u"label"_s).toString();
+            return list;
+        };
+        QCOMPARE(names(), (QStringList{u"Verse"_s, u"Chorus"_s})); // "Big Ending" there is only a note
+        QVERIFY(m_doc->renameChartSection(2, u"Vamp Out"_s));
+        QCOMPARE(names(), (QStringList{u"Verse"_s, u"Vamp Out"_s}));
+        QVERIFY(m_doc->renameChartSection(4, u"Big Ending"_s)); // the note made a section
+        QCOMPARE(names(), (QStringList{u"Verse"_s, u"Vamp Out"_s, u"Big Ending"_s}));
+        QVERIFY(m_doc->removeChartSection(2));
+        QCOMPARE(names(), (QStringList{u"Verse"_s, u"Big Ending"_s}));
+        QVERIFY(m_doc->currentChart().contains(u"Three four"_s)); // its words stay
+        QVERIFY(!m_doc->removeChartSection(1)); // words: refused, said
+        QVERIFY(!m_doc->lastError().isEmpty());
+        QVERIFY(m_doc->undo());
+        QCOMPARE(names(), (QStringList{u"Verse"_s, u"Vamp Out"_s, u"Big Ending"_s}));
+    }
+
     void pastingKeepsANameTheUserChose()
     {
         QVERIFY(m_doc->renameSong(0, u"Opener"_s));
