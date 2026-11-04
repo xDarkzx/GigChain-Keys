@@ -154,6 +154,66 @@ private slots:
         QCOMPARE(sections.size(), std::size_t{1});
     }
 
+    // Rows of chords (#25): an empty line becomes a row; chords go in by
+    // their order, move along the row and between rows, and onto new rows;
+    // bar lines are kept; each chord is a bar.
+    void rowsOfChordsTakeChordsByTheirOrder()
+    {
+        const QString chart = u"{comment: Intro}\n\n{comment: Verse}\n[C]Words"_s;
+        // The empty line under the Intro: a row.
+        auto row = placeChordInRow(chart, 1, 0, u"Am"_s);
+        QVERIFY(row.has_value());
+        QCOMPARE(*row, u"{comment: Intro}\n[Am]\n{comment: Verse}\n[C]Words"_s);
+        row = placeChordInRow(*row, 1, 9, u"F"_s); // (past the end: last)
+        row = placeChordInRow(*row, 1, 1, u"C"_s);
+        QCOMPARE(*row, u"{comment: Intro}\n[Am] [C] [F]\n{comment: Verse}\n[C]Words"_s);
+        QVERIFY(isChordRow(parseChordPro(*row).lines.at(1)));
+        QVERIFY(!isChordRow(parseChordPro(*row).lines.at(3))); // (words)
+        QCOMPARE(chartSections(parseChordPro(*row)).front().guessedBars, 3); // a bar each
+        // Along the row: F first.
+        auto moved = moveChordInRow(*row, 1, 2, 1, 0);
+        QCOMPARE(*moved, u"{comment: Intro}\n[F] [Am] [C]\n{comment: Verse}\n[C]Words"_s);
+        // Forward: Am after C (counted as the row was).
+        moved = moveChordInRow(*moved, 1, 1, 1, 3);
+        QCOMPARE(*moved, u"{comment: Intro}\n[F] [C] [Am]\n{comment: Verse}\n[C]Words"_s);
+        // From the words into the row: the words keep theirs.
+        moved = moveChordInRow(*moved, 3, 0, 1, 1);
+        QCOMPARE(*moved, u"{comment: Intro}\n[F] [C] [C] [Am]\n{comment: Verse}\nWords"_s);
+        // A line of words takes no chord by order.
+        QVERIFY(!placeChordInRow(u"[C]Words"_s, 0, 0, u"G"_s));
+        // Bar lines are kept.
+        QCOMPARE(*placeChordInRow(u"| [Am] | [C] |"_s, 0, 2, u"G"_s), u"| [Am] | [C] | [G] |"_s);
+    }
+
+    // A new row before a line (or at the end); a chord moved onto one; the
+    // row it left, empty, becomes an empty line.
+    void newRowsAreMadeWhereAChordIsDropped()
+    {
+        const QString chart = u"{comment: Intro}\n{comment: Verse}\n[C]Words"_s;
+        QCOMPARE(*insertChordRow(chart, 1, u"Am"_s), u"{comment: Intro}\n[Am]\n{comment: Verse}\n[C]Words"_s);
+        QCOMPARE(*insertChordRow(chart, 3, u"G"_s), u"{comment: Intro}\n{comment: Verse}\n[C]Words\n[G]"_s);
+        QVERIFY(!insertChordRow(chart, 9, u"G"_s));     // not in the chart
+        QVERIFY(!insertChordRow(chart, 1, u"[x]"_s));   // not a chord name
+        QCOMPARE(*moveChordToNewRow(chart, 2, 0, 1), u"{comment: Intro}\n[C]\n{comment: Verse}\nWords"_s);
+        // The only chord of a row moved away: the row is an empty line.
+        QCOMPARE(*moveChordToNewRow(u"[Am]\n[C]Words"_s, 0, 0, 2), u"\n[C]Words\n[Am]"_s);
+    }
+
+    // A whole line deleted: words and chords, a row, an empty line, a note;
+    // never a section's title (it has Remove section).
+    void aWholeLineIsDeleted()
+    {
+        const QString chart = u"{comment: Verse}\n[C]One [G]two\n[Am] [F]\n\n{c: Capo 2}\nThree"_s;
+        QCOMPARE(*deleteLine(chart, 1), u"{comment: Verse}\n[Am] [F]\n\n{c: Capo 2}\nThree"_s);
+        QCOMPARE(*deleteLine(chart, 2), u"{comment: Verse}\n[C]One [G]two\n\n{c: Capo 2}\nThree"_s);
+        QCOMPARE(*deleteLine(chart, 3), u"{comment: Verse}\n[C]One [G]two\n[Am] [F]\n{c: Capo 2}\nThree"_s);
+        QCOMPARE(*deleteLine(chart, 4), u"{comment: Verse}\n[C]One [G]two\n[Am] [F]\n\nThree"_s);
+        const auto title = deleteLine(chart, 0);
+        QVERIFY(!title);
+        QVERIFY2(title.error().message.contains(u"Remove section"_s), qPrintable(title.error().message));
+        QVERIFY(!deleteLine(chart, 99));
+    }
+
     // "+ Section": a new section at the end, with a line to type into.
     void aSectionIsAdded()
     {

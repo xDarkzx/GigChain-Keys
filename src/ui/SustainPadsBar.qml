@@ -51,8 +51,9 @@ Item {
     }
 
     // A key of the twelve: a hardware key with a light strip along its top
-    // (green: playing; dim amber: picked but off), its name, and a dot under
-    // it on the song's own key.
+    // (green: playing in it; amber: picked, ready for Activate), its name, and
+    // a dot under it on the song's own key. A tap only picks the key: it
+    // never starts or stops the pad (Activate does).
     component PadKey: Rectangle {
         id: key
         required property int keyIndex
@@ -63,7 +64,7 @@ Item {
         implicitWidth: unit.keyWidth
         implicitHeight: unit.keyHeight
         radius: Theme.radius
-        border.color: playing ? Theme.ledGreen : Theme.outline
+        border.color: playing ? Theme.ledGreen : picked ? Theme.ledAmber : Theme.outline
         gradient: Gradient {
             GradientStop { position: 0; color: keyMouse.pressed ? Theme.buttonBottom : Theme.buttonTop }
             GradientStop { position: 1; color: Theme.buttonBottom }
@@ -73,7 +74,7 @@ Item {
             anchors { left: parent.left; right: parent.right; top: parent.top; margins: 5 }
             height: 3
             radius: 1.5
-            color: key.playing ? Theme.ledGreen : key.picked ? Qt.darker(Theme.ledAmber, 1.8) : Theme.ledOff
+            color: key.playing ? Theme.ledGreen : key.picked ? Theme.ledAmber : Theme.ledOff
         }
         Text {
             anchors.centerIn: parent
@@ -81,7 +82,7 @@ Item {
             text: unit.pads.keyNames[key.keyIndex]
             font.pixelSize: unit.roomy ? Theme.fontSize + 3 : Theme.fontSize
             font.bold: true
-            color: key.playing ? Theme.text : Theme.textDim
+            color: key.playing || key.picked ? Theme.text : Theme.textDim
         }
         Rectangle {
             visible: key.songs
@@ -96,13 +97,18 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: unit.pads.playKey(key.keyIndex)
+            onClicked: unit.pads.pickKey(key.keyIndex)
         }
         ToolTip.visible: keyMouse.containsMouse
         ToolTip.delay: 600
-        ToolTip.text: key.playing ? qsTr("Playing in %1: tap to fade it out").arg(unit.pads.keyNames[key.keyIndex])
-                                  : qsTr("Play the pad in %1").arg(unit.pads.keyNames[key.keyIndex])
-                                    + (key.songs ? qsTr(" (the song's key)") : "")
+        ToolTip.text: {
+            const name = unit.pads.keyNames[key.keyIndex]
+            const said = key.picked ? (unit.pads.active ? qsTr("Playing in %1 (Activate stops it)").arg(name)
+                                                        : qsTr("%1 is ready: Activate starts the pad").arg(name))
+                                    : (unit.pads.active ? qsTr("Fade the pad over to %1").arg(name)
+                                                        : qsTr("Get the pad ready in %1 (Activate starts it)").arg(name))
+            return said + (key.songs ? qsTr(" (the song's key)") : "")
+        }
     }
 
     // A knob: drag up or right, scroll; double-click: back to where it starts.

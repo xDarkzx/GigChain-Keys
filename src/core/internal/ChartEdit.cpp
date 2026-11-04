@@ -3,6 +3,7 @@
 #include <QRegularExpression>
 
 #include <algorithm>
+#include <iterator>
 
 using namespace Qt::StringLiterals;
 
@@ -84,6 +85,98 @@ Result<void> checkChordIndex(const LyricLine& lyric, int line, int chord)
     return {};
 }
 
+// ---- Rows of chords
+
+bool onlyRowMarks(const QString& lyrics)
+{
+    return std::ranges::all_of(lyrics, [](QChar c) { return c.isSpace() || c == u'|'; });
+}
+
+std::vector<QString> rowNames(const ChartLine& line)
+{
+    const LyricLine lyric = lyricLineOf(line); // (kept: its chords are read below)
+    std::vector<QString> names;
+    names.reserve(lyric.chords.size());
+    std::ranges::transform(lyric.chords, std::back_inserter(names), [](const PlacedChord& chord) { return chord.name; });
+    return names;
+}
+
+// A row rebuilt from its chords' names ("[Am] [C]", or "| [Am] | [C] |" when
+// it had bar lines); no chords left: an empty line.
+ChartLine rowFrom(const std::vector<QString>& names, bool bars)
+{
+    ChartLine line;
+    if (names.empty()) return line; // (Blank)
+    line.kind = Kind::Lyrics;
+    if (bars) line.segments.push_back(ChartSegment{.chord = {}, .text = u"| "_s});
+    for (std::size_t i = 0; i < names.size(); ++i) {
+        const bool last = i + 1 == names.size();
+        line.segments.push_back(ChartSegment{.chord = names.at(i), .text = bars ? (last ? u" |"_s : u" | "_s) : (last ? QString() : u" "_s)});
+    }
+    return line;
+}
+
+// The chart with `line` checked: a row of chords, or an empty line (to become one).
+Result<Chart> chartWithRow(const QString& chordPro, int line)
+{
+    Chart chart = parseChordPro(chordPro);
+    if (line < 0 || std::cmp_greater_equal(line, chart.lines.size())) {
+        return fail(ErrorCode::OutOfRange,
+                    u"Line %1 is not in the chart (it has %2 lines)"_s.arg(line + 1).arg(chart.lines.size()));
+    }
+    const ChartLine& target = chart.lines.at(static_cast<std::size_t>(line));
+    const bool wordless = target.kind == Kind::Lyrics && onlyRowMarks(lyricLineOf(target).lyrics); // (a row, or only spaces)
+    if (target.kind != Kind::Blank && !wordless) {
+        return fail(ErrorCode::InvalidData, u"Line %1 of the chart has words: a chord goes over one of its words"_s.arg(line + 1));
+    }
+    return chart;
+}
+
+// Chord number `chord` of `line` (words or a row) taken out; its name. A
+// row left without chords becomes an empty line (the line stays: the others
+// keep their numbers).
+Result<QString> takeChord(Chart& chart, int line, int chord)
+{
+    if (line < 0 || std::cmp_greater_equal(line, chart.lines.size())) {
+        return fail(ErrorCode::OutOfRange,
+                    u"Line %1 is not in the chart (it has %2 lines)"_s.arg(line + 1).arg(chart.lines.size()));
+    }
+    ChartLine& source = chart.lines.at(static_cast<std::size_t>(line));
+    if (source.kind != Kind::Lyrics) return fail(ErrorCode::InvalidData, u"Line %1 of the chart has no chords"_s.arg(line + 1));
+    LyricLine lyric = lyricLineOf(source);
+    if (auto there = checkChordIndex(lyric, line, chord); !there) return tl::unexpected(there.error());
+    QString name = lyric.chords.at(static_cast<std::size_t>(chord)).name;
+    if (isChordRow(source)) {
+        std::vector<QString> names = rowNames(source);
+        names.erase(names.begin() + chord);
+        source = rowFrom(names, lyric.lyrics.contains(u'|'));
+    } else {
+        lyric.chords.erase(lyric.chords.begin() + chord);
+        source = lineFrom(lyric);
+    }
+    return name;
+}
+
+// `name` into the row (or empty line) `line` at `index` (clamped).
+void putInRow(Chart& chart, int line, int index, const QString& name)
+{
+    ChartLine& target = chart.lines.at(static_cast<std::size_t>(line));
+    const bool row = target.kind == Kind::Lyrics;
+    std::vector<QString> names = row ? rowNames(target) : std::vector<QString>{};
+    const bool bars = row && lyricLineOf(target).lyrics.contains(u'|');
+    const auto at = static_cast<std::ptrdiff_t>(std::clamp(index, 0, static_cast<int>(names.size())));
+    names.insert(names.begin() + at, name);
+    target = rowFrom(names, bars);
+}
+
+Result<void> checkInsertPlace(const Chart& chart, int before)
+{
+    if (before < 0 || std::cmp_greater(before, chart.lines.size())) {
+        return fail(ErrorCode::OutOfRange, u"Line %1 is not in the chart (it has %2 lines)"_s.arg(before + 1).arg(chart.lines.size()));
+    }
+    return {};
+}
+
 // A section's title line called `name`: {comment: Verse 2} when the name is
 // one a chart calls a section (as charts are written), else a section of
 // its own, {start_of_section: Big Ending} (a comment under that name would
@@ -159,6 +252,73 @@ Result<QString> moveChord(const QString& chordPro, int line, int chord, int toLi
     insertChord(to, wordStartAt(to.lyrics, toAt), name);
     setLine(*chart, toLine, to);
     return toChordPro(*chart);
+}
+
+bool isChordRow(const ChartLine& line)
+{
+    if (line.kind != Kind::Lyrics) return false;
+    const LyricLine lyric = lyricLineOf(line);
+    return !lyric.chords.empty() && onlyRowMarks(lyric.lyrics);
+}
+
+Result<QString> placeChordInRow(const QString& chordPro, int line, int index, const QString& chord)
+{
+    if (auto named = checkChordName(chord); !named) return tl::unexpected(named.error());
+    auto chart = chartWithRow(chordPro, line);
+    if (!chart) return tl::unexpected(chart.error());
+    putInRow(*chart, line, index, chord.trimmed());
+    return toChordPro(*chart);
+}
+
+Result<QString> moveChordInRow(const QString& chordPro, int line, int chord, int toLine, int toIndex)
+{
+    auto chart = chartWithRow(chordPro, toLine);
+    if (!chart) return tl::unexpected(chart.error());
+    auto name = takeChord(*chart, line, chord);
+    if (!name) return tl::unexpected(name.error());
+    // Along its own row: the place counted as it was, before the chord left it.
+    const int index = line == toLine && toIndex > chord ? toIndex - 1 : toIndex;
+    putInRow(*chart, toLine, index, *name);
+    return toChordPro(*chart);
+}
+
+Result<QString> insertChordRow(const QString& chordPro, int before, const QString& chord)
+{
+    if (auto named = checkChordName(chord); !named) return tl::unexpected(named.error());
+    Chart chart = parseChordPro(chordPro);
+    if (auto place = checkInsertPlace(chart, before); !place) return tl::unexpected(place.error());
+    chart.lines.insert(chart.lines.begin() + before, rowFrom({chord.trimmed()}, false));
+    return toChordPro(chart);
+}
+
+Result<QString> moveChordToNewRow(const QString& chordPro, int line, int chord, int before)
+{
+    Chart chart = parseChordPro(chordPro);
+    if (auto place = checkInsertPlace(chart, before); !place) return tl::unexpected(place.error());
+    auto name = takeChord(chart, line, chord); // (the lines keep their numbers: `before` still points where it did)
+    if (!name) return tl::unexpected(name.error());
+    chart.lines.insert(chart.lines.begin() + before, rowFrom({*name}, false));
+    return toChordPro(chart);
+}
+
+Result<QString> deleteLine(const QString& chordPro, int line)
+{
+    Chart chart = parseChordPro(chordPro);
+    if (line < 0 || std::cmp_greater_equal(line, chart.lines.size())) {
+        return fail(ErrorCode::OutOfRange,
+                    u"Line %1 is not in the chart (it has %2 lines)"_s.arg(line + 1).arg(chart.lines.size()));
+    }
+    const ChartLine& doomed = chart.lines.at(static_cast<std::size_t>(line));
+    const Kind kind = doomed.kind;
+    // A section's title ({start_of_...}, or a note under a section's name, {comment: Verse}).
+    if (kind == Kind::Section || (kind == Kind::Comment && isSectionName(doomed.label))) {
+        return fail(ErrorCode::InvalidData, u"Line %1 is a section's title: right-click it and choose Remove section"_s.arg(line + 1));
+    }
+    if (kind != Kind::Lyrics && kind != Kind::Blank && kind != Kind::Comment) {
+        return fail(ErrorCode::InvalidData, u"Line %1 of the chart is not shown, so it cannot be deleted here"_s.arg(line + 1));
+    }
+    chart.lines.erase(chart.lines.begin() + line);
+    return toChordPro(chart);
 }
 
 Result<QString> editLyrics(const QString& chordPro, int line, const QString& lyrics)

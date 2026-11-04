@@ -65,10 +65,12 @@ waves) and choose where its panel goes: **Under the main area** or **In a
 window of its own** (to drag onto another screen; close it, or click
 **Reattach**, to put it back).
 
-- **Tap a key** (C to B): the pad plays in that key. Tap another key and the
-  pad fades over to it, with no gap. Tap the key that is playing to fade it
-  out.
-- **Activate** fades the pad in or out in the key that is lit.
+- **Tap a key** (C to B) to choose the key. It never starts the pad by
+  itself, so you can get the next song's key ready in silence: the key lights
+  amber.
+- **Activate** fades the pad in, in that key (the key lights green), and
+  fades it out again. Only Activate starts and stops the pad.
+- While it plays, tap another key and the pad fades over to it, with no gap.
 - **The pad:** *Warm, Lush, Dark, Air, Shimmer, Choir, Strings* or *Organ*
   (Pads Pro's). Step with **‹ ›** or click its name; a new pad fades over too.
 - **Filter · Shimmer:** drag across for darker or brighter, and up for more

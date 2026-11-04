@@ -8,6 +8,43 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-05 (alpha)
+
+Fixes: Sustain Pads wait for Activate, chords drag anywhere in a chart, and
+the window's buttons always stay in sight.
+
+### Added
+
+- **Drag chords anywhere in a chart** ([#25](https://github.com/xDarkzx/GigChain-Keys/issues/25)).
+  A chord dragged from the palette or the chart lands in the nearest
+  sensible place, marked before you let go: on the nearest word, between the
+  chords of a row, on an empty line, or on a new row under a section's title.
+  The chart scrolls when you drag near its edge.
+- **Rows of chords for intros and solos:** a part with no words is a row of
+  chords in order, with bar lines; drag them along the row to reorder, type
+  one at its end with **+**.
+- **Delete a whole line** of a chart in one click: the **✕** at its right end
+  when the mouse is over it (or from its right-click menu).
+
+### Fixed
+
+- **Sustain Pads: a key tapped no longer starts the pad.** Tapping a key
+  only chooses the key (it lights amber, ready), so you can pick the next
+  song's key in silence; **Activate** starts and stops the pad. While it
+  plays, a new key still fades over to it, and tapping the key that is
+  playing no longer stops it.
+- **Recent setlists that were moved or deleted** show as *Moved or deleted*
+  on the start screen, and opening one says so in plain words and takes it
+  off the list (it used to say only "File not found").
+- **The window's minimise, maximise and close buttons always stay in sight**,
+  however narrow the window: the toolbar measures itself and its least needed
+  parts step aside one at a time (the CPU and memory display first, then
+  Undo/Redo, Tap, the song and track readouts, Rec, the Loops label), never
+  Panic, the modes, the tempo, Settings or Help.
+- **Notes in a chart** get the same ✕ to delete them in one click.
+- A chord dropped back where it was no longer marks the setlist as changed.
+- Every message that pops up is now also written to the log, word for word.
+
 ## [0.8.0] - 2026-11-04 (alpha)
 
 Sustain Pads under every song, with your own pad plugin and effects, and the

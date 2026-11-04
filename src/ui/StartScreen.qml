@@ -81,7 +81,9 @@ Rectangle {
                 onClicked: start.openRecentRequested(recent.modelData.path)
                 ToolTip.visible: hovered
                 ToolTip.delay: 600
-                ToolTip.text: recent.modelData.path
+                ToolTip.text: recent.modelData.missing ? qsTr("Not there any more (moved or deleted): click to take it off the list")
+                                                       : recent.modelData.path
+                opacity: recent.modelData.missing ? 0.55 : 1
                 contentItem: ColumnLayout {
                     spacing: 2
                     RowLayout {
@@ -93,7 +95,12 @@ Rectangle {
                             Layout.fillWidth: true
                         }
                         Label {
-                            visible: recent.modelData.songs >= 0
+                            visible: recent.modelData.missing === true
+                            text: qsTr("Moved or deleted")
+                            color: Theme.ledAmber
+                        }
+                        Label {
+                            visible: recent.modelData.songs >= 0 && recent.modelData.missing !== true
                             text: recent.modelData.songs === 1 ? qsTr("1 song") : qsTr("%1 songs").arg(recent.modelData.songs)
                             color: Theme.textDim
                         }

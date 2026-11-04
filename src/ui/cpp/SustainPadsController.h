@@ -22,8 +22,8 @@ class EffectWindows;
 
 // Sustain Pads, as Sunday Keys' Tonic: a pad held on one key under the
 // song, from Pads Pro or a VST instrument loaded into it (its patch chosen
-// in its own window, kept). Tap a key to play it (the pad fades over to it), tap
-// it again to fade it out; the filter, shimmer, motion, fade time, volume
+// in its own window, kept). Tap a key to choose the key; Activate starts and
+// stops it (a key never does; playing, it fades over to a new key); the filter, shimmer, motion, fade time, volume
 // and output are the player's, remembered. It follows the song's key (from
 // its chart) when a song is picked, unless that is switched off. It never
 // starts by itself when the app opens. Its panel is shown under the main
@@ -120,9 +120,10 @@ public:
     [[nodiscard]] bool detached() const { return m_detached; }
     void setDetached(bool on);
 
-    // A key tapped: the pad fades over to it (and starts, if it was off);
-    // the key playing tapped again: it fades out.
-    Q_INVOKABLE void playKey(int key);
+    // A key tapped: the key the pad plays in. It never starts or stops the
+    // pad (Activate does): off, the key is ready for when it is switched on;
+    // playing, the pad fades over to it.
+    Q_INVOKABLE void pickKey(int key);
     // Its window: where it was last, when that is on a screen now (empty otherwise).
     Q_INVOKABLE [[nodiscard]] QRect restoredGeometry() const;
     Q_INVOKABLE void rememberGeometry(const QRect& normal);
