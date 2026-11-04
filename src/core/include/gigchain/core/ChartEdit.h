@@ -62,6 +62,11 @@ struct LyricLine
 // A section title ({comment: Verse}, {start_of_chorus}...) renamed.
 [[nodiscard]] Result<QString> renameSection(const QString& chordPro, int line, const QString& label);
 
+// A section title or a note line taken out (its words join the section
+// above; a {start_of_...} section's {end_of_...} goes too). Refused for
+// any other line.
+[[nodiscard]] Result<QString> removeSectionTitle(const QString& chordPro, int line);
+
 // A new section at the end ({comment: <label>}), with an empty line under it
 // to type into.
 [[nodiscard]] Result<QString> appendSection(const QString& chordPro, const QString& label);

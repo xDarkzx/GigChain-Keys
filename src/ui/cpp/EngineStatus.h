@@ -185,6 +185,8 @@ public slots:
     void poll();
 
 signals:
+    // Panic, just before every sound is stopped.
+    void panicking();
     void statusChanged();
     void recordingChanged();
     void masterVolumeDbChanged();

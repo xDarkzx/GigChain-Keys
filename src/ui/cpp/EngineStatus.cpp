@@ -101,7 +101,8 @@ void EngineStatus::panic()
 {
     FreezeWatchdog::mark(u"panic"_s);
     m_document.stopSong(); // the song stops playing too (its parts, its count-in)
-    m_engine.panic();      // logged by the engine: the sound, the backing track, the loops
+    emit panicking();      // (what the app plays under the song, Sustain Pads, is switched off)
+    m_engine.panic();      // logged by the engine: the sound, the backing track, the loops, the pads
     m_document.reportMessage(tr("Panic: every sound stopped"), Notifications::Info);
 }
 

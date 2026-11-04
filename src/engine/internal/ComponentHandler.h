@@ -23,6 +23,14 @@ class ComponentHandler final : public Steinberg::Vst::IComponentHandler, public 
 public:
     // True once after the plugin reported a change of its settings.
     bool takeEdited() { return m_edited.exchange(false, std::memory_order_acq_rel); }
+    // True once after a new sound was chosen in the plugin (a preset): it
+    // asked for every parameter to be read again, or moved at least
+    // `burst` parameters since the last call (a knob turned moves one).
+    bool takeSoundChanged(uint32_t burst)
+    {
+        const uint32_t edits = m_editCount.exchange(0, std::memory_order_acq_rel);
+        return m_soundChanged.exchange(false, std::memory_order_acq_rel) || edits >= burst;
+    }
     // The last parameter moved in the plugin's window since the previous
     // call (for learning a knob), or kNoParamId.
     Steinberg::Vst::ParamID takeTouched()
@@ -48,6 +56,7 @@ public:
     Steinberg::tresult PLUGIN_API performEdit(Steinberg::Vst::ParamID id, Steinberg::Vst::ParamValue value) override
     {
         markEdited();
+        m_editCount.fetch_add(1, std::memory_order_acq_rel);
         m_touched.store((uint64_t{1} << 32U) | id, std::memory_order_release);
         // Id and value (as a float) in one atomic, per slot; a later edit of
         // a parameter replaces an earlier one not yet taken. Never 0: the
@@ -61,7 +70,10 @@ public:
     {
         // A preset loaded inside the plugin arrives as new parameter values
         // or a full reload; latency or bus changes are not settings.
-        if ((flags & (Steinberg::Vst::kParamValuesChanged | Steinberg::Vst::kReloadComponent)) != 0) markEdited();
+        if ((flags & (Steinberg::Vst::kParamValuesChanged | Steinberg::Vst::kReloadComponent)) != 0) {
+            markEdited();
+            m_soundChanged.store(true, std::memory_order_release);
+        }
         return Steinberg::kResultOk;
     }
 
@@ -101,6 +113,8 @@ private:
     void markEdited() { m_edited.store(true, std::memory_order_release); }
 
     std::atomic<bool> m_edited{false};
+    std::atomic<bool> m_soundChanged{false};
+    std::atomic<uint32_t> m_editCount{0}; // parameters moved since takeSoundChanged
     std::atomic<uint64_t> m_touched{0}; // 1 << 32 | id; 0 = none
     std::array<std::atomic<uint64_t>, kEditSlots> m_toProcessor{};
 };

@@ -75,6 +75,12 @@ add_library(gigchain_engine STATIC
     internal/PianoPro.cpp
     internal/PianoProNode.h
     internal/PianoProNode.cpp
+    internal/PadsPro.h
+    internal/PadsPro.cpp
+    internal/PadsProNode.h
+    internal/PadsProNode.cpp
+    internal/SustainPads.h
+    internal/SustainPads.cpp
     internal/RealEngine.h
     internal/RealEngine.cpp
     include/gigchain/engine/RealEngineFactory.h

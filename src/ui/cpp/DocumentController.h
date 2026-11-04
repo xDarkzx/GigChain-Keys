@@ -201,6 +201,9 @@ public:
     Q_INVOKABLE bool editLineAndSplit(int line, const QString& lyrics, int at);
     Q_INVOKABLE bool joinChartLine(int line);
     Q_INVOKABLE bool renameChartSection(int line, const QString& label);
+    // A section title or a note line of the chart taken out (its words stay,
+    // joining the section above).
+    Q_INVOKABLE bool removeChartSection(int line);
     Q_INVOKABLE bool addChartSection(const QString& label);
     // The chords the current song's chart uses, each once, in order (to drag
     // onto the words again).

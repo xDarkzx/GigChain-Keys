@@ -19,6 +19,9 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_effectWindows(engine, m_document),
       m_masterBus(engine, m_document, settings, m_effectWindows, EffectWindows::Bus::Master),
       m_auxBus(engine, m_document, settings, m_effectWindows, EffectWindows::Bus::Aux),
+      m_padsBus(engine, m_document, settings, m_effectWindows, EffectWindows::Bus::SustainPadsFx),
+      m_mixerLayout(settings),
+      m_sustainPads(engine, m_document, settings, m_effectWindows),
       m_settingsController(engine, m_document, settings),
       m_practice(engine, m_document),
       m_warmup(engine, m_practice, settings)
@@ -27,12 +30,17 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_settingsController, &SettingsController::pollLearning);
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_loops, &LoopController::poll);
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_panel, &PanelController::poll);
+    QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_sustainPads, &SustainPadsController::poll);
+    // Panic: every sound means the pad too (switched off here, silenced at once by the engine).
+    QObject::connect(&m_engineStatus, &EngineStatus::panicking, &m_sustainPads, [this] { m_sustainPads.setActive(false); });
     // The rig's master effects load with the app (behind the splash).
     m_masterBus.load();
     m_auxBus.load();
+    m_padsBus.load();
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_masterBus, [this, &engine] {
         if (engine.takeMasterEdits()) m_masterBus.noteEdited();
         if (engine.takeAuxEdits()) m_auxBus.noteEdited();
+        if (engine.takeSustainPadsEffectEdits()) m_padsBus.noteEdited();
     });
     // An audio input from the last session: may the app hear it (the Mac asks)?
     m_settingsController.checkInputPermission();
@@ -54,6 +62,9 @@ QVariantMap Session::initialProperties()
         {u"effectWindows"_s, QVariant::fromValue(&m_effectWindows)},
         {u"masterBus"_s, QVariant::fromValue(&m_masterBus)},
         {u"auxBus"_s, QVariant::fromValue(&m_auxBus)},
+        {u"padsBus"_s, QVariant::fromValue(&m_padsBus)},
+        {u"mixerLayout"_s, QVariant::fromValue(&m_mixerLayout)},
+        {u"sustainPads"_s, QVariant::fromValue(&m_sustainPads)},
         {u"settings"_s, QVariant::fromValue(&m_settingsController)},
         {u"loading"_s, QVariant::fromValue(&m_loading)},
         {u"practice"_s, QVariant::fromValue(&m_practice)},

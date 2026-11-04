@@ -325,6 +325,34 @@ public:
     double trackVolume = 0.0;
     void setBackingTrackVolume(double volumeDb) override { trackVolume = volumeDb; }
     [[nodiscard]] engine::BackingTrackState backingTrack() const override { return track; }
+    std::vector<engine::SustainPadsSettings> sustainPads; // every setting given, in order
+    void setSustainPads(const engine::SustainPadsSettings& settings) override { sustainPads.push_back(settings); }
+    [[nodiscard]] engine::LevelReading sustainPadsLevel() override { return {0.3F, 0.1F}; }
+    QString sustainPadsInstrument;
+    QByteArray sustainPadsState;
+    QString sustainPadsRefusal; // not empty: loading an instrument fails with it
+    core::Result<void> setSustainPadsInstrument(const QString& pluginId, const QByteArray& state) override
+    {
+        if (!pluginId.isEmpty() && !sustainPadsRefusal.isEmpty()) return core::fail(core::ErrorCode::InvalidData, sustainPadsRefusal);
+        sustainPadsInstrument = pluginId;
+        sustainPadsState = state;
+        return {};
+    }
+    [[nodiscard]] core::Result<QByteArray> sustainPadsInstrumentState() const override { return sustainPadsState; }
+    core::Result<std::unique_ptr<engine::IPluginEditor>> createSustainPadsEditor() override
+    {
+        return std::unique_ptr<engine::IPluginEditor>{};
+    }
+    bool sustainPadsEdited = false; // set: the next takeSustainPadsEdits says so, once
+    bool takeSustainPadsEdits() override { return std::exchange(sustainPadsEdited, false); }
+    std::vector<core::PluginSlot> sustainPadsEffects;
+    void setSustainPadsEffects(const std::vector<core::PluginSlot>& effects) override { sustainPadsEffects = effects; }
+    std::vector<QString> storeSustainPadsEffectStates(std::vector<core::PluginSlot>&) override { return {}; }
+    bool takeSustainPadsEffectEdits() override { return false; }
+    core::Result<std::unique_ptr<engine::IPluginEditor>> createSustainPadsEffectEditor(int) override
+    {
+        return std::unique_ptr<engine::IPluginEditor>{};
+    }
     std::vector<engine::PluginParameter> parameters{{.id = 7, .name = QStringLiteral("Cutoff")},
                                                     {.id = 9, .name = QStringLiteral("Drive")}};
     [[nodiscard]] std::vector<engine::PluginParameter> pluginParameters(const core::ChannelId&, int) const override

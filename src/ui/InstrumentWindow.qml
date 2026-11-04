@@ -217,6 +217,11 @@ ApplicationWindow {
                 active: win.builtin && win.service.builtinId === "builtin:piano-pro"
                 sourceComponent: PianoProPanel { service: win.service }
             }
+            Loader {
+                anchors.fill: parent
+                active: win.builtin && win.service.builtinId === "builtin:pads-pro"
+                sourceComponent: PadsProPanel { service: win.service }
+            }
 
             // Nothing to show: why (no channel, not in this song), or where it is.
             Column {

@@ -128,6 +128,24 @@ public:
     }
     void setBackingTrackVolume(double) override {}
     [[nodiscard]] BackingTrackState backingTrack() const override { return m_track; }
+    void setSustainPads(const SustainPadsSettings& settings) override { m_sustainPads = settings; }
+    core::Result<void> setSustainPadsInstrument(const QString& pluginId, const QByteArray& state) override
+    {
+        m_sustainPadsInstrument = pluginId;
+        m_sustainPadsState = pluginId.isEmpty() ? QByteArray{} : state;
+        return {};
+    }
+    [[nodiscard]] core::Result<QByteArray> sustainPadsInstrumentState() const override { return m_sustainPadsState; }
+    core::Result<std::unique_ptr<IPluginEditor>> createSustainPadsEditor() override { return std::unique_ptr<IPluginEditor>{}; }
+    bool takeSustainPadsEdits() override { return false; }
+    void setSustainPadsEffects(const std::vector<core::PluginSlot>& effects) override { m_sustainPadsEffects = effects; }
+    std::vector<QString> storeSustainPadsEffectStates(std::vector<core::PluginSlot>&) override { return {}; }
+    bool takeSustainPadsEffectEdits() override { return false; }
+    core::Result<std::unique_ptr<IPluginEditor>> createSustainPadsEffectEditor(int) override { return std::unique_ptr<IPluginEditor>{}; }
+    [[nodiscard]] LevelReading sustainPadsLevel() override
+    {
+        return m_sustainPads.active ? LevelReading{.peak = 0.3F, .rms = 0.1F} : LevelReading{};
+    }
     // Saw Stack Pro's own (its type and knobs, as the real one has them);
     // any other instrument: two made-up ones.
     [[nodiscard]] std::vector<PluginParameter> pluginParameters(const core::ChannelId& id, int target) const override;
@@ -309,6 +327,10 @@ private:
     std::vector<KeyPress> m_presses; // keys played on screen, not yet taken
     double m_tempo = 120.0;
     bool m_click = false;
+    SustainPadsSettings m_sustainPads;
+    QString m_sustainPadsInstrument;
+    std::vector<core::PluginSlot> m_sustainPadsEffects;
+    QByteArray m_sustainPadsState;
     MidiActivity m_keyboard; // notes played on screen (the demo has no MIDI input)
     BackingTrackState m_track;
     struct ChannelState

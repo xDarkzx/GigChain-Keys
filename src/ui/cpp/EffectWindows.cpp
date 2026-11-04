@@ -125,7 +125,7 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
 bool EffectWindows::openBus(Bus bus, int effect, const std::vector<core::PluginSlot>& busSlots, QWindow* owner)
 {
     GC_ONLY_MAIN_THREAD();
-    const QString busName = bus == Bus::Master ? tr("Master") : tr("Aux");
+    const QString busName = bus == Bus::Master ? tr("Master") : bus == Bus::SustainPadsFx ? tr("Sustain Pads") : tr("Aux");
     if (effect < 0 || static_cast<std::size_t>(effect) >= busSlots.size()) {
         qCWarning(lcUi).noquote() << "No effect window:" << busName << "effect" << effect << "does not exist (" << busSlots.size() << "effects)";
         return false;
@@ -140,7 +140,9 @@ bool EffectWindows::openBus(Bus bus, int effect, const std::vector<core::PluginS
         }
     }
     FreezeWatchdog::mark(u"opening the window of %1 (%2)"_s.arg(slot.displayName, busName));
-    auto created = bus == Bus::Master ? m_engine.createMasterEffectEditor(effect) : m_engine.createAuxEffectEditor(effect);
+    auto created = bus == Bus::Master          ? m_engine.createMasterEffectEditor(effect)
+                   : bus == Bus::SustainPadsFx ? m_engine.createSustainPadsEffectEditor(effect)
+                                               : m_engine.createAuxEffectEditor(effect);
     if (!created) {
         m_document.reportMessage(created.error().message);
         return false;
@@ -155,6 +157,42 @@ bool EffectWindows::openBus(Bus bus, int effect, const std::vector<core::PluginS
     entry->pluginId = slot.pluginId;
     entry->editor = std::move(*created);
     return show(std::move(entry), tr("%1 — %2").arg(slot.displayName, busName), owner);
+}
+
+bool EffectWindows::openSustainPads(const QString& pluginId, const QString& name, QWindow* owner)
+{
+    GC_ONLY_MAIN_THREAD();
+    constexpr int kSustainPads = static_cast<int>(Bus::SustainPads);
+    for (const auto& entry : m_open) {
+        if (entry->bus == kSustainPads && entry->pluginId == pluginId) {
+            GC_IF_FAILED(entry->window) { break; } // an open entry always has its window
+            entry->window->raise();
+            entry->window->requestActivate();
+            return true;
+        }
+    }
+    closeSustainPads(); // (another instrument's, still open)
+    FreezeWatchdog::mark(u"opening the window of %1 (Sustain Pads)"_s.arg(name));
+    auto created = m_engine.createSustainPadsEditor();
+    if (!created) {
+        m_document.reportMessage(created.error().message);
+        return false;
+    }
+    if (!*created) {
+        m_document.reportMessage(tr("%1 has no window of its own").arg(name), Notifications::Info);
+        return false;
+    }
+    auto entry = std::make_unique<Entry>();
+    entry->bus = kSustainPads;
+    entry->pluginId = pluginId;
+    entry->editor = std::move(*created);
+    return show(std::move(entry), tr("%1 — Sustain Pads").arg(name), owner);
+}
+
+void EffectWindows::closeSustainPads()
+{
+    const auto it = std::ranges::find_if(m_open, [](const auto& e) { return e->bus == static_cast<int>(Bus::SustainPads); });
+    if (it != m_open.end()) close(**it);
 }
 
 bool EffectWindows::show(std::unique_ptr<Entry> entry, const QString& title, QWindow* owner)

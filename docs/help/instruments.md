@@ -12,9 +12,9 @@ version). A plugin's details in the browser say which it is ("Built with VST
 2.4"). VST2 "shell" plugins, which hold several plugins in one file (as
 Waves' do), are not played yet.
 
-## The built-in instruments: Saw Stack Pro and Piano Pro
+## The built-in instruments: Saw Stack Pro, Piano Pro and Pads Pro
 
-Two instruments come with GigChain Keys, in the **Instruments** list as
+Three instruments come with GigChain Keys, in the **Instruments** list as
 *Built into GigChain Keys*. Their windows are the app's own, in the same
 style, and work the same way:
 
@@ -46,6 +46,61 @@ time a recorded piano is used it takes a few seconds to load ("Loading…"),
 and the FM piano plays meanwhile. **Tone, Resonance, Attack, Release** and
 **Width** shape it; **Reverb, Delay, OTT** and **Tape** (wobble, warmth and
 hiss) finish it.
+
+**Pads Pro** is the lush pad of worship sets, in the spirit of the classic
+analog synths: *Warm, Lush, Dark, Air, Shimmer, Choir, Strings* and
+*Organ*, all equally loud, so switching never jumps in level. The square
+moves **Tone** across and **Shimmer** (the reverb climbing an octave) up.
+**Motion** is how much the pad breathes and drifts, **Bloom** how slowly it
+swells in, **Tail** how long it rings after you let go, **Width** how wide it
+is, and **Touch** how much playing harder makes it louder (none at first).
+**Reverb** sets the room.
+
+## Sustain Pads
+
+Sustain Pads hold a pad on one key under the whole song, the way Sunday
+Keys' Tonic pads do: the pad keeps going while you play, and moves with
+you from song to song. Click the **Sustain Pads** button in the toolbar (the
+waves) and choose where its panel goes: **Under the main area** or **In a
+window of its own** (to drag onto another screen; close it, or click
+**Reattach**, to put it back).
+
+- **Tap a key** (C to B): the pad plays in that key. Tap another key and the
+  pad fades over to it, with no gap. Tap the key that is playing to fade it
+  out.
+- **Activate** fades the pad in or out in the key that is lit.
+- **The pad:** *Warm, Lush, Dark, Air, Shimmer, Choir, Strings* or *Organ*
+  (Pads Pro's). Step with **‹ ›** or click its name; a new pad fades over too.
+- **Filter · Shimmer:** drag across for darker or brighter, and up for more
+  shimmer (Pads Pro's).
+- **Motion** is how much it moves (Pads Pro's); **Fade** is how long it
+  takes to come in, go out and move from key to key (0.1 to 30 seconds).
+- **−1 / 0 / +1** moves it an octave down or up.
+- **Song key:** when lit, picking a song takes the pad to the song's key
+  (from the `{key: …}` line of its chart). A small dot under a key marks the
+  song's key.
+
+### Its channel strip
+
+While its panel is shown, or it plays, Sustain Pads has a strip of its own in
+the mixer (**PADS**, before **Aux**), as a channel has:
+
+- **Instrument:** *Pads Pro*, or your own pad plugin: drag a VST instrument
+  from the browser onto the strip, or right-click the slot and pick **A VST
+  instrument…**. Its window opens: choose its sound there (click the slot to
+  open it again). Choosing another sound in it plays at once on the held
+  chord. GigChain Keys remembers it and the sound you chose. **Pads Pro
+  (built in)** in the same menu goes back. With a VST, its own window has
+  the filter and movement, so **Filter · Shimmer** and **Motion** leave the
+  panel.
+- **Audio FX:** your reverbs, delays, EQs on the pad, Pads Pro or a VST
+  alike: drag them onto the strip, or add them in its empty slot. Kept with
+  your rig, as the Aux's.
+- **The fader** with its meter, **M** to mute, and (with an interface that
+  has more than two outputs) where it plays.
+
+The pad never starts by itself when GigChain Keys opens. **Panic** stops it
+too. Its sound, effects, fade, volume and place are remembered.
 
 ### Enhance
 
@@ -211,6 +266,25 @@ The **LIM** light shows the safety limiter at work (see
 Click **Audio input** after the last channel and pick the input. The channel
 plays what comes in, through its effects: a vocal with reverb, a guitar
 through an amp plugin. Choose the input device first in **Settings > Audio**.
+
+## Where the mixer goes
+
+Click the **Mixer** button in the toolbar (the sliders) and choose where it
+goes:
+
+- **Hide the mixer.**
+- **Along the bottom:** where it starts.
+- **Down the left side** or **Down the right side:** the same strips, the
+  loop station over them and the Aux and Master beside them, using the
+  window's full height, so the faders are longer. Drag the mixer's edge to
+  make it wider or narrower.
+- **In a window of its own** (or **Ctrl+Shift+M**): the whole mixer goes
+  into a window to drag onto another screen. Close that window (or press
+  Ctrl+Shift+M again) to put it back.
+
+GigChain Keys remembers where you put the mixer, and its window opens again
+where you left it, unless that screen isn't plugged in (then it opens over
+the main window). It works the same in Edit and in Perform.
 
 ## Show and hide
 

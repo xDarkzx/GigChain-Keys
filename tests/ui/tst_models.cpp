@@ -1,13 +1,16 @@
 #include "ChannelModel.h"
 #include "DocumentController.h"
 #include "EditorService.h"
+#include "EffectWindows.h"
 #include "OfficialArtwork.h"
 #include "EngineStatus.h"
+#include "MixerLayout.h"
 #include "Notifications.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
 #include "SetlistModel.h"
 #include "SpyEngine.h"
+#include "SustainPadsController.h"
 #include "gigchain/engine/BuiltinReadings.h"
 #include "gigchain/engine/SidechainCurves.h"
 
@@ -354,6 +357,246 @@ private slots:
         QVERIFY(target.wait(500));
         QTest::qWait(20);
         QCOMPARE(target.count(), 1);
+    }
+
+    // Where the mixer is, remembered for next time: its place, detached or
+    // not, and how wide it is down a side (never too narrow for a strip,
+    // nor wider than makes sense).
+    void theMixersPlaceIsRemembered()
+    {
+        {
+            MixerLayout layout(*m_settings);
+            QCOMPARE(layout.placement(), MixerLayout::Placement::Bottom); // as it always was
+            QVERIFY(!layout.detached());
+            QSignalSpy placed(&layout, &MixerLayout::placementChanged);
+            layout.setPlacement(MixerLayout::Placement::Right);
+            layout.setPlacement(MixerLayout::Placement::Right);
+            QCOMPARE(placed.count(), 1);
+            layout.toggleDetached();
+            layout.setSideWidth(100); // too narrow for a strip
+            QCOMPARE(layout.sideWidth(), MixerLayout::kMinSideWidth);
+            layout.setSideWidth(700); // (not the default: remembered, not just started with)
+        }
+        MixerLayout again(*m_settings);
+        QCOMPARE(again.placement(), MixerLayout::Placement::Right);
+        QVERIFY(again.detached());
+        QCOMPARE(again.sideWidth(), 700);
+        again.toggleDetached();
+        QVERIFY(!MixerLayout(*m_settings).detached());
+        // A place it never had (a newer version's, an edited file): along the bottom.
+        m_settings->setValue(u"mixer/placement"_s, 9);
+        QCOMPARE(MixerLayout(*m_settings).placement(), MixerLayout::Placement::Bottom);
+    }
+
+    // A key as a chart writes it, as Sustain Pads' key.
+    void aWrittenKeyIsReadAsSustainPadsKey()
+    {
+        QCOMPARE(SustainPadsController::keyOf(u"C"_s), 0);
+        QCOMPARE(SustainPadsController::keyOf(u"Dm"_s), 2);
+        QCOMPARE(SustainPadsController::keyOf(u"F#"_s), 6);
+        QCOMPARE(SustainPadsController::keyOf(u"Bb"_s), 10);
+        QCOMPARE(SustainPadsController::keyOf(u" ebmaj7 "_s), 3);
+        QCOMPARE(SustainPadsController::keyOf(u"Cb"_s), 11);
+        QCOMPARE(SustainPadsController::keyOf(u"B#"_s), 0);
+        QCOMPARE(SustainPadsController::keyOf(u"G♭"_s), 6);
+        QCOMPARE(SustainPadsController::keyOf(u""_s), -1);
+        QCOMPARE(SustainPadsController::keyOf(u"H"_s), -1);
+        QCOMPARE(SustainPadsController::keyOf(u"?"_s), -1);
+    }
+
+    // Tapping a key plays it (fading over from the one playing); tapping the
+    // one playing fades it out. The engine hears every change.
+    void sustainPadsKeysPlayAndStop()
+    {
+        EffectWindows windows(*m_engine, *m_doc);
+        SustainPadsController pads(*m_engine, *m_doc, *m_settings, windows);
+        QVERIFY(!pads.active());
+        QVERIFY(!m_engine->sustainPads.empty());
+        QVERIFY(!m_engine->sustainPads.back().active); // never on by itself
+        pads.playKey(7); // G
+        QVERIFY(pads.active());
+        QCOMPARE(m_engine->sustainPads.back().key, 7);
+        QVERIFY(m_engine->sustainPads.back().active);
+        pads.playKey(2); // to D, still on
+        QCOMPARE(m_engine->sustainPads.back().key, 2);
+        QVERIFY(m_engine->sustainPads.back().active);
+        pads.playKey(2); // D again: off
+        QVERIFY(!pads.active());
+        QVERIFY(!m_engine->sustainPads.back().active);
+        QCOMPARE(m_engine->sustainPads.back().key, 2);
+        pads.playKey(-1); // (kept in range: B)
+        QCOMPARE(pads.key(), 11);
+    }
+
+    // The player's pad, filter, shimmer, fade, volume and output come back
+    // next time; the pad never starts by itself. Out of range: kept in range.
+    void sustainPadsSettingsAreRemembered()
+    {
+        {
+            EffectWindows windows(*m_engine, *m_doc);
+            SustainPadsController pads(*m_engine, *m_doc, *m_settings, windows);
+            pads.setPreset(4);
+            pads.setTone(0.8);
+            pads.setShimmer(0.9);
+            pads.setMotion(0.2);
+            pads.setFadeSeconds(12.0);
+            pads.setVolumeDb(-12.0);
+            pads.setOutputPair(2);
+            pads.setOctave(1);
+            pads.setFollowSongKey(false);
+            pads.setShown(true);
+            pads.setDetached(true);
+            pads.playKey(9);
+            QVERIFY(pads.active());
+        }
+        EffectWindows againWindows(*m_engine, *m_doc);
+        SustainPadsController again(*m_engine, *m_doc, *m_settings, againWindows);
+        QVERIFY(!again.active());
+        QCOMPARE(again.preset(), 4);
+        QCOMPARE(again.key(), 9);
+        QCOMPARE(again.tone(), 0.8);
+        QCOMPARE(again.shimmer(), 0.9);
+        QCOMPARE(again.motion(), 0.2);
+        QCOMPARE(again.fadeSeconds(), 12.0);
+        QCOMPARE(again.volumeDb(), -12.0);
+        QCOMPARE(again.outputPair(), 2);
+        QCOMPARE(again.octave(), 1);
+        QVERIFY(!again.followSongKey());
+        QVERIFY(again.shown());
+        QVERIFY(again.detached());
+        QCOMPARE(m_engine->sustainPads.back(), again.settings()); // and the engine has them
+        again.setPreset(99);
+        again.setVolumeDb(20.0);
+        again.setFadeSeconds(0.0);
+        again.setTone(-3.0);
+        again.setOctave(-5);
+        QCOMPARE(again.preset(), 7);
+        QCOMPARE(again.volumeDb(), 0.0);
+        QCOMPARE(again.fadeSeconds(), 0.1);
+        QCOMPARE(again.tone(), 0.0);
+        QCOMPARE(again.octave(), -1);
+        QCOMPARE(SustainPadsController::presetNames().size(), 8);
+        QCOMPARE(SustainPadsController::presetNames().at(0), u"Warm"_s);
+    }
+
+    // A song with a key (from its chart) takes the pad to its key when it is
+    // picked, as Tonic does; a key tapped on the panel then stays. Not when
+    // following is off.
+    void sustainPadsFollowTheSongsKey()
+    {
+        EffectWindows windows(*m_engine, *m_doc);
+        SustainPadsController pads(*m_engine, *m_doc, *m_settings, windows);
+        QVERIFY(pads.followSongKey());
+        QCOMPARE(pads.songKeyIndex(), -1); // the song has none
+        QVERIFY(m_doc->pasteChart(0, u"{title: Hymn}\n{key: Eb}\n[Eb]Holy [Bb]holy"_s));
+        QCOMPARE(pads.songKey(), u"Eb"_s);
+        QCOMPARE(pads.key(), 3); // its key set: there
+        pads.playKey(5);         // F tapped
+        QCOMPARE(pads.key(), 5);
+        QVERIFY(m_doc->setSongTempo(0, 72.0)); // the song changes otherwise: F stays
+        QCOMPARE(pads.key(), 5);
+
+        QVERIFY(m_doc->addSong()); // a song without a key: the pad stays where it is
+        QCOMPARE(pads.songKeyIndex(), -1);
+        QCOMPARE(pads.key(), 5);
+        QVERIFY(m_doc->pasteChart(1, u"{key: A}\n[A]Praise"_s));
+        QCOMPARE(pads.key(), 9);
+
+        pads.setFollowSongKey(false);
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->pasteChart(2, u"{key: D}\n[D]Glory"_s));
+        QCOMPARE(pads.key(), 9); // not followed
+        pads.setFollowSongKey(true); // following again: the song's key
+        QCOMPARE(pads.key(), 2);
+    }
+
+    // A VST loaded into Sustain Pads plays them from then on, and next time
+    // with the patch chosen in its window (its settings kept when the app
+    // closes); Pads Pro again forgets it. Not loadable: said, Pads Pro stays.
+    void sustainPadsPlayAVstLoadedIntoThemNextTimeToo()
+    {
+        {
+            EffectWindows windows(*m_engine, *m_doc);
+            SustainPadsController pads(*m_engine, *m_doc, *m_settings, windows);
+            QCOMPARE(pads.instrumentId(), QString());
+            QCOMPARE(pads.instrumentName(), u"Pads Pro"_s);
+            QSignalSpy changed(&pads, &SustainPadsController::instrumentChanged);
+            QVERIFY(pads.loadInstrument(u"C:/VST3/Ethereal Pads.vst3"_s, u"Ethereal Pads"_s));
+            QCOMPARE(changed.count(), 1);
+            QCOMPARE(m_engine->sustainPadsInstrument, u"C:/VST3/Ethereal Pads.vst3"_s);
+            QCOMPARE(pads.instrumentName(), u"Ethereal Pads"_s);
+            m_engine->sustainPadsState = "patch: Heaven"; // chosen in its window
+        } // (the app closes: its settings are kept)
+        m_engine->sustainPadsInstrument.clear();
+        m_engine->sustainPadsState.clear();
+        {
+            EffectWindows windows(*m_engine, *m_doc);
+            SustainPadsController again(*m_engine, *m_doc, *m_settings, windows);
+            QCOMPARE(again.instrumentName(), u"Ethereal Pads"_s);
+            QCOMPARE(m_engine->sustainPadsInstrument, u"C:/VST3/Ethereal Pads.vst3"_s);
+            QCOMPARE(m_engine->sustainPadsState, QByteArray("patch: Heaven")); // given back
+            again.usePadsPro();
+            QCOMPARE(m_engine->sustainPadsInstrument, QString());
+            QCOMPARE(again.instrumentName(), u"Pads Pro"_s);
+        }
+        m_engine->sustainPadsInstrument = u"untouched"_s;
+        EffectWindows windows(*m_engine, *m_doc);
+        SustainPadsController third(*m_engine, *m_doc, *m_settings, windows);
+        QCOMPARE(m_engine->sustainPadsInstrument, u"untouched"_s); // Pads Pro: nothing loaded
+        QCOMPARE(third.instrumentId(), QString());
+
+        // Refused (an effect, a crash): said why, and Pads Pro still plays.
+        m_engine->sustainPadsRefusal = u"Valhalla is an effect, not an instrument"_s;
+        QVERIFY(!third.loadInstrument(u"C:/VST3/Valhalla.vst3"_s, u"Valhalla"_s));
+        QCOMPARE(third.instrumentId(), QString());
+        const Notifications& shown = *m_doc->notifications();
+        QVERIFY(shown.count() > 0);
+        const QString said = shown.text(shown.count() - 1);
+        QVERIFY2(said.contains(u"Valhalla"_s) && said.contains(u"not an instrument"_s), qPrintable(said));
+    }
+
+    // A new sound chosen in the VST's window is kept soon after (not only
+    // when its window closes or the app ends: a crash would lose it).
+    void sustainPadsKeepANewSoundChosenInTheVst()
+    {
+        EffectWindows windows(*m_engine, *m_doc);
+        SustainPadsController pads(*m_engine, *m_doc, *m_settings, windows);
+        QVERIFY(pads.loadInstrument(u"C:/VST3/Ethereal Pads.vst3"_s, u"Ethereal Pads"_s));
+        QVERIFY(!m_settings->contains(u"sustainPads/instrumentState"_s));
+        m_engine->sustainPadsState = "patch: Choir Heaven";
+        m_engine->sustainPadsEdited = true; // its window said so
+        pads.poll();
+        QTRY_COMPARE_WITH_TIMEOUT(QByteArray::fromBase64(m_settings->value(u"sustainPads/instrumentState"_s).toByteArray()),
+                                  QByteArray("patch: Choir Heaven"), 4000);
+    }
+
+    // Its strip's mute reaches the engine and comes back next time.
+    void sustainPadsMuteIsRemembered()
+    {
+        {
+            EffectWindows windows(*m_engine, *m_doc);
+            SustainPadsController pads(*m_engine, *m_doc, *m_settings, windows);
+            QVERIFY(!pads.muted());
+            pads.setMuted(true);
+            QVERIFY(m_engine->sustainPads.back().mute);
+        }
+        EffectWindows windows(*m_engine, *m_doc);
+        SustainPadsController again(*m_engine, *m_doc, *m_settings, windows);
+        QVERIFY(again.muted());
+        QVERIFY(m_engine->sustainPads.back().mute);
+    }
+
+    // The meter comes from the engine, with its poll.
+    void sustainPadsMeterIsPolled()
+    {
+        EffectWindows windows(*m_engine, *m_doc);
+        SustainPadsController pads(*m_engine, *m_doc, *m_settings, windows);
+        QSignalSpy level(&pads, &SustainPadsController::levelChanged);
+        pads.poll();
+        QCOMPARE(level.count(), 1);
+        QCOMPARE(pads.peak(), static_cast<double>(0.3F));
+        pads.poll(); // the same: no change to say
+        QCOMPARE(level.count(), 1);
     }
 
     void engineStatusPollsAndForwardsNotices()

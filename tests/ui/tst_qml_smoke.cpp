@@ -712,6 +712,211 @@ private slots:
         QTRY_VERIFY(!m_engine->songPosition().playing);
     }
 
+    // Picks `entry` in the toolbar's Mixer menu, as a player would.
+    void pickMixerPlace(const QString& entry)
+    {
+        click(u"mixerButton"_s);
+        QTRY_VERIFY2(item(entry) != nullptr && item(entry)->isVisible(), qPrintable(entry));
+        click(entry);
+        settle();
+    }
+
+    // The mixer's place, from the toolbar's Mixer button (one button: its
+    // menu): down the right or left side, its strips upright as along the
+    // bottom (channels, then the aux and the master); hidden; back.
+    void theMixerGoesDownASideFromItsButtonsMenu()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        QVERIFY(doc.addChannel(u"fake.analog-pad"_s, u"Analog Pad"_s));
+        window()->resize(1600, 1000);
+        settle();
+        auto* layout = m_qml->rootObjects().value(0)->property("mixerLayout").value<QObject*>();
+        QVERIFY(layout != nullptr);
+        QVERIFY(item(u"mixerBottom"_s)->isVisible());
+        // "" when its strips stand upright (the fader taller than wide) with the aux and master in sight, else what was found.
+        const auto notUpright = [](QQuickItem* in) -> QString {
+            auto* strips = in->findChild<QQuickItem*>(u"mixerStrips"_s);
+            if (strips == nullptr) return u"no strips"_s;
+            QQuickItem* fader = findItem(strips, u"channelFader"_s);
+            if (fader == nullptr) return u"no fader in %1 strips"_s.arg(strips->property("count").toInt());
+            if (!fader->isVisible() || fader->height() <= fader->width()) return u"a fader %1x%2"_s.arg(fader->width()).arg(fader->height());
+            for (const QString& bus : {u"auxStrip"_s, u"masterFader"_s}) {
+                auto* busItem = in->findChild<QQuickItem*>(bus);
+                if (busItem == nullptr || !busItem->isVisible() || busItem->width() <= 0) return bus + u" not in sight"_s;
+            }
+            return {};
+        };
+        pickMixerPlace(u"mixerAtRight"_s);
+        auto* right = qobject_cast<QQuickItem*>(window()->findChild<QObject*>(u"mixerRight"_s));
+        QVERIFY(right != nullptr);
+        QTRY_VERIFY(right->isVisible() && right->property("item").value<QQuickItem*>() != nullptr);
+        auto* side = right->property("item").value<QQuickItem*>();
+        QVERIFY(!item(u"mixerBottom"_s)->isVisible());
+        QTRY_VERIFY2(notUpright(side).isEmpty(), qPrintable(notUpright(side)));
+        QVERIFY(right->mapToScene({0, 0}).x() > window()->width() / 2.0); // down the right
+        QCOMPARE(layout->property("placement").toInt(), 2);
+        shoot(u"mixer-right"_s);
+        pickMixerPlace(u"mixerAtLeft"_s);
+        auto* left = qobject_cast<QQuickItem*>(window()->findChild<QObject*>(u"mixerLeft"_s));
+        QTRY_VERIFY(left != nullptr && left->isVisible() && left->property("item").value<QQuickItem*>() != nullptr);
+        QTRY_VERIFY2(notUpright(left->property("item").value<QQuickItem*>()).isEmpty(),
+                     qPrintable(notUpright(left->property("item").value<QQuickItem*>())));
+        QVERIFY(left->mapToScene({0, 0}).x() < window()->width() / 2.0); // down the left
+        QVERIFY(!right->isVisible());
+        // Hidden: nowhere; then along the bottom again (shown by picking it).
+        pickMixerPlace(u"mixerHide"_s);
+        QVERIFY(!left->isVisible() && !item(u"mixerBottom"_s)->isVisible());
+        pickMixerPlace(u"mixerAtBottom"_s);
+        QTRY_VERIFY(item(u"mixerBottom"_s)->isVisible());
+        QVERIFY(notUpright(item(u"mixerBottom"_s)).isEmpty());
+        QVERIFY(!left->isVisible());
+    }
+
+    // Its own window, from the same menu: the whole mixer there, gone from
+    // the main window; closing it (or the key) brings it back.
+    void theMixerDetachesIntoItsOwnWindow()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        settle();
+        const auto mixerWindow = [] {
+            const QWindowList all = QGuiApplication::topLevelWindows();
+            const auto it = std::ranges::find_if(all, [](const QWindow* w) { return w->objectName() == u"mixerWindow"_s && w->isVisible(); });
+            return it != all.end() ? qobject_cast<QQuickWindow*>(*it) : nullptr;
+        };
+        QVERIFY(mixerWindow() == nullptr);
+        pickMixerPlace(u"mixerInWindow"_s);
+        QTRY_VERIFY(mixerWindow() != nullptr);
+        QQuickWindow* own = mixerWindow();
+        QVERIFY(!item(u"mixerBottom"_s)->isVisible()); // not in the main window as well
+        auto* strips = own->findChild<QQuickItem*>(u"mixerStrips"_s);
+        QVERIFY(strips != nullptr && strips->property("count").toInt() == 1);
+        QVERIFY(own->findChild<QQuickItem*>(u"auxStrip"_s)->isVisible());
+        if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
+            QVERIFY(own->grabWindow().save(folder + u"/mixer-window.png"_s));
+        }
+        // Closed: the window goes, the mixer is back in its place.
+        own->close();
+        QTRY_VERIFY(mixerWindow() == nullptr);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete); // the window really gone, quietly
+        settle();
+        QTRY_VERIFY(item(u"mixerBottom"_s)->isVisible());
+        // The key does both.
+        auto* key = window()->findChild<QObject*>(u"keyMixerWindow"_s);
+        QVERIFY(key != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(key, "activated"));
+        QTRY_VERIFY(mixerWindow() != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(key, "activated"));
+        QTRY_VERIFY(mixerWindow() == nullptr);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        settle();
+    }
+
+    // Sustain Pads from the toolbar's button: its unit under the main area;
+    // tapping a key plays the pad there (the engine hears it on, in that
+    // key), tapping it again fades it out; Activate does the same; Detach
+    // puts the unit in a window of its own (gone from the main window), and
+    // closing that window brings it back.
+    void sustainPadsPlayFromTheirPanelAndDetach()
+    {
+        window()->resize(1600, 1000);
+        settle();
+        auto* pads = m_qml->rootObjects().value(0)->property("sustainPads").value<QObject*>();
+        QVERIFY(pads != nullptr);
+        // The engine meters the pad while it sounds (the demo engine: while it is on).
+        const auto sounding = [this] { return m_engine->sustainPadsLevel().peak > 0.0F; };
+        QVERIFY(!sounding());
+        QVERIFY(window()->findChild<QQuickItem*>(u"sustainPadsBar"_s) == nullptr); // hidden at first
+        click(u"sustainPadsButton"_s);
+        QTRY_VERIFY(item(u"sustainPadsInBar"_s) != nullptr && item(u"sustainPadsInBar"_s)->isVisible());
+        click(u"sustainPadsInBar"_s);
+        settle();
+        QTRY_VERIFY(item(u"sustainPadsBar"_s) != nullptr && item(u"sustainPadsBar"_s)->isVisible());
+        QQuickItem* unit = item(u"sustainPadsBar"_s);
+        QVERIFY(unit->height() > 60);
+        shoot(u"sustain-pads"_s);
+
+        click(u"sustainKey7"_s); // G
+        QTRY_VERIFY(sounding());
+        QCOMPARE(pads->property("key").toInt(), 7);
+        click(u"sustainKey2"_s); // to D
+        QTRY_COMPARE(pads->property("key").toInt(), 2);
+        QVERIFY(sounding());
+        click(u"sustainKey2"_s); // D again: it fades out
+        QTRY_VERIFY(!sounding());
+        click(u"sustainActivate"_s);
+        QTRY_VERIFY(sounding());
+        // Panic: the pad too, switched off on its panel.
+        click(u"panicButton"_s);
+        QTRY_VERIFY(!pads->property("active").toBool());
+        QTRY_VERIFY(!sounding());
+        click(u"sustainActivate"_s);
+        QTRY_VERIFY(sounding());
+        click(u"sustainNextPad"_s);
+        QTRY_COMPARE(pads->property("preset").toInt(), 2); // (Lush, the first, then Dark)
+        click(u"sustainOctaveUp"_s);
+        QTRY_COMPARE(pads->property("octave").toInt(), 1);
+
+        const auto padsWindow = [] {
+            const QWindowList all = QGuiApplication::topLevelWindows();
+            const auto it = std::ranges::find_if(all, [](const QWindow* w) { return w->objectName() == u"sustainPadsWindow"_s && w->isVisible(); });
+            return it != all.end() ? qobject_cast<QQuickWindow*>(*it) : nullptr;
+        };
+        QVERIFY(padsWindow() == nullptr);
+        click(u"sustainDetach"_s);
+        QTRY_VERIFY(padsWindow() != nullptr);
+        QQuickWindow* own = padsWindow();
+        // Not in the main window as well (its window is a child of the main one: its own loader is checked).
+        auto* here = window()->findChild<QObject*>(u"sustainPadsHere"_s);
+        QVERIFY(here != nullptr);
+        QTRY_VERIFY(!here->property("active").toBool());
+        QVERIFY(own->findChild<QQuickItem*>(u"sustainActivate"_s) != nullptr);
+        QVERIFY(sounding()); // still playing: the window is only where it is
+        if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
+            QVERIFY(own->grabWindow().save(folder + u"/sustain-pads-window.png"_s));
+        }
+        own->close();
+        QTRY_VERIFY(padsWindow() == nullptr);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        settle();
+        QTRY_VERIFY(item(u"sustainPadsBar"_s) != nullptr && item(u"sustainPadsBar"_s)->isVisible());
+        // Its channel strip in the mixer, as a channel's: an instrument
+        // dropped on it plays the pad (its name on the panel, Pads Pro's
+        // square and Motion gone: its own window has them); right-click its
+        // instrument: Pads Pro again; its mute.
+        QTRY_VERIFY(item(u"sustainPadsStrip"_s) != nullptr && item(u"sustainPadsStrip"_s)->isVisible());
+        auto* drop = item(u"sustainPadsStrip"_s)->findChild<QObject*>(u"sustainPadsDrop"_s);
+        QVERIFY(drop != nullptr);
+        const QVariantMap dropped{{u"pluginId"_s, u"fake.analog-pad"_s}, {u"name"_s, u"Analog Pad"_s}, {u"kind"_s, u"instrument"_s}};
+        QVERIFY(QMetaObject::invokeMethod(drop, "acceptDrop", Q_ARG(QVariant, dropped)));
+        QTRY_COMPARE(pads->property("instrumentId").toString(), u"fake.analog-pad"_s);
+        QTRY_COMPARE(item(u"sustainPadName"_s)->property("text").toString(), u"Analog Pad"_s);
+        QCOMPARE(item(u"sustainInstrumentSlot"_s)->property("text").toString(), u"Analog Pad"_s);
+        QVERIFY(!item(u"sustainXY"_s)->isVisible());
+        QVERIFY(!item(u"sustainMotion"_s)->isVisible());
+        shoot(u"sustain-pads-vst"_s);
+        QQuickItem* slot = item(u"sustainInstrumentSlot"_s);
+        QTest::mouseClick(window(), Qt::RightButton, {}, slot->mapToScene(QPointF(slot->width() / 2, slot->height() / 2)).toPoint());
+        QTRY_VERIFY(item(u"sustainUsePadsPro"_s) != nullptr && item(u"sustainUsePadsPro"_s)->isVisible());
+        click(u"sustainUsePadsPro"_s);
+        QTRY_COMPARE(pads->property("instrumentId").toString(), QString());
+        QTRY_VERIFY(item(u"sustainXY"_s)->isVisible());
+        click(u"sustainPadsMute"_s);
+        QTRY_VERIFY(pads->property("muted").toBool());
+        click(u"sustainPadsMute"_s);
+        QTRY_VERIFY(!pads->property("muted").toBool());
+        settle();
+
+        // Hidden from the menu: gone, still playing until switched off.
+        click(u"sustainPadsButton"_s);
+        QTRY_VERIFY(item(u"sustainPadsHide"_s) != nullptr && item(u"sustainPadsHide"_s)->isVisible());
+        click(u"sustainPadsHide"_s);
+        settle();
+        QTRY_VERIFY(item(u"sustainPadsBar"_s) == nullptr);
+        QVERIFY(sounding());
+    }
+
     // A short window (a laptop, the keyboard shown): the mixer takes at most
     // its share, and each strip fits inside it, its fader shorter, its mute,
     // solo and name plate still in sight (they were pushed under the keyboard).

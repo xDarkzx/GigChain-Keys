@@ -17,6 +17,7 @@ Item {
     property string namePrefix: "builtin" // objectNames: <prefix>Panel, <prefix>Next, ...
     property string logoText
     property int masterId: -1
+    property string masterKind: "db" // how its master level reads (describe)
     // A type's kind as the display tags it: the first [part of its name, tag]
     // its name holds, else otherCategory.
     property var categories: []
@@ -119,6 +120,11 @@ Item {
             return s < 1 ? Math.round(s * 1000) + " ms" : s.toFixed(2) + " s"
         }
         case "stretch": return "×" + Math.pow(2, (v - 0.5) * 2).toFixed(2)
+        case "padtime": { // Pads Pro's times (pads::Ranges::seconds: 5 ms .. 15 s)
+            const s = 0.005 * Math.pow(3000, v)
+            return s < 1 ? Math.round(s * 1000) + " ms" : s.toFixed(1) + " s"
+        }
+        case "paddb": return (-24 + 36 * v).toFixed(1) + " dB" // Pads Pro's level (pads::Ranges::levelDb)
         default: return Math.round(v * 100) + "%"
         }
     }
@@ -302,7 +308,7 @@ Item {
 
                 BuiltinKnob {
                     anchors { right: parent.right; verticalCenter: parent.verticalCenter; verticalCenterOffset: 4 }
-                    owner: panel; pid: panel.masterId; text: "MASTER"; kind: "db"; size: 34
+                    owner: panel; pid: panel.masterId; text: "MASTER"; kind: panel.masterKind; size: 34
                     colour: panel.text
                 }
             }

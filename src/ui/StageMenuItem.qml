@@ -8,14 +8,28 @@ MenuItem {
     implicitHeight: 26
     implicitWidth: 220
 
-    contentItem: Text {
-        leftPadding: item.checkable ? 26 : 8
-        rightPadding: 18
-        text: item.text
-        color: item.enabled ? (item.highlighted ? "white" : Theme.text) : Theme.textDim
-        font.pixelSize: Theme.fontSize
-        elide: Text.ElideRight
-        verticalAlignment: Text.AlignVCenter
+    // Its text, after its icon when it has one (icon.source).
+    contentItem: Item {
+        readonly property bool hasIcon: item.icon.source.toString() !== ""
+        Image {
+            id: itemIcon
+            x: item.checkable ? 26 : 8
+            anchors.verticalCenter: parent.verticalCenter
+            visible: parent.hasIcon
+            source: item.icon.source
+            sourceSize: Qt.size(16, 16)
+            opacity: item.enabled ? 1 : 0.5
+        }
+        Text {
+            anchors.fill: parent
+            leftPadding: (item.checkable ? 26 : 8) + (parent.hasIcon ? 24 : 0)
+            rightPadding: 18
+            text: item.text
+            color: item.enabled ? (item.highlighted ? "white" : Theme.text) : Theme.textDim
+            font.pixelSize: Theme.fontSize
+            elide: Text.ElideRight
+            verticalAlignment: Text.AlignVCenter
+        }
     }
 
     arrow: Text {

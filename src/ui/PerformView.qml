@@ -33,8 +33,15 @@ Rectangle {
     property MasterBus masterBus: null
     property MasterBus auxBus: null
     property LoopController loops: null
+    // Where the mixer is (MixerLayout): along the bottom, down a side, or in its own window.
+    property MixerLayout mixerLayout: null
+    readonly property bool mixerHere: mixerOpen && (mixerLayout === null || !mixerLayout.detached)
+    readonly property int mixerPlace: mixerLayout !== null ? mixerLayout.placement : MixerLayout.Bottom
     property PanelController panel: null
     property bool panelOpen: true
+    // Sustain Pads' unit, when it is shown here (not hidden, nor in its own window).
+    property SustainPadsController sustainPads: null
+    property MasterBus padsBus: null // its strip's effects (in the mixer)
 
     // "Add lyrics & chords": to the chart editor.
     signal editChartRequested()
@@ -61,6 +68,16 @@ Rectangle {
                 setlistModel: perform.setlistModel
                 pluginModel: perform.pluginModel
                 editable: false
+            }
+
+            // The mixer down the left.
+            Loader {
+                objectName: "performMixerLeft"
+                Layout.fillHeight: true
+                Layout.preferredWidth: perform.mixerLayout !== null ? perform.mixerLayout.sideWidth : Theme.sideMixerMinWidth
+                visible: active
+                active: perform.mixerHere && perform.mixerPlace === MixerLayout.Left
+                sourceComponent: performSideMixer
             }
 
             ColumnLayout {
@@ -453,6 +470,16 @@ Rectangle {
                     }
                 }
             }
+
+            // The mixer down the right.
+            Loader {
+                objectName: "performMixerRight"
+                Layout.fillHeight: true
+                Layout.preferredWidth: perform.mixerLayout !== null ? perform.mixerLayout.sideWidth : Theme.sideMixerMinWidth
+                visible: active
+                active: perform.mixerHere && perform.mixerPlace === MixerLayout.Right
+                sourceComponent: performSideMixer
+            }
         }
 
         PanelBar {
@@ -463,9 +490,23 @@ Rectangle {
             pluginModel: perform.pluginModel
         }
 
+        Loader {
+            objectName: "performSustainPads"
+            Layout.fillWidth: true
+            active: perform.sustainPads !== null && perform.sustainPads.shown && !perform.sustainPads.detached
+            visible: active
+            sourceComponent: SustainPadsBar {
+                pads: perform.sustainPads
+                settings: perform.settings
+                pluginModel: perform.pluginModel
+                onDetachRequested: perform.sustainPads.detached = true
+            }
+        }
+
         Mixer {
+            objectName: "performMixerBottom"
             editable: false
-            visible: perform.mixerOpen
+            visible: perform.mixerHere && perform.mixerPlace === MixerLayout.Bottom
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.mixerHeight + (perform.loops !== null && perform.loops.stripVisible ? Theme.looperHeight : 0)
             doc: perform.doc
@@ -476,6 +517,30 @@ Rectangle {
             instrumentWindows: perform.instrumentWindows
             masterBus: perform.masterBus
             auxBus: perform.auxBus
+            sustainPads: perform.sustainPads
+            padsBus: perform.padsBus
+            settings: perform.settings
+            loops: perform.loops
+        }
+    }
+
+    // The mixer down a side, as in Edit: the same upright strips, aux and master.
+    Component {
+        id: performSideMixer
+        Mixer {
+            tall: true // (the window's height: longer faders)
+            editable: false
+            doc: perform.doc
+            channelModel: perform.channelModel
+            pluginModel: perform.pluginModel
+            engineStatus: perform.engineStatus
+            effectWindows: perform.effectWindows
+            instrumentWindows: perform.instrumentWindows
+            masterBus: perform.masterBus
+            auxBus: perform.auxBus
+            sustainPads: perform.sustainPads
+            padsBus: perform.padsBus
+            settings: perform.settings
             loops: perform.loops
         }
     }

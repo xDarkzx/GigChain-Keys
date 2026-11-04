@@ -116,6 +116,10 @@ struct Vst2Node::Impl
     // A parameter changed in the plugin's own window (any thread may say).
     std::atomic<bool> edited{false};
     std::atomic<int32_t> touched{-1};
+    // A new sound chosen in its window: it said its display changed without
+    // a parameter moving (a preset), or many moved at once.
+    std::atomic<bool> displayChanged{false};
+    std::atomic<uint32_t> automated{0}; // parameters moved since takeSoundChanged
     // Main thread: the editor open, for the plugin's size requests.
     std::function<void(int, int)> resized;
 
@@ -233,6 +237,8 @@ intptr_t hostCallback(vst2::Effect* effect, int32_t opcode, int32_t index, intpt
         if (impl != nullptr) {
             // A parameter moved in its window ("learn"); end and update say no which.
             if (opcode == vst2::host::kAutomate || opcode == vst2::host::kBeginEdit) impl->touched.store(index, std::memory_order_relaxed);
+            if (opcode == vst2::host::kAutomate) impl->automated.fetch_add(1, std::memory_order_relaxed);
+            if (opcode == vst2::host::kUpdateDisplay) impl->displayChanged.store(true, std::memory_order_relaxed);
             impl->edited.store(true, std::memory_order_relaxed);
         }
         return 1;
@@ -598,6 +604,15 @@ bool Vst2Node::takeEdited()
 {
     GC_ONLY_MAIN_THREAD();
     return m_impl->edited.exchange(false, std::memory_order_relaxed);
+}
+
+bool Vst2Node::takeSoundChanged()
+{
+    GC_ONLY_MAIN_THREAD();
+    const uint32_t moved = m_impl->automated.exchange(0, std::memory_order_relaxed);
+    const bool display = m_impl->displayChanged.exchange(false, std::memory_order_relaxed);
+    // (A knob turned may update the display too: then it moved a parameter or two, not none.)
+    return (display && moved == 0) || moved >= kPresetBurst;
 }
 
 QString Vst2Node::bundlePath() const

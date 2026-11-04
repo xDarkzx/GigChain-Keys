@@ -317,6 +317,25 @@ private slots:
         QVERIFY(handler.takeEdited());
     }
 
+    // A new sound chosen in the plugin (a preset: every value to be read
+    // again, or many moved at once) is told apart from a knob turned.
+    void aNewSoundIsToldFromAKnobTurned()
+    {
+        ComponentHandler handler;
+        constexpr uint32_t kBurst = PluginNode::kPresetBurst;
+        QVERIFY(!handler.takeSoundChanged(kBurst));
+        for (Steinberg::Vst::ParamID id = 0; id < 3; ++id) handler.performEdit(1, 0.1 * id); // a knob turned
+        QVERIFY(!handler.takeSoundChanged(kBurst));
+        handler.restartComponent(Steinberg::Vst::kLatencyChanged); // not a sound
+        QVERIFY(!handler.takeSoundChanged(kBurst));
+        handler.restartComponent(Steinberg::Vst::kParamValuesChanged); // a preset chosen
+        QVERIFY(handler.takeSoundChanged(kBurst));
+        QVERIFY(!handler.takeSoundChanged(kBurst)); // reported once
+        for (Steinberg::Vst::ParamID id = 0; id < 40; ++id) handler.performEdit(id, 0.5); // a preset, value by value
+        QVERIFY(handler.takeSoundChanged(kBurst));
+        QVERIFY(!handler.takeSoundChanged(kBurst)); // counted afresh
+    }
+
     void instancesOfAPluginShareOneLibrary()
     {
         if (!QFileInfo::exists(kInstrument)) QSKIP("The test instrument is not installed");

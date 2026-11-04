@@ -663,6 +663,12 @@ bool Vst3Node::takeEdited()
     return m_impl->componentHandler.takeEdited();
 }
 
+bool Vst3Node::takeSoundChanged()
+{
+    GC_ONLY_MAIN_THREAD();
+    return m_impl->componentHandler.takeSoundChanged(kPresetBurst);
+}
+
 core::Result<Vst3Node::State> Vst3Node::saveState() const
 {
     GC_ONLY_MAIN_THREAD();

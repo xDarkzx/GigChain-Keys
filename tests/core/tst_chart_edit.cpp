@@ -113,6 +113,47 @@ private slots:
         QVERIFY(!renameSection(u"{comment: Verse}"_s, 0, u"  "_s));
     }
 
+    // Any name keeps it a section (issue #23): a name a chart would not call
+    // a section ("Big Ending", "Tag") is written as a section of its own,
+    // never left as a note that ends the section and cannot be removed.
+    void aSectionKeepsBeingASectionWhateverItIsCalled()
+    {
+        const QString chart = u"{comment: Verse}\n[C]Words\n\n{comment: Chorus}\n[F]More"_s;
+        for (const QString& name : {u"Big Ending"_s, u"Tag"_s, u"Vamp out"_s, u"Verse 2"_s}) {
+            const auto renamed = renameSection(chart, 3, name);
+            QVERIFY2(renamed.has_value(), qPrintable(name));
+            const auto sections = chartSections(parseChordPro(*renamed));
+            QCOMPARE(sections.size(), std::size_t{2});
+            QCOMPARE(sections.at(1).label, name);
+            QCOMPARE(sections.at(1).line, 3);
+            // And again: still a section, renamed in place.
+            const auto again = renameSection(*renamed, 3, u"Outro"_s);
+            QVERIFY(again.has_value());
+            QCOMPARE(chartSections(parseChordPro(*again)).at(1).label, u"Outro"_s);
+        }
+        // Added under a name of its own: a section too.
+        const auto added = appendSection(u"[C]Words"_s, u"Big Ending"_s);
+        QVERIFY(added.has_value());
+        const auto sections = chartSections(parseChordPro(*added));
+        QCOMPARE(sections.size(), std::size_t{1});
+        QCOMPARE(sections.front().label, u"Big Ending"_s);
+    }
+
+    // A section title (or a note line) taken out: its words join the section
+    // above; a {start_of_...} section's closing line goes with it. Words are
+    // never taken out this way.
+    void aSectionTitleOrANoteIsRemoved()
+    {
+        QCOMPARE(*removeSectionTitle(u"{comment: Verse}\n[C]One\n{comment: Big Ending}\n[F]Two"_s, 2), u"{comment: Verse}\n[C]One\n[F]Two"_s);
+        QCOMPARE(*removeSectionTitle(u"[C]One\n{start_of_section: Tag}\n[F]Two\n{end_of_section}\n[G]Three"_s, 1),
+                 u"[C]One\n[F]Two\n[G]Three"_s);
+        QCOMPARE(*removeSectionTitle(u"{c: Capo 2}\n[C]One"_s, 0), u"[C]One"_s);
+        QVERIFY(!removeSectionTitle(u"[C]One"_s, 0));   // words: refused
+        QVERIFY(!removeSectionTitle(u"[C]One"_s, 7));   // not there: refused
+        const auto sections = chartSections(parseChordPro(*removeSectionTitle(u"{comment: Verse}\n[C]One\n{comment: Chorus}\n[F]Two"_s, 2)));
+        QCOMPARE(sections.size(), std::size_t{1});
+    }
+
     // "+ Section": a new section at the end, with a line to type into.
     void aSectionIsAdded()
     {

@@ -414,6 +414,11 @@ bool DocumentController::renameChartSection(int line, const QString& label)
     return true;
 }
 
+bool DocumentController::removeChartSection(int line)
+{
+    return applyChartEdit(core::removeSectionTitle(currentChart(), line), {});
+}
+
 bool DocumentController::addChartSection(const QString& label)
 {
     return applyChartEdit(core::appendSection(currentChart(), label), {});
@@ -532,7 +537,8 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
     const QString key = now.key.isEmpty() ? sheet.key : now.key;
     const double tempo = now.tempo > 0.0 ? now.tempo : sheet.tempo;
     const bool tempoTaken = tempo != now.tempo;
-    if (key != now.key || tempoTaken) {
+    const bool keyTaken = key != now.key; // (Sustain Pads follow it)
+    if (keyTaken || tempoTaken) {
         if (auto r = core::setSongKeyAndTempo(m_setlist, song, key, tempo); !r) return report(r.error());
     }
     // A time signature from the chart, when the song has the default (4/4).
@@ -550,7 +556,7 @@ bool DocumentController::pasteChart(int song, const QString& pasted)
     };
     if (tempoTaken) tell(tr("Tempo %1 BPM taken from the chart").arg(tempo));
     if (timeTaken) tell(tr("Time signature %1/%2 taken from the chart").arg(sheet.timeNumerator).arg(sheet.timeDenominator));
-    if (tempoTaken || timeTaken) {
+    if (tempoTaken || timeTaken || keyTaken) {
         setDirty(true);
         if (song == m_cursor.song) {
             applyCurrentSongToEngine();
