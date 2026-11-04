@@ -84,6 +84,15 @@ Result<void> checkChordIndex(const LyricLine& lyric, int line, int chord)
     return {};
 }
 
+// A section's title line called `name`: {comment: Verse 2} when the name is
+// one a chart calls a section (as charts are written), else a section of
+// its own, {start_of_section: Big Ending} (a comment under that name would
+// be read as a note, not a section).
+QString sectionTitle(const QString& name)
+{
+    return isSectionName(name) ? u"{comment: %1}"_s.arg(name) : u"{start_of_section: %1}"_s.arg(name);
+}
+
 } // namespace
 
 LyricLine lyricLineOf(const ChartLine& line)
@@ -239,8 +248,37 @@ Result<QString> renameSection(const QString& chordPro, int line, const QString& 
     static const QRegularExpression directive(uR"(^\s*\{\s*([A-Za-z_]+))"_s);
     const QRegularExpressionMatch found = directive.match(title.source);
     const QString kind = found.hasMatch() ? found.captured(1) : u"comment"_s;
-    title.source = u"{%1: %2}"_s.arg(kind, name);
+    // A note line ({comment: ...}) is a section only under a section's name:
+    // under any other name it becomes a section of its own (issue #23).
+    title.source = title.kind == Kind::Comment ? sectionTitle(name) : u"{%1: %2}"_s.arg(kind, name);
     title.label = name;
+    return toChordPro(chart);
+}
+
+Result<QString> removeSectionTitle(const QString& chordPro, int line)
+{
+    Chart chart = parseChordPro(chordPro);
+    if (line < 0 || std::cmp_greater_equal(line, chart.lines.size())) {
+        return fail(ErrorCode::OutOfRange,
+                    u"Line %1 is not in the chart (it has %2 lines)"_s.arg(line + 1).arg(chart.lines.size()));
+    }
+    const auto at = static_cast<std::size_t>(line);
+    const Kind kind = chart.lines.at(at).kind;
+    if (kind != Kind::Section && kind != Kind::Comment) {
+        return fail(ErrorCode::InvalidData, u"Line %1 of the chart is not a section title or a note"_s.arg(line + 1));
+    }
+    if (kind == Kind::Section) {
+        // Its closing line, before the next section begins.
+        for (std::size_t j = at + 1; j < chart.lines.size(); ++j) {
+            const Kind next = chart.lines.at(j).kind;
+            if (next == Kind::Section) break;
+            if (next == Kind::SectionEnd) {
+                chart.lines.erase(chart.lines.begin() + static_cast<std::ptrdiff_t>(j));
+                break;
+            }
+        }
+    }
+    chart.lines.erase(chart.lines.begin() + static_cast<std::ptrdiff_t>(at));
     return toChordPro(chart);
 }
 
@@ -253,7 +291,7 @@ Result<QString> appendSection(const QString& chordPro, const QString& label)
     }
     QString base = chordPro;
     while (!base.isEmpty() && base.back().isSpace()) base.chop(1);
-    return (base.isEmpty() ? QString() : base + u"\n\n"_s) + u"{comment: %1}\n"_s.arg(name);
+    return (base.isEmpty() ? QString() : base + u"\n\n"_s) + sectionTitle(name) + u"\n"_s;
 }
 
 } // namespace gigchain::core

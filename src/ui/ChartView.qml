@@ -159,7 +159,9 @@ Column {
             Component {
                 id: commentLine
                 // A note to the player ("Capo 2", "play softly"), centred.
+                // Editing, right-click: make it a section, or take it out.
                 Text {
+                    objectName: "chartNote"
                     width: lineLoader.width
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
@@ -168,6 +170,24 @@ Column {
                     color: Theme.textDim
                     font.pixelSize: (Theme.fontSize + 3) * chart.size
                     font.italic: true
+                    TapHandler {
+                        enabled: chart.editable && chart.doc !== null
+                        acceptedButtons: Qt.RightButton
+                        onTapped: noteMenu.popup()
+                    }
+                    StageMenu {
+                        id: noteMenu
+                        StageMenuItem {
+                            objectName: "chartNoteToSection"
+                            text: qsTr("Make it a section")
+                            onTriggered: chart.doc.renameChartSection(lineLoader.modelData.line, lineLoader.modelData.label)
+                        }
+                        StageMenuItem {
+                            objectName: "chartNoteRemove"
+                            text: qsTr("Remove this note")
+                            onTriggered: chart.doc.removeChartSection(lineLoader.modelData.line)
+                        }
+                    }
                 }
             }
             Component {

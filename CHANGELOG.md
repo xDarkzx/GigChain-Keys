@@ -31,6 +31,12 @@ Downloads for every version are on the
 
 ### Fixed
 
+- **A section renamed to any name stays a section** ([#23](https://github.com/xDarkzx/GigChain-Keys/issues/23)).
+  Renaming one to a name that didn't start with *Intro, Verse, Chorus…*
+  turned it into a note: the section disappeared and the line couldn't be
+  removed. Now any name works. Right-click a section's title to **Remove** it
+  (its lines stay), and right-click a note to **Make it a section** or
+  **Remove** it, which also fixes charts saved before.
 - A song's key taken from a pasted or imported chart now updates everything
   that shows it at once.
 

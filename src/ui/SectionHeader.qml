@@ -73,9 +73,32 @@ Column {
                     titleInput.selectAll()
                 }
             }
+            // Right-click: rename it, or take its title out (its lines join the section above).
+            TapHandler {
+                enabled: header.editable && header.chartLine >= 0
+                acceptedButtons: Qt.RightButton
+                onTapped: sectionMenu.popup()
+            }
+            StageMenu {
+                id: sectionMenu
+                StageMenuItem {
+                    text: qsTr("Rename…")
+                    onTriggered: {
+                        titleInput.text = header.label
+                        titleInput.visible = true
+                        titleInput.forceActiveFocus()
+                        titleInput.selectAll()
+                    }
+                }
+                StageMenuItem {
+                    objectName: "sectionRemove"
+                    text: qsTr("Remove section (keep its lines)")
+                    onTriggered: header.doc.removeChartSection(header.chartLine)
+                }
+            }
             ToolTip.visible: titleHover.hovered && header.editable
             ToolTip.delay: 900
-            ToolTip.text: qsTr("Click to go to this section · double-click to rename it")
+            ToolTip.text: qsTr("Click to go to this section · double-click to rename it · right-click for more")
         }
         TextInput {
             id: titleInput
