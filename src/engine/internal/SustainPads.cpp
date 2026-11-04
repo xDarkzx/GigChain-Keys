@@ -341,7 +341,7 @@ void SustainPads::process(const AudioBlock& to, float gain, const TimeInfo& time
         m_soundSeen = sound;
     }
     // Its strip's effects (a reverb, a delay...), in order.
-    EffectChain* const effects = m_effects.acquire();
+    const EffectChain* const effects = m_effects.acquire();
 
     // Its meter is its own level (as a strip's): the master fader is not on it.
     const float own = m_volume.load(std::memory_order_relaxed) * kHeadroom;

@@ -456,10 +456,12 @@ private slots:
         off.active = false;
         pads.set(off);
         run(pads, t, 1.0);
-        const int presses = vst->pressesOf(48);
+        // (Read before and after: the pads send to the VST through their own reference to it.)
+        std::vector<int> presses{vst->pressesOf(48)};
         pads.restrike();
         run(pads, t, 0.5);
-        QCOMPARE(vst->pressesOf(48), presses);
+        presses.push_back(vst->pressesOf(48));
+        QCOMPARE(presses.back(), presses.front());
     }
 
     // Switched off and on again before it has faded out: the chord is
@@ -504,9 +506,10 @@ private slots:
         QVERIFY(rmsDb(t, 2.0, 2.2) > -40.0);
 
         vst->mute = true; // silent whatever it is sent
-        const int before = vst->pressesOf(48);
+        std::vector<int> counted{vst->pressesOf(48)}; // (before and after ten seconds)
         run(pads, t, 10.0);
-        const int presses = vst->pressesOf(48) - before;
+        counted.push_back(vst->pressesOf(48));
+        const int presses = counted.back() - counted.front();
         QVERIFY2(presses >= 2 && presses <= 4, qPrintable(QString::number(presses)));
     }
 
