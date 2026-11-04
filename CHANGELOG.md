@@ -8,6 +8,11 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-04 (alpha)
+
+Sustain Pads under every song, with your own pad plugin and effects, and the
+mixer where you want it.
+
 ### Added
 
 - **The mixer where you want it:** the toolbar's Mixer button now drops
