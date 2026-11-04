@@ -53,6 +53,31 @@ struct LyricLine
 // away goes where they were.
 [[nodiscard]] Result<QString> editLyrics(const QString& chordPro, int line, const QString& lyrics);
 
+// ---- Rows of chords: the instrumental parts (an intro, a solo, a turnaround)
+// A line of chords with no words, "[Am] [C] [G]" (or with bar lines,
+// "| [Am] | [C] |"): its chords in a row, placed by their order, not by
+// letters (it has none). Each chord is a bar, as everywhere in a chart.
+[[nodiscard]] bool isChordRow(const ChartLine& line);
+
+// A new chord in a row at `index` (0: first; past the end: last). A blank
+// line becomes a row.
+[[nodiscard]] Result<QString> placeChordInRow(const QString& chordPro, int line, int index, const QString& chord);
+
+// Chord number `chord` of `line` (words or a row) moved into the row
+// `toLine` at `toIndex` (the same row: reordered; a blank line: a row).
+[[nodiscard]] Result<QString> moveChordInRow(const QString& chordPro, int line, int chord, int toLine, int toIndex);
+
+// A new row holding `chord`, put in before line `before` (the number of
+// lines: at the end).
+[[nodiscard]] Result<QString> insertChordRow(const QString& chordPro, int before, const QString& chord);
+
+// Chord number `chord` of `line` moved onto a new row put in before line `before`.
+[[nodiscard]] Result<QString> moveChordToNewRow(const QString& chordPro, int line, int chord, int before);
+
+// A whole line taken out: its words and chords, a row, an empty line, a
+// note. A section title is removed with removeSectionTitle (its lines stay).
+[[nodiscard]] Result<QString> deleteLine(const QString& chordPro, int line);
+
 // Enter at `at`: the words (and chords) from there on go to a new line under it.
 [[nodiscard]] Result<QString> splitLyricLine(const QString& chordPro, int line, int at);
 

@@ -837,13 +837,21 @@ private slots:
         QVERIFY(unit->height() > 60);
         shoot(u"sustain-pads"_s);
 
+        // A key picked ahead (on stage, before the song): silent, ready.
         click(u"sustainKey7"_s); // G
+        QTRY_COMPARE(pads->property("key").toInt(), 7);
+        QTest::qWait(200);
+        QVERIFY(!sounding());
+        QVERIFY(!pads->property("active").toBool());
+        click(u"sustainActivate"_s); // Activate: now it plays
         QTRY_VERIFY(sounding());
-        QCOMPARE(pads->property("key").toInt(), 7);
-        click(u"sustainKey2"_s); // to D
+        click(u"sustainKey2"_s); // to D, still playing
         QTRY_COMPARE(pads->property("key").toInt(), 2);
         QVERIFY(sounding());
-        click(u"sustainKey2"_s); // D again: it fades out
+        click(u"sustainKey2"_s); // D again: still playing (only Activate stops it)
+        QTest::qWait(200);
+        QVERIFY(sounding());
+        click(u"sustainActivate"_s); // Activate again: off
         QTRY_VERIFY(!sounding());
         click(u"sustainActivate"_s);
         QTRY_VERIFY(sounding());
@@ -920,6 +928,37 @@ private slots:
     // A short window (a laptop, the keyboard shown): the mixer takes at most
     // its share, and each strip fits inside it, its fader shorter, its mute,
     // solo and name plate still in sight (they were pushed under the keyboard).
+    // However narrow the window, its minimise, maximise and close buttons
+    // are in sight, and so is every toolbar button that matters (the row
+    // gives way: its least needed parts step aside, never these).
+    void theToolbarFitsANarrowWindow()
+    {
+        auto* row = window()->findChild<QQuickItem*>(u"toolbarRow"_s);
+        auto* controls = window()->findChild<QQuickItem*>(u"windowControls"_s);
+        QVERIFY(row != nullptr && controls != nullptr);
+        for (const int width : {1920, 1600, 1440, 1366, 1280}) {
+            window()->resize(width, 900);
+            settle();
+            // (The row fits itself once the window has its new size: waited for, as a busy machine is slower.)
+            QTRY_VERIFY2(window()->width() == width && row->width() < width - controls->width()
+                             && row->implicitWidth() <= row->width() + 0.5,
+                         qPrintable(u"%1 px: the row needs %2 px, has %3"_s.arg(width).arg(row->implicitWidth()).arg(row->width())));
+            const double rowRight = row->mapToScene({row->width(), 0}).x();
+            qInfo().noquote() << u"%1 px wide: the row needs %2 px, has %3"_s.arg(width).arg(row->implicitWidth()).arg(row->width());
+            QVERIFY2(controls->isVisible(), qPrintable(u"%1 px: the window's buttons are hidden"_s.arg(width)));
+            QVERIFY2(controls->mapToScene({controls->width(), 0}).x() <= width + 0.5,
+                     qPrintable(u"%1 px: the window's buttons run off the window"_s.arg(width)));
+            for (const QString& name : {u"panicButton"_s, u"mixerButton"_s, u"panelButton"_s, u"sustainPadsButton"_s,
+                                        u"settingsButton"_s, u"helpButton"_s}) {
+                QQuickItem* button = item(name);
+                QVERIFY2(button != nullptr, qPrintable(name));
+                const double right = button->mapToScene({button->width(), 0}).x();
+                QVERIFY2(right <= rowRight + 0.5, qPrintable(u"%1 px: %2 is cut off (ends at %3, the row at %4)"_s
+                                                                .arg(width).arg(name).arg(right).arg(rowRight)));
+            }
+        }
+    }
+
     void aShortWindowKeepsWholeStripsInSight()
     {
         window()->resize(1400, 760);

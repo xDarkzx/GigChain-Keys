@@ -40,6 +40,9 @@ Item {
     readonly property int chartLine: live.line.line
     readonly property string lyrics: live.line.lyrics !== undefined ? live.line.lyrics : ""
     readonly property var cells: live.line.cells !== undefined ? live.line.cells : []
+    // A row of chords (an intro, a solo: chords and no words), drawn as chips in order.
+    readonly property bool isRow: live.line.row === true
+    readonly property var rowChords: live.line.rowChords !== undefined ? live.line.rowChords : []
     readonly property real chordHeight: (Theme.fontSize + 5) * live.size * 1.4
     readonly property real chordFont: (Theme.fontSize + 5) * live.size
     readonly property real wordFont: (Theme.fontSize + 7) * live.size
@@ -52,7 +55,47 @@ Item {
     property var cellEditAsked: null
 
     width: parent ? parent.width : 0
-    height: live.typingLine ? lineText.y + lineText.height : Math.max(cellsFlow.height, live.chordHeight + wordMetrics.height)
+    height: live.typingLine ? lineText.y + lineText.height
+          : live.isRow ? rowView.height + 8 * live.size
+          : Math.max(cellsFlow.height, live.chordHeight + wordMetrics.height)
+
+    // Where a chord dragged to (px, py) of this line lands (the chart's drop
+    // layer asks): between two chords of a row; at the start of an empty
+    // line (it becomes a row); on the nearest word of a line of words. With
+    // the mark to show there, in this line's coordinates.
+    function dropTargetAt(px, py) {
+        if (live.isRow) {
+            const gap = rowView.spacing
+            let index = 0
+            let markX = rowView.x - gap / 2
+            for (let i = 0; i < rowRepeater.count; ++i) {
+                const chip = rowRepeater.itemAt(i)
+                if (chip === null) continue
+                if (px > rowView.x + chip.x + chip.width / 2) {
+                    index = i + 1
+                    markX = rowView.x + chip.x + chip.width + gap / 2
+                }
+            }
+            return { kind: "row", line: live.chartLine, index: index, x: markX - 1.5, y: rowView.y, w: 3, h: rowView.height }
+        }
+        if (live.cells.length === 0)
+            return { kind: "row", line: live.chartLine, index: 0, x: live.width / 2 - 1.5, y: 0, w: 3, h: live.height }
+        let best = -1
+        let distance = Infinity
+        for (let c = 0; c < cellsRepeater.count; ++c) {
+            const item = cellsRepeater.itemAt(c)
+            if (item === null) continue
+            const dx = Math.abs(cellsFlow.x + item.x + item.width / 2 - px)
+            const dy = Math.abs(cellsFlow.y + item.y + item.height / 2 - py)
+            if (dx + 3 * dy < distance) {
+                distance = dx + 3 * dy
+                best = c
+            }
+        }
+        const cell = cellsRepeater.itemAt(best)
+        return { kind: "word", line: live.chartLine, at: live.cells[best].at,
+                 x: cellsFlow.x + cell.x, y: cellsFlow.y + cell.y, w: cell.width - (live.cells[best].space ? wordMetrics.advanceWidth(" ") : 0), h: live.chordHeight }
+    }
 
     FontMetrics {
         id: wordMetrics
@@ -76,6 +119,37 @@ Item {
     function moveOn(from, step, what, save) {
         save()
         live.wantCell(live.chartLine, from + step, what)
+    }
+
+    // ✕ at the line's right end, while the mouse is over the line (or it is
+    // open): one click deletes the whole line (Ctrl+Z brings it back).
+    HoverHandler { id: lineHover }
+    Rectangle {
+        id: deleteLineButton
+        objectName: "deleteLineButton"
+        visible: (lineHover.hovered || live.open) && !live.typingLine
+        z: 30
+        anchors.right: parent.right
+        anchors.rightMargin: 2
+        anchors.verticalCenter: parent.verticalCenter
+        width: 22 * Math.max(live.size, 1)
+        height: width
+        radius: width / 2
+        color: deleteHover.hovered ? Theme.danger : "#22ffffff"
+        border.color: deleteHover.hovered ? Theme.danger : "#44ffffff"
+        Text {
+            anchors.centerIn: parent
+            text: "✕"
+            color: deleteHover.hovered ? "white" : Theme.textDim
+            font.pixelSize: Theme.smallFontSize * Math.max(live.size, 1)
+            font.bold: true
+        }
+        HoverHandler { id: deleteHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler { onTapped: live.doc.deleteChartLine(live.chartLine) }
+        ToolTip.visible: deleteHover.hovered
+        ToolTip.delay: 400
+        ToolTip.text: live.isRow ? qsTr("Delete this row of chords (Ctrl+Z brings it back)")
+                                 : qsTr("Delete this line (Ctrl+Z brings it back)")
     }
 
     // The line's ground: a click opens it; a right-click gives its menu.
@@ -113,13 +187,201 @@ Item {
                 live.doc.editLineAndSplit(live.chartLine, live.lyrics, live.lyrics.length)
             }
         }
+        MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+        StageMenuItem {
+            objectName: "deleteLine"
+            text: live.isRow ? qsTr("Delete this row of chords") : qsTr("Delete this line")
+            onTriggered: live.doc.deleteChartLine(live.chartLine)
+        }
+    }
+
+    // A row of chords: its chips in order with bar lines between them;
+    // drag one along the row or anywhere in the chart, click it to change
+    // it, right-click for more; the box at the end types a new one.
+    Row {
+        id: rowView
+        objectName: "chartChordRow"
+        visible: live.isRow && !live.typingLine
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 4 * live.size
+        spacing: 10 * live.size
+        Repeater {
+            id: rowRepeater
+            model: live.isRow ? live.rowChords : []
+            delegate: Item {
+                id: rowSlot
+                required property var modelData
+                required property int index
+                width: rowChip.width
+                height: live.chordHeight
+                // The bar line before it.
+                Rectangle {
+                    visible: rowSlot.index > 0
+                    x: -rowView.spacing / 2 - 1
+                    y: 4 * live.size
+                    width: 2
+                    height: parent.height - 8 * live.size
+                    color: "#44ffffff"
+                }
+                ChordDragSource {
+                    id: rowChip
+                    objectName: "chartRowChord"
+                    fromLine: live.chartLine
+                    chordIndex: rowSlot.modelData.index
+                    chordName: rowSlot.modelData.name
+                    readonly property bool current: live.started && rowSlot.modelData.steps.indexOf(live.currentStep) >= 0
+                    width: Math.max(rowLabel.implicitWidth + 4 * live.chipPadding, 44 * live.size)
+                    height: live.chordHeight
+                    radius: Theme.radiusSmall
+                    color: rowDragger.active ? Theme.accent : rowHover.hovered ? "#33f0bf45" : "#14ffffff"
+                    border.color: rowDragger.active || rowHover.hovered ? Theme.chord : rowChip.current ? Theme.accent : "#33ffffff"
+                    z: rowDragger.active ? 10 : 1
+                    Drag.active: rowDragger.active
+                    Drag.keys: ["chord"]
+                    Drag.hotSpot.x: width / 2
+                    Drag.hotSpot.y: height / 2
+                    Text {
+                        id: rowLabel
+                        anchors.centerIn: parent
+                        visible: !rowInput.visible
+                        text: rowSlot.modelData.name
+                        color: rowDragger.active ? "white" : !rowSlot.modelData.understood ? Theme.textDim
+                             : rowChip.current ? Theme.accent : Theme.chord
+                        font.pixelSize: live.chordFont
+                        font.bold: true
+                        font.strikeout: !rowSlot.modelData.understood
+                    }
+                    TextInput {
+                        id: rowInput
+                        visible: false
+                        anchors.centerIn: parent
+                        width: Math.max(contentWidth + 10, 44 * live.size)
+                        horizontalAlignment: TextInput.AlignHCenter
+                        color: Theme.chord
+                        font.pixelSize: live.chordFont
+                        font.bold: true
+                        selectByMouse: true
+                        Rectangle { anchors.fill: parent; anchors.margins: -2; z: -1; color: Theme.readoutBackground; border.color: Theme.accent; radius: Theme.radiusSmall }
+                        function commit() {
+                            if (!rowInput.visible) return // (saved once)
+                            rowInput.visible = false
+                            const name = rowInput.text.trim()
+                            if (name !== rowSlot.modelData.name) live.doc.renameChordAt(live.chartLine, rowSlot.modelData.index, name)
+                        }
+                        onAccepted: rowInput.commit()
+                        Keys.onEscapePressed: rowInput.visible = false
+                        onActiveFocusChanged: if (!activeFocus && visible) rowInput.commit()
+                    }
+                    function rename() {
+                        rowInput.text = rowSlot.modelData.name
+                        rowInput.visible = true
+                        rowInput.forceActiveFocus()
+                        rowInput.selectAll()
+                    }
+                    HoverHandler { id: rowHover; cursorShape: Qt.OpenHandCursor }
+                    DragHandler {
+                        id: rowDragger
+                        objectName: "rowChordDragger"
+                        cursorShape: Qt.ClosedHandCursor
+                        onActiveChanged: {
+                            live.dragging = active
+                            if (active) return
+                            // Dropped where nothing takes it: back in its place.
+                            if (rowChip.Drag.drop() === Qt.IgnoreAction) {
+                                rowChip.x = 0
+                                rowChip.y = 0
+                            }
+                        }
+                    }
+                    TapHandler {
+                        onTapped: {
+                            live.openRequested(live.chartLine)
+                            rowChip.rename()
+                        }
+                    }
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: rowChipMenu.popup()
+                    }
+                    StageMenu {
+                        id: rowChipMenu
+                        StageMenuItem {
+                            text: qsTr("How to play %1…").arg(rowSlot.modelData.name)
+                            onTriggered: live.chordDiagramRequested(rowSlot.modelData.name)
+                        }
+                        StageMenuItem {
+                            text: qsTr("Change %1…").arg(rowSlot.modelData.name)
+                            onTriggered: rowChip.rename()
+                        }
+                        StageMenuItem {
+                            text: qsTr("Remove %1").arg(rowSlot.modelData.name)
+                            onTriggered: live.doc.renameChordAt(live.chartLine, rowSlot.modelData.index, "")
+                        }
+                        MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+                        StageMenuItem {
+                            text: qsTr("Delete this row of chords")
+                            onTriggered: live.doc.deleteChartLine(live.chartLine)
+                        }
+                    }
+                    ToolTip.visible: rowHover.hovered && !rowDragger.active
+                    ToolTip.delay: 900
+                    ToolTip.text: qsTr("Drag along the row or anywhere in the chart · click to change · right-click for more")
+                }
+            }
+        }
+        // A new chord typed at the end of the row.
+        Rectangle {
+            id: rowAdd
+            objectName: "chartRowAdd"
+            width: rowAddInput.visible ? rowAddInput.width + 8 : 34 * live.size
+            height: live.chordHeight
+            radius: Theme.radiusSmall
+            color: "transparent"
+            border.color: rowAddHover.hovered || rowAddInput.visible ? Theme.chord : "#33ffffff"
+            Text {
+                anchors.centerIn: parent
+                visible: !rowAddInput.visible
+                text: "+"
+                color: rowAddHover.hovered ? Theme.chord : Theme.textDim
+                font.pixelSize: live.chordFont
+            }
+            TextInput {
+                id: rowAddInput
+                visible: false
+                anchors.centerIn: parent
+                width: Math.max(contentWidth + 10, 44 * live.size)
+                horizontalAlignment: TextInput.AlignHCenter
+                color: Theme.chord
+                font.pixelSize: live.chordFont
+                font.bold: true
+                function commit() {
+                    if (!rowAddInput.visible) return
+                    rowAddInput.visible = false
+                    const name = rowAddInput.text.trim()
+                    if (name !== "") live.doc.placeChordInRow(live.chartLine, live.rowChords.length, name)
+                }
+                onAccepted: rowAddInput.commit()
+                Keys.onEscapePressed: rowAddInput.visible = false
+                onActiveFocusChanged: if (!activeFocus && visible) rowAddInput.commit()
+            }
+            HoverHandler { id: rowAddHover; cursorShape: Qt.IBeamCursor }
+            TapHandler {
+                onTapped: {
+                    rowAddInput.text = ""
+                    rowAddInput.visible = true
+                    rowAddInput.forceActiveFocus()
+                }
+            }
+            ToolTip.visible: rowAddHover.hovered && !rowAddInput.visible
+            ToolTip.text: qsTr("Type a chord at the end of the row")
+        }
     }
 
     // The cells, centred; a line wider than the chart wraps.
     Flow {
         id: cellsFlow
         objectName: "chartCells"
-        visible: !live.typingLine
+        visible: !live.typingLine && !live.isRow // (a row: its chips instead)
         readonly property real natural: {
             let sum = 0
             for (let i = 0; i < cellsRepeater.count; ++i) {
@@ -330,32 +592,7 @@ Item {
                         Keys.onBacktabPressed: live.moveOn(cell.index, -1, "chord", chordInput.commit)
                         onActiveFocusChanged: if (!activeFocus && visible) chordInput.commit()
                     }
-                    // A chord dragged onto this word.
-                    DropArea {
-                        id: drop
-                        anchors.fill: parent
-                        anchors.bottomMargin: -wordMetrics.height // (the word below counts too)
-                        keys: ["chord"]
-                        onDropped: (event) => {
-                            const source = event.source as ChordDragSource
-                            if (source === null) return
-                            event.accept()
-                            if (source.fromLine >= 0)
-                                live.doc.moveChordTo(source.fromLine, source.chordIndex, live.chartLine, cell.modelData.at)
-                            else
-                                live.doc.placeChordAt(live.chartLine, cell.modelData.at, source.chordName)
-                        }
-                    }
-                    // Where a dragged chord will land: this box lit.
-                    Rectangle {
-                        objectName: "chordDropMark"
-                        visible: drop.containsDrag
-                        anchors.fill: parent
-                        radius: Theme.radiusSmall
-                        color: "transparent"
-                        border.color: Theme.accent
-                        border.width: 2
-                    }
+                    // (A chord dragged here lands by the chart's drop layer: dropTargetAt.)
                 }
 
                 // The word: double-click to change it where it is.

@@ -39,13 +39,27 @@ so you can see where chords can go.
   box, so you can type a whole line of chords in a row.
 - **Change one:** click it, type the new name, press **Enter**. Leave it
   empty to take it off.
-- **Move one:** drag it onto another word's box, on the same line or another.
-  It lands exactly on that word.
+- **Move one:** drag it anywhere in the chart. A blue mark shows where it
+  will land before you let go: over a line of words, on the nearest word;
+  over a row of chords, between the two chords there; on an empty line, which
+  becomes a row of chords; on a section's title or below the last line, on a
+  new row there. Drag near the top or bottom edge and the chart scrolls.
 - **Right-click** a chord for **How to play it** (its
   [chord diagram](#how-to-play-a-chord)) and **Remove**. You can also drag it
   onto **Remove** at the top.
-- **The chord palette** at the top holds the song's chords: drag one onto any
-  word. Type a new chord in **Chord…** to drag that in.
+- **The chord palette** at the top holds the song's chords: drag one anywhere
+  in the chart, the same way. Type a new chord in **Chord…** to drag that in.
+
+### Rows of chords (intros, solos, turnarounds)
+
+A part with no words, such as an intro or a solo, is a **row of chords**:
+the chords in order, a bar line between each, one bar each.
+
+- **Start one:** drag a chord onto the empty line under the section's
+  title, onto the title itself, or below the last line.
+- **Change the order:** drag a chord along the row; the others make room.
+- **Add one at the end:** click **+** at the end of the row and type it.
+- **Change or remove one:** click it to type a new name, or right-click it.
 
 ### Words
 
@@ -56,6 +70,9 @@ so you can see where chords can go.
   and **Down** move between lines; **Backspace** at the start joins it to the
   line above; **Esc** leaves it as it was.
 - **Add a line below:** right-click the line, **Add a line below**.
+- **Delete a whole line:** right-click it, **Delete this line** (or **Delete
+  this row of chords**): its words and chords go in one step. Quicker: the
+  **✕** at the right end of a line when the mouse is over it.
 
 Every change is one step for **Ctrl+Z** (undo) and **Ctrl+Shift+Z** (redo).
 

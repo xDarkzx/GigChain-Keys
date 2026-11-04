@@ -325,8 +325,34 @@ Rectangle {
                 duration: 250
                 easing.type: Easing.OutCubic
             }
+            // A chord dragged near the top or bottom edge: the chart scrolls on
+            // (any section of a long song can be reached in one drag).
+            Timer {
+                id: dragScroll
+                property real step: 0
+                interval: 16
+                repeat: true
+                onTriggered: {
+                    const page = chartScroll.contentItem as Flickable
+                    if (page === null || dragScroll.step === 0) return
+                    page.contentY = Math.max(0, Math.min(page.contentHeight - page.height, page.contentY + dragScroll.step))
+                }
+            }
             Connections {
                 target: panelChart
+                function onDragMoved(y) {
+                    const inView = panelChart.mapToItem(chartScroll, 0, y).y
+                    const edge = 60
+                    dragScroll.step = inView < edge ? -Math.max(2, (edge - inView) / 4)
+                                    : inView > chartScroll.height - edge ? Math.max(2, (inView - chartScroll.height + edge) / 4)
+                                    : 0
+                    if (dragScroll.step !== 0) dragScroll.start()
+                    else dragScroll.stop()
+                }
+                function onDragEnded() {
+                    dragScroll.step = 0
+                    dragScroll.stop()
+                }
                 function onFollowYChanged() {
                     if (panelChart.followY < 0) return
                     followScroll.to = Math.max(0, Math.min(panelChart.followY - chartScroll.height / 3,

@@ -170,6 +170,16 @@ public:
     Q_INVOKABLE bool placeChordAt(int line, int at, const QString& chord);
     Q_INVOKABLE bool renameChordAt(int line, int chord, const QString& name); // empty: removed
     Q_INVOKABLE bool moveChordTo(int line, int chord, int toLine, int toAt);
+    // Rows of chords (an intro, a solo: a line of chords with no words), by
+    // the chords' order: a chord put in a row (or an empty line) at
+    // `index`; one moved into a row (or along it); a new row put in before
+    // line `before` with a chord, or with one moved there. Each an undo step.
+    Q_INVOKABLE bool placeChordInRow(int line, int index, const QString& name);
+    Q_INVOKABLE bool moveChordInRow(int line, int chord, int toLine, int toIndex);
+    Q_INVOKABLE bool addChordRow(int before, const QString& name);
+    Q_INVOKABLE bool moveChordToNewRow(int line, int chord, int before);
+    // A whole line of the chart deleted (words and chords, a row, an empty line, a note).
+    Q_INVOKABLE bool deleteChartLine(int line);
     Q_INVOKABLE bool setLineLyrics(int line, const QString& lyrics);
     Q_INVOKABLE bool splitChartLine(int line, int at);
     Q_PROPERTY(QVariantMap currentChordInversions READ currentChordInversions NOTIFY chordInversionsChanged)

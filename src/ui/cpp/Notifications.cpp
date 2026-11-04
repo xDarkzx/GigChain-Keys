@@ -2,7 +2,11 @@
 
 #include "gigchain/core/Checks.h"
 
+#include <QLoggingCategory>
+
 #include <algorithm>
+
+Q_DECLARE_LOGGING_CATEGORY(lcUi)
 
 namespace gigchain::ui {
 
@@ -39,6 +43,14 @@ void Notifications::post(const QString& message, Level severity)
 {
     GC_ONLY_MAIN_THREAD();
     if (message.isEmpty()) return;
+    // Every message the player sees is in the log too, word for word (whatever
+    // posted it, and each time it is shown again): what popped up can always
+    // be found afterwards.
+    switch (severity) {
+    case Error: qCCritical(lcUi).noquote() << "Shown (error):" << message; break;
+    case Warning: qCWarning(lcUi).noquote() << "Shown (warning):" << message; break;
+    default: qCInfo(lcUi).noquote() << "Shown:" << message; break;
+    }
     const auto same =
         std::ranges::find_if(m_entries, [&](const Entry& e) { return e.text == message && e.level == severity; });
     if (same != m_entries.end()) {

@@ -321,19 +321,11 @@ void SustainPadsController::songPicked()
     if (m_followSongKey && songKeyIndex() >= 0) setKey(songKeyIndex());
 }
 
-void SustainPadsController::playKey(int tapped)
+void SustainPadsController::pickKey(int tapped)
 {
-    const int k = ((tapped % 12) + 12) % 12;
-    if (m_settings.active && m_settings.key == k) {
-        setActive(false);
-        return;
-    }
-    m_settings.key = k;
-    if (!m_settings.active) {
-        setActive(true); // (with the key: applied together)
-        return;
-    }
-    apply();
+    // Only the key: never starts or stops the pad (Activate does). Off, it
+    // waits in that key; playing, it fades over to it.
+    setKey(tapped);
 }
 
 void SustainPadsController::setShown(bool on)

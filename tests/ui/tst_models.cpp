@@ -404,28 +404,38 @@ private slots:
         QCOMPARE(SustainPadsController::keyOf(u"?"_s), -1);
     }
 
-    // Tapping a key plays it (fading over from the one playing); tapping the
-    // one playing fades it out. The engine hears every change.
-    void sustainPadsKeysPlayAndStop()
+    // A key tapped only picks the key: it never starts the pad (a key picked
+    // ahead on stage must stay silent) nor stops it; Activate does both.
+    // Playing, a new key fades over to it. The engine hears every change.
+    void sustainPadsKeysPickOnlyActivatePlays()
     {
         EffectWindows windows(*m_engine, *m_doc);
         SustainPadsController pads(*m_engine, *m_doc, *m_settings, windows);
         QVERIFY(!pads.active());
         QVERIFY(!m_engine->sustainPads.empty());
         QVERIFY(!m_engine->sustainPads.back().active); // never on by itself
-        pads.playKey(7); // G
-        QVERIFY(pads.active());
+        pads.pickKey(7); // G, picked ahead: silent
+        QCOMPARE(pads.key(), 7);
+        QVERIFY(!pads.active());
         QCOMPARE(m_engine->sustainPads.back().key, 7);
+        QVERIFY(!m_engine->sustainPads.back().active);
+        pads.pickKey(7); // again: still only picked
+        QVERIFY(!m_engine->sustainPads.back().active);
+        pads.setActive(true); // Activate: it plays in G
         QVERIFY(m_engine->sustainPads.back().active);
-        pads.playKey(2); // to D, still on
+        QCOMPARE(m_engine->sustainPads.back().key, 7);
+        pads.pickKey(2); // to D, still playing
         QCOMPARE(m_engine->sustainPads.back().key, 2);
         QVERIFY(m_engine->sustainPads.back().active);
-        pads.playKey(2); // D again: off
-        QVERIFY(!pads.active());
+        pads.pickKey(2); // D again: still playing (only Activate stops it)
+        QVERIFY(pads.active());
+        QVERIFY(m_engine->sustainPads.back().active);
+        pads.setActive(false);
         QVERIFY(!m_engine->sustainPads.back().active);
         QCOMPARE(m_engine->sustainPads.back().key, 2);
-        pads.playKey(-1); // (kept in range: B)
+        pads.pickKey(-1); // (kept in range: B)
         QCOMPARE(pads.key(), 11);
+        QVERIFY(!pads.active());
     }
 
     // The player's pad, filter, shimmer, fade, volume and output come back
@@ -446,7 +456,8 @@ private slots:
             pads.setFollowSongKey(false);
             pads.setShown(true);
             pads.setDetached(true);
-            pads.playKey(9);
+            pads.pickKey(9);
+            pads.setActive(true);
             QVERIFY(pads.active());
         }
         EffectWindows againWindows(*m_engine, *m_doc);
@@ -491,7 +502,7 @@ private slots:
         QVERIFY(m_doc->pasteChart(0, u"{title: Hymn}\n{key: Eb}\n[Eb]Holy [Bb]holy"_s));
         QCOMPARE(pads.songKey(), u"Eb"_s);
         QCOMPARE(pads.key(), 3); // its key set: there
-        pads.playKey(5);         // F tapped
+        pads.pickKey(5);         // F tapped
         QCOMPARE(pads.key(), 5);
         QVERIFY(m_doc->setSongTempo(0, 72.0)); // the song changes otherwise: F stays
         QCOMPARE(pads.key(), 5);

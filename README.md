@@ -270,6 +270,7 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
+| 0.8.1 | Alpha: fixes: Sustain Pads wait for Activate; drag chords anywhere in a chart, rows of chords for intros and solos, delete a line in one click; the window's buttons always in sight |
 | 0.8.0 | Alpha: Sustain Pads (a Tonic-style pad held on one key under the song) with its own mixer strip: Pads Pro or your own VST pad, your own effects; Pads Pro, a third instrument of its own; the mixer along the bottom, down a side or in its own window; section names fixed |
 | 0.7.0 | Alpha: an instrument's window detached onto a second screen (Detach, Reattach, Link); Enhance in Saw Stack Pro and Piano Pro (a Soundgoodizer-style A–D knob, beside OTT) |
 | 0.6.0 | Alpha: two instruments of its own: Saw Stack Pro (EDM supersaw stacks) and Piano Pro (EDM pianos from a real recorded grand and upright), with a Kickstart-style sidechain |

@@ -57,11 +57,60 @@ ToolBar {
         }
     }
 
+    // Narrow windows: the least needed parts step aside, one stage at a time,
+    // until the row fits (measured, not guessed), so the buttons that matter
+    // stay: 1 the CPU/RAM/MIDI display, 2 Undo/Redo, 3 Tap, 4 where the song
+    // is, 5 the backing track's clock and markers, 6 Rec, 7 the Loops label
+    // (its icon stays). Panic, the modes, the tempo, the toggles, Settings,
+    // Help and the window's buttons never go.
+    property int squeeze: 0
+    property real loopsFullWidth: 0 // the Loops button with its label
+    readonly property int squeezeStages: 7
+
+    // What one stage gives back when it steps aside (0: it is not there anyway).
+    function stageRoom(stage) {
+        const gap = toolbarRow.spacing
+        switch (stage) {
+        case 1: return toolbarStats.implicitWidth + statsDivider.implicitWidth + 2 * gap
+        case 2: return bar.performMode ? 0 : undoButton.implicitWidth + redoButton.implicitWidth + undoDivider.implicitWidth + 3 * gap
+        case 3: return tapButton.implicitWidth - 1
+        case 4: return bar.doc.canPlaySong ? songWhereLcd.width - 1 : 0
+        case 5: return transport.visible ? trackClock.width + markerButton.implicitWidth - 2 : 0
+        case 6: return bar.engineStatus.recording ? 0 : recordButton.implicitWidth + gap
+        case 7: return Math.max(0, bar.loopsFullWidth - loopsMenuButton.implicitHeight)
+        }
+        return 0
+    }
+    function fit() {
+        if (bar.squeeze < 7) bar.loopsFullWidth = loopsMenuButton.implicitWidth
+        let need = toolbarRow.implicitWidth // with what is shown now
+        for (let stage = 1; stage <= bar.squeeze; ++stage) need += bar.stageRoom(stage) // everything shown
+        let level = 0
+        while (level < bar.squeezeStages && need > toolbarRow.width + 0.5) {
+            ++level
+            need -= bar.stageRoom(level)
+        }
+        bar.squeeze = level
+    }
+    // (Fitted just after a change, once the row has measured itself.)
+    Timer {
+        id: fitSoon
+        interval: 0
+        onTriggered: bar.fit()
+    }
+    Component.onCompleted: fitSoon.restart()
+
     RowLayout {
+        id: toolbarRow
+        objectName: "toolbarRow"
         anchors.fill: parent
         anchors.leftMargin: Theme.spacingLarge
-        anchors.rightMargin: Theme.spacingLarge
+        // (It ends before the window's buttons, and is cut there rather than run under them.)
+        anchors.rightMargin: Theme.spacingLarge + (windowControls.visible ? windowControls.width + Theme.spacing : 0)
+        clip: true
         spacing: Theme.spacing
+        onWidthChanged: fitSoon.restart()
+        onImplicitWidthChanged: fitSoon.restart()
 
         StageButton {
             iconSource: bar.sidePanelOpen ? "icons/chevron-left.svg" : "icons/chevron-right.svg"
@@ -100,8 +149,10 @@ ToolBar {
 
         // The loop pedal's menu: everything beyond the buttons over the mixer.
         StageButton {
+            id: loopsMenuButton
             objectName: "loopsMenuButton"
-            text: qsTr("Loops")
+            text: bar.squeeze >= 7 ? "" : qsTr("Loops")
+            tip: bar.squeeze >= 7 ? qsTr("Loops") : ""
             iconSource: "icons/loop.svg"
             onClicked: loopsMenu.popup(0, height)
             StageMenu {
@@ -222,7 +273,10 @@ ToolBar {
         }
         // Recording the performance: what the audience hears, to a WAV.
         StageButton {
+            id: recordButton
             objectName: "recordButton"
+            // (Stepped aside in a narrow window, but never while it records.)
+            visible: bar.squeeze < 6 || bar.engineStatus.recording
             text: bar.engineStatus.recording ? qsTr("● Stop rec") : qsTr("● Rec")
             tone: bar.engineStatus.recording ? "danger" : ""
             checked: bar.engineStatus.recording
@@ -231,20 +285,22 @@ ToolBar {
             onClicked: bar.engineStatus.toggleRecording()
         }
 
-        StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8; visible: !bar.performMode }
+        StageDivider { id: undoDivider; vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8; visible: !bar.performMode && bar.squeeze < 2 }
 
         StageButton {
+            id: undoButton
             objectName: "undoButton"
             iconSource: "icons/undo.svg"
-            visible: !bar.performMode
+            visible: !bar.performMode && bar.squeeze < 2
             enabled: bar.doc.canUndo
             tip: qsTr("Undo (%1)").arg(Theme.keys("Ctrl+Z"))
             onClicked: bar.doc.undo()
         }
         StageButton {
+            id: redoButton
             objectName: "redoButton"
             iconSource: "icons/redo.svg"
-            visible: !bar.performMode
+            visible: !bar.performMode && bar.squeeze < 2
             enabled: bar.doc.canRedo
             tip: qsTr("Redo (%1)").arg(Theme.keys("Ctrl+Shift+Z"))
             onClicked: bar.doc.redo()
@@ -307,6 +363,8 @@ ToolBar {
                 onClicked: bar.engineStatus.songPlaying ? bar.doc.stopSong() : bar.doc.playSong()
             }
             LcdPanel {
+                id: songWhereLcd
+                visible: bar.squeeze < 4
                 width: 160
                 height: Theme.controlHeight
                 readonly property var section: bar.engineStatus.songSection >= 0
@@ -364,6 +422,8 @@ ToolBar {
             }
             // Where it is: a recessed display.
             LcdPanel {
+                id: trackClock
+                visible: bar.squeeze < 5
                 width: 96
                 height: Theme.controlHeight
                 Text {
@@ -380,6 +440,7 @@ ToolBar {
             StageButton {
                 id: markerButton
                 objectName: "markerButton"
+                visible: bar.squeeze < 5
                 iconSource: "icons/flag.svg"
                 enabled: bar.engineStatus.trackLoaded
                 tip: bar.doc.songMarkers.length > 0 ? qsTr("Markers: jump to a marked place in the track")
@@ -528,7 +589,9 @@ ToolBar {
                 ToolTip.text: qsTr("Tempo for arpeggiators, delays and the click: click to type one. Songs can have their own (right-click a song).")
             }
             StageButton {
+                id: tapButton
                 objectName: "tapButton"
+                visible: bar.squeeze < 3
                 text: qsTr("Tap")
                 tip: qsTr("Tap along: the tempo follows your taps")
                 onPressed: bar.engineStatus.tapTempo()
@@ -543,10 +606,14 @@ ToolBar {
             }
         }
 
-        StageDivider { vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8 }
+        StageDivider { id: statsDivider; vertical: true; Layout.fillHeight: true; Layout.topMargin: 8; Layout.bottomMargin: 8; visible: bar.squeeze < 1 }
 
-        // The rig's state on one display: CPU, plugin memory, and the MIDI light.
+        // The rig's state on one display: CPU, plugin memory, and the MIDI light
+        // (a narrow window: it steps aside first).
         LcdPanel {
+            id: toolbarStats
+            objectName: "toolbarStats"
+            visible: bar.squeeze < 1
             implicitWidth: stats.implicitWidth + 16
             implicitHeight: Theme.controlHeight
         Row {
@@ -782,10 +849,18 @@ ToolBar {
             }
         }
 
-        // Minimise, maximise, close: at the right end, as on Windows.
-        WindowControls {
-            visible: bar.Window.window !== null && bar.Window.window.visibility !== Window.FullScreen
-            Layout.leftMargin: Theme.spacing
-        }
+    }
+
+    // Minimise, maximise, close: at the right end, as on Windows. Pinned there,
+    // out of the row of buttons: however narrow the window, they are always
+    // there (the row gives way: it ends before them, its least needed parts
+    // hidden first).
+    WindowControls {
+        id: windowControls
+        objectName: "windowControls"
+        visible: bar.Window.window !== null && bar.Window.window.visibility !== Window.FullScreen
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.spacingLarge
+        anchors.verticalCenter: parent.verticalCenter
     }
 }

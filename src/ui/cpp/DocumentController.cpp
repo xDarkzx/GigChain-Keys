@@ -223,6 +223,8 @@ bool DocumentController::setSongChart(int song, const QString& chordPro)
 bool DocumentController::applyChartEdit(const core::Result<QString>& edited, const QString& coalesceKey)
 {
     if (!edited) return report(edited.error());
+    // Nothing changed (a chord dropped back where it was): no undo step, nothing unsaved.
+    if (*edited == currentChart()) return true;
     const int song = m_cursor.song;
     if (auto r = core::setSongChart(m_setlist, song, *edited); !r) return report(r.error());
     m_coalesceKey = coalesceKey; // empty: a step of its own
@@ -245,6 +247,31 @@ bool DocumentController::renameChordAt(int line, int chord, const QString& name)
 bool DocumentController::moveChordTo(int line, int chord, int toLine, int toAt)
 {
     return applyChartEdit(core::moveChord(currentChart(), line, chord, toLine, toAt), {});
+}
+
+bool DocumentController::placeChordInRow(int line, int index, const QString& name)
+{
+    return applyChartEdit(core::placeChordInRow(currentChart(), line, index, name), {});
+}
+
+bool DocumentController::moveChordInRow(int line, int chord, int toLine, int toIndex)
+{
+    return applyChartEdit(core::moveChordInRow(currentChart(), line, chord, toLine, toIndex), {});
+}
+
+bool DocumentController::addChordRow(int before, const QString& name)
+{
+    return applyChartEdit(core::insertChordRow(currentChart(), before, name), {});
+}
+
+bool DocumentController::moveChordToNewRow(int line, int chord, int before)
+{
+    return applyChartEdit(core::moveChordToNewRow(currentChart(), line, chord, before), {});
+}
+
+bool DocumentController::deleteChartLine(int line)
+{
+    return applyChartEdit(core::deleteLine(currentChart(), line), {});
 }
 
 bool DocumentController::setLineLyrics(int line, const QString& lyrics)
@@ -591,6 +618,8 @@ QVariantList DocumentController::recentSetlists() const
             {u"name"_s, name},
             {u"songs"_s, known.value(u"songs"_s, -1).toInt()},
             {u"opened"_s, known.value(u"opened"_s).toDateTime()},
+            // Moved or deleted since (or on a drive not plugged in): shown as such, before anyone clicks it.
+            {u"missing"_s, !QFileInfo::exists(path)},
         });
     }
     return list;
@@ -718,7 +747,20 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
             at += static_cast<int>(segment.text.size());
         }
         const auto section = sectionAt.find(static_cast<int>(i));
+        // A row of chords (no words): its chords in order, as chips.
+        QVariantList rowChords;
+        const bool row = core::isChordRow(line);
+        if (row) {
+            for (const QVariant& s : segments) {
+                const QVariantMap segment = s.toMap();
+                if (segment.value(u"chord"_s).toString().isEmpty()) continue;
+                rowChords << QVariantMap{{u"name"_s, segment.value(u"chord"_s)}, {u"index"_s, segment.value(u"chordIndex"_s)},
+                                         {u"steps"_s, segment.value(u"steps"_s)}, {u"understood"_s, segment.value(u"understood"_s)}};
+            }
+        }
         lines << QVariantMap{{u"kind"_s, kind},
+                             {u"row"_s, row},
+                             {u"rowChords"_s, rowChords},
                              {u"line"_s, static_cast<int>(i)},
                              {u"label"_s, line.label},
                              {u"lyrics"_s, line.lyrics()},
@@ -2182,7 +2224,13 @@ bool DocumentController::open(const QString& path)
     GC_ONLY_MAIN_THREAD();
     auto loaded = core::loadSetlistFile(path);
     if (!loaded) {
-        if (loaded.error().code == core::ErrorCode::FileNotFound) forgetRecent(path); // moved or deleted
+        if (loaded.error().code == core::ErrorCode::FileNotFound && recentFiles().contains(path)) {
+            // A recent setlist moved or deleted since: said so, and taken off the list.
+            forgetRecent(path);
+            return report(core::Error{core::ErrorCode::FileNotFound,
+                                      tr("%1 is not there any more (moved or deleted), so it has been taken off your recent setlists")
+                                          .arg(QDir::toNativeSeparators(path))});
+        }
         return report(loaded.error());
     }
     m_setlist = std::move(*loaded);

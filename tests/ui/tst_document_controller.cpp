@@ -828,6 +828,39 @@ private slots:
     // Issue #23: a section renamed to any name stays a section (its part,
     // its instruments); a section title or a note can be taken out, its
     // words kept; an old note can be made a section.
+    // #25: rows of chords take chords by order; a whole line is deleted in
+    // one step (undone in one); a chord dropped back where it was changes
+    // nothing (not unsaved, no undo step).
+    void rowsOfChordsAndDeletingLines()
+    {
+        QVERIFY(m_doc->setSongChart(0, u"{comment: Intro}\n\n{comment: Verse}\n[C]One [G]two\n"_s));
+        QVERIFY(m_doc->placeChordInRow(1, 0, u"Am"_s));
+        QVERIFY(m_doc->placeChordInRow(1, 1, u"F"_s));
+        QVERIFY(m_doc->currentChart().contains(u"[Am] [F]"_s));
+        QVERIFY(m_doc->moveChordInRow(1, 1, 1, 0)); // F first
+        QVERIFY(m_doc->currentChart().contains(u"[F] [Am]"_s));
+        // Dropped back where it was: nothing changes, nothing to undo.
+        const bool dirtyBefore = m_doc->isDirty();
+        const QString chartBefore = m_doc->currentChart();
+        QVERIFY(m_doc->moveChordInRow(1, 0, 1, 0));
+        QCOMPARE(m_doc->currentChart(), chartBefore);
+        QCOMPARE(m_doc->isDirty(), dirtyBefore);
+        QVERIFY(m_doc->undo()); // the undo is the reorder, not the no-op
+        QVERIFY(m_doc->currentChart().contains(u"[Am] [F]"_s));
+        QVERIFY(m_doc->redo());
+        // A whole line of words deleted, and back with one undo.
+        QVERIFY(m_doc->deleteChartLine(3));
+        QVERIFY(!m_doc->currentChart().contains(u"One"_s));
+        QVERIFY(m_doc->undo());
+        QVERIFY(m_doc->currentChart().contains(u"[C]One [G]two"_s));
+        // A new row under the Verse's title, from a chord moved out of the words.
+        QVERIFY(m_doc->moveChordToNewRow(3, 1, 3));
+        QVERIFY(m_doc->currentChart().contains(u"{comment: Verse}\n[G]\n[C]One two"_s));
+        // A section's title is not deleted as a line: said why.
+        QVERIFY(!m_doc->deleteChartLine(0));
+        QVERIFY(m_doc->lastError().contains(u"Remove section"_s));
+    }
+
     void aSectionTakesAnyNameAndCanBeRemoved()
     {
         QVERIFY(m_doc->setSongChart(0, u"{comment: Verse}\n[C]One two\n{comment: Chorus}\n[F]Three four\n{c: Big Ending}\n[G]Five\n"_s));
