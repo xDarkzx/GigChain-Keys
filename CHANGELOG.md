@@ -8,6 +8,44 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-11-07 (alpha)
+
+The chart moves with the flow, menus that open clean, Perform's parts take
+the chart there, and editing a long chart no longer freezes the screen.
+
+Thanks to **riversongswgs-glitch** for testing the releases and reporting
+these (and #25, #27-#30) with videos and logs.
+
+### Fixed
+
+- **The chart moves with the flow** ([#32](https://github.com/xDarkzx/GigChain-Keys/issues/32)).
+  A part dragged along the Flow bar now moves its section in the chart too:
+  the chart's sections are written in the order the flow first plays them.
+  Playing, the chart no longer jumps to the bottom and back for a section
+  written at the end. The flow and each section's instruments go with it,
+  and one **Ctrl+Z** puts both back.
+- **A chord's menu opens on its own** ([#33](https://github.com/xDarkzx/GigChain-Keys/issues/33)).
+  A right-click on a chord opened the chord's menu and the line's menu, one
+  over the other.
+- **Editing a long chart no longer freezes the screen.** Each edit built
+  the whole chart again with a menu for every chord and a box to type in
+  for every word, and Practice, while shut, drew every note of the song
+  again: about a second's freeze for each chord changed in a full song. Menus
+  and boxes are now made when they are opened, and Practice draws only when
+  it is on screen: an edit is about four times faster, opening a song's
+  chart too.
+- **A chart typed with no song yet** (⋯ > **Edit as text**, in a new
+  setlist) makes the first song, as a paste does. It said *Song 0 does not
+  exist* and the text was lost. A chart that cannot be saved now keeps the
+  editor open with the text in it, and no song at all is said as *There is
+  no song yet*.
+
+### Added
+
+- **Perform's parts take the chart there** ([#34](https://github.com/xDarkzx/GigChain-Keys/issues/34)):
+  tap a part's tile and the chart goes to it, at once when stopped, and
+  when the part comes in while playing.
+
 ## [0.8.2] - 2026-11-06 (alpha)
 
 Practice in time with the click, the flow you can drag, chord lengths, and a

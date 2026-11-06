@@ -16,7 +16,9 @@ by accident.
 - **The song's parts** as tiles, in the order the song is played (its
   [flow](charts.md): *Verse 1, Chorus, Verse 2, Chorus…*). The one playing is
   lit, with how far through it you are; tap a tile to go to that very part
-  (playing: at the next bar line; stopped: Play starts there).
+  (playing: at the next bar line; stopped: Play starts there). The chart
+  goes there too: at once when stopped, and when the part comes in while
+  playing.
 - **The chart**, filling the screen, in the order the song is played (its
   flow): a chorus played three times is shown three times, and the title of
   the part playing is lit. While the song plays it scrolls by itself so the

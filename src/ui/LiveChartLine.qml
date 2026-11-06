@@ -168,30 +168,140 @@ Item {
             else live.openRequested(live.chartLine)
         }
     }
+    // ---- The menus (right-click), each made when it is opened and gone when
+    // it closes: a chart has hundreds of chords, and a menu built for each
+    // one, again with every edit, made every edit freeze the screen.
+    property var openMenu: null // the menu open (a test, or a second right-click, finds it)
+    function showMenu(component, settings) {
+        if (live.openMenu !== null) live.openMenu.close()
+        const menu = component.createObject(live, settings)
+        if (menu === null) {
+            console.warn("LiveChartLine: a menu could not be made")
+            return
+        }
+        live.openMenu = menu
+        menu.closed.connect(() => {
+            if (live.openMenu === menu) live.openMenu = null
+            menu.destroy()
+        })
+        menu.popup()
+    }
+    // A right-click on a chord reaches the line too: the chord's menu only
+    // (issue #33: both opened, one over the other). The chord says so when it
+    // opens its own, and the line looks once both have had the click.
+    property bool chordMenuAsked: false
+    function chordMenu(component, settings) {
+        live.chordMenuAsked = true
+        live.showMenu(component, settings)
+    }
+    function lineMenuUnlessChord() {
+        if (!live.chordMenuAsked) live.showMenu(lineMenu, {})
+        live.chordMenuAsked = false
+    }
     TapHandler {
         acceptedButtons: Qt.RightButton
-        onTapped: lineMenu.popup()
+        onTapped: Qt.callLater(live.lineMenuUnlessChord)
     }
-    StageMenu {
+    Component {
         id: lineMenu
-        StageMenuItem {
-            objectName: "editLineAsText"
-            text: qsTr("Edit the line as text")
-            onTriggered: live.typeLine(live.lyrics.length)
-        }
-        StageMenuItem {
-            objectName: "insertLineBelow"
-            text: qsTr("Add a line below")
-            onTriggered: {
-                live.wantFocus(live.chartLine + 1, 0)
-                live.doc.editLineAndSplit(live.chartLine, live.lyrics, live.lyrics.length)
+        StageMenu {
+            objectName: "lineMenu"
+            StageMenuItem {
+                objectName: "editLineAsText"
+                text: qsTr("Edit the line as text")
+                onTriggered: live.typeLine(live.lyrics.length)
+            }
+            StageMenuItem {
+                objectName: "insertLineBelow"
+                text: qsTr("Add a line below")
+                onTriggered: {
+                    live.wantFocus(live.chartLine + 1, 0)
+                    live.doc.editLineAndSplit(live.chartLine, live.lyrics, live.lyrics.length)
+                }
+            }
+            MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+            StageMenuItem {
+                objectName: "deleteLine"
+                text: live.isRow ? qsTr("Delete this row of chords") : qsTr("Delete this line")
+                onTriggered: live.doc.deleteChartLine(live.chartLine)
             }
         }
-        MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
-        StageMenuItem {
-            objectName: "deleteLine"
-            text: live.isRow ? qsTr("Delete this row of chords") : qsTr("Delete this line")
-            onTriggered: live.doc.deleteChartLine(live.chartLine)
+    }
+    // A chord's menu in a row of chords: `chord` {index, name, bars}; `chip`
+    // changes it (Change).
+    Component {
+        id: rowChordMenu
+        StageMenu {
+            id: rowMenu
+            objectName: "rowChordMenu"
+            property var chord: ({ index: -1, name: "", bars: 0 })
+            property var chip: null // (its rowChip: rename())
+            onClosed: live.chordMenuAsked = false // (the line never had the click: ready for its own)
+            StageMenuItem {
+                objectName: "chordHowToPlay"
+                text: qsTr("How to play %1…").arg(rowMenu.chord.name)
+                onTriggered: live.chordDiagramRequested(rowMenu.chord.name)
+            }
+            StageMenuItem {
+                objectName: "chordChange"
+                text: qsTr("Change %1…").arg(rowMenu.chord.name)
+                onTriggered: if (rowMenu.chip !== null) rowMenu.chip.rename()
+            }
+            StageMenuItem {
+                objectName: "chordRemove"
+                text: qsTr("Remove %1").arg(rowMenu.chord.name)
+                onTriggered: live.doc.renameChordAt(live.chartLine, rowMenu.chord.index, "")
+            }
+            // How long it lasts (Practice and the timeline play it so): written as bar lines.
+            StageMenu {
+                id: lengthMenu
+                objectName: "rowChordLength"
+                title: qsTr("Length")
+                Instantiator {
+                    model: [1, 2, 4, 6, 8]
+                    delegate: StageMenuItem {
+                        required property int modelData
+                        objectName: "rowChordLength" + modelData
+                        text: modelData === 1 ? qsTr("Half a bar") : modelData === 2 ? qsTr("1 bar") : qsTr("%1 bars").arg(modelData / 2)
+                        checkable: true
+                        checked: Math.abs(rowMenu.chord.bars * 2 - modelData) < 1e-6
+                        onTriggered: live.doc.setRowChordLength(live.chartLine, rowMenu.chord.index, modelData)
+                    }
+                    onObjectAdded: (index, object) => lengthMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => lengthMenu.removeItem(object)
+                }
+            }
+            MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+            StageMenuItem {
+                text: qsTr("Delete this row of chords")
+                onTriggered: live.doc.deleteChartLine(live.chartLine)
+            }
+        }
+    }
+    // A chord's menu over the words: `chord` {index, name}; `cell` types it (Change).
+    Component {
+        id: lyricChordMenu
+        StageMenu {
+            id: lyricMenu
+            objectName: "lyricChordMenu"
+            property var chord: ({ index: -1, name: "" })
+            property var cell: null // (its cell: editChord())
+            onClosed: live.chordMenuAsked = false
+            StageMenuItem {
+                objectName: "chordHowToPlay"
+                text: qsTr("How to play %1…").arg(lyricMenu.chord.name)
+                onTriggered: live.chordDiagramRequested(lyricMenu.chord.name)
+            }
+            StageMenuItem {
+                objectName: "chordChange"
+                text: qsTr("Change %1…").arg(lyricMenu.chord.name)
+                onTriggered: if (lyricMenu.cell !== null) lyricMenu.cell.editChord(lyricMenu.chord.index, lyricMenu.chord.name)
+            }
+            StageMenuItem {
+                objectName: "chordRemove"
+                text: qsTr("Remove %1").arg(lyricMenu.chord.name)
+                onTriggered: live.doc.renameChordAt(live.chartLine, lyricMenu.chord.index, "")
+            }
         }
     }
 
@@ -245,7 +355,7 @@ Item {
                     Text {
                         id: rowLabel
                         anchors.centerIn: parent
-                        visible: !rowInput.visible
+                        visible: !rowChip.renaming
                         text: rowSlot.modelData.name
                         color: rowDragger.active ? "white" : !rowSlot.modelData.understood ? Theme.textDim
                              : rowChip.current ? Theme.accent : Theme.chord
@@ -257,7 +367,7 @@ Item {
                     Text {
                         objectName: "rowChordBars"
                         readonly property real bars: rowSlot.modelData.bars !== undefined ? rowSlot.modelData.bars : 0
-                        visible: bars > 0 && Math.abs(bars - 1) > 1e-6 && !rowInput.visible
+                        visible: bars > 0 && Math.abs(bars - 1) > 1e-6 && !rowChip.renaming
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
                         anchors.rightMargin: 3
@@ -266,32 +376,43 @@ Item {
                         color: Theme.textDim
                         font.pixelSize: Math.max(9, live.chordFont * 0.45)
                     }
-                    TextInput {
-                        id: rowInput
-                        visible: false
+                    // Its name typed in (made while it is typed in only).
+                    property bool renaming: false
+                    Loader {
+                        id: rowEditor
+                        active: rowChip.renaming
                         anchors.centerIn: parent
-                        width: Math.max(contentWidth + 10, 44 * live.size)
-                        horizontalAlignment: TextInput.AlignHCenter
-                        color: Theme.chord
-                        font.pixelSize: live.chordFont
-                        font.bold: true
-                        selectByMouse: true
-                        Rectangle { anchors.fill: parent; anchors.margins: -2; z: -1; color: Theme.readoutBackground; border.color: Theme.accent; radius: Theme.radiusSmall }
-                        function commit() {
-                            if (!rowInput.visible) return // (saved once)
-                            rowInput.visible = false
-                            const name = rowInput.text.trim()
-                            if (name !== rowSlot.modelData.name) live.doc.renameChordAt(live.chartLine, rowSlot.modelData.index, name)
+                        onLoaded: rowChip.begin(rowEditor.item as TextInput)
+                        sourceComponent: TextInput {
+                            id: rowInput
+                            objectName: "rowChordInput"
+                            width: Math.max(contentWidth + 10, 44 * live.size)
+                            horizontalAlignment: TextInput.AlignHCenter
+                            color: Theme.chord
+                            font.pixelSize: live.chordFont
+                            font.bold: true
+                            selectByMouse: true
+                            Rectangle { anchors.fill: parent; anchors.margins: -2; z: -1; color: Theme.readoutBackground; border.color: Theme.accent; radius: Theme.radiusSmall }
+                            function commit() {
+                                if (!rowChip.renaming) return // (saved once)
+                                const name = rowInput.text.trim()
+                                rowChip.renaming = false
+                                if (name !== rowSlot.modelData.name) live.doc.renameChordAt(live.chartLine, rowSlot.modelData.index, name)
+                            }
+                            onAccepted: rowInput.commit()
+                            Keys.onEscapePressed: rowChip.renaming = false
+                            onActiveFocusChanged: if (!activeFocus && rowChip.renaming) rowInput.commit()
                         }
-                        onAccepted: rowInput.commit()
-                        Keys.onEscapePressed: rowInput.visible = false
-                        onActiveFocusChanged: if (!activeFocus && visible) rowInput.commit()
+                    }
+                    function begin(input: TextInput) {
+                        if (input === null) return
+                        input.text = rowSlot.modelData.name
+                        input.forceActiveFocus()
+                        input.selectAll()
                     }
                     function rename() {
-                        rowInput.text = rowSlot.modelData.name
-                        rowInput.visible = true
-                        rowInput.forceActiveFocus()
-                        rowInput.selectAll()
+                        if (rowChip.renaming) rowChip.begin(rowEditor.item as TextInput) // (already open: starts again)
+                        rowChip.renaming = true
                     }
                     HoverHandler { id: rowHover; cursorShape: Qt.OpenHandCursor }
                     DragHandler {
@@ -316,45 +437,10 @@ Item {
                     }
                     TapHandler {
                         acceptedButtons: Qt.RightButton
-                        onTapped: rowChipMenu.popup()
-                    }
-                    StageMenu {
-                        id: rowChipMenu
-                        StageMenuItem {
-                            text: qsTr("How to play %1…").arg(rowSlot.modelData.name)
-                            onTriggered: live.chordDiagramRequested(rowSlot.modelData.name)
-                        }
-                        StageMenuItem {
-                            text: qsTr("Change %1…").arg(rowSlot.modelData.name)
-                            onTriggered: rowChip.rename()
-                        }
-                        StageMenuItem {
-                            text: qsTr("Remove %1").arg(rowSlot.modelData.name)
-                            onTriggered: live.doc.renameChordAt(live.chartLine, rowSlot.modelData.index, "")
-                        }
-                        // How long it lasts (Practice and the timeline play it so): written as bar lines.
-                        StageMenu {
-                            id: lengthMenu
-                            objectName: "rowChordLength"
-                            title: qsTr("Length")
-                            Instantiator {
-                                model: [1, 2, 4, 6, 8]
-                                delegate: StageMenuItem {
-                                    required property int modelData
-                                    text: modelData === 1 ? qsTr("Half a bar") : modelData === 2 ? qsTr("1 bar") : qsTr("%1 bars").arg(modelData / 2)
-                                    checkable: true
-                                    checked: Math.abs(rowSlot.modelData.bars * 2 - modelData) < 1e-6
-                                    onTriggered: live.doc.setRowChordLength(live.chartLine, rowSlot.modelData.index, modelData)
-                                }
-                                onObjectAdded: (index, object) => lengthMenu.insertItem(index, object)
-                                onObjectRemoved: (index, object) => lengthMenu.removeItem(object)
-                            }
-                        }
-                        MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
-                        StageMenuItem {
-                            text: qsTr("Delete this row of chords")
-                            onTriggered: live.doc.deleteChartLine(live.chartLine)
-                        }
+                        onTapped: live.chordMenu(rowChordMenu, {
+                            chord: { index: rowSlot.modelData.index, name: rowSlot.modelData.name,
+                                     bars: rowSlot.modelData.bars !== undefined ? rowSlot.modelData.bars : 0 },
+                            chip: rowChip })
                     }
                     ToolTip.visible: rowHover.hovered && !rowDragger.active
                     ToolTip.delay: 900
@@ -435,25 +521,35 @@ Item {
                 required property var modelData
                 required property int index
                 readonly property var chords: cell.modelData.chords
-                readonly property bool editingChord: chordInput.visible
-                readonly property bool editingWord: wordInput.visible
+                // Its box or its word being typed in. (The boxes to type in are
+                // made then, not for every word of the chart: see chordEditor.)
+                property bool editingChord: false
+                property bool editingWord: false
+                property int editedChord: -1     // the chord being changed (-1: a new one)
+                property string startText: ""    // what the box starts with
                 readonly property real gap: cell.modelData.space ? wordMetrics.advanceWidth(" ") : 0
                 width: Math.max(word.implicitWidth, chordRow.implicitWidth + 4, live.open ? 18 * live.size : 0,
-                                chordInput.visible ? chordInput.width : 0, wordInput.visible ? wordInput.width : 0) + cell.gap
+                                cell.editingChord ? chordEditor.implicitWidth : 0,
+                                cell.editingWord ? wordEditor.implicitWidth : 0) + cell.gap
                 height: live.chordHeight + wordMetrics.height
 
                 function editChord(index, name) {
-                    chordInput.chordIndex = index
-                    chordInput.text = name
-                    chordInput.visible = true
-                    chordInput.forceActiveFocus()
-                    chordInput.selectAll()
+                    cell.editedChord = index
+                    cell.startText = name
+                    if (cell.editingChord) cell.begin(chordEditor.item as TextInput) // (already open: starts again)
+                    cell.editingChord = true
                 }
                 function editWord() {
-                    wordInput.text = cell.modelData.text
-                    wordInput.visible = true
-                    wordInput.forceActiveFocus()
-                    wordInput.selectAll()
+                    cell.startText = cell.modelData.text
+                    if (cell.editingWord) cell.begin(wordEditor.item as TextInput)
+                    cell.editingWord = true
+                }
+                // A box just made (or asked again): what it starts with, selected, the caret in it.
+                function begin(input: TextInput) {
+                    if (input === null) return
+                    input.text = cell.startText
+                    input.forceActiveFocus()
+                    input.selectAll()
                 }
                 Connections {
                     target: live
@@ -565,23 +661,9 @@ Item {
                                     }
                                     TapHandler {
                                         acceptedButtons: Qt.RightButton
-                                        onTapped: chipMenu.popup()
-                                    }
-                                    StageMenu {
-                                        id: chipMenu
-                                        StageMenuItem {
-                                            objectName: "chordHowToPlay"
-                                            text: qsTr("How to play %1…").arg(slot.modelData.name)
-                                            onTriggered: live.chordDiagramRequested(slot.modelData.name)
-                                        }
-                                        StageMenuItem {
-                                            text: qsTr("Change %1…").arg(slot.modelData.name)
-                                            onTriggered: cell.editChord(slot.modelData.index, slot.modelData.name)
-                                        }
-                                        StageMenuItem {
-                                            text: qsTr("Remove %1").arg(slot.modelData.name)
-                                            onTriggered: live.doc.renameChordAt(live.chartLine, slot.modelData.index, "")
-                                        }
+                                        onTapped: live.chordMenu(lyricChordMenu, {
+                                            chord: { index: slot.modelData.index, name: slot.modelData.name },
+                                            cell: cell })
                                     }
                                     ToolTip.visible: hover.hovered && !dragger.active
                                     ToolTip.delay: 900
@@ -590,40 +672,44 @@ Item {
                             }
                         }
                     }
-                    // A chord typed in the box (a new one, or one changed; empty: removed).
-                    TextInput {
-                        id: chordInput
-                        objectName: "chordEditInput"
-                        property int chordIndex: -1
-                        property bool done: false
-                        visible: false
+                    // A chord typed in the box (a new one, or one changed; empty:
+                    // removed). Made while it is typed in only.
+                    Loader {
+                        id: chordEditor
+                        active: cell.editingChord
                         anchors.bottom: parent.bottom
-                        width: Math.max(contentWidth + 10, 44 * live.size)
-                        height: live.chordHeight - 2
                         z: 20
-                        leftPadding: 4
-                        verticalAlignment: TextInput.AlignVCenter
-                        color: Theme.chord
-                        font.pixelSize: live.chordFont
-                        font.bold: true
-                        selectByMouse: true
-                        Rectangle { anchors.fill: parent; z: -1; color: Theme.readoutBackground; border.color: Theme.accent; radius: Theme.radiusSmall }
-                        function commit() {
-                            if (!chordInput.visible) return // (saved once: Tab, then the focus leaving)
-                            const name = chordInput.text.trim()
-                            chordInput.visible = false
-                            if (chordInput.chordIndex >= 0) {
-                                const before = cell.chords.find(c => c.index === chordInput.chordIndex)
-                                if (before === undefined || before.name !== name) live.doc.renameChordAt(live.chartLine, chordInput.chordIndex, name)
-                            } else if (name !== "") {
-                                live.doc.placeChordAt(live.chartLine, cell.modelData.at, name)
+                        onLoaded: cell.begin(chordEditor.item as TextInput)
+                        sourceComponent: TextInput {
+                            id: chordInput
+                            objectName: "chordEditInput"
+                            width: Math.max(contentWidth + 10, 44 * live.size)
+                            height: live.chordHeight - 2
+                            leftPadding: 4
+                            verticalAlignment: TextInput.AlignVCenter
+                            color: Theme.chord
+                            font.pixelSize: live.chordFont
+                            font.bold: true
+                            selectByMouse: true
+                            Rectangle { anchors.fill: parent; z: -1; color: Theme.readoutBackground; border.color: Theme.accent; radius: Theme.radiusSmall }
+                            function commit() {
+                                if (!cell.editingChord) return // (saved once: Tab, then the focus leaving)
+                                const name = chordInput.text.trim()
+                                const index = cell.editedChord
+                                cell.editingChord = false
+                                if (index >= 0) {
+                                    const before = cell.chords.find(c => c.index === index)
+                                    if (before === undefined || before.name !== name) live.doc.renameChordAt(live.chartLine, index, name)
+                                } else if (name !== "") {
+                                    live.doc.placeChordAt(live.chartLine, cell.modelData.at, name)
+                                }
                             }
+                            onAccepted: chordInput.commit()
+                            Keys.onEscapePressed: cell.editingChord = false
+                            Keys.onTabPressed: live.moveOn(cell.index, 1, "chord", chordInput.commit)
+                            Keys.onBacktabPressed: live.moveOn(cell.index, -1, "chord", chordInput.commit)
+                            onActiveFocusChanged: if (!activeFocus && cell.editingChord) chordInput.commit()
                         }
-                        onAccepted: chordInput.commit()
-                        Keys.onEscapePressed: chordInput.visible = false
-                        Keys.onTabPressed: live.moveOn(cell.index, 1, "chord", chordInput.commit)
-                        Keys.onBacktabPressed: live.moveOn(cell.index, -1, "chord", chordInput.commit)
-                        onActiveFocusChanged: if (!activeFocus && visible) chordInput.commit()
                     }
                     // (A chord dragged here lands by the chart's drop layer: dropTargetAt.)
                 }
@@ -644,26 +730,32 @@ Item {
                         }
                     }
                 }
-                TextInput {
-                    id: wordInput
-                    objectName: "wordEditInput"
-                    visible: false
+                // The word typed in where it is (made while it is typed in only).
+                Loader {
+                    id: wordEditor
+                    active: cell.editingWord
                     y: live.chordHeight
-                    width: Math.max(contentWidth + 6, 30 * live.size)
-                    color: Theme.text
-                    font.pixelSize: live.wordFont
-                    selectByMouse: true
-                    Rectangle { anchors.fill: parent; anchors.margins: -2; z: -1; color: Theme.readoutBackground; border.color: Theme.accent; radius: Theme.radiusSmall }
-                    function commit() {
-                        if (!wordInput.visible) return // (saved once)
-                        wordInput.visible = false
-                        if (wordInput.text !== cell.modelData.text) live.doc.setLineLyrics(live.chartLine, live.lyricsWith(cell.modelData, wordInput.text))
+                    onLoaded: cell.begin(wordEditor.item as TextInput)
+                    sourceComponent: TextInput {
+                        id: wordInput
+                        objectName: "wordEditInput"
+                        width: Math.max(contentWidth + 6, 30 * live.size)
+                        color: Theme.text
+                        font.pixelSize: live.wordFont
+                        selectByMouse: true
+                        Rectangle { anchors.fill: parent; anchors.margins: -2; z: -1; color: Theme.readoutBackground; border.color: Theme.accent; radius: Theme.radiusSmall }
+                        function commit() {
+                            if (!cell.editingWord) return // (saved once)
+                            const text = wordInput.text
+                            cell.editingWord = false
+                            if (text !== cell.modelData.text) live.doc.setLineLyrics(live.chartLine, live.lyricsWith(cell.modelData, text))
+                        }
+                        onAccepted: wordInput.commit()
+                        Keys.onEscapePressed: cell.editingWord = false
+                        Keys.onTabPressed: live.moveOn(cell.index, 1, "word", wordInput.commit)
+                        Keys.onBacktabPressed: live.moveOn(cell.index, -1, "word", wordInput.commit)
+                        onActiveFocusChanged: if (!activeFocus && cell.editingWord) wordInput.commit()
                     }
-                    onAccepted: wordInput.commit()
-                    Keys.onEscapePressed: wordInput.visible = false
-                    Keys.onTabPressed: live.moveOn(cell.index, 1, "word", wordInput.commit)
-                    Keys.onBacktabPressed: live.moveOn(cell.index, -1, "word", wordInput.commit)
-                    onActiveFocusChanged: if (!activeFocus && visible) wordInput.commit()
                 }
             }
         }

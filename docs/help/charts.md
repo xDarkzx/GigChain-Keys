@@ -114,6 +114,11 @@ though the band plays it three times.
   in there.
 - **+** adds a section of the chart at the end, and **Chart order** goes back.
 
+The chart follows the flow: change the flow and its sections move in the
+chart to the order they are first played (a section the flow leaves out goes
+after them). Each is written once here; a chorus played three times stays
+one chorus to edit. **Ctrl+Z** puts the flow and the chart back together.
+
 Play runs the song along this flow, and in Perform the chart is shown in
 this order, each section as many times as it is played: see
 [Sections, tempo and backing tracks](sections-and-tempo.md).
@@ -145,4 +150,5 @@ change on, and a line like *{comment: Chorus}* starts a section:
 [G]Amazing [G7]grace, how [C]sweet the [G]sound
 ```
 
-Click **Done** to go back.
+Click **Done** to go back. With no song yet (a new setlist), Done makes the
+first song from what you typed, named from its *{title: …}*.

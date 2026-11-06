@@ -213,7 +213,8 @@ public:
     [[nodiscard]] bool songFlowSet() const;
     [[nodiscard]] std::vector<core::SectionRef> currentSongFlow() const;
     // A new flow ([{name, occurrence}]; empty: back to the chart's order): an
-    // undo step. A part naming no section of the chart is refused, said.
+    // undo step. A part naming no section of the chart is refused, said. The
+    // chart's sections are then written in the flow's order (core::arrangeSongChart).
     Q_INVOKABLE bool setSongFlow(const QVariantList& flow);
     // Enter while typing a line: its words become `lyrics` and it splits at
     // `at` (of the new words), as one undo step.

@@ -122,8 +122,11 @@ Rectangle {
                 text: qsTr("Done")
                 highlighted: true
                 onClicked: {
-                    panel.doc.setSongChart(panel.doc.songIndex, editor.text)
-                    panel.editing = false
+                    // No song yet: the text makes the first one, as a paste
+                    // does. Refused (said): the text stays, to put right.
+                    const saved = panel.doc.songIndex >= 0 ? panel.doc.setSongChart(panel.doc.songIndex, editor.text)
+                                : editor.text.trim() === "" || panel.doc.pasteChart(-1, editor.text)
+                    if (saved) panel.editing = false
                 }
             }
             StageButton {

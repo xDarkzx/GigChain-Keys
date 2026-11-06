@@ -264,8 +264,22 @@ Rectangle {
                     readonly property int count: perform.doc.songFlow.length
                     // The part playing, or the one Play starts from.
                     readonly property int playingPart: perform.engineStatus.songPlace
-                    // A tile tapped: that very part of the flow.
-                    function choose(place) { perform.doc.selectFlowPart(place) }
+                    // A tile tapped: that very part of the flow, and the chart
+                    // goes to it (issue #34): at once when stopped; playing,
+                    // when it comes in (at the next bar line).
+                    property int goingTo: -1
+                    function choose(place) {
+                        perform.doc.selectFlowPart(place)
+                        if (perform.engineStatus.songPlaying) parts.goingTo = place
+                        else {
+                            parts.goingTo = -1
+                            performChart.showPlace(place)
+                        }
+                    }
+                    onPlayingPartChanged: if (parts.playingPart === parts.goingTo) {
+                        parts.goingTo = -1
+                        performChart.showPlace(parts.playingPart)
+                    }
                     Repeater {
                         model: perform.doc.songFlow
                         StageButton {
@@ -336,6 +350,13 @@ Rectangle {
                     Connections {
                         target: perform.doc
                         function onChartChanged() { performChart.contentY = 0 }
+                    }
+                    // Part `place` of the flow at the top of the view.
+                    function showPlace(place) {
+                        const y = stageChart.yOfPlace(place)
+                        if (y < 0) return
+                        followScroll.to = Math.max(0, Math.min(y, performChart.contentHeight - performChart.height))
+                        followScroll.restart()
                     }
                     // Playing: the line it has come to stays in the upper third.
                     NumberAnimation {

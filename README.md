@@ -270,6 +270,7 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
+| 0.8.3 | Alpha: the chart moves with the flow; a chord's menu opens on its own; tap a part in Perform and the chart goes there; editing a long chart no longer freezes |
 | 0.8.2 | Alpha: Practice in time with the click and matching Perform; drag the flow, the chart follows it on stage; chord lengths in rows; a big count-in; Practice's parts to jump to; the click's volume and "only while playing" |
 | 0.8.1 | Alpha: fixes: Sustain Pads wait for Activate; drag chords anywhere in a chart, rows of chords for intros and solos, delete a line in one click; the window's buttons always in sight |
 | 0.8.0 | Alpha: Sustain Pads (a Tonic-style pad held on one key under the song) with its own mixer strip: Pads Pro or your own VST pad, your own effects; Pads Pro, a third instrument of its own; the mixer along the bottom, down a side or in its own window; section names fixed |
@@ -298,6 +299,13 @@ Steinberg VST3 SDK; audio and MIDI go through RtAudio and RtMidi.
 - [**Roadmap**](docs/ROADMAP.md): what is coming next
 
 Everyone taking part is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).
+
+### Contributors
+
+- [**riversongswgs-glitch**](https://github.com/riversongswgs-glitch): testing the
+  releases and reporting with videos and logs, which shaped the Flow bar,
+  Practice in time with the click, chord lengths, the big count-in and the
+  chart editor's fixes
 
 ## License and credits
 

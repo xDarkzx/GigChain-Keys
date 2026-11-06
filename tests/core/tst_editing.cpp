@@ -1,4 +1,5 @@
 #include "LeakCheck.h"
+#include "gigchain/core/Chart.h"
 #include "gigchain/core/Editing.h"
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/Validation.h"
@@ -252,6 +253,73 @@ private slots:
         QCOMPARE(song.sections.at(0).occurrence, 1);
         QCOMPARE(song.sections.at(0).bars, 8);
         QVERIFY(renameSongSection(s, 9, renamed).error().code == ErrorCode::OutOfRange);
+    }
+
+    // A part dragged along the flow (issue #32): the chart's sections are
+    // written in the order the flow first plays them, each once; the gaps
+    // between sections stay where they were; sections the flow leaves out
+    // follow, as written. The flow and the sections' instruments keep to
+    // each section (the second chorus written first is now the first).
+    void theChartIsWrittenInTheFlowsOrder()
+    {
+        Setlist s = abc();
+        Song& song = s.songs.at(0);
+        song.chart = u"{title: Song}\n{comment: Intro}\n[Am]a\n\n{comment: Chorus}\n[C]b\n\n{comment: Verse}\n[G]c\n\n"
+                     u"{comment: Chorus}\n[F]d\n\n{comment: Outro}\n[E]e\n"_s;
+        song.flow = {{.name = u"Intro"_s}, {.name = u"Verse"_s}, {.name = u"Chorus"_s, .occurrence = 2},
+                     {.name = u"Chorus"_s}, {.name = u"Verse"_s}, {.name = u"Chorus"_s, .occurrence = 2}};
+        song.sections = {SectionSetup{.name = u"Chorus"_s, .occurrence = 2, .bars = 8, .assigned = true, .channels = {}},
+                         SectionSetup{.name = u"Outro"_s, .occurrence = 1, .bars = 2, .assigned = false, .channels = {}}};
+        QVERIFY(arrangeSongChart(s, 0).has_value());
+        QCOMPARE(song.chart, u"{title: Song}\n{comment: Intro}\n[Am]a\n\n{comment: Verse}\n[G]c\n\n{comment: Chorus}\n[F]d\n\n"
+                             u"{comment: Chorus}\n[C]b\n\n{comment: Outro}\n[E]e\n"_s);
+        QStringList flow;
+        for (const SectionRef& part : song.flow) flow << u"%1 %2"_s.arg(part.name).arg(part.occurrence);
+        QCOMPARE(flow, (QStringList{u"Intro 1"_s, u"Verse 1"_s, u"Chorus 1"_s, u"Chorus 2"_s, u"Verse 1"_s, u"Chorus 1"_s}));
+        QCOMPARE(song.sections.at(0).name, u"Chorus"_s); // ([F]d, now the first chorus)
+        QCOMPARE(song.sections.at(0).occurrence, 1);
+        QCOMPARE(song.sections.at(0).bars, 8);
+        QCOMPARE(song.sections.at(1).name, u"Outro"_s);
+        QCOMPARE(song.sections.at(1).occurrence, 1);
+
+        // Already in order, or no flow: the chart is left as written.
+        const QString arranged = song.chart;
+        QVERIFY(arrangeSongChart(s, 0).has_value());
+        QCOMPARE(song.chart, arranged);
+        song.flow.clear();
+        song.chart = u"{comment: B}\nb\n{comment: A}\na\n"_s;
+        QVERIFY(arrangeSongChart(s, 0).has_value());
+        QCOMPARE(song.chart, u"{comment: B}\nb\n{comment: A}\na\n"_s);
+        QVERIFY(arrangeSongChart(s, 9).error().code == ErrorCode::OutOfRange);
+    }
+
+    // No song at all (-1) is said as such, not as "Song 0 does not exist";
+    // a song past the end is named as the player counts (from 1).
+    void noSongIsSaidPlainly()
+    {
+        Setlist s = abc();
+        const auto none = setSongChart(s, -1, u"[C]la"_s);
+        QVERIFY(!none.has_value());
+        QVERIFY(none.error().code == ErrorCode::OutOfRange);
+        QCOMPARE(none.error().message, u"There is no song yet: add one first"_s);
+        QCOMPARE(setSongChart(s, 7, u"[C]la"_s).error().message, u"Song 8 does not exist"_s);
+    }
+
+    // Sections written as {start_of_chorus}...{end_of_chorus} move whole
+    // (their end with them); a part naming no section of the chart (renamed
+    // away) is passed over and kept as it is.
+    void sectionsWithAnEndMoveWhole()
+    {
+        Setlist s = abc();
+        Song& song = s.songs.at(0);
+        song.chart = u"{start_of_verse: Verse}\n[Am]a\n{end_of_verse}\n{start_of_chorus}\n[C]b\n{end_of_chorus}\n"_s;
+        const std::vector<ChartSection> sections = chartSections(parseChordPro(song.chart));
+        QCOMPARE(sections.size(), 2u);
+        song.flow = {{.name = u"Gone"_s}, {.name = sections.at(1).name}, {.name = sections.at(0).name}};
+        QVERIFY(arrangeSongChart(s, 0).has_value());
+        QCOMPARE(song.chart, u"{start_of_chorus}\n[C]b\n{end_of_chorus}\n{start_of_verse: Verse}\n[Am]a\n{end_of_verse}\n"_s);
+        QCOMPARE(song.flow.at(0).name, u"Gone"_s);
+        QCOMPARE(chartSections(parseChordPro(song.chart)).at(0).name, sections.at(1).name);
     }
 };
 

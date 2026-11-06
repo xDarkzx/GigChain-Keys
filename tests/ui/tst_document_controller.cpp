@@ -792,7 +792,9 @@ private slots:
         QVERIFY(m_doc->setSongFlow({part(u"Verse 1"_s), part(u"Verse 2"_s), part(u"Chorus"_s), part(u"Chorus"_s)}));
         QVERIFY(m_doc->songFlowSet());
         QCOMPARE(labels(), (QStringList{u"Verse 1"_s, u"Verse 2"_s, u"Chorus"_s, u"Chorus"_s}));
-        QCOMPARE(m_engine->sections.parts, (std::vector<int>{0, 2, 1, 1})); // the chorus twice
+        // The chart follows the flow (#32): Verse 2 is written before the chorus now.
+        QCOMPARE(m_doc->currentChart(), u"{comment: Verse 1}\n[Am]a [F]b\n{comment: Verse 2}\n[Dm]e [E]f\n{comment: Chorus}\n[C]c [G]d\n"_s);
+        QCOMPARE(m_engine->sections.parts, (std::vector<int>{0, 1, 2, 2})); // the chorus twice
 
         QVERIFY(!m_doc->setSongFlow({part(u"Bridge"_s)}));
         QVERIFY2(m_doc->lastError().contains(u"Bridge"_s), qPrintable(m_doc->lastError()));
@@ -808,9 +810,9 @@ private slots:
         m_doc->selectFlowPart(9);
         QVERIFY(m_doc->lastError().contains(u"part"_s));
         // A section renamed in the chart: the flow keeps to it.
-        QVERIFY(m_doc->renameChartSection(2, u"Refrain"_s));
+        QVERIFY(m_doc->renameChartSection(4, u"Refrain"_s)); // (the chorus's title: line 4 now)
         QCOMPARE(labels(), (QStringList{u"Verse 1"_s, u"Verse 2"_s, u"Refrain"_s, u"Refrain"_s}));
-        QCOMPARE(m_engine->sections.parts, (std::vector<int>{0, 2, 1, 1}));
+        QCOMPARE(m_engine->sections.parts, (std::vector<int>{0, 1, 2, 2}));
         QVERIFY(m_doc->undo());
         QCOMPARE(labels(), (QStringList{u"Verse 1"_s, u"Verse 2"_s, u"Chorus"_s, u"Chorus"_s}));
         QVERIFY(m_doc->setSongFlow({})); // back to the chart's order

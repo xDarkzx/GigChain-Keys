@@ -687,14 +687,18 @@ private slots:
         const QList<QQuickItem*> tiles = findAll(item(u"performParts"_s), u"performPart"_s);
         QCOMPARE(tiles.size(), 2);
         QVERIFY(tiles.at(1)->height() >= 44);
-        fingerTap(tiles.at(1));
-        QTRY_COMPARE(m_engine->songPosition().section, 1);
-        fingerTap(tiles.at(0));
-        QTRY_COMPARE(m_engine->songPosition().section, 0);
-
-        // A finger slid up the chart scrolls it, even starting on a chord.
         auto* stage = item(u"performChart"_s);
         QVERIFY(stage != nullptr);
+        fingerTap(tiles.at(1));
+        QTRY_COMPARE(m_engine->songPosition().section, 1);
+        // #34: the chart goes to the part tapped (the chorus, under the long verse).
+        QTRY_VERIFY2(stage->property("contentY").toReal() > 300,
+                     qPrintable(u"the chart is at %1"_s.arg(stage->property("contentY").toReal())));
+        fingerTap(tiles.at(0));
+        QTRY_COMPARE(m_engine->songPosition().section, 0);
+        QTRY_COMPARE(stage->property("contentY").toReal(), 0.0);
+
+        // A finger slid up the chart scrolls it, even starting on a chord.
         QVERIFY(stage->property("contentHeight").toReal() > stage->height());
         const QPoint start = stage->mapToScene(QPointF(stage->width() / 2, stage->height() * 0.8)).toPoint();
         fingerDrag(start, start - QPoint(0, 300));
@@ -2299,14 +2303,34 @@ private slots:
             for (int i = 1; i <= 12; ++i) QTest::mouseMove(w, from + ((to - from) * i / 12), 15);
             QTest::mouseRelease(w, Qt::LeftButton, {}, to);
             QTRY_COMPARE(partTexts(), (QStringList{u"Verse 2"_s, u"Verse 1"_s, u"Chorus  ×2"_s}));
+            // #32: the chart being edited moves with it (each section once, as first played).
+            auto* edited = findItem(scene, u"chartView"_s);
+            QVERIFY(edited != nullptr);
+            QStringList titles;
+            for (const QVariant& l : edited->property("lines").toList()) {
+                if (l.toMap().value(u"sectionIndex"_s).toInt() >= 0) titles << l.toMap().value(u"label"_s).toString();
+            }
+            QCOMPARE(titles, (QStringList{u"Verse 2"_s, u"Verse 1"_s, u"Chorus"_s}));
+            QVERIFY(doc.currentChart().startsWith(u"{comment: Verse 2}\n[Dm]e [E]f\n"_s));
+            // One undo step brings back the flow and the chart as they were.
+            QVERIFY(doc.undo());
+            QTRY_COMPARE(partTexts(), (QStringList{u"Verse 1"_s, u"Chorus  ×2"_s, u"Verse 2"_s}));
+            QVERIFY(doc.currentChart().startsWith(u"{comment: Verse 1}\n"_s));
+            QVERIFY(doc.redo());
+            QTRY_COMPARE(partTexts(), (QStringList{u"Verse 2"_s, u"Verse 1"_s, u"Chorus  ×2"_s}));
         }
         // An arrow's menu puts a section in there (between Verse 2 and Verse 1: the chorus).
         {
             QVERIFY(bar->setProperty("insertAt", 1));
             auto* insert = bar->findChild<QObject*>(u"flowInsertMenu"_s);
             QVERIFY(insert != nullptr);
+            // (The menu lists the chart's sections in its order, which the drag just changed.)
             QQuickItem* chorusItem = nullptr;
-            QVERIFY(QMetaObject::invokeMethod(insert, "itemAt", Q_RETURN_ARG(QQuickItem*, chorusItem), Q_ARG(int, 1)));
+            for (int i = 0; i < insert->property("count").toInt() && chorusItem == nullptr; ++i) {
+                QQuickItem* entry = nullptr;
+                QVERIFY(QMetaObject::invokeMethod(insert, "itemAt", Q_RETURN_ARG(QQuickItem*, entry), Q_ARG(int, i)));
+                if (entry != nullptr && entry->property("text").toString() == u"Put in Chorus"_s) chorusItem = entry;
+            }
             QVERIFY(chorusItem != nullptr);
             QVERIFY(QMetaObject::invokeMethod(chorusItem, "triggered"));
             QTRY_COMPARE(partTexts(), (QStringList{u"Verse 2"_s, u"Chorus"_s, u"Verse 1"_s, u"Chorus  ×2"_s}));
@@ -2321,6 +2345,268 @@ private slots:
             QCOMPARE(titles, (QStringList{u"Verse 2"_s, u"Chorus"_s, u"Verse 1"_s, u"Chorus"_s, u"Chorus"_s}));
         }
         QVERIFY(doc.setSongFlow({}));
+    }
+
+    // A full song's chart stays light to edit (the tester's log: every edit
+    // froze the screen for about a second). Each edit builds the chart's
+    // lines again, so what a line is made of is what an edit costs: no menu
+    // until one is opened, no box to type in until one is typed in, and
+    // Practice (not on screen) draws none of the song's notes. Counted in
+    // objects, not milliseconds, so it holds on any machine.
+    void aLongChartIsLightToEdit()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        ui::DocumentController& doc = m_session->document();
+        QString chart = u"{title: Long}\n{comment: Intro}\n[Am] [C] [G] [Am] [Am] [C] [G] [Am]\n\n"_s;
+        for (const QString& name : {u"Verse 1"_s, u"Chorus"_s, u"Verse 2"_s, u"Chorus"_s, u"Bridge"_s, u"Verse 3"_s, u"Chorus"_s, u"Chorus"_s}) {
+            chart += u"{comment: %1}\n"_s.arg(name);
+            for (int i = 0; i < 8; ++i) chart += u"[Am]Words of the [C]line number %1 and [G]more of them\n"_s.arg(i);
+            chart += u"\n"_s;
+        }
+        chart += u"{comment: Outro}\n"_s;
+        for (int i = 0; i < 9; ++i) chart += u"[Am] [C] [G] [Dm] [Am]\n"_s;
+        QVERIFY(doc.setSongChart(0, chart));
+        QVERIFY(doc.renameChordAt(5, 0, u"Em"_s)); // (an edit: the lines built again)
+        settle();
+
+        const auto objectsIn = [](QQuickItem* top) {
+            int count = 0;
+            const std::function<void(QObject*)> objects = [&](QObject* o) {
+                ++count;
+                for (QObject* child : o->children()) objects(child);
+            };
+            const std::function<void(QQuickItem*)> items = [&](QQuickItem* i) {
+                objects(i);
+                for (QQuickItem* child : i->childItems()) items(child);
+            };
+            items(top);
+            return count;
+        };
+        auto* edited = findItem(window()->contentItem(), u"chartView"_s);
+        QVERIFY(edited != nullptr && edited->isVisible());
+        QList<QQuickItem*> words;
+        QList<QQuickItem*> rows;
+        const std::function<void(QQuickItem*)> lines = [&](QQuickItem* i) {
+            if (QString::fromLatin1(i->metaObject()->className()).startsWith(u"LiveChartLine"_s)) {
+                if (i->property("isRow").toBool()) rows << i;
+                else if (!i->property("lyrics").toString().isEmpty()) words << i; // (not the blank lines between sections)
+            }
+            for (QQuickItem* child : i->childItems()) lines(child);
+        };
+        lines(edited);
+        QCOMPARE(words.size(), 64);
+        QCOMPARE(rows.size(), 10);
+        // (A line of 10 words, 3 chords: about 600 objects. With a menu per chord and two boxes per word it was 1,200.)
+        for (QQuickItem* line : words) QVERIFY2(objectsIn(line) < 800, qPrintable(u"a line of words is %1 objects"_s.arg(objectsIn(line))));
+        // (A row of 5 chords: about 750. With a menu per chord it was 3,600.)
+        for (QQuickItem* line : rows) QVERIFY2(objectsIn(line) < 1000, qPrintable(u"a row of chords is %1 objects"_s.arg(objectsIn(line))));
+        // No menu is there until one is opened.
+        int menus = 0;
+        const std::function<void(QQuickItem*)> findMenus = [&](QQuickItem* i) {
+            menus += static_cast<int>(std::ranges::count_if(i->children(), [](const QObject* child) { return child->inherits("QQuickMenu"); }));
+            for (QQuickItem* child : i->childItems()) findMenus(child);
+        };
+        findMenus(edited);
+        QCOMPARE(menus, 0);
+        // Practice, shut: none of the song's notes drawn (they were 110,000 objects).
+        auto* practice = findItem(window()->contentItem(), u"practiceView"_s);
+        QVERIFY(practice != nullptr && !practice->isVisible());
+        QVERIFY2(objectsIn(practice) < 10000, qPrintable(u"Practice, shut, is %1 objects"_s.arg(objectsIn(practice))));
+    }
+
+    // No song yet (a new setlist): a chart typed as text (⋯ > Edit as text,
+    // Done) becomes the first song, as a paste does (the tester's log: "Song
+    // 0 does not exist", three times, and the text lost).
+    void aChartTypedWithNoSongBecomesTheFirstSong()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.removeSong(0));
+        QCOMPARE(doc.songIndex(), -1);
+        settle();
+        QQuickItem* scene = window()->contentItem();
+        click(u"chartMoreButton"_s);
+        QTRY_VERIFY(item(u"editAsTextItem"_s) != nullptr && item(u"editAsTextItem"_s)->isVisible());
+        QObject* edit = item(u"editAsTextItem"_s);
+        QVERIFY(QMetaObject::invokeMethod(edit, "triggered"));
+        settle();
+        auto* editor = findItem(scene, u"chartEditor"_s);
+        QVERIFY(editor != nullptr && editor->isVisible());
+        const QString typed = u"{title: First Light}\n{comment: Verse}\n[Am]Here it [C]comes"_s;
+        QVERIFY(editor->setProperty("text", typed));
+        click(u"chartTextDone"_s);
+        QTRY_COMPARE(doc.songIndex(), 0);
+        QCOMPARE(doc.currentSongName(), u"First Light"_s);
+        QVERIFY2(doc.currentChart().contains(u"[Am]Here it [C]comes"_s), qPrintable(doc.currentChart()));
+        QVERIFY(!editor->isVisible());
+        QVERIFY(doc.undo()); // (one step: the song and its chart)
+        QTRY_COMPARE(doc.songIndex(), -1);
+    }
+
+    // Editing far down a long chart keeps the chart where it is (the lines
+    // are built again with each edit: the view must not jump back up).
+    void anEditDownAChartKeepsItsPlace()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        QVERIFY(root->setProperty("editKeyboardOpen", false));
+        ui::DocumentController& doc = m_session->document();
+        QString text = u"{comment: Verse}\n"_s;
+        for (int i = 0; i < 60; ++i) text += u"[Am]Line %1 of the [C]song\n"_s.arg(i);
+        QVERIFY(doc.setSongChart(0, text));
+        settle();
+        auto* scroll = findItem(window()->contentItem(), u"chartScroll"_s);
+        QVERIFY(scroll != nullptr);
+        auto* flick = scroll->property("contentItem").value<QQuickItem*>();
+        QVERIFY(flick != nullptr && flick->inherits("QQuickFlickable"));
+        const qreal most = flick->property("contentHeight").toReal() - flick->height();
+        QVERIFY(most > 500);
+        flick->setProperty("contentY", most - 100);
+        settle();
+        const qreal before = flick->property("contentY").toReal();
+        QVERIFY(doc.renameChordAt(55, 0, u"Em"_s)); // (line 55: near the end)
+        settle();
+        QCOMPARE(flick->property("contentY").toReal(), before);
+        QVERIFY(doc.undo());
+        settle();
+        QCOMPARE(flick->property("contentY").toReal(), before);
+    }
+
+    // #33: a right-click on a chord (in a row of chords, or over a word)
+    // opens the chord's menu alone, not the line's over it; a right-click
+    // on the line beside its chords still opens the line's.
+    void aChordsRightClickOpensOnlyItsMenu()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        QVERIFY(root->setProperty("editKeyboardOpen", false));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.setSongChart(0, u"{comment: Intro}\n[Am] [C] [G]\n{comment: Verse}\n[F]Sing it [G]loud\n"_s));
+        settle();
+        QQuickWindow* w = window();
+        QQuickItem* scene = w->contentItem();
+        // Every menu open (each by its name; one without a name: "?"). A menu
+        // belongs to the item it is declared in (a Repeater's delegate has no
+        // QObject parent, so the items are walked, not the objects).
+        const auto openMenus = [scene] {
+            QStringList open;
+            const std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+                for (QObject* child : item->children()) {
+                    if (child->inherits("QQuickMenu") && child->property("visible").toBool()) {
+                        open << (child->objectName().isEmpty() ? u"?"_s : child->objectName());
+                    }
+                }
+                for (QQuickItem* child : item->childItems()) walk(child);
+            };
+            walk(scene);
+            open.sort();
+            return open;
+        };
+        const auto rightClick = [w](QQuickItem* target, qreal fx) {
+            QTest::mouseClick(w, Qt::RightButton, {}, target->mapToScene(QPointF(target->width() * fx, target->height() / 2)).toPoint());
+        };
+        const auto closeAll = [w, &openMenus] {
+            QTest::keyClick(w, Qt::Key_Escape);
+            QTRY_VERIFY(openMenus().isEmpty());
+        };
+        QQuickItem* rowChord = findItem(scene, u"chartRowChord"_s);
+        QVERIFY(rowChord != nullptr && rowChord->isVisible());
+        scrollIntoView(rowChord);
+        settle();
+        const QPointF chordAt = rowChord->mapToScene(QPointF(rowChord->width() / 2, rowChord->height() / 2));
+        QVERIFY2(QRectF(QPointF(0, 0), QSizeF(w->size())).contains(chordAt),
+                 qPrintable(u"the chord is at %1,%2, off the %3x%4 window"_s.arg(chordAt.x()).arg(chordAt.y()).arg(w->width()).arg(w->height())));
+        rightClick(rowChord, 0.5);
+        QTRY_COMPARE(openMenus(), QStringList{u"rowChordMenu"_s});
+        QTest::qWait(100); // (nothing opens late over it)
+        QCOMPARE(openMenus(), QStringList{u"rowChordMenu"_s});
+        shoot(u"chord-menu"_s);
+        closeAll();
+
+        const QList<QQuickItem*> lyricChords = findAll(scene, u"chartChordChip"_s);
+        const auto shownChord = std::ranges::find_if(lyricChords, &QQuickItem::isVisible);
+        QVERIFY2(shownChord != lyricChords.end(), qPrintable(u"%1 chord chips, none shown"_s.arg(lyricChords.size())));
+        QQuickItem* lyricChord = *shownChord;
+        scrollIntoView(lyricChord);
+        settle();
+        rightClick(lyricChord, 0.5);
+        QTRY_COMPARE(openMenus(), QStringList{u"lyricChordMenu"_s});
+        QTest::qWait(100);
+        QCOMPARE(openMenus(), QStringList{u"lyricChordMenu"_s});
+        closeAll();
+
+        // Beside the row's chords: the line's own menu (the chord's last click left nothing behind).
+        QQuickItem* row = findItem(scene, u"chartChordRow"_s);
+        QVERIFY(row != nullptr);
+        QQuickItem* line = row->parentItem();
+        QTest::mouseClick(w, Qt::RightButton, {}, line->mapToScene(QPointF(8, line->height() / 2)).toPoint());
+        QTRY_COMPARE(openMenus(), QStringList{u"lineMenu"_s});
+        closeAll();
+
+        // What the menus do (each made when opened): an entry of the menu open, by its name.
+        const auto openMenu = [scene]() -> QObject* {
+            QObject* found = nullptr;
+            const std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+                for (QObject* child : item->children()) {
+                    if (child->inherits("QQuickMenu") && child->property("visible").toBool()) found = child;
+                }
+                for (QQuickItem* child : item->childItems()) walk(child);
+            };
+            walk(scene);
+            return found;
+        };
+        const auto pick = [&openMenu](const QString& entry) {
+            QObject* menu = openMenu();
+            QVERIFY2(menu != nullptr, qPrintable(u"no menu open for %1"_s.arg(entry)));
+            auto* entryItem = menu->findChild<QObject*>(entry);
+            QVERIFY2(entryItem != nullptr, qPrintable(entry));
+            QVERIFY(QMetaObject::invokeMethod(entryItem, "triggered"));
+        };
+        const auto rowChordAt = [scene](int i) { return findAll(scene, u"chartRowChord"_s).value(i); };
+        // Length: the row's C lasts 2 bars, written as bar lines.
+        rightClick(rowChordAt(1), 0.5);
+        QTRY_COMPARE(openMenus(), QStringList{u"rowChordMenu"_s});
+        pick(u"rowChordLength4"_s);
+        const auto barsOfC = [&doc]() -> double {
+            for (const QVariant& l : doc.chartLines(doc.currentChart())) {
+                const QVariantList chords = l.toMap().value(u"rowChords"_s).toList();
+                const auto c = std::ranges::find_if(chords, [](const QVariant& v) { return v.toMap().value(u"name"_s).toString() == u"C"_s; });
+                if (c != chords.end()) return c->toMap().value(u"bars"_s).toDouble();
+            }
+            return -1.0;
+        };
+        QTRY_COMPARE(barsOfC(), 2.0);
+        QTRY_VERIFY(openMenus().isEmpty());
+        settle(); // (the chart's lines, built again, laid out before the next click, as a player's eye would see them)
+        // Change: its box opens to type in.
+        rightClick(rowChordAt(0), 0.5);
+        QTRY_VERIFY2(openMenus() == QStringList{u"rowChordMenu"_s}, qPrintable(openMenus().join(u", "_s)));
+        pick(u"chordChange"_s);
+        QTRY_VERIFY(openMenus().isEmpty());
+        QTRY_VERIFY(findItem(scene, u"rowChordInput"_s) != nullptr && findItem(scene, u"rowChordInput"_s)->hasActiveFocus());
+        QCOMPARE(findItem(scene, u"rowChordInput"_s)->property("text").toString(), u"Am"_s);
+        QTest::keyClick(w, Qt::Key_Escape);
+        QTRY_VERIFY(findItem(scene, u"rowChordInput"_s) == nullptr); // (gone with the typing)
+        // How to play: the chord's diagram.
+        rightClick(rowChordAt(0), 0.5);
+        QTRY_COMPARE(openMenus(), QStringList{u"rowChordMenu"_s});
+        pick(u"chordHowToPlay"_s);
+        const auto diagramOf = [root]() -> QString {
+            const QList<QObject*> diagrams = root->findChildren<QObject*>(u"chordDiagram"_s);
+            const auto d = std::ranges::find_if(diagrams, [](const QObject* o) { return o->property("visible").toBool(); });
+            return d != diagrams.end() ? (*d)->property("chord").toString() : QString();
+        };
+        QTRY_COMPARE(diagramOf(), u"Am"_s);
+        QTest::keyClick(w, Qt::Key_Escape);
+        // Remove, over the words: the F goes, the words stay.
+        const QList<QQuickItem*> chips = findAll(scene, u"chartChordChip"_s);
+        const auto f = std::ranges::find_if(chips, [](QQuickItem* c) { return c->isVisible() && c->property("chordName").toString() == u"F"_s; });
+        QVERIFY(f != chips.end());
+        rightClick(*f, 0.5);
+        QTRY_COMPARE(openMenus(), QStringList{u"lyricChordMenu"_s});
+        pick(u"chordRemove"_s);
+        QTRY_VERIFY2(doc.currentChart().contains(u"Sing it [G]loud"_s) && !doc.currentChart().contains(u"[F]"_s), qPrintable(doc.currentChart()));
+        settle();
     }
 
     // A long chart scrolls with the mouse wheel (the page itself is not
@@ -2504,7 +2790,7 @@ private slots:
         findAll(scene, u"chartChordChip"_s, chips);
         QCOMPARE(chips.size(), 2);
         QTest::mouseClick(w, Qt::LeftButton, {}, centre(chips.at(0)));
-        QTRY_VERIFY(part(u"love"_s, u"chordEditInput"_s)->isVisible());
+        QTRY_VERIFY(part(u"love"_s, u"chordEditInput"_s) != nullptr && part(u"love"_s, u"chordEditInput"_s)->isVisible());
         QTest::keyClick(w, Qt::Key_A, Qt::ControlModifier);
         typeKeys(u"Gm7"_s);
         QTest::keyClick(w, Qt::Key_Return);
@@ -5539,6 +5825,44 @@ private slots:
         QTest::keyClick(w, Qt::Key_Z, Qt::ControlModifier);
         settle();
         QCOMPARE(doc.currentPatch()->channels.size(), 1u);
+    }
+
+    // Playing, the chart being edited scrolls to the line holding the chord
+    // it has come to, with {title}, {artist} and {key} above it too (lines
+    // of the chart that are not shown: chordLine() counts the lines shown).
+    void theEditedChartFollowsTheRightLine()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QString text = u"{title: Song}\n{artist: Someone}\n{key: Am}\n{comment: Verse}\n"_s;
+        for (int i = 0; i < 12; ++i) text += u"[Am]Line %1 of the verse\n"_s.arg(i);
+        text += u"{comment: Chorus}\n[F]Sing it [G]loud\n"_s;
+        QVERIFY(doc.setSongChart(0, text));
+        settle();
+        QQmlComponent component(m_qml.get());
+        component.setData("import QtQuick\nimport GigChain.Ui\nChartView { width: 600; liveEdit: true }", QUrl());
+        std::unique_ptr<QObject> made(component.create());
+        QVERIFY2(made != nullptr, qPrintable(component.errorString()));
+        auto* chart = qobject_cast<QQuickItem*>(made.get());
+        chart->setParentItem(window()->contentItem());
+        chart->setX(-10000); // (laid out and measured, off to the side)
+        chart->setProperty("doc", QVariant::fromValue(&doc));
+        chart->setProperty("lines", doc.chartLines(doc.currentChart()));
+        chart->setProperty("followStarted", true);
+        settle();
+        const int fStep = 12; // (12 Am, then F)
+        const int fShown = doc.chordLine(fStep);
+        const QVariantList shownLines = chart->property("lines").toList();
+        QVERIFY(fShown >= 0 && fShown < shownLines.size());
+        QCOMPARE(shownLines.at(fShown).toMap().value(u"line"_s).toInt(), 17); // (3 directives, the verse's title and 12 lines, the chorus's title)
+        chart->setProperty("currentStep", fStep);
+        // The line shown with the F on it is where the chart follows to.
+        QQuickItem* fItem = nullptr;
+        auto* repeater = findItem(chart, u"chartLines"_s);
+        QVERIFY(repeater != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(repeater, "itemAt", Q_RETURN_ARG(QQuickItem*, fItem), Q_ARG(int, fShown)));
+        QVERIFY(fItem != nullptr);
+        QTRY_COMPARE(chart->property("followY").toReal(), fItem->y());
+        chart->setParentItem(nullptr);
     }
 
     // Before Play, the song's first chord is outlined and nothing is lit.
