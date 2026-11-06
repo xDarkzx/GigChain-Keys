@@ -120,6 +120,14 @@ public:
     virtual void injectNote(int midiChannel, int note, int velocity) = 0;
     // A controller (a knob, fader or pedal) as if from the keyboard; out-of-range values are ignored (logged).
     virtual void injectController(int midiChannel, int controller, int value) = 0;
+    // A note played as injectNote, but on its sample at `quarter` of the beat
+    // clock (beatClock(): Practice plays the song's chords in time with the
+    // click). One already past plays at once. Out-of-range values are ignored (logged).
+    virtual void scheduleNote(int midiChannel, int note, int velocity, double quarter) = 0;
+    // Every scheduled note not played yet is forgotten (the caller lets go of those sounding).
+    virtual void clearScheduledNotes() = 0;
+    // The clock the click and the plugins follow: where it is now, its tempo and bar.
+    [[nodiscard]] virtual BeatClock beatClock() const = 0;
     // The keys pressed since the last call (the keyboards that play, and
     // injectNote), each timed as it came in: for scoring a player's timing
     // to the millisecond. The most recent 1024 are kept.
@@ -213,6 +221,12 @@ public:
     // The outputs the audio device has open (2: only the mix's, 1-2).
     [[nodiscard]] virtual int outputChannels() const = 0;
     [[nodiscard]] virtual bool clickOn() const = 0;
+    // The click (when on) only while something plays: a song's count (its
+    // count-in too) or Practice (setPractising); quiet between songs.
+    virtual void setClickOnlyWhilePlaying(bool only) = 0;
+    [[nodiscard]] virtual bool clickOnlyWhilePlaying() const = 0;
+    // Practice is playing along the beat clock (the click counts with it).
+    virtual void setPractising(bool playing) = 0;
 
     // Beats per bar and the beat's note value (6/8: 6, 8), for plugins, the
     // click and counting a song's bars. Anything that is not a time

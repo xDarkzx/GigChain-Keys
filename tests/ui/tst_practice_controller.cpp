@@ -11,6 +11,7 @@
 #include <QtTest>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 
 using namespace gigchain;
@@ -187,6 +188,82 @@ private slots:
         m_practice->play();
         m_practice->advance(20000);
         QVERIFY(!m_practice->playing());
+    }
+
+    // Issue #30: an intro of eight chords over eight bars, the same chord
+    // twice in the middle (Am Am), plays a bar each, as Perform's timeline
+    // does: the twins are not one chord (which made seven chords of 4.6 beats,
+    // off the click).
+    void anIntroWithTheSameChordTwicePlaysABarEach()
+    {
+        QVERIFY(m_doc->setSongChart(0, u"{comment: Intro}\n[Am] [C] [G] [Am] [Am] [C] [G] [Am]\n{comment: Verse}\n[C]a\n"_s));
+        QVERIFY(m_doc->setSectionBars(0, 8));
+        const QVariantList chords = m_practice->chords();
+        QCOMPARE(chords.size(), 9);
+        for (int i = 0; i < 8; ++i) {
+            QCOMPARE(chords.at(i).toMap().value(u"length"_s).toDouble(), 4.0);
+            QCOMPARE(chords.at(i).toMap().value(u"start"_s).toDouble(), 4.0 + (4.0 * i)); // on every bar line
+        }
+        QCOMPARE(chords.at(4).toMap().value(u"name"_s).toString(), u"Am"_s); // the second Am: its own bar
+    }
+
+    // With the audio running, Practice goes by the engine's beat clock: its
+    // bar lines on the click's (it starts a little before so they meet), the
+    // song's tempo set on the engine (slowed with the speed, back after), its
+    // notes timed to their sample, and the click told Practice is playing.
+    void onTheClickTheChordsFallOnItsBarLines()
+    {
+        QVERIFY(m_doc->setSongTempo(0, 100.0));
+        m_engine->tempoNow = 90.0; // (another tempo playing before)
+        m_engine->clock = engine::BeatClock{.quarter = 1.0, .tempo = 90.0, .beatsPerBar = 4, .quartersPerBar = 4.0, .running = true};
+        m_practice->setMode(PracticeController::Listen);
+        m_practice->play();
+        QVERIFY(m_practice->onBeatClock());
+        QVERIFY(m_engine->practising);
+        QCOMPARE(m_engine->tempoNow, 100.0); // the song's tempo, on the click too
+        QCOMPARE(m_practice->position(), -3.0); // a beat into the click's bar: three beats to its next bar line
+        // The clock moves on to just past bar 3's line (quarter 8): the count-in done, the first chord there.
+        m_engine->clock.quarter = 8.05;
+        m_practice->follow();
+        QVERIFY(std::abs(m_practice->position() - 4.05) < 1e-9);
+        QCOMPARE(m_practice->nowChord(), u"C"_s);
+        // Its notes were timed for the engine on that bar line, nothing before it.
+        QVERIFY(!m_engine->scheduled.empty());
+        double first = 1e9;
+        for (const auto& note : m_engine->scheduled) {
+            if (note.velocity > 0) first = std::min(first, note.quarter);
+        }
+        QCOMPARE(first, 8.0);
+        QCOMPARE(std::fmod(first, 4.0), 0.0); // a bar line of the click
+        QVERIFY(m_engine->notes.empty()); // (not played "now": timed)
+        // Slower: the click slows with it.
+        m_practice->setSpeed(0.5);
+        QCOMPARE(m_engine->tempoNow, 50.0);
+        // Paused: the timed notes forgotten, every note let go, the tempo as it was.
+        m_practice->pause();
+        QVERIFY(m_engine->scheduledClears >= 1);
+        QVERIFY(!sent().empty());
+        QCOMPARE(m_engine->tempoNow, 90.0);
+        QVERIFY(!m_engine->practising);
+        QVERIFY(m_practice->position() >= 4.0);
+    }
+
+    // #29: going to a part of the song while it plays; within a loop, to its start.
+    void aPartOfTheSongIsGoneTo()
+    {
+        m_practice->setMode(PracticeController::PlayAlong);
+        m_practice->play();
+        m_practice->advance(1000);
+        m_practice->seek(12.0); // the chorus
+        QCOMPARE(m_practice->position(), 12.0);
+        QVERIFY(m_practice->playing());
+        m_practice->advance(500);
+        QCOMPARE(m_practice->position(), 13.0);
+        m_practice->setLoopSection(0); // the verse: beats 4 to 12
+        m_practice->seek(30.0); // past the loop: its last moment
+        QVERIFY(m_practice->position() < 12.0);
+        m_practice->seek(0.0); // before it: its start
+        QCOMPARE(m_practice->position(), 4.0);
     }
 
     // A song without chords: nothing to practise, said on the screen.

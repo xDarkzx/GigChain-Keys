@@ -1,5 +1,6 @@
 #include "gigchain/core/SongMap.h"
 
+#include "gigchain/core/ChartEdit.h"
 #include "gigchain/core/Limits.h"
 
 #include <algorithm>
@@ -72,13 +73,15 @@ SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow, bo
         const ChartLine& line = chart.lines.at(i);
         if (line.kind != ChartLine::Kind::Lyrics) continue;
         std::vector<SongStep> once;
+        const std::vector<double> lengths = rowChordBars(line); // (a row with bar lines: how long each lasts)
         int chordIndex = 0;
         for (const ChartSegment& segment : line.segments) {
             if (segment.chord.isEmpty()) continue;
             const int at = chordIndex++;
             if (const auto shape = parseChordName(segment.chord)) {
                 once.push_back(SongStep{.shape = *shape, .name = segment.chord, .section = section,
-                                        .places = {{static_cast<int>(i), at}}});
+                                        .places = {{static_cast<int>(i), at}},
+                                        .bars = std::cmp_less(at, lengths.size()) ? lengths.at(static_cast<std::size_t>(at)) : 0.0});
             }
         }
         if (read + part.size() + once.size() > limit) map.tooLong = true;
@@ -121,6 +124,8 @@ SongMap buildSongMap(const Chart& chart, const std::vector<SectionRef>& flow, bo
     for (SongStep& step : played) {
         if (mergeTwins && !map.steps.empty() && map.steps.back().part == step.part && map.steps.back().shape == step.shape) {
             auto& places = map.steps.back().places;
+            // (Held on: as long as both, when both are written; else not written.)
+            map.steps.back().bars = map.steps.back().bars > 0.0 && step.bars > 0.0 ? map.steps.back().bars + step.bars : 0.0;
             const std::vector<std::pair<int, int>> earlier = places;
             std::ranges::copy_if(step.places, std::back_inserter(places),
                                  [&earlier](const auto& place) { return std::ranges::find(earlier, place) == earlier.end(); });

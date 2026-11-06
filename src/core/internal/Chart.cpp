@@ -1,8 +1,12 @@
 #include "gigchain/core/Chart.h"
 
+#include "gigchain/core/ChartEdit.h"
+
 #include <QRegularExpression>
 
 #include <algorithm>
+#include <cmath>
+#include <numeric>
 
 using namespace Qt::StringLiterals;
 
@@ -224,7 +228,10 @@ std::vector<ChartSection> chartSections(const Chart& chart)
                 break;
             }
             if (inside.kind != Kind::Lyrics) continue;
-            const auto chords = static_cast<int>(inside.chords().size());
+            // A bar a chord; a row with bar lines: the bars it writes.
+            const std::vector<double> written = rowChordBars(inside);
+            const auto chords = written.empty() ? static_cast<int>(inside.chords().size())
+                                                : static_cast<int>(std::ceil(std::accumulate(written.begin(), written.end(), 0.0) - 1e-9));
             bars += chords * repeatCount(kRepeatMark().match(inside.lyrics().trimmed()));
         }
         bars *= repeatCount(kRepeatInLabel().match(section.label));

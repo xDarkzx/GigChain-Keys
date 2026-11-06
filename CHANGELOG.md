@@ -8,6 +8,46 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-11-06 (alpha)
+
+Practice in time with the click, the flow you can drag, chord lengths, and a
+big count-in.
+
+### Fixed
+
+- **Practice now plays in time with the click, and matches Perform**
+  ([#30](https://github.com/xDarkzx/GigChain-Keys/issues/30)). Practice kept
+  its own time, apart from the click, and counted chords its own way: the
+  same chord twice in a row (*Am Am*) became one, and a section played twice
+  had its chords halved, so chords fell between the clicks. Now Practice
+  goes by the click's own clock: its bars start on the click's accented beat,
+  its notes play on the beat to the sample, the song's tempo is set on the
+  click (and slowed with **Speed**, then put back), and each chord lasts as
+  long as Perform's timeline gives it, changing on bar lines (or beats).
+- A song without a tempo of its own is practised at the tempo playing, the
+  click's, not at 120.
+
+### Added
+
+- **The Flow bar, by hand** ([#27](https://github.com/xDarkzx/GigChain-Keys/issues/27)):
+  drag a part along the bar to move it; click a part to go to it in the
+  chart; right-click it for its menu; click or right-click an arrow between
+  two parts to put a section in there.
+- **On stage the chart follows the flow:** Perform shows the song in the
+  order it is played, each section as many times as it is played, the part
+  playing lit.
+- **Chord lengths:** right-click a chord in a row of chords, **Length**: half
+  a bar, or 1 to 4 bars. Written as the row's bar lines (`| Am |  | C G |`),
+  played so by Practice and the song's timeline.
+- **A big count-in** ([#28](https://github.com/xDarkzx/GigChain-Keys/issues/28)):
+  *1 2 3 4* large in the middle of the screen while a song counts in, and in
+  Practice's count-in bar. Turn it off in the click's menu.
+- **Practice: the song's parts** ([#29](https://github.com/xDarkzx/GigChain-Keys/issues/29))
+  under the toolbar, the one playing lit and filling; click one to go there,
+  or click along the song's line under them.
+- **The click's menu** (right-click the metronome button): its **Volume**,
+  **Only while a song or Practice plays**, and the big count-in. Remembered.
+
 ## [0.8.1] - 2026-11-05 (alpha)
 
 Fixes: Sustain Pads wait for Activate, chords drag anywhere in a chart, and

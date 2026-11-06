@@ -277,6 +277,13 @@ Rectangle {
             Layout.preferredHeight: implicitHeight
             visible: !panel.editing && panel.doc.songIndex >= 0 && panel.doc.songFlow.length > 0
             doc: panel.doc
+            // A part clicked: the chart goes to its section.
+            onPartChosen: (section) => {
+                const y = panelChart.yOfSection(section)
+                if (y < 0) return
+                followScroll.to = Math.max(0, Math.min(panelChart.y + y - Theme.spacing, chartScroll.contentHeight - chartScroll.height))
+                followScroll.restart()
+            }
         }
 
         // The chart, edited where it is read.

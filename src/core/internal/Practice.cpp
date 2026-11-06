@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
-#include <map>
 #include <numeric>
 
 namespace gigchain::core {
@@ -69,7 +68,61 @@ std::vector<int> stacked(int bottom, const std::vector<int>& classes, std::size_
     return notes;
 }
 
+// `count` chords sharing `beats`, each change on the beat grid: on bar lines
+// when there are bars enough for them, else on beats (else evenly).
+std::vector<double> shared(double beats, int count, int beatsPerBar)
+{
+    std::vector<double> out;
+    if (count <= 0) return out;
+    const double unit = beats / beatsPerBar >= count - 1e-9 ? beatsPerBar : (beats >= count - 1e-9 ? 1.0 : beats / count);
+    const double units = std::floor(beats / unit + 1e-9);
+    double last = 0.0;
+    for (int j = 1; j <= count; ++j) {
+        const double edge = j == count ? beats : std::round(j * units / count) * unit;
+        out.push_back(edge - last);
+        last = edge;
+    }
+    return out;
+}
+
 } // namespace
+
+std::vector<double> chordLengths(const SongMap& song, const std::vector<int>& sectionBars, int beatsPerBar)
+{
+    const int perBar = std::max(1, beatsPerBar);
+    std::vector<double> lengths(song.steps.size(), static_cast<double>(perBar));
+    // Part by part (a section each time it is played).
+    for (std::size_t first = 0; first < song.steps.size();) {
+        std::size_t end = first + 1;
+        while (end < song.steps.size() && song.steps.at(end).part == song.steps.at(first).part) ++end;
+        const int section = song.steps.at(first).section;
+        const int bars = section >= 0 && std::cmp_less(section, sectionBars.size()) ? sectionBars.at(static_cast<std::size_t>(section)) : 0;
+        double written = 0.0; // beats the chart gives its chords
+        int open = 0;         // chords it does not
+        for (std::size_t i = first; i < end; ++i) {
+            const double b = song.steps.at(i).bars;
+            if (b > 0.0) {
+                lengths.at(i) = b * perBar;
+                written += lengths.at(i);
+            } else {
+                ++open;
+            }
+        }
+        if (open > 0) {
+            // The section's bars left over, shared on the grid (no bars set,
+            // or too few left: a bar each).
+            double left = bars > 0 ? bars * static_cast<double>(perBar) - written : 0.0;
+            if (left < open - 1e-9) left = static_cast<double>(open) * perBar;
+            const std::vector<double> share = shared(left, open, perBar);
+            std::size_t next = 0;
+            for (std::size_t i = first; i < end; ++i) {
+                if (song.steps.at(i).bars <= 0.0) lengths.at(i) = share.at(next++);
+            }
+        }
+        first = end;
+    }
+    return lengths;
+}
 
 int inversionCount(const ChordShape& chord)
 {
@@ -154,23 +207,19 @@ PracticeTimeline practiceTimeline(const SongMap& song, const std::vector<int>& s
     timeline.beatsPerBar = std::max(1, beatsPerBar);
     const double bar = timeline.beatsPerBar;
     if (song.steps.empty()) return timeline;
-    // How many chords each section has.
-    std::map<int, int> chordsIn;
-    for (const SongStep& step : song.steps) ++chordsIn[step.section];
+    const std::vector<double> lengths = chordLengths(song, sectionBars, timeline.beatsPerBar);
     double at = bar; // the count-in bar
-    int lastSection = -2;
+    int lastPart = -2;
     std::vector<int> hand;
-    for (const SongStep& step : song.steps) {
+    for (std::size_t i = 0; i < song.steps.size(); ++i) {
+        const SongStep& step = song.steps.at(i);
         const int section = step.section;
-        double length = bar;
-        if (section >= 0 && std::cmp_less(section, sectionBars.size()) && sectionBars.at(static_cast<std::size_t>(section)) > 0) {
-            length = sectionBars.at(static_cast<std::size_t>(section)) * bar / chordsIn.at(section);
-        }
-        if (section != lastSection && section >= 0) {
+        const double length = lengths.at(i);
+        if (step.part != lastPart && section >= 0) { // (each time a section is played: a mark, Chorus x2 two)
             const QString name = section < sectionNames.size() ? sectionNames.at(section) : QString();
-            timeline.sections.push_back({.start = at, .name = name, .section = section});
+            timeline.sections.push_back({.start = at, .name = name, .section = section, .part = step.part});
         }
-        lastSection = section;
+        lastPart = step.part;
         std::vector<int> right;
         const auto chosen = style.chosen.find(step.name);
         if (style.right == RightHand::Root) right = chordInversion(step.shape, 0);

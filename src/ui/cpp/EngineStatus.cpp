@@ -11,6 +11,7 @@
 #include <QDir>
 #include <QLoggingCategory>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QTime>
 
@@ -43,6 +44,49 @@ EngineStatus::EngineStatus(engine::IEngine& engine, DocumentController& document
     m_timer.setInterval(kPollIntervalMs);
     connect(&m_timer, &QTimer::timeout, this, &EngineStatus::poll);
     m_timer.start();
+    // The click's level and when it plays, and the big count-in: as last set.
+    const QSettings settings;
+    m_clickVolumeDb = std::clamp(settings.value(u"click/volumeDb"_s, m_clickVolumeDb).toDouble(), -60.0, 0.0);
+    m_bigCountIn = settings.value(u"click/bigCountIn"_s, true).toBool();
+    m_engine.setClick(m_clickOn, m_clickVolumeDb);
+    m_engine.setClickOnlyWhilePlaying(settings.value(u"click/onlyWhilePlaying"_s, false).toBool());
+}
+
+bool EngineStatus::clickOnlyWhilePlaying() const
+{
+    return m_engine.clickOnlyWhilePlaying();
+}
+
+void EngineStatus::setClickOnlyWhilePlaying(bool only)
+{
+    if (only == m_engine.clickOnlyWhilePlaying()) return;
+    m_engine.setClickOnlyWhilePlaying(only);
+    QSettings().setValue(u"click/onlyWhilePlaying"_s, only);
+    qCInfo(lcUi) << "The click plays" << (only ? "only while a song or Practice plays" : "all the time when on");
+    emit transportChanged();
+}
+
+void EngineStatus::setBigCountIn(bool shown)
+{
+    if (shown == m_bigCountIn) return;
+    m_bigCountIn = shown;
+    QSettings().setValue(u"click/bigCountIn"_s, shown);
+    emit transportChanged();
+}
+
+int EngineStatus::countInBeats() const
+{
+    const int numerator = m_document.songTimeNumerator();
+    return numerator > 0 ? numerator : 4;
+}
+
+int EngineStatus::countInBeat() const
+{
+    if (!m_song.countingIn) return 0;
+    const int beats = countInBeats();
+    const int denominator = m_document.songTimeDenominator();
+    const double beatQuarters = denominator > 0 ? 4.0 / denominator : 1.0;
+    return std::clamp(static_cast<int>(std::floor((m_song.countInQuarter + 1e-6) / beatQuarters)) + 1, 1, beats);
 }
 
 double EngineStatus::masterVolumeDb() const
@@ -155,6 +199,7 @@ void EngineStatus::setClickVolumeDb(double volumeDb)
     if (!std::isfinite(volumeDb)) return;
     m_clickVolumeDb = std::clamp(volumeDb, -60.0, 0.0);
     m_engine.setClick(m_clickOn, m_clickVolumeDb);
+    QSettings().setValue(u"click/volumeDb"_s, m_clickVolumeDb);
     emit transportChanged();
 }
 

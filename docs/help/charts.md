@@ -60,6 +60,15 @@ the chords in order, a bar line between each, one bar each.
 - **Change the order:** drag a chord along the row; the others make room.
 - **Add one at the end:** click **+** at the end of the row and type it.
 - **Change or remove one:** click it to type a new name, or right-click it.
+- **Make one longer or shorter:** right-click it, **Length**: half a bar,
+  1, 2, 3 or 4 bars. The row is written with bar lines the way chord charts
+  write it (`| Am |  | C G |` is Am for two bars, then C and G half a bar
+  each), and Practice and the song's timeline play each chord for that long.
+  A chord set longer than a bar shows its length on it.
+
+Chords over words are not given a length: they share their section's bars,
+each changing on a bar line (or on a beat when there are more chords than
+bars).
 
 ### Words
 
@@ -95,10 +104,19 @@ lasts.
 The **Flow** bar above the chart says the order the song is really played in,
 for example *Verse 1 → Pre-Chorus → Chorus → Verse 2 → Chorus ×3 → Outro*.
 It starts as the chart's order. A chord sheet often writes the chorus once,
-though the band plays it three times. Click a part for **Play it once more**,
-**Move earlier** or **later** and **Take it out**. **+** adds a section of the
-chart again, and **Chart order** goes back. Play runs the song along this
-flow: see [Sections, tempo and backing tracks](sections-and-tempo.md).
+though the band plays it three times.
+
+- **Click a part** to go to it in the chart.
+- **Drag a part** along the bar to move it; a line shows where it will go.
+- **Right-click a part** for **Play it once more**, **Move earlier** or
+  **later** and **Take it out**.
+- **Click or right-click an arrow** (→) between two parts to put a section
+  in there.
+- **+** adds a section of the chart at the end, and **Chart order** goes back.
+
+Play runs the song along this flow, and in Perform the chart is shown in
+this order, each section as many times as it is played: see
+[Sections, tempo and backing tracks](sections-and-tempo.md).
 
 Renaming a section (double-click its title) keeps it in the flow. A part
 whose section is no longer in the chart (changed in the ChordPro text) shows

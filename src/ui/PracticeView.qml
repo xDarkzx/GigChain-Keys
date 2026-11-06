@@ -273,6 +273,97 @@ Rectangle {
             }
         }
 
+        // Where it is in the song: its parts in order (the one playing lit,
+        // how far through it filled in); a click goes there (looping a
+        // section: that one loops). The line under them: the whole song,
+        // click anywhere along it to go there.
+        Rectangle {
+            id: partsBar
+            objectName: "practiceParts"
+            visible: !view.warming && view.practice.sections.length > 0
+            Layout.fillWidth: true
+            Layout.preferredHeight: 40
+            color: "#0b0d14"
+            // The part playing: the last one started.
+            readonly property int current: {
+                let at = -1
+                const list = view.practice.sections
+                for (let i = 0; i < list.length; ++i) if (view.practice.position >= list[i].start - 1e-9) at = i
+                return at
+            }
+            function endOf(i) {
+                const list = view.practice.sections
+                return i + 1 < list.length ? list[i + 1].start : view.practice.length
+            }
+            Flickable {
+                id: partsFlick
+                anchors.fill: parent
+                anchors.leftMargin: Theme.spacingLarge
+                anchors.rightMargin: Theme.spacingLarge
+                anchors.bottomMargin: 6
+                contentWidth: partsRow.width
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                Row {
+                    id: partsRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4
+                    Repeater {
+                        model: view.practice.sections
+                        delegate: StageButton {
+                            id: partButton
+                            required property var modelData
+                            required property int index
+                            objectName: "practicePart"
+                            readonly property bool here: partsBar.current === index
+                            text: modelData.name
+                            checked: here
+                            tip: view.practice.loopSection >= 0 ? qsTr("Loop %1 instead").arg(modelData.name)
+                                                                : qsTr("Go to %1").arg(modelData.name)
+                            onClicked: {
+                                if (view.practice.loopSection >= 0) view.practice.loopSection = modelData.section
+                                else view.practice.seek(modelData.start)
+                            }
+                            onHereChanged: if (here) partsFlick.contentX = Math.max(0, Math.min(x - partsFlick.width / 3,
+                                                                                               partsFlick.contentWidth - partsFlick.width))
+                            // How far through it.
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.bottom: parent.bottom
+                                anchors.margins: 2
+                                height: 3
+                                radius: 1.5
+                                visible: partButton.here
+                                color: Theme.accent
+                                width: (parent.width - 4) * Math.max(0, Math.min(1, (view.practice.position - partButton.modelData.start)
+                                                                                    / Math.max(1e-6, partsBar.endOf(partButton.index) - partButton.modelData.start)))
+                            }
+                        }
+                    }
+                }
+            }
+            // The whole song.
+            Rectangle {
+                objectName: "practiceSongLine"
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 4
+                color: "#1c2130"
+                Rectangle {
+                    height: parent.height
+                    width: parent.width * Math.max(0, Math.min(1, view.practice.position / Math.max(1e-6, view.practice.length)))
+                    color: Qt.alpha(Theme.accent, 0.8)
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.topMargin: -6 // (easier to hit)
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: (mouse) => view.practice.seek(mouse.x / width * view.practice.length)
+                }
+            }
+        }
+
         // The notes falling onto the line above the keys.
         Item {
             id: falls

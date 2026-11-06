@@ -18,6 +18,9 @@ class Metronome
 public:
     void setOn(bool on) { m_on.store(on, std::memory_order_relaxed); }
     [[nodiscard]] bool isOn() const { return m_on.load(std::memory_order_relaxed); }
+    // Only while something plays (process()'s `playing`): quiet between songs.
+    void setOnlyWhilePlaying(bool only) { m_onlyWhilePlaying.store(only, std::memory_order_relaxed); }
+    [[nodiscard]] bool onlyWhilePlaying() const { return m_onlyWhilePlaying.load(std::memory_order_relaxed); }
     void setVolumeDb(double volumeDb)
     {
         m_gain.store(std::isfinite(volumeDb) ? static_cast<float>(std::pow(10.0, std::min(volumeDb, 0.0) / 20.0)) : 0.0F,
@@ -25,11 +28,11 @@ public:
     }
 
     // Audio thread: adds the clicks falling in this block. `time` is where
-    // the block starts.
-    void process(const AudioBlock& out, const TimeInfo& time) noexcept
+    // the block starts; `playing`: a song counts or Practice plays.
+    void process(const AudioBlock& out, const TimeInfo& time, bool playing = true) noexcept
     {
         if (out.frames <= 0 || time.sampleRate <= 0.0 || time.tempo <= 0.0) return;
-        const bool on = m_on.load(std::memory_order_relaxed);
+        const bool on = m_on.load(std::memory_order_relaxed) && (playing || !m_onlyWhilePlaying.load(std::memory_order_relaxed));
         const float gain = m_gain.load(std::memory_order_relaxed);
         const double quartersPerSample = time.tempo / 60.0 / time.sampleRate;
         const double beatLength = 4.0 / time.timeSigDenominator; // in quarter notes
@@ -72,6 +75,7 @@ private:
     static constexpr float kLevel = 0.5F;
 
     std::atomic<bool> m_on{false};
+    std::atomic<bool> m_onlyWhilePlaying{false};
     std::atomic<float> m_gain{1.0F};
     // Audio thread only.
     double m_lastBeat = -1.0;

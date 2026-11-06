@@ -230,7 +230,9 @@ Item {
                     chordIndex: rowSlot.modelData.index
                     chordName: rowSlot.modelData.name
                     readonly property bool current: live.started && rowSlot.modelData.steps.indexOf(live.currentStep) >= 0
+                    // (Longer chords are wider: the row reads like bars.)
                     width: Math.max(rowLabel.implicitWidth + 4 * live.chipPadding, 44 * live.size)
+                           * (rowSlot.modelData.bars > 1 ? Math.min(2, 1 + (rowSlot.modelData.bars - 1) * 0.25) : 1)
                     height: live.chordHeight
                     radius: Theme.radiusSmall
                     color: rowDragger.active ? Theme.accent : rowHover.hovered ? "#33f0bf45" : "#14ffffff"
@@ -250,6 +252,19 @@ Item {
                         font.pixelSize: live.chordFont
                         font.bold: true
                         font.strikeout: !rowSlot.modelData.understood
+                    }
+                    // Its length, when set to other than a bar ("2 bars", "½").
+                    Text {
+                        objectName: "rowChordBars"
+                        readonly property real bars: rowSlot.modelData.bars !== undefined ? rowSlot.modelData.bars : 0
+                        visible: bars > 0 && Math.abs(bars - 1) > 1e-6 && !rowInput.visible
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.rightMargin: 3
+                        anchors.bottomMargin: 1
+                        text: Math.abs(bars - 0.5) < 1e-6 ? "½" : (Number.isInteger(bars) ? bars : bars.toFixed(1)) + qsTr(" bars")
+                        color: Theme.textDim
+                        font.pixelSize: Math.max(9, live.chordFont * 0.45)
                     }
                     TextInput {
                         id: rowInput
@@ -316,6 +331,24 @@ Item {
                         StageMenuItem {
                             text: qsTr("Remove %1").arg(rowSlot.modelData.name)
                             onTriggered: live.doc.renameChordAt(live.chartLine, rowSlot.modelData.index, "")
+                        }
+                        // How long it lasts (Practice and the timeline play it so): written as bar lines.
+                        StageMenu {
+                            id: lengthMenu
+                            objectName: "rowChordLength"
+                            title: qsTr("Length")
+                            Instantiator {
+                                model: [1, 2, 4, 6, 8]
+                                delegate: StageMenuItem {
+                                    required property int modelData
+                                    text: modelData === 1 ? qsTr("Half a bar") : modelData === 2 ? qsTr("1 bar") : qsTr("%1 bars").arg(modelData / 2)
+                                    checkable: true
+                                    checked: Math.abs(rowSlot.modelData.bars * 2 - modelData) < 1e-6
+                                    onTriggered: live.doc.setRowChordLength(live.chartLine, rowSlot.modelData.index, modelData)
+                                }
+                                onObjectAdded: (index, object) => lengthMenu.insertItem(index, object)
+                                onObjectRemoved: (index, object) => lengthMenu.removeItem(object)
+                            }
                         }
                         MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
                         StageMenuItem {

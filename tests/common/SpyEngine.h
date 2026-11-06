@@ -189,6 +189,19 @@ public:
     [[nodiscard]] bool masterMuted() const override { return muted; }
     void injectNote(int channel, int note, int velocity) override { notes.push_back({channel, note, velocity}); }
     void injectController(int, int, int) override {}
+    struct TimedNote
+    {
+        int channel = 0;
+        int note = 0;
+        int velocity = 0;
+        double quarter = 0.0;
+    };
+    std::vector<TimedNote> scheduled; // scheduleNote(), in the order asked
+    int scheduledClears = 0;
+    void scheduleNote(int channel, int note, int velocity, double quarter) override { scheduled.push_back({channel, note, velocity, quarter}); }
+    void clearScheduledNotes() override { ++scheduledClears; }
+    engine::BeatClock clock{}; // what beatClock() says (running: false, as with no audio)
+    [[nodiscard]] engine::BeatClock beatClock() const override { return clock; }
     std::vector<engine::KeyPress> keyPresses; // what takeKeyPresses() hands over next
     std::vector<engine::KeyPress> takeKeyPresses() override { return std::exchange(keyPresses, {}); }
     engine::AppKnobs appKnobs{};
@@ -289,6 +302,11 @@ public:
         clickVolume = volumeDb;
     }
     [[nodiscard]] bool clickOn() const override { return click; }
+    bool clickOnlyWhilePlaying_ = false;
+    void setClickOnlyWhilePlaying(bool only) override { clickOnlyWhilePlaying_ = only; }
+    [[nodiscard]] bool clickOnlyWhilePlaying() const override { return clickOnlyWhilePlaying_; }
+    bool practising = false;
+    void setPractising(bool playing) override { practising = playing; }
     int clickPair = 0;
     void setClickOutput(int pair) override { clickPair = pair; }
     QString recordingTo; // empty: not recording

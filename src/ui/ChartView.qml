@@ -44,12 +44,37 @@ Item {
     // The chord the song's timeline has come to (from EngineStatus), lit.
     property int currentStep: -1
     property bool followStarted: false
+    // The lines in the song's flow order (DocumentController.chartLinesInFlow,
+    // on stage): the section title lit is the part playing (`currentPlace`,
+    // its place in the flow), not every time its section comes round.
+    property bool flowOrder: false
+    property int currentPlace: -1
     // Where the line being played is (-1: none), for the view around the
     // chart to scroll to.
     readonly property real followY: {
-        const line = chart.doc !== null && chart.followStarted ? chart.doc.chordLine(chart.currentStep) : -1
+        if (chart.doc === null || !chart.followStarted) return -1
+        let line = -1
+        if (chart.flowOrder) { // (the line holding the step: each copy of a section has its own)
+            for (let i = 0; i < chart.lines.length && line < 0; ++i) {
+                const steps = chart.lines[i].steps
+                if (steps !== undefined && steps.indexOf(chart.currentStep) >= 0) line = i
+            }
+        } else {
+            line = chart.doc.chordLine(chart.currentStep)
+        }
         const item = line >= 0 ? lineRepeater.itemAt(line) : null
         return item !== null ? item.y : -1
+    }
+
+    // Where section `section`'s title is (in chartSections()), -1: not shown.
+    function yOfSection(section) {
+        for (let i = 0; i < lineRepeater.count; ++i) {
+            const shown = chart.lines[i]
+            if (shown === undefined || shown.sectionIndex !== section) continue
+            const item = lineRepeater.itemAt(i)
+            return item !== null ? item.y : -1
+        }
+        return -1
     }
 
     // ---- Where a dragged chord lands: {kind: "word" (line, at) | "row"
@@ -191,7 +216,9 @@ Item {
                     doc: chart.doc
                     size: chart.size
                     editable: chart.editable
-                    current: lineLoader.sectionIndex === chart.currentSection
+                    current: chart.flowOrder && lineLoader.modelData.place !== undefined
+                             ? lineLoader.modelData.place === chart.currentPlace
+                             : lineLoader.sectionIndex === chart.currentSection
                     playing: chart.playing
                     bar: chart.bar
                 }

@@ -21,6 +21,10 @@ struct SongStep
     // A chord written twice in a row, or a repeated line, has several.
     std::vector<std::pair<int, int>> places;
     int part = -1; // which part of the flow (SongMap::partStarts)
+    // How long it lasts in bars when the chart writes it (a row of chords
+    // with bar lines, core::rowChordBars); 0: not written (its section's
+    // bars are shared between such chords).
+    double bars = 0.0;
 };
 
 // A chart's chords in playing order: repeat marks played out, the same

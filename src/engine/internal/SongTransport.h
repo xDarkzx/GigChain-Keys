@@ -106,7 +106,8 @@ public:
                             .queuedPart = m_outQueuedPart.load(std::memory_order_relaxed),
                             .repeats = m_outRepeats.load(std::memory_order_relaxed),
                             .hold = m_outHold.load(std::memory_order_relaxed),
-                            .stopAtEnd = m_outStopAtEnd.load(std::memory_order_relaxed)};
+                            .stopAtEnd = m_outStopAtEnd.load(std::memory_order_relaxed),
+                            .countInQuarter = m_outCountInQuarter.load(std::memory_order_relaxed)};
     }
 
     struct Block
@@ -221,7 +222,8 @@ public:
         const bool countingIn = end - first <= kEpsilon && m_part == m_from;
         const int bars = barsOf(*timeline, m_part);
         const int bar = countingIn ? 0 : static_cast<int>(std::floor((std::max(end, from) - from) / timeline->quartersPerBar)) + 1;
-        publish(true, countingIn, now, m_part, std::clamp(bar, 0, bars), bars, std::max(0.0, end - from));
+        publish(true, countingIn, now, m_part, std::clamp(bar, 0, bars), bars, std::max(0.0, end - from),
+                countingIn ? std::clamp(start - (first - timeline->quartersPerBar), 0.0, timeline->quartersPerBar) : 0.0);
         return block;
     }
 
@@ -379,8 +381,10 @@ private:
         m_from = landing.part;
     }
 
-    void publish(bool playing, bool countingIn, int section, int part, int bar, int bars, double quarter) noexcept
+    void publish(bool playing, bool countingIn, int section, int part, int bar, int bars, double quarter,
+                 double countInQuarter = 0.0) noexcept
     {
+        m_outCountInQuarter.store(countInQuarter, std::memory_order_relaxed);
         m_outPlaying.store(playing, std::memory_order_relaxed);
         m_outCountingIn.store(countingIn, std::memory_order_relaxed);
         m_outSection.store(section, std::memory_order_relaxed);
@@ -421,6 +425,7 @@ private:
     std::atomic<int> m_outBar{0};
     std::atomic<int> m_outBars{0};
     std::atomic<double> m_outQuarter{0.0};
+    std::atomic<double> m_outCountInQuarter{0.0};
     std::atomic<int> m_outQueuedPart{-1};
     std::atomic<int> m_outRepeats{0};
     std::atomic<bool> m_outHold{false};

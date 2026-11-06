@@ -269,6 +269,11 @@ bool DocumentController::moveChordToNewRow(int line, int chord, int before)
     return applyChartEdit(core::moveChordToNewRow(currentChart(), line, chord, before), {});
 }
 
+bool DocumentController::setRowChordLength(int line, int chord, int halfBars)
+{
+    return applyChartEdit(core::setRowChordLength(currentChart(), line, chord, halfBars), {});
+}
+
 bool DocumentController::deleteChartLine(int line)
 {
     return applyChartEdit(core::deleteLine(currentChart(), line), {});
@@ -751,11 +756,15 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
         QVariantList rowChords;
         const bool row = core::isChordRow(line);
         if (row) {
+            // How long each lasts when its bar lines say (bars; 0: not written).
+            const std::vector<double> lengths = core::rowChordBars(line);
             for (const QVariant& s : segments) {
                 const QVariantMap segment = s.toMap();
                 if (segment.value(u"chord"_s).toString().isEmpty()) continue;
-                rowChords << QVariantMap{{u"name"_s, segment.value(u"chord"_s)}, {u"index"_s, segment.value(u"chordIndex"_s)},
-                                         {u"steps"_s, segment.value(u"steps"_s)}, {u"understood"_s, segment.value(u"understood"_s)}};
+                const int index = segment.value(u"chordIndex"_s).toInt();
+                rowChords << QVariantMap{{u"name"_s, segment.value(u"chord"_s)}, {u"index"_s, index},
+                                         {u"steps"_s, segment.value(u"steps"_s)}, {u"understood"_s, segment.value(u"understood"_s)},
+                                         {u"bars"_s, index >= 0 && std::cmp_less(index, lengths.size()) ? lengths.at(static_cast<std::size_t>(index)) : 0.0}};
             }
         }
         lines << QVariantMap{{u"kind"_s, kind},
@@ -771,6 +780,73 @@ QVariantList DocumentController::chartLines(const QString& chordPro) const
     // No empty space after the last line (a chart usually ends with a newline).
     while (!lines.isEmpty() && lines.last().toMap().value(u"kind"_s).toString() == u"blank"_s) lines.removeLast();
     return lines;
+}
+
+QVariantList DocumentController::chartLinesInFlow(const QString& chordPro) const
+{
+    const QVariantList lines = chartLines(chordPro);
+    const core::Chart chart = core::parseChordPro(chordPro);
+    const std::vector<core::SectionRef> flow = currentSongFlow();
+    const core::SongMap map = core::buildSongMap(chart, flow, false);
+    // Each line's steps, kept to one time through (the part `part`; -1: all; -2: none).
+    const auto only = [&map](const QVariantList& steps, int part) {
+        QVariantList kept;
+        for (const QVariant& s : steps) {
+            const int step = s.toInt();
+            if (part == -1 || (step >= 0 && std::cmp_less(step, map.steps.size()) && map.steps.at(static_cast<std::size_t>(step)).part == part)) kept << step;
+        }
+        return kept;
+    };
+    const auto copied = [&only](QVariantMap line, int part, int place) {
+        QVariantList allSteps;
+        QVariantList segments;
+        for (const QVariant& s : line.value(u"segments"_s).toList()) {
+            QVariantMap segment = s.toMap();
+            const QVariantList steps = only(segment.value(u"steps"_s).toList(), part);
+            segment.insert(u"steps"_s, steps);
+            allSteps << steps;
+            segments << segment;
+        }
+        line.insert(u"segments"_s, segments);
+        QVariantList rowChords;
+        for (const QVariant& c : line.value(u"rowChords"_s).toList()) {
+            QVariantMap chord = c.toMap();
+            chord.insert(u"steps"_s, only(chord.value(u"steps"_s).toList(), part));
+            rowChords << chord;
+        }
+        line.insert(u"rowChords"_s, rowChords);
+        line.insert(u"steps"_s, allSteps);
+        if (line.value(u"sectionIndex"_s).toInt() >= 0) line.insert(u"place"_s, place);
+        return line;
+    };
+    // The chart's lines in blocks: before the first title, then one per section.
+    QVariantList prelude;
+    std::vector<QVariantList> blocks;
+    for (const QVariant& l : lines) {
+        const QVariantMap line = l.toMap();
+        if (line.value(u"sectionIndex"_s).toInt() >= 0) blocks.emplace_back();
+        if (blocks.empty()) prelude << line;
+        else blocks.back() << line;
+    }
+    QVariantList shown;
+    const int preludePart = !map.partFlow.empty() && map.partFlow.front() == -1 ? 0 : -1;
+    for (const QVariant& line : prelude) shown << copied(line.toMap(), preludePart, -1);
+    // The sections as played: the chart's order when no flow is set.
+    const std::vector<core::ChartSection> sections = core::chartSections(chart);
+    std::vector<int> order;
+    if (flow.empty()) {
+        for (int s = 0; std::cmp_less(s, sections.size()); ++s) order.push_back(s);
+    } else {
+        std::ranges::transform(flow, std::back_inserter(order), [&sections](const core::SectionRef& ref) { return core::sectionIndexOf(sections, ref); });
+    }
+    for (int place = 0; std::cmp_less(place, order.size()); ++place) {
+        const int section = order.at(static_cast<std::size_t>(place));
+        if (section < 0 || std::cmp_greater_equal(section, blocks.size())) continue; // (a part naming no section of the chart)
+        const auto part = std::ranges::find(map.partFlow, place);
+        const int partIndex = part != map.partFlow.end() ? static_cast<int>(part - map.partFlow.begin()) : -2; // (-2: no chords there)
+        for (const QVariant& line : blocks.at(static_cast<std::size_t>(section))) shown << copied(line.toMap(), partIndex, place);
+    }
+    return shown;
 }
 
 bool DocumentController::renamePatch(int song, int patch, const QString& name)
@@ -1969,10 +2045,18 @@ void DocumentController::applySectionsToEngine()
     }
     m_chordsTooMany = m_songMap.tooLong;
     if (!m_songMap.followable()) m_songMap = {};
-    // The timeline: each part's chords spread evenly over its bars.
+    // The timeline: each part's chords for their bars, as Practice plays them
+    // (core::chordLengths: as the chart writes them, else sharing the part's
+    // bars on the bar lines or beats).
     m_timelinePlaces = timelinePlaces();
     m_timelineSteps.assign(m_timelinePlaces.size(), {});
+    const int numerator = song != nullptr && song->timeNumerator > 0 ? song->timeNumerator : 4;
     const double quartersPerBar = song != nullptr && song->timeDenominator > 0 ? song->timeNumerator * 4.0 / song->timeDenominator : 4.0;
+    std::vector<int> sectionBars;
+    sectionBars.reserve(sections.sections.size());
+    std::ranges::transform(sections.sections, std::back_inserter(sectionBars), [](const auto& s) { return s.bars; });
+    const std::vector<double> beats = core::chordLengths(m_songMap, sectionBars, numerator);
+    const double quartersPerBeat = quartersPerBar / numerator;
     for (std::size_t part = 0; part < m_timelinePlaces.size(); ++part) {
         const auto mapPart = std::ranges::find(m_songMap.partFlow, m_timelinePlaces.at(part));
         if (mapPart == m_songMap.partFlow.end()) continue; // (no chords there)
@@ -1981,8 +2065,16 @@ void DocumentController::applySectionsToEngine()
         const int last = index + 1 < m_songMap.partStarts.size() ? m_songMap.partStarts.at(index + 1) : static_cast<int>(m_songMap.steps.size());
         const int section = sections.parts.empty() ? static_cast<int>(part) : sections.parts.at(part);
         const int bars = section >= 0 && std::cmp_less(section, sections.sections.size()) ? sections.sections.at(static_cast<std::size_t>(section)).bars : 1;
-        const double each = std::max(bars, 1) * quartersPerBar / std::max(last - first, 1);
-        for (int step = first; step < last; ++step) m_timelineSteps.at(part).emplace_back((step - first) * each, step);
+        // (Longer than the part plays, a section without its bars set: squeezed into it, so each still lights.)
+        double written = 0.0;
+        for (int step = first; step < last; ++step) written += beats.at(static_cast<std::size_t>(step)) * quartersPerBeat;
+        const double partLength = std::max(bars, 1) * quartersPerBar;
+        const double scale = written > partLength + 1e-9 ? partLength / written : 1.0;
+        double at = 0.0;
+        for (int step = first; step < last; ++step) {
+            m_timelineSteps.at(part).emplace_back(at, step);
+            at += beats.at(static_cast<std::size_t>(step)) * quartersPerBeat * scale;
+        }
     }
     // Where each chord is shown, worked out once here (not on every chord
     // lit: a long chart takes a while to read).

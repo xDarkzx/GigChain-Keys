@@ -15,6 +15,7 @@
 #include "MidiQueue.h"
 #include "PluginLoadGuard.h"
 #include "SafetyLimiter.h"
+#include "ScheduledNotes.h"
 #include "LoopStation.h"
 #include "SongTransport.h"
 #include "SustainPads.h"
@@ -109,6 +110,9 @@ public:
     [[nodiscard]] double masterVolume() const override { return m_masterDb; }
     void injectNote(int midiChannel, int note, int velocity) override;
     void injectController(int midiChannel, int controller, int value) override;
+    void scheduleNote(int midiChannel, int note, int velocity, double quarter) override;
+    void clearScheduledNotes() override;
+    [[nodiscard]] BeatClock beatClock() const override;
     std::vector<KeyPress> takeKeyPresses() override { return m_midi.takePresses(); }
     std::vector<Notice> poll() override;
     [[nodiscard]] QString statusText() const override;
@@ -158,6 +162,9 @@ public:
     [[nodiscard]] bool recording() const override { return m_recorder.recording(); }
     [[nodiscard]] int outputChannels() const override { return m_audio.outputChannels(); }
     [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
+    void setClickOnlyWhilePlaying(bool only) override { m_click.setOnlyWhilePlaying(only); }
+    [[nodiscard]] bool clickOnlyWhilePlaying() const override { return m_click.onlyWhilePlaying(); }
+    void setPractising(bool playing) override { m_practising.store(playing, std::memory_order_relaxed); }
     void setBackingTrack(const QString& path) override;
     void setBackingStems(const std::vector<BackingStemFile>& stems) override;
     void playBackingTrack(bool play) override;
@@ -267,6 +274,7 @@ private:
     std::unique_ptr<QMediaDevices> m_mediaDevices;
     MidiInput m_midi;
     MidiQueue m_injected; // main thread -> audio thread
+    ScheduledNotes m_scheduled; // main thread -> audio thread: notes on their beat
     GraphExchange m_exchange;
     std::vector<PluginInfo> m_plugins;
     QString m_pluginFolder;        // where m_plugins were found
@@ -374,6 +382,12 @@ private:
     std::atomic<bool> m_followClock{false};
     int64_t m_samplePosition = 0; // audio thread
     double m_ppq = 0.0;           // audio thread
+    // The beat clock as the last block left it (beatClock()): where, at what
+    // tempo, and when (steady clock, ns), so the main thread can tell where it is now.
+    std::atomic<double> m_clockQuarter{0.0};
+    std::atomic<double> m_clockTempo{120.0};
+    std::atomic<int64_t> m_clockAtNs{0};
+    std::atomic<bool> m_practising{false}; // Practice plays along the clock (the click's "while playing")
     std::atomic<int> m_timeNumerator{4};
     std::atomic<int> m_timeDenominator{4};
     Metronome m_click;

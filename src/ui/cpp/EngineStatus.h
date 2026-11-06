@@ -49,6 +49,10 @@ class EngineStatus : public QObject
     Q_PROPERTY(double tempo READ tempo NOTIFY transportChanged)
     Q_PROPERTY(bool clickOn READ clickOn WRITE setClickOn NOTIFY transportChanged)
     Q_PROPERTY(double clickVolumeDb READ clickVolumeDb WRITE setClickVolumeDb NOTIFY transportChanged)
+    // The click only while a song counts (its count-in too) or Practice plays.
+    Q_PROPERTY(bool clickOnlyWhilePlaying READ clickOnlyWhilePlaying WRITE setClickOnlyWhilePlaying NOTIFY transportChanged)
+    // The big count-in over the song (1 2 3 4) is shown; remembered.
+    Q_PROPERTY(bool bigCountIn READ bigCountIn WRITE setBigCountIn NOTIFY transportChanged)
     Q_PROPERTY(bool trackLoaded READ trackLoaded NOTIFY transportChanged)
     Q_PROPERTY(bool trackLoading READ trackLoading NOTIFY transportChanged)
     Q_PROPERTY(bool trackPlaying READ trackPlaying NOTIFY transportChanged)
@@ -58,6 +62,9 @@ class EngineStatus : public QObject
     // none) and the bar in it (0 while stopped or counting in).
     Q_PROPERTY(bool songPlaying READ songPlaying NOTIFY songPositionChanged)
     Q_PROPERTY(bool songCountingIn READ songCountingIn NOTIFY songPositionChanged)
+    // Counting in: the beat of the count-in bar (1, 2, 3, 4); 0 otherwise. And how many it counts.
+    Q_PROPERTY(int countInBeat READ countInBeat NOTIFY songPositionChanged)
+    Q_PROPERTY(int countInBeats READ countInBeats NOTIFY songPositionChanged)
     Q_PROPERTY(int songSection READ songSection NOTIFY songPositionChanged)
     Q_PROPERTY(int songBar READ songBar NOTIFY songPositionChanged)
     Q_PROPERTY(int songBars READ songBars NOTIFY songPositionChanged)
@@ -131,6 +138,12 @@ public:
     void setClickOn(bool on);
     [[nodiscard]] double clickVolumeDb() const { return m_clickVolumeDb; }
     void setClickVolumeDb(double volumeDb);
+    [[nodiscard]] bool clickOnlyWhilePlaying() const;
+    void setClickOnlyWhilePlaying(bool only);
+    [[nodiscard]] bool bigCountIn() const { return m_bigCountIn; }
+    void setBigCountIn(bool shown);
+    [[nodiscard]] int countInBeat() const;
+    [[nodiscard]] int countInBeats() const;
 
     [[nodiscard]] bool trackLoaded() const { return m_track.loaded; }
     [[nodiscard]] bool trackLoading() const { return m_track.loading; }
@@ -229,6 +242,7 @@ private:
     double m_tempo = 120.0;
     bool m_clickOn = false;
     double m_clickVolumeDb = -6.0;
+    bool m_bigCountIn = true;
     engine::BackingTrackState m_track;
     engine::SongPosition m_song;
     int m_timelineStep = -1; // the chord lit by the timeline; -1 = not playing on it

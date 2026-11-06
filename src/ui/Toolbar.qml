@@ -597,12 +597,75 @@ ToolBar {
                 onPressed: bar.engineStatus.tapTempo()
             }
             StageButton {
+                id: clickButton
                 objectName: "clickButton"
                 iconSource: "icons/metronome.svg"
                 checkable: true
                 checked: bar.engineStatus.clickOn
-                tip: qsTr("A click on every beat")
+                tip: qsTr("A click on every beat (right-click: its volume, when it plays, the big count-in)")
                 onClicked: bar.engineStatus.clickOn = checked
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: clickMenu.popup(clickButton, 0, clickButton.height)
+                }
+                StageMenu {
+                    id: clickMenu
+                    objectName: "clickMenu"
+                    StageMenuItem {
+                        objectName: "clickOnItem"
+                        text: qsTr("Click on")
+                        checkable: true
+                        checked: bar.engineStatus.clickOn
+                        onTriggered: bar.engineStatus.clickOn = !bar.engineStatus.clickOn
+                    }
+                    StageMenuItem {
+                        objectName: "clickWhilePlaying"
+                        text: qsTr("Only while a song or Practice plays")
+                        checkable: true
+                        checked: bar.engineStatus.clickOnlyWhilePlaying
+                        onTriggered: bar.engineStatus.clickOnlyWhilePlaying = !bar.engineStatus.clickOnlyWhilePlaying
+                    }
+                    StageMenuItem {
+                        objectName: "bigCountInItem"
+                        text: qsTr("Big count-in on screen")
+                        checkable: true
+                        checked: bar.engineStatus.bigCountIn
+                        onTriggered: bar.engineStatus.bigCountIn = !bar.engineStatus.bigCountIn
+                    }
+                    MenuSeparator { contentItem: Rectangle { implicitHeight: 1; color: Theme.stripBorder } }
+                    // Its volume: a slider in the menu (dB, -40 to 0).
+                    MenuItem {
+                        id: clickVolumeItem
+                        objectName: "clickVolumeItem"
+                        hoverEnabled: false
+                        background: Item {}
+                        contentItem: Row {
+                            spacing: 8
+                            Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: qsTr("Volume")
+                                color: Theme.text
+                            }
+                            Slider {
+                                id: clickVolume
+                                objectName: "clickVolumeSlider"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 140
+                                from: -40
+                                to: 0
+                                stepSize: 1
+                                value: bar.engineStatus.clickVolumeDb
+                                onMoved: bar.engineStatus.clickVolumeDb = value
+                            }
+                            Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 44
+                                text: qsTr("%1 dB").arg(Math.round(clickVolume.value))
+                                color: Theme.textDim
+                            }
+                        }
+                    }
+                }
             }
         }
 
