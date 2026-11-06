@@ -1863,6 +1863,16 @@ private slots:
         QCOMPARE(m_engine->tempo(), 96.0);
         click(u"clickButton"_s);
         QVERIFY(m_engine->clickOn());
+        // #29: its menu (right-click): only while playing; #28: the big count-in.
+        auto* whilePlaying = window()->findChild<QObject*>(u"clickWhilePlaying"_s);
+        auto* bigCountIn = window()->findChild<QObject*>(u"bigCountInItem"_s);
+        QVERIFY(whilePlaying != nullptr && bigCountIn != nullptr && window()->findChild<QObject*>(u"clickVolumeSlider"_s) != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(whilePlaying, "triggered"));
+        QVERIFY(m_engine->clickOnlyWhilePlaying());
+        QVERIFY(QMetaObject::invokeMethod(whilePlaying, "triggered"));
+        QVERIFY(!m_engine->clickOnlyWhilePlaying());
+        auto* status = window()->findChild<QObject*>(u"clickMenu"_s);
+        QVERIFY(status != nullptr);
 
         ui::DocumentController& doc = m_session->document();
         QVERIFY(doc.renameSong(0, u"Renamed"_s));
@@ -2278,6 +2288,38 @@ private slots:
         QVERIFY(doc.songFlowSet());
         QCOMPARE(doc.songFlow().size(), 4);
         shoot(u"flow-bar"_s);
+        // #27: a part dragged along the bar moves there (Verse 2 to the front).
+        {
+            const QList<QQuickItem*> parts = findAll(bar, u"flowPart"_s);
+            QQuickItem* last = parts.value(2);
+            QQuickItem* first = parts.value(0);
+            const QPoint from = last->mapToScene(QPointF(last->width() / 2, last->height() / 2)).toPoint();
+            const QPoint to = first->mapToScene(QPointF(4, first->height() / 2)).toPoint();
+            QTest::mousePress(w, Qt::LeftButton, {}, from);
+            for (int i = 1; i <= 12; ++i) QTest::mouseMove(w, from + ((to - from) * i / 12), 15);
+            QTest::mouseRelease(w, Qt::LeftButton, {}, to);
+            QTRY_COMPARE(partTexts(), (QStringList{u"Verse 2"_s, u"Verse 1"_s, u"Chorus  ×2"_s}));
+        }
+        // An arrow's menu puts a section in there (between Verse 2 and Verse 1: the chorus).
+        {
+            QVERIFY(bar->setProperty("insertAt", 1));
+            auto* insert = bar->findChild<QObject*>(u"flowInsertMenu"_s);
+            QVERIFY(insert != nullptr);
+            QQuickItem* chorusItem = nullptr;
+            QVERIFY(QMetaObject::invokeMethod(insert, "itemAt", Q_RETURN_ARG(QQuickItem*, chorusItem), Q_ARG(int, 1)));
+            QVERIFY(chorusItem != nullptr);
+            QVERIFY(QMetaObject::invokeMethod(chorusItem, "triggered"));
+            QTRY_COMPARE(partTexts(), (QStringList{u"Verse 2"_s, u"Chorus"_s, u"Verse 1"_s, u"Chorus  ×2"_s}));
+        }
+        // On stage the chart follows the flow: the chorus shown each time it is played.
+        {
+            const QVariantList inFlow = doc.chartLinesInFlow(doc.currentChart());
+            QStringList titles;
+            for (const QVariant& l : inFlow) {
+                if (l.toMap().value(u"sectionIndex"_s).toInt() >= 0) titles << l.toMap().value(u"label"_s).toString();
+            }
+            QCOMPARE(titles, (QStringList{u"Verse 2"_s, u"Chorus"_s, u"Verse 1"_s, u"Chorus"_s, u"Chorus"_s}));
+        }
         QVERIFY(doc.setSongFlow({}));
     }
 
@@ -5237,6 +5279,16 @@ private slots:
         const auto shown = std::ranges::count_if(sparks, [](QQuickItem* s) { return s->isVisible(); });
         QCOMPARE(shown, 4); // the C chord: C2; C4, E4, G4
         shoot(u"practice-playing"_s);
+        // #29: the song's parts above the notes, the one playing lit; a click goes to another.
+        QList<QQuickItem*> parts;
+        findAll(scene, u"practicePart"_s, parts);
+        QCOMPARE(parts.size(), 2);
+        QTRY_VERIFY(parts.value(0)->property("checked").toBool());
+        const double chorusStart = m_session->practice().sections().at(1).toMap().value(u"start"_s).toDouble();
+        QVERIFY(QMetaObject::invokeMethod(parts.value(1), "clicked"));
+        QTRY_VERIFY(m_session->practice().position() >= chorusStart);
+        QVERIFY(m_session->practice().playing());
+        QTRY_VERIFY(parts.value(1)->property("checked").toBool());
         // Back to Edit: it pauses.
         auto* editButton = window()->findChild<QObject*>(u"editButton"_s);
         QVERIFY(editButton != nullptr);

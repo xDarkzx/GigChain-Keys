@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <utility>
 
 using namespace Qt::StringLiterals;
 
@@ -116,6 +117,88 @@ ChartLine rowFrom(const std::vector<QString>& names, bool bars)
     return line;
 }
 
+// A barred row's bars, in order: the chords in each ("| [Am] [C] | | [G] |":
+// {Am, C}, {}, {G}; an empty bar holds the chord before it). Regions before
+// the first bar line or after the last count only when they hold chords.
+std::vector<std::vector<QString>> rowBarsOf(const ChartLine& line)
+{
+    const LyricLine lyric = lyricLineOf(line);
+    std::vector<int> marks; // where each bar line is
+    for (int i = 0; i < static_cast<int>(lyric.lyrics.size()); ++i) {
+        if (lyric.lyrics.at(i) == u'|') marks.push_back(i);
+    }
+    std::vector<std::vector<QString>> bars(marks.size() + 1);
+    for (const PlacedChord& chord : lyric.chords) {
+        const auto region = std::ranges::upper_bound(marks, chord.at - 1) - marks.begin(); // (a chord right after a bar line is in the bar it opens)
+        bars.at(static_cast<std::size_t>(region)).push_back(chord.name);
+    }
+    if (!bars.empty() && bars.back().empty()) bars.pop_back();   // after the last bar line
+    if (!bars.empty() && bars.front().empty()) bars.erase(bars.begin()); // before the first
+    return bars;
+}
+
+// A row written from its bars: "| [Am] [C] |  | [G] |".
+ChartLine rowFromBars(const std::vector<std::vector<QString>>& bars)
+{
+    ChartLine line;
+    line.kind = Kind::Lyrics;
+    line.segments.push_back(ChartSegment{.chord = {}, .text = u"| "_s});
+    for (const std::vector<QString>& bar : bars) {
+        if (bar.empty()) {
+            line.segments.back().text += u" | "_s; // a bar held
+            continue;
+        }
+        for (std::size_t i = 0; i < bar.size(); ++i) {
+            line.segments.push_back(ChartSegment{.chord = bar.at(i), .text = i + 1 == bar.size() ? u" | "_s : u" "_s});
+        }
+    }
+    if (line.segments.back().text.endsWith(u' ')) line.segments.back().text.chop(1);
+    return line;
+}
+
+// Where chord number `chord` of a row's bars is: (bar, place in it); the bars' count when past the last.
+std::pair<std::size_t, std::size_t> findInBars(const std::vector<std::vector<QString>>& bars, int chord)
+{
+    int seen = 0;
+    for (std::size_t b = 0; b < bars.size(); ++b) {
+        for (std::size_t i = 0; i < bars.at(b).size(); ++i) {
+            if (seen++ == chord) return {b, i};
+        }
+    }
+    return {bars.size(), 0};
+}
+
+// Chord number `chord` out of a row's bars: its bar goes when it is left
+// empty, and the bars it held with it.
+void takeFromBars(std::vector<std::vector<QString>>& bars, int chord)
+{
+    const auto [bar, place] = findInBars(bars, chord);
+    if (bar >= bars.size()) return;
+    auto& chords = bars.at(bar);
+    chords.erase(chords.begin() + static_cast<std::ptrdiff_t>(place));
+    if (!chords.empty()) return;
+    std::size_t end = bar + 1;
+    while (end < bars.size() && bars.at(end).empty()) ++end;
+    bars.erase(bars.begin() + static_cast<std::ptrdiff_t>(bar), bars.begin() + static_cast<std::ptrdiff_t>(end));
+}
+
+// `name` into a row's bars as chord number `index` (clamped): a bar of its own.
+void putInBars(std::vector<std::vector<QString>>& bars, int index, const QString& name)
+{
+    const auto [bar, place] = findInBars(bars, std::max(index, 0));
+    std::size_t at = bar;
+    if (place > 0) { // (in the middle of a shared bar: after that bar and the bars it holds)
+        ++at;
+        while (at < bars.size() && bars.at(at).empty()) ++at;
+    }
+    bars.insert(bars.begin() + static_cast<std::ptrdiff_t>(std::min(at, bars.size())), std::vector<QString>{name});
+}
+
+bool hasBarLines(const ChartLine& line)
+{
+    return lyricLineOf(line).lyrics.contains(u'|');
+}
+
 // The chart with `line` checked: a row of chords, or an empty line (to become one).
 Result<Chart> chartWithRow(const QString& chordPro, int line)
 {
@@ -146,10 +229,14 @@ Result<QString> takeChord(Chart& chart, int line, int chord)
     LyricLine lyric = lyricLineOf(source);
     if (auto there = checkChordIndex(lyric, line, chord); !there) return tl::unexpected(there.error());
     QString name = lyric.chords.at(static_cast<std::size_t>(chord)).name;
-    if (isChordRow(source)) {
+    if (isChordRow(source) && hasBarLines(source)) { // (the other chords keep their bars)
+        std::vector<std::vector<QString>> bars = rowBarsOf(source);
+        takeFromBars(bars, chord);
+        source = bars.empty() ? ChartLine{} : rowFromBars(bars);
+    } else if (isChordRow(source)) {
         std::vector<QString> names = rowNames(source);
         names.erase(names.begin() + chord);
-        source = rowFrom(names, lyric.lyrics.contains(u'|'));
+        source = rowFrom(names, false);
     } else {
         lyric.chords.erase(lyric.chords.begin() + chord);
         source = lineFrom(lyric);
@@ -162,11 +249,16 @@ void putInRow(Chart& chart, int line, int index, const QString& name)
 {
     ChartLine& target = chart.lines.at(static_cast<std::size_t>(line));
     const bool row = target.kind == Kind::Lyrics;
+    if (row && hasBarLines(target) && isChordRow(target)) { // (the chords there keep their bars)
+        std::vector<std::vector<QString>> bars = rowBarsOf(target);
+        putInBars(bars, index, name);
+        target = rowFromBars(bars);
+        return;
+    }
     std::vector<QString> names = row ? rowNames(target) : std::vector<QString>{};
-    const bool bars = row && lyricLineOf(target).lyrics.contains(u'|');
     const auto at = static_cast<std::ptrdiff_t>(std::clamp(index, 0, static_cast<int>(names.size())));
     names.insert(names.begin() + at, name);
-    target = rowFrom(names, bars);
+    target = rowFrom(names, false);
 }
 
 Result<void> checkInsertPlace(const Chart& chart, int before)
@@ -231,6 +323,11 @@ Result<QString> changeChord(const QString& chordPro, int line, int chord, const 
     if (!chart) return tl::unexpected(chart.error());
     LyricLine lyric = lyricAt(*chart, line);
     if (auto there = checkChordIndex(lyric, line, chord); !there) return tl::unexpected(there.error());
+    // Out of a row with bar lines: its bars go with it (the others keep theirs).
+    if (const ChartLine& row = chart->lines.at(static_cast<std::size_t>(line)); name.isEmpty() && isChordRow(row) && hasBarLines(row)) {
+        if (auto taken = takeChord(*chart, line, chord); !taken) return tl::unexpected(taken.error());
+        return toChordPro(*chart);
+    }
     const auto it = lyric.chords.begin() + chord;
     if (name.isEmpty()) lyric.chords.erase(it);
     else it->name = name.trimmed();
@@ -259,6 +356,85 @@ bool isChordRow(const ChartLine& line)
     if (line.kind != Kind::Lyrics) return false;
     const LyricLine lyric = lyricLineOf(line);
     return !lyric.chords.empty() && onlyRowMarks(lyric.lyrics);
+}
+
+std::vector<double> rowChordBars(const ChartLine& line)
+{
+    if (!isChordRow(line) || !hasBarLines(line)) return {};
+    std::vector<double> lengths;
+    for (const std::vector<QString>& bar : rowBarsOf(line)) {
+        if (bar.empty()) { // held: the chord before it goes on
+            if (!lengths.empty()) lengths.back() += 1.0;
+            continue;
+        }
+        for (std::size_t i = 0; i < bar.size(); ++i) lengths.push_back(1.0 / static_cast<double>(bar.size()));
+    }
+    return lengths;
+}
+
+Result<QString> setRowChordLength(const QString& chordPro, int line, int chord, int halfBars)
+{
+    if (halfBars != 1 && (halfBars < 2 || halfBars > 2 * kMaxRowChordBars || halfBars % 2 != 0)) {
+        return fail(ErrorCode::OutOfRange, u"A chord in a row lasts half a bar, or 1 to %1 whole bars"_s.arg(kMaxRowChordBars));
+    }
+    Chart chart = parseChordPro(chordPro);
+    if (line < 0 || std::cmp_greater_equal(line, chart.lines.size())) {
+        return fail(ErrorCode::OutOfRange,
+                    u"Line %1 is not in the chart (it has %2 lines)"_s.arg(line + 1).arg(chart.lines.size()));
+    }
+    ChartLine& row = chart.lines.at(static_cast<std::size_t>(line));
+    if (!isChordRow(row)) {
+        return fail(ErrorCode::InvalidData, u"Line %1 is not a row of chords: a chord's length is set in a row"_s.arg(line + 1));
+    }
+    // A row without bar lines: a bar each, written out.
+    std::vector<std::vector<QString>> bars;
+    if (hasBarLines(row)) {
+        bars = rowBarsOf(row);
+    } else {
+        const std::vector<QString> names = rowNames(row);
+        std::ranges::transform(names, std::back_inserter(bars), [](const QString& name) { return std::vector<QString>{name}; });
+    }
+    const auto [bar, place] = findInBars(bars, chord);
+    if (chord < 0 || bar >= bars.size()) {
+        return fail(ErrorCode::OutOfRange, u"Line %1 has no chord %2"_s.arg(line + 1).arg(chord + 1));
+    }
+    const QString name = bars.at(bar).at(place);
+    // Out of its bar (the bar's other chords before it stay there, those after go to a bar of their own).
+    std::vector<QString>& shared = bars.at(bar);
+    std::vector<QString> after(shared.begin() + static_cast<std::ptrdiff_t>(place) + 1, shared.end());
+    shared.resize(place);
+    std::size_t at = bar;
+    if (!shared.empty()) ++at;
+    else bars.erase(bars.begin() + static_cast<std::ptrdiff_t>(bar));
+    // The bars it held go (they would follow it again otherwise).
+    if (after.empty()) {
+        while (at < bars.size() && bars.at(at).empty()) bars.erase(bars.begin() + static_cast<std::ptrdiff_t>(at));
+    } else {
+        bars.insert(bars.begin() + static_cast<std::ptrdiff_t>(at), after);
+    }
+    if (halfBars == 1) {
+        // Half a bar: it shares a bar with the next chord (or the one before, last in the row).
+        if (!after.empty()) {
+            bars.at(at).insert(bars.at(at).begin(), name);
+        } else if (at < bars.size()) {
+            auto& next = bars.at(at);
+            next.insert(next.begin(), name);
+            if (next.size() > 2) { // (it was a shared bar already: the others go on in a bar of their own)
+                std::vector<QString> rest(next.begin() + 2, next.end());
+                next.resize(2);
+                bars.insert(bars.begin() + static_cast<std::ptrdiff_t>(at) + 1, rest);
+            }
+        } else if (at > 0 && !bars.at(at - 1).empty() && bars.at(at - 1).size() == 1) {
+            bars.at(at - 1).push_back(name);
+        } else {
+            bars.insert(bars.begin() + static_cast<std::ptrdiff_t>(at), std::vector<QString>{name}); // (alone: a bar)
+        }
+    } else {
+        bars.insert(bars.begin() + static_cast<std::ptrdiff_t>(at), std::vector<QString>{name});
+        for (int held = 1; held < halfBars / 2; ++held) bars.insert(bars.begin() + static_cast<std::ptrdiff_t>(at) + held, std::vector<QString>{});
+    }
+    row = rowFromBars(bars);
+    return toChordPro(chart);
 }
 
 Result<QString> placeChordInRow(const QString& chordPro, int line, int index, const QString& chord)

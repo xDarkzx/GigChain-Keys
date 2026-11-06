@@ -163,6 +163,12 @@ public:
     // For the chart view: [{kind: "lyrics"|"section"|"comment"|"blank",
     // label, segments: [{chord, text}]}]; title/key lines are left out.
     Q_INVOKABLE QVariantList chartLines(const QString& chordPro) const;
+    // chartLines() in the order the song is played (its flow): the lines
+    // before the first section, then each part's section as many times as
+    // it is played, Chorus twice shown twice. Each section title gets its
+    // "place" in songFlow(); each line "steps", the steps on it (each copy
+    // only its own time through). Without a flow: the chart's order.
+    Q_INVOKABLE QVariantList chartLinesInFlow(const QString& chordPro) const;
     // The current song's chart edited in place (the Chart tab): `line` is a
     // chartLines() line's "line", `at` a character of its words, `chord` the
     // line's chord number. Each is an undo step (typing a line is one); a
@@ -178,6 +184,9 @@ public:
     Q_INVOKABLE bool moveChordInRow(int line, int chord, int toLine, int toIndex);
     Q_INVOKABLE bool addChordRow(int before, const QString& name);
     Q_INVOKABLE bool moveChordToNewRow(int line, int chord, int before);
+    // A row's chord set to last `halfBars` half bars (1: half a bar; 2, 4...:
+    // whole bars), written as the row's bar lines (core::setRowChordLength).
+    Q_INVOKABLE bool setRowChordLength(int line, int chord, int halfBars);
     // A whole line of the chart deleted (words and chords, a row, an empty line, a note).
     Q_INVOKABLE bool deleteChartLine(int line);
     Q_INVOKABLE bool setLineLyrics(int line, const QString& lyrics);

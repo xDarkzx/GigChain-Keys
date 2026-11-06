@@ -67,6 +67,10 @@ public:
     void injectNote(int midiChannel, int note, int velocity) override;
     // (The demo has no instruments to hear it; a knob learned for the mixer moves it.)
     void injectController(int midiChannel, int controller, int value) override;
+    // No audio, no clock: a timed note plays at once (its keys light), and the clock stands.
+    void scheduleNote(int midiChannel, int note, int velocity, double /*quarter*/) override { injectNote(midiChannel, note, velocity); }
+    void clearScheduledNotes() override {}
+    [[nodiscard]] BeatClock beatClock() const override { return BeatClock{.tempo = m_tempo}; }
     std::vector<KeyPress> takeKeyPresses() override { return std::exchange(m_presses, {}); } // (played on screen)
     std::vector<Notice> poll() override;
     [[nodiscard]] QString statusText() const override;
@@ -112,6 +116,10 @@ public:
     // (As an 8-output interface, so the output choices can be seen and tested.)
     [[nodiscard]] int outputChannels() const override { return 8; }
     [[nodiscard]] bool clickOn() const override { return m_click; }
+    void setClickOnlyWhilePlaying(bool only) override { m_clickOnlyWhilePlaying = only; }
+    [[nodiscard]] bool clickOnlyWhilePlaying() const override { return m_clickOnlyWhilePlaying; }
+    void setPractising(bool playing) override { m_practising = playing; }
+    [[nodiscard]] bool practising() const { return m_practising; }
     // The demo "reads" any track at once, as three minutes long.
     void setBackingTrack(const QString& path) override
     {
@@ -327,6 +335,8 @@ private:
     std::vector<KeyPress> m_presses; // keys played on screen, not yet taken
     double m_tempo = 120.0;
     bool m_click = false;
+    bool m_clickOnlyWhilePlaying = false;
+    bool m_practising = false;
     SustainPadsSettings m_sustainPads;
     QString m_sustainPadsInstrument;
     std::vector<core::PluginSlot> m_sustainPadsEffects;

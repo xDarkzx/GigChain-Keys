@@ -134,6 +134,46 @@ private slots:
         QCOMPARE(mine.chords.at(1).left, (std::vector<int>{41}));            // the bass alone (the default)
     }
 
+    // A section played twice in the flow: its chords as long the second
+    // time as the first (they were counted twice and halved).
+    void aSectionPlayedTwiceKeepsItsChordsLengths()
+    {
+        const Chart chart = parseChordPro(u"{comment: Verse}\n[C]a [F]b\n{comment: Chorus}\n[G]c [C]d\n"_s);
+        const std::vector<SectionRef> flow{{.name = u"Verse"_s, .occurrence = 1}, {.name = u"Chorus"_s, .occurrence = 1},
+                                           {.name = u"Chorus"_s, .occurrence = 1}};
+        const SongMap map = buildSongMap(chart, flow, false);
+        const PracticeTimeline timeline = practiceTimeline(map, {2, 2}, {u"Verse"_s, u"Chorus"_s}, 4);
+        QCOMPARE(timeline.chords.size(), std::size_t{6});
+        for (const PracticeChord& chord : timeline.chords) QCOMPARE(chord.length, 4.0); // a bar each, every time
+        QCOMPARE(timeline.sections.size(), std::size_t{3}); // the chorus marked each time it is played
+        QCOMPARE(timeline.sections.at(2).start, 20.0);
+        QCOMPARE(timeline.length, 28.0);
+    }
+
+    // Fewer chords than bars: each changes on a bar line (six chords over
+    // eight bars: 1, 2, 1, 1, 2, 1 bars), never in the middle of a bar.
+    void chordsChangeOnBarLines()
+    {
+        const Chart chart = parseChordPro(u"{comment: Verse}\n[C]a [F]b [G]c [Am]d [F]e [G]f\n"_s);
+        const std::vector<double> beats = chordLengths(buildSongMap(chart, {}, false), {8}, 4);
+        QCOMPARE(beats, (std::vector<double>{4, 8, 4, 4, 8, 4}));
+        // More chords than bars: on the beats (five over two bars: 2, 1, 2, 1, 2 beats).
+        const std::vector<double> quick = chordLengths(buildSongMap(parseChordPro(u"{comment: Bridge}\n[C]a [F]b [G]c [Am]d [F]e\n"_s), {}, false), {2}, 4);
+        QCOMPARE(quick, (std::vector<double>{2, 1, 2, 1, 2}));
+    }
+
+    // A row with bar lines says how long each chord lasts; the section's
+    // other chords share what is left of its bars.
+    void barLinesSetTheChordsLengths()
+    {
+        const Chart chart = parseChordPro(u"{comment: Intro}\n| [Am] |  | [C] [G] |\n[F]la [E]la\n"_s);
+        const SongMap map = buildSongMap(chart, {}, false);
+        QCOMPARE(map.steps.at(0).bars, 2.0);
+        QCOMPARE(map.steps.at(1).bars, 0.5);
+        QCOMPARE(map.steps.at(3).bars, 0.0); // (over words: not written)
+        QCOMPARE(chordLengths(map, {5}, 4), (std::vector<double>{8, 2, 2, 4, 4})); // 3 bars written, 2 left: a bar each
+    }
+
     // No sections: a bar a chord; no chords: nothing to play.
     void aPlainChartGetsABarAChord()
     {

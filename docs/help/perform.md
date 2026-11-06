@@ -17,9 +17,14 @@ by accident.
   [flow](charts.md): *Verse 1, Chorus, Verse 2, Chorus…*). The one playing is
   lit, with how far through it you are; tap a tile to go to that very part
   (playing: at the next bar line; stopped: Play starts there).
-- **The chart**, filling the screen. While the song plays it scrolls by itself
-  so the line you are on stays in the upper third. Slide a finger (or the
-  mouse wheel) to look ahead.
+- **The chart**, filling the screen, in the order the song is played (its
+  flow): a chorus played three times is shown three times, and the title of
+  the part playing is lit. While the song plays it scrolls by itself so the
+  line you are on stays in the upper third. Slide a finger (or the mouse
+  wheel) to look ahead.
+- **The count-in**, big in the middle of the screen (*1 2 3 4*) when the song
+  is played with the click on. Turn it off in the click's menu (right-click
+  the metronome button).
 - **The master level** and how the computer is doing (**CPU**), small at the
   bottom.
 

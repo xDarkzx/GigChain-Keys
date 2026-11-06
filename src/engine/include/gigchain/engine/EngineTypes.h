@@ -210,8 +210,20 @@ struct SongPosition
     int repeats = 0;     // Repeat part: times more
     bool hold = false;   // Hold: loops until released
     bool stopAtEnd = false;
+    // Counting in: how far into the count-in bar, in quarter notes (0 otherwise).
+    double countInQuarter = 0.0;
 
     bool operator==(const SongPosition&) const = default;
+};
+
+// The beat clock the click and the plugins follow (IEngine::beatClock).
+struct BeatClock
+{
+    double quarter = 0.0; // quarter notes since it started (a bar line every quartersPerBar)
+    double tempo = 120.0; // BPM, quarter notes a minute
+    int beatsPerBar = 4;
+    double quartersPerBar = 4.0;
+    bool running = false; // the audio is going: the clock moves
 };
 
 // ---- The loop station (one audio loop per channel)

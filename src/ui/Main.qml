@@ -701,6 +701,20 @@ ApplicationWindow {
         onActivated: root.cancelLearning()
     }
 
+    // The count-in, big in the middle (a song played with the click on, or
+    // Practice's count-in bar); the click button's menu turns it off.
+    CountInOverlay {
+        anchors.centerIn: parent
+        z: 40
+        readonly property int practiceBeat: root.practiceMode && root.practice.playing && !root.practice.exercise
+                                            && root.practice.loopSection < 0 && root.practice.position >= 0
+                                            && root.practice.position < root.practice.beatsPerBar
+                                            ? Math.floor(root.practice.position) + 1 : 0
+        beat: !root.engineStatus.bigCountIn ? 0
+              : root.engineStatus.countInBeat > 0 ? root.engineStatus.countInBeat : practiceBeat
+        beats: root.engineStatus.countInBeat > 0 ? root.engineStatus.countInBeats : root.practice.beatsPerBar
+    }
+
     // Errors and engine notices: never silent, never in the way.
     NotificationWindow {
         notifications: root.doc.notifications

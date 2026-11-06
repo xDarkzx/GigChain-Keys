@@ -77,6 +77,7 @@ struct PracticeSectionMark
     double start = 0.0;
     QString name;
     int section = 0;
+    int part = -1; // which time through the flow (SongStep::part): a section played twice has two marks
 };
 
 struct PracticeTimeline
@@ -87,11 +88,18 @@ struct PracticeTimeline
     int beatsPerBar = 4;
 };
 
-// A chart's chords (`song`, in playing order) as a timeline: a count-in bar,
-// then each section's bars (`sectionBars`, per chartSections() section)
-// shared evenly between its chords; chords before the first section, or of
-// a section without bars, a bar each. Voiced in `style` (by default, the
-// bass alone and each chord from the one before).
+// How long each chord of `song` lasts, in beats: as the chart writes it (a
+// row with bar lines, SongStep::bars); the others share what is left of their
+// section's bars (`sectionBars`, per chartSections() section), each time the
+// section is played, changing on bar lines when there are bars enough for
+// them, else on beats, so they fall on the click. Chords before the first
+// section, of a section without bars, or with no bars left: a bar each.
+[[nodiscard]] std::vector<double> chordLengths(const SongMap& song, const std::vector<int>& sectionBars, int beatsPerBar);
+
+// A chart's chords (`song`, in playing order: each chord written, the same
+// one twice is twice) as a timeline: a count-in bar, then each chord for its
+// chordLengths(). Voiced in `style` (by default, the bass alone and each
+// chord from the one before).
 [[nodiscard]] PracticeTimeline practiceTimeline(const SongMap& song, const std::vector<int>& sectionBars,
                                                 const QStringList& sectionNames, int beatsPerBar,
                                                 const VoicingStyle& style = {});

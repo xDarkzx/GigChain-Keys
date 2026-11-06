@@ -54,11 +54,31 @@ A change in a chord's diagram is heard at once.
   speed it up as it sinks in.
 - **Loop** repeats one section over and over (*Chorus*, *Bridge*…). **Whole
   song** plays it once from the top.
+- **The song's parts** (under the toolbar) show where you are: the part
+  playing is lit, with a line filling as it goes. **Click a part** to go
+  straight to it (while looping, that part loops instead). The thin line
+  under them is the whole song: click anywhere along it to go there.
 
 The tempo comes from the song (right-click the song > **Tempo…**), and each
 section's length from its bars in the chart. See
 [Sections, tempo and backing tracks](sections-and-tempo.md). There is one
-bar of count-in before the first chord.
+bar of count-in before the first chord, shown big in the middle of the
+screen (turn that off in the click's menu).
+
+### In time with the click
+
+Practice plays on the same beat as the **click** (the metronome button in
+the top bar): the notes land on the click's beats and each bar starts on its
+accented beat, so when you press Play it may wait a moment for the click's
+next bar. It plays at the song's tempo, and **Speed** slows the click too
+(it goes back when you pause). The chords last as long as in Perform: a
+row of chords with bar lines keeps the lengths it writes, and the other
+chords share their section's bars, changing on a bar line (or a beat when
+there are more chords than bars).
+
+**The click's options:** right-click the metronome button for its
+**Volume**, **Only while a song or Practice plays** (quiet in between), and
+**Big count-in on screen**.
 
 ## Tips
 

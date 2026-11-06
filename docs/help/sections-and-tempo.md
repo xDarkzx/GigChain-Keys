@@ -79,7 +79,11 @@ so a guess would jump to the wrong part.)
   delays or arpeggiators follow it.
 - **Tap** sets the tempo from your taps (a pedal can tap too: see
   [Sound and your keyboard](audio-and-midi.md)).
-- The **metronome** button switches the click on and off.
+- The **metronome** button switches the click on and off. **Right-click** it
+  for its **Volume**, **Only while a song or Practice plays** (the click
+  counts the song in and plays along, and is quiet between songs), and
+  **Big count-in on screen**: while the song counts in, *1 2 3 4* shows large
+  in the middle of the screen.
 - A song's tempo (right-click the song > **Tempo…**) is set whenever the song
   is chosen. *0* means "leave the tempo as it is".
 

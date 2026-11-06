@@ -64,6 +64,8 @@ gigchain_add_test(tst_midi_monitor SOURCES tst_midi_monitor.cpp LIBS gigchain::e
 target_include_directories(tst_midi_monitor PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_metronome SOURCES tst_metronome.cpp LIBS gigchain::engine)
 target_include_directories(tst_metronome PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_test(tst_scheduled_notes SOURCES tst_scheduled_notes.cpp LIBS gigchain::engine)
+target_include_directories(tst_scheduled_notes PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_audio_file SOURCES tst_audio_file.cpp LIBS gigchain::engine)
 target_include_directories(tst_audio_file PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_midi_clock SOURCES tst_midi_clock.cpp LIBS gigchain::engine)

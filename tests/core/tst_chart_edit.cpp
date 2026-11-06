@@ -185,6 +185,37 @@ private slots:
         QCOMPARE(*placeChordInRow(u"| [Am] | [C] |"_s, 0, 2, u"G"_s), u"| [Am] | [C] | [G] |"_s);
     }
 
+    // #27: how long a row's chords last, read from its bar lines and set from
+    // a chord's menu (half a bar, or whole bars: the empty bars it holds).
+    void aRowChordsLengthIsSetInBars()
+    {
+        QCOMPARE(rowChordBars(parseChordPro(u"| [Am] | [C] [G] |  | [F] |"_s).lines.at(0)), (std::vector<double>{1.0, 0.5, 1.5, 1.0}));
+        QVERIFY(rowChordBars(parseChordPro(u"[Am] [C]"_s).lines.at(0)).empty()); // (no bar lines: not written)
+        QVERIFY(rowChordBars(parseChordPro(u"[Am]Words"_s).lines.at(0)).empty());
+        // C for 2 bars: the row gets its bar lines, a bar each for the others.
+        auto set = setRowChordLength(u"{comment: Intro}\n[Am] [C] [G]\n"_s, 1, 1, 4);
+        QVERIFY(set.has_value());
+        const auto barsOf = [](const QString& chart) { return rowChordBars(parseChordPro(chart).lines.at(1)); };
+        QCOMPARE(barsOf(*set), (std::vector<double>{1.0, 2.0, 1.0}));
+        QCOMPARE(chartSections(parseChordPro(*set)).front().guessedBars, 4); // (the bars it writes)
+        // Am for half a bar: it shares a bar with C.
+        set = setRowChordLength(*set, 1, 0, 1);
+        QCOMPARE(barsOf(*set), (std::vector<double>{0.5, 1.5, 1.0}));
+        // Back to a bar: the bar is its own again.
+        set = setRowChordLength(*set, 1, 0, 2);
+        QCOMPARE(barsOf(*set), (std::vector<double>{1.0, 2.0, 1.0}));
+        // Moved along the row or taken out, the other chords keep their bars.
+        auto moved = moveChordInRow(*set, 1, 2, 1, 0); // G first
+        QCOMPARE(barsOf(*moved), (std::vector<double>{1.0, 1.0, 2.0}));
+        auto taken = changeChord(*moved, 1, 1, QString()); // (a row's chord removed: its bar goes)
+        QVERIFY(taken.has_value());
+        QCOMPARE(barsOf(*taken), (std::vector<double>{1.0, 2.0}));
+        // Not a row, not a length, not a chord: refused.
+        QVERIFY(!setRowChordLength(u"[Am]Words"_s, 0, 0, 2));
+        QVERIFY(!setRowChordLength(u"[Am] [C]"_s, 0, 0, 3));
+        QVERIFY(!setRowChordLength(u"[Am] [C]"_s, 0, 5, 2));
+    }
+
     // A new row before a line (or at the end); a chord moved onto one; the
     // row it left, empty, becomes an empty line.
     void newRowsAreMadeWhereAChordIsDropped()

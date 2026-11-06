@@ -821,6 +821,44 @@ void RealEngine::injectController(int midiChannel, int controller, int value)
     }
 }
 
+void RealEngine::scheduleNote(int midiChannel, int note, int velocity, double quarter)
+{
+    if (midiChannel < 1 || midiChannel > 16 || note < 0 || note > 127 || velocity < 0 || velocity > 127 || !std::isfinite(quarter)) {
+        qCWarning(lcEngine) << "Timed note ignored: channel" << midiChannel << "(1-16), note" << note << "(0-127), velocity"
+                            << velocity << "(0-127), at quarter" << quarter;
+        return;
+    }
+    const auto status = static_cast<uint8_t>((velocity > 0 ? 0x90 : 0x80) | (midiChannel - 1));
+    // (A full queue is counted there and reported from poll().)
+    m_scheduled.push(MidiEvent{.status = status, .data1 = static_cast<uint8_t>(note), .data2 = static_cast<uint8_t>(velocity)}, quarter);
+}
+
+void RealEngine::clearScheduledNotes()
+{
+    if (!m_scheduled.clear()) qCWarning(lcEngine) << "The timed notes could not be cleared: their queue is full";
+}
+
+BeatClock RealEngine::beatClock() const
+{
+    const int numerator = m_timeNumerator.load(std::memory_order_relaxed);
+    const int denominator = m_timeDenominator.load(std::memory_order_relaxed);
+    BeatClock clock{.quarter = m_clockQuarter.load(std::memory_order_relaxed),
+                    .tempo = m_clockTempo.load(std::memory_order_relaxed),
+                    .beatsPerBar = std::max(numerator, 1),
+                    .quartersPerBar = denominator > 0 ? numerator * 4.0 / denominator : 4.0,
+                    .running = false};
+    // Where it is now: on from where the last block left it (a block or two
+    // at most; longer and the audio has stopped: the clock stands).
+    const int64_t at = m_clockAtNs.load(std::memory_order_acquire);
+    if (at == 0) return clock;
+    const auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    const double since = static_cast<double>(now - at) / 1e9;
+    constexpr double kStopped = 0.25; // seconds without a block
+    clock.running = since >= 0.0 && since < kStopped;
+    if (clock.running) clock.quarter += since * clock.tempo / 60.0;
+    return clock;
+}
+
 std::vector<Notice> RealEngine::poll()
 {
     GC_ONLY_MAIN_THREAD();
@@ -865,6 +903,9 @@ std::vector<Notice> RealEngine::poll()
 
     if (const uint64_t dropped = m_midi.takeDropped() + m_droppedInjected.exchange(0); dropped > 0) {
         qCWarning(lcEngine) << "Dropped" << dropped << "MIDI events (input queue full)";
+    }
+    if (const int dropped = m_scheduled.takeDropped(); dropped > 0) {
+        qCWarning(lcEngine) << "Dropped" << dropped << "timed notes (Practice's notes: their queue was full)";
     }
     for (const QString& problem : m_hardwareSender.takeProblems()) {
         qCWarning(lcEngine).noquote() << problem;
@@ -2137,6 +2178,22 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     if (const int64_t origin = m_barOriginAt.exchange(-1, std::memory_order_acq_rel); origin >= 0) {
         m_ppq = static_cast<double>(m_samplePosition - origin) * quartersPerSample;
     }
+    // Notes timed to the beat (Practice): those due in this block, on their sample.
+    if (const std::size_t timed = m_scheduled.take(m_ppq, quartersPerSample, out.frames, std::span<MidiEvent>(m_events).subspan(count));
+        timed > 0) {
+        m_keyboard.apply(std::span<const MidiEvent>(m_events).subspan(count, timed)); // (the keys light as they play)
+        count += timed;
+        // Every event in sample order, as plugins take them (insertion: few, nearly sorted, no allocation).
+        for (std::size_t i = 1; i < count; ++i) {
+            const MidiEvent moving = m_events.at(i);
+            std::size_t j = i;
+            while (j > 0 && m_events.at(j - 1).sampleOffset > moving.sampleOffset) {
+                m_events.at(j) = m_events.at(j - 1);
+                --j;
+            }
+            m_events.at(j) = moving;
+        }
+    }
 
     TimeInfo time{.tempo = bpm,
                   .sampleRate = rate,
@@ -2226,10 +2283,17 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     // The click, on top of everything (not through the master fader: it
     // still counts in when the band is muted); on outputs of its own when
     // sent there (the in-ears only, not the audience).
-    m_click.process(sendPair(sends, m_clickPair.load(std::memory_order_relaxed), out), time);
+    // (Set to click only while playing: a song's count, its count-in, or Practice.)
+    const bool playingAlong = m_transport.position().playing || m_practising.load(std::memory_order_relaxed);
+    m_click.process(sendPair(sends, m_clickPair.load(std::memory_order_relaxed), out), time, playingAlong);
 
     m_samplePosition += static_cast<int64_t>(frames);
     if (rate > 0.0) m_ppq += static_cast<double>(frames) * bpm / 60.0 / rate;
+    // The beat clock for the main thread (beatClock()): where this block left it, and when.
+    m_clockQuarter.store(m_ppq, std::memory_order_relaxed);
+    m_clockTempo.store(bpm, std::memory_order_relaxed);
+    m_clockAtNs.store(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(),
+                      std::memory_order_release);
 
     // The safety limiter: last before the output.
     if (rate != m_limiterRate) {

@@ -16,7 +16,7 @@ constexpr int kBlock = 256;
 
 // Renders `seconds` of the click at `bpm`, block by block as the engine
 // does, and returns the samples where a click starts (silence before it).
-std::vector<int> clickStarts(Metronome& click, double bpm, double seconds, std::vector<float>* all = nullptr)
+std::vector<int> clickStarts(Metronome& click, double bpm, double seconds, std::vector<float>* all = nullptr, bool playing = true)
 {
     std::vector<int> starts;
     std::vector<float> left(kBlock);
@@ -31,7 +31,7 @@ std::vector<int> clickStarts(Metronome& click, double bpm, double seconds, std::
         const TimeInfo time{.tempo = bpm, .sampleRate = kRate, .samplePosition = static_cast<int64_t>(b) * kBlock,
                             .ppqPosition = ppq, .barStartPpq = std::floor(ppq / 4.0) * 4.0, .timeSigNumerator = 4,
                             .timeSigDenominator = 4};
-        click.process(AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, time);
+        click.process(AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, time, playing);
         for (int i = 0; i < kBlock; ++i) {
             const float v = left.at(static_cast<std::size_t>(i));
             if (all != nullptr) all->push_back(v);
@@ -111,6 +111,23 @@ private slots:
         };
         QVERIFY(peak(a) > 0.3F);
         QVERIFY(std::abs(peak(b) / peak(a) - 0.1F) < 0.01F);
+    }
+
+    // #29: set to click only while something plays (a song's count, Practice):
+    // quiet in between, on the beat while playing; otherwise always.
+    void onlyWhilePlayingIsQuietInBetween()
+    {
+        Metronome click;
+        click.setOn(true);
+        click.setOnlyWhilePlaying(true);
+        QVERIFY(clickStarts(click, 120.0, 2.1, nullptr, false).empty());
+        Metronome playing;
+        playing.setOn(true);
+        playing.setOnlyWhilePlaying(true);
+        QCOMPARE(clickStarts(playing, 120.0, 2.1, nullptr, true).size(), std::size_t{5});
+        Metronome always;
+        always.setOn(true);
+        QCOMPARE(clickStarts(always, 120.0, 2.1, nullptr, false).size(), std::size_t{5});
     }
 };
 

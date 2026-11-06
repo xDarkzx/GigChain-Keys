@@ -59,6 +59,21 @@ struct LyricLine
 // letters (it has none). Each chord is a bar, as everywhere in a chart.
 [[nodiscard]] bool isChordRow(const ChartLine& line);
 
+// How long each chord of a row with bar lines lasts, in bars, as a chart
+// reads them: "| [Am] | [C] [G] |  | [F] |" is Am 1, C 1/2, G 1/2 + a bar it
+// holds (an empty bar) = 1.5, F 1. Empty: not a row, or one without bar lines
+// (its chords' lengths are not written).
+[[nodiscard]] std::vector<double> rowChordBars(const ChartLine& line);
+
+// The longest a chord of a row is set to last.
+inline constexpr int kMaxRowChordBars = 8;
+
+// Chord number `chord` of the row `line` set to last `halfBars` half bars:
+// 1 (half a bar: it shares a bar with the next chord), or 2, 4... up to
+// kMaxRowChordBars bars (whole bars: the empty bars after it it holds). A row
+// without bar lines gets them (a bar each for the others).
+[[nodiscard]] Result<QString> setRowChordLength(const QString& chordPro, int line, int chord, int halfBars);
+
 // A new chord in a row at `index` (0: first; past the end: last). A blank
 // line becomes a row.
 [[nodiscard]] Result<QString> placeChordInRow(const QString& chordPro, int line, int index, const QString& chord);

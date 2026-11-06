@@ -359,7 +359,10 @@ Rectangle {
                         width: performChart.width - 16
                         size: perform.chartSize
                         editable: false
-                        lines: perform.doc.chartLines(perform.doc.currentChart)
+                        // (In the order the song is played: its flow, Chorus twice shown twice.)
+                        lines: perform.doc.songFlow.length >= 0 ? perform.doc.chartLinesInFlow(perform.doc.currentChart) : [] // (again when the flow changes)
+                        flowOrder: true
+                        currentPlace: perform.engineStatus.songPlace
                         doc: perform.doc
                         currentSection: perform.engineStatus.songSection
                         playing: perform.engineStatus.songPlaying
