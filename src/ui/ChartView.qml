@@ -60,7 +60,7 @@ Item {
                 if (steps !== undefined && steps.indexOf(chart.currentStep) >= 0) line = i
             }
         } else {
-            line = chart.doc.chordLine(chart.currentStep)
+            line = chart.doc.chordLine(chart.currentStep) // (its place among the lines shown)
         }
         const item = line >= 0 ? lineRepeater.itemAt(line) : null
         return item !== null ? item.y : -1
@@ -71,6 +71,17 @@ Item {
         for (let i = 0; i < lineRepeater.count; ++i) {
             const shown = chart.lines[i]
             if (shown === undefined || shown.sectionIndex !== section) continue
+            const item = lineRepeater.itemAt(i)
+            return item !== null ? item.y : -1
+        }
+        return -1
+    }
+
+    // Where part `place` of the flow begins (its title; flowOrder), -1: not shown.
+    function yOfPlace(place) {
+        for (let i = 0; i < lineRepeater.count; ++i) {
+            const shown = chart.lines[i]
+            if (shown === undefined || shown.place !== place || shown.sectionIndex === undefined || shown.sectionIndex < 0) continue
             const item = lineRepeater.itemAt(i)
             return item !== null ? item.y : -1
         }

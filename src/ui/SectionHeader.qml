@@ -27,6 +27,25 @@ Column {
     readonly property bool known: doc !== null && section !== undefined && section !== null
     readonly property color lit: header.current ? (header.playing ? Theme.chord : Theme.accent) : Theme.accentBlue
 
+    // Its menus, made when opened and gone when closed (each edit of the
+    // chart builds its titles again: no menus waiting in each).
+    function showMenu(component, owner, below) {
+        const menu = component.createObject(owner)
+        if (menu === null) {
+            console.warn("SectionHeader: a menu could not be made")
+            return
+        }
+        menu.closed.connect(() => menu.destroy())
+        if (below) menu.popup(owner, 0, owner.height)
+        else menu.popup()
+    }
+    function rename() {
+        titleInput.text = header.label
+        titleInput.visible = true
+        titleInput.forceActiveFocus()
+        titleInput.selectAll()
+    }
+
     topPadding: 14 * size
     bottomPadding: 6 * size
     spacing: 6 * size
@@ -66,34 +85,28 @@ Column {
             TapHandler {
                 enabled: header.known && header.editable
                 onSingleTapped: header.doc.selectSection(header.sectionIndex)
-                onDoubleTapped: {
-                    titleInput.text = header.label
-                    titleInput.visible = true
-                    titleInput.forceActiveFocus()
-                    titleInput.selectAll()
-                }
+                onDoubleTapped: header.rename()
             }
             // Right-click: rename it, or take its title out (its lines join the section above).
             TapHandler {
                 enabled: header.editable && header.chartLine >= 0
                 acceptedButtons: Qt.RightButton
-                onTapped: sectionMenu.popup()
+                onTapped: header.showMenu(sectionMenu, title, false)
             }
-            StageMenu {
+            Component {
                 id: sectionMenu
-                StageMenuItem {
-                    text: qsTr("Rename…")
-                    onTriggered: {
-                        titleInput.text = header.label
-                        titleInput.visible = true
-                        titleInput.forceActiveFocus()
-                        titleInput.selectAll()
+                StageMenu {
+                    objectName: "sectionMenu"
+                    StageMenuItem {
+                        objectName: "sectionRename"
+                        text: qsTr("Rename…")
+                        onTriggered: header.rename()
                     }
-                }
-                StageMenuItem {
-                    objectName: "sectionRemove"
-                    text: qsTr("Remove section (keep its lines)")
-                    onTriggered: header.doc.removeChartSection(header.chartLine)
+                    StageMenuItem {
+                        objectName: "sectionRemove"
+                        text: qsTr("Remove section (keep its lines)")
+                        onTriggered: header.doc.removeChartSection(header.chartLine)
+                    }
                 }
             }
             ToolTip.visible: titleHover.hovered && header.editable
@@ -188,19 +201,22 @@ Column {
             text: "+"
             enabled: header.known && header.section.choices.length > 0
             tip: qsTr("Add an instrument of this patch to the section")
-            onClicked: addMenu.popup(addButton, 0, addButton.height)
-            StageMenu {
+            onClicked: header.showMenu(addMenu, addButton, true)
+            Component {
                 id: addMenu
-                objectName: "sectionAddMenu"
-                Instantiator {
-                    model: header.known ? header.section.choices : []
-                    delegate: StageMenuItem {
-                        required property var modelData
-                        text: modelData.name
-                        onTriggered: header.doc.addSectionChannel(header.sectionIndex, modelData.channel)
+                StageMenu {
+                    id: addMenuShown
+                    objectName: "sectionAddMenu"
+                    Instantiator {
+                        model: header.known ? header.section.choices : []
+                        delegate: StageMenuItem {
+                            required property var modelData
+                            text: modelData.name
+                            onTriggered: header.doc.addSectionChannel(header.sectionIndex, modelData.channel)
+                        }
+                        onObjectAdded: (index, object) => addMenuShown.insertItem(index, object)
+                        onObjectRemoved: (index, object) => addMenuShown.removeItem(object)
                     }
-                    onObjectAdded: (index, object) => addMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => addMenu.removeItem(object)
                 }
             }
         }

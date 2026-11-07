@@ -33,6 +33,14 @@ tl::unexpected<Error> missing(const QString& what)
     return fail(ErrorCode::OutOfRange, u"%1 does not exist"_s.arg(what));
 }
 
+// No song at `songIndex`: as the player reads it ("Song 0 does not exist"
+// was what no song at all, -1, read as).
+tl::unexpected<Error> missingSong(int songIndex)
+{
+    if (songIndex < 0) return fail(ErrorCode::OutOfRange, u"There is no song yet: add one first"_s);
+    return missing(u"Song %1"_s.arg(songIndex + 1));
+}
+
 Result<QString> cleanName(const QString& name, const QString& what)
 {
     QString trimmed = name.trimmed();
@@ -71,7 +79,7 @@ Result<int> addSong(Setlist& setlist, const QString& name)
 
 Result<int> addPatch(Setlist& setlist, int songIndex, const QString& name)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     auto clean = cleanName(name, u"Patch name"_s);
     if (!clean) return tl::unexpected(clean.error());
     Song& song = setlist.songs.at(toIndex(songIndex));
@@ -84,7 +92,7 @@ Result<int> addPatch(Setlist& setlist, int songIndex, const QString& name)
 
 Result<void> renameSong(Setlist& setlist, int songIndex, const QString& name)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     auto clean = cleanName(name, u"Song name"_s);
     if (!clean) return tl::unexpected(clean.error());
     setlist.songs.at(toIndex(songIndex)).name = *clean;
@@ -93,7 +101,7 @@ Result<void> renameSong(Setlist& setlist, int songIndex, const QString& name)
 
 Result<void> setSongChart(Setlist& setlist, int songIndex, const QString& chart)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     if (chart.size() > limits::kMaxChartLength) {
         return fail(ErrorCode::LimitExceeded,
                     u"The chart is longer than %1 characters"_s.arg(limits::kMaxChartLength));
@@ -104,7 +112,7 @@ Result<void> setSongChart(Setlist& setlist, int songIndex, const QString& chart)
 
 Result<void> setSongKeyAndTempo(Setlist& setlist, int songIndex, const QString& key, double tempo)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     if (key.size() > limits::kMaxKeyLength) {
         return fail(ErrorCode::LimitExceeded, u"The key is longer than %1 characters"_s.arg(limits::kMaxKeyLength));
     }
@@ -159,7 +167,7 @@ Result<void> setPatchPlayMode(Setlist& setlist, Cursor cursor, PlayMode mode)
 
 Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator, int denominator)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     if (!isTimeSignature(numerator, denominator)) {
         return fail(ErrorCode::OutOfRange,
                     u"%1/%2 is not a time signature (1-32 beats of a 1, 2, 4, 8, 16 or 32 note)"_s.arg(numerator).arg(denominator));
@@ -172,14 +180,14 @@ Result<void> setSongTimeSignature(Setlist& setlist, int songIndex, int numerator
 
 Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     setlist.songs.at(toIndex(songIndex)).switchEarly = early;
     return {};
 }
 
 Result<void> renameSongSection(Setlist& setlist, int songIndex, const QString& chart)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     Song& song = setlist.songs.at(toIndex(songIndex));
     const std::vector<ChartSection> before = chartSections(parseChordPro(song.chart));
     if (auto r = setSongChart(setlist, songIndex, chart); !r) return r;
@@ -199,7 +207,7 @@ Result<void> renameSongSection(Setlist& setlist, int songIndex, const QString& c
 
 Result<void> setSongFlow(Setlist& setlist, int songIndex, const std::vector<SectionRef>& flow)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     if (flow.size() > static_cast<std::size_t>(limits::kMaxFlowParts)) {
         return fail(ErrorCode::LimitExceeded, u"A song's flow has at most %1 parts"_s.arg(limits::kMaxFlowParts));
     }
@@ -211,9 +219,63 @@ Result<void> setSongFlow(Setlist& setlist, int songIndex, const std::vector<Sect
     return {};
 }
 
+Result<void> arrangeSongChart(Setlist& setlist, int songIndex)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
+    Song& song = setlist.songs.at(toIndex(songIndex));
+    if (song.flow.empty()) return {};
+    const Chart chart = parseChordPro(song.chart);
+    const std::vector<ChartSection> sections = chartSections(chart);
+    // The order: each section where the flow first plays it, then the rest as written.
+    std::vector<std::size_t> order;
+    for (const SectionRef& part : song.flow) {
+        const int at = sectionIndexOf(sections, part);
+        if (at >= 0 && std::ranges::find(order, toIndex(at)) == order.end()) order.push_back(toIndex(at));
+    }
+    for (std::size_t s = 0; s < sections.size(); ++s) {
+        if (std::ranges::find(order, s) == order.end()) order.push_back(s);
+    }
+    if (std::ranges::is_sorted(order)) return {};
+    // A section's lines: from its title to the next one's; the blank lines
+    // closing it are the gap after it, which stays in its place.
+    const auto begin = [&](std::size_t s) { return toIndex(sections.at(s).line); };
+    const auto end = [&](std::size_t s) { return s + 1 < sections.size() ? begin(s + 1) : chart.lines.size(); };
+    const auto bodyEnd = [&](std::size_t s) {
+        std::size_t e = end(s);
+        while (e > begin(s) + 1 && chart.lines.at(e - 1).kind == ChartLine::Kind::Blank) --e;
+        return e;
+    };
+    const auto lineAt = [&chart](std::size_t l) { return chart.lines.begin() + static_cast<std::ptrdiff_t>(l); };
+    Chart arranged = chart;
+    arranged.lines.assign(chart.lines.begin(), lineAt(begin(0))); // (what comes before the first section)
+    for (std::size_t place = 0; place < order.size(); ++place) {
+        const std::size_t s = order.at(place);
+        arranged.lines.insert(arranged.lines.end(), lineAt(begin(s)), lineAt(bodyEnd(s)));
+        arranged.lines.insert(arranged.lines.end(), lineAt(bodyEnd(place)), lineAt(end(place)));
+    }
+    const QString text = toChordPro(arranged);
+    const std::vector<ChartSection> after = chartSections(parseChordPro(text));
+    if (after.size() != sections.size()) {
+        return fail(ErrorCode::InvalidData, u"The chart's sections could not be put in the flow's order (they read differently moved)"_s);
+    }
+    if (auto r = setSongChart(setlist, songIndex, text); !r) return r;
+    // What named a section names it in its new place.
+    const auto follow = [&](QString& name, int& occurrence) {
+        const int at = sectionIndexOf(sections, SectionRef{.name = name, .occurrence = occurrence});
+        if (at < 0) return;
+        const auto moved = std::ranges::find(order, toIndex(at));
+        const ChartSection& now = after.at(static_cast<std::size_t>(moved - order.begin()));
+        name = now.name;
+        occurrence = now.occurrence;
+    };
+    for (SectionRef& part : song.flow) follow(part.name, part.occurrence);
+    for (SectionSetup& section : song.sections) follow(section.name, section.occurrence);
+    return {};
+}
+
 Result<void> setChordInversion(Setlist& setlist, int songIndex, const QString& chord, int inversion)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     if (chord.trimmed().isEmpty()) return fail(ErrorCode::InvalidData, u"Which chord? (no name given)"_s);
     if (inversion < -1 || inversion > limits::kMaxChordInversion) {
         return fail(ErrorCode::OutOfRange,
@@ -227,14 +289,14 @@ Result<void> setChordInversion(Setlist& setlist, int songIndex, const QString& c
 
 Result<void> setSongLoopSync(Setlist& setlist, int songIndex, bool sync)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     setlist.songs.at(toIndex(songIndex)).loopSync = sync;
     return {};
 }
 
 Result<void> setSongLoopBars(Setlist& setlist, int songIndex, int bars)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     if (bars < 0 || bars > limits::kMaxLoopBars) {
         return fail(ErrorCode::OutOfRange, u"A loop is 1 to %1 bars long (or open)"_s.arg(limits::kMaxLoopBars));
     }
@@ -265,7 +327,7 @@ Result<void> setPanelControls(Setlist& setlist, const PanelControls& controls)
 
 Result<void> setSectionSetup(Setlist& setlist, int songIndex, const SectionSetup& setup)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     Song edited = setlist.songs.at(toIndex(songIndex));
     SectionSetup clean = setup;
     clean.name = clean.name.simplified();
@@ -281,7 +343,7 @@ Result<void> setSectionSetup(Setlist& setlist, int songIndex, const SectionSetup
 
 Result<int> duplicateSong(Setlist& setlist, int songIndex)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     if (setlist.songs.size() >= toIndex(limits::kMaxSongs)) {
         return fail(ErrorCode::LimitExceeded, u"A setlist can hold at most %1 songs"_s.arg(limits::kMaxSongs));
     }
@@ -310,7 +372,7 @@ Result<int> duplicatePatch(Setlist& setlist, Cursor cursor)
 
 Result<void> removeSong(Setlist& setlist, int songIndex)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     setlist.songs.erase(setlist.songs.begin() + songIndex);
     return {};
 }
@@ -337,7 +399,7 @@ Result<void> moveSong(Setlist& setlist, int from, int to)
 
 Result<void> movePatch(Setlist& setlist, int songIndex, int from, int to)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     auto& patches = setlist.songs.at(toIndex(songIndex)).patches;
     if (!inRange(from, patches.size()) || !inRange(to, patches.size())) return missing(u"Patch position"_s);
     moveElement(patches, from, to);
@@ -397,7 +459,7 @@ Result<void> setSongBackingTrack(Setlist& setlist, int songIndex, const QString&
 
 Result<void> setSongStems(Setlist& setlist, int songIndex, const std::vector<BackingStem>& stems)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     if (stems.size() > static_cast<std::size_t>(limits::kMaxStems)) {
         return fail(ErrorCode::LimitExceeded, u"A song can have at most %1 stems"_s.arg(limits::kMaxStems));
     }
@@ -416,7 +478,7 @@ Result<void> setSongStems(Setlist& setlist, int songIndex, const std::vector<Bac
 
 Result<void> setSongMarkers(Setlist& setlist, int songIndex, std::vector<TrackMarker> markers)
 {
-    if (!inRange(songIndex, setlist.songs.size())) return missing(u"Song %1"_s.arg(songIndex + 1));
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
     if (markers.size() > static_cast<std::size_t>(limits::kMaxTrackMarkers)) {
         return fail(ErrorCode::LimitExceeded, u"A song can have at most %1 markers"_s.arg(limits::kMaxTrackMarkers));
     }

@@ -32,6 +32,12 @@ Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early);
 Result<void> renameSongSection(Setlist& setlist, int songIndex, const QString& chart);
 // The order a song is played in (its sections, by name); empty: the chart's order.
 Result<void> setSongFlow(Setlist& setlist, int songIndex, const std::vector<SectionRef>& flow);
+// The song's chart with its sections written in the order its flow first
+// plays them, each once (those the flow leaves out after them, as written);
+// the gaps between sections stay where they are, and the flow and the
+// sections' instruments keep to each section. No flow, or already in its
+// order: the chart is left as it is.
+Result<void> arrangeSongChart(Setlist& setlist, int songIndex);
 // The inversion chosen for chord `chord` of a song (0 to 3); -1 forgets it.
 Result<void> setChordInversion(Setlist& setlist, int songIndex, const QString& chord, int inversion);
 // Loops start and stop on the bars (true) or press to press.

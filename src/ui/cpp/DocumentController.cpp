@@ -362,6 +362,9 @@ bool DocumentController::setSongFlow(const QVariantList& flow)
         parts.push_back(part);
     }
     if (auto r = core::setSongFlow(m_setlist, song, parts); !r) return report(r.error());
+    // The chart reads in the flow's order too (a part dragged: its section
+    // moves in the chart). Refused: the flow stands, the chart as it was, said.
+    if (auto r = core::arrangeSongChart(m_setlist, song); !r) report(r.error());
     setDirty(true);
     applySectionsToEngine(); // the timeline keeps to the new flow
     emit sectionsChanged();

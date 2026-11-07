@@ -19,6 +19,12 @@ Rectangle {
     required property DocumentController doc
     // Warming up (the warm-up's exercise falls) rather than the song.
     readonly property bool warming: view.warmup.active
+    // What is drawn, only while Practice is on screen: a song's notes are
+    // thousands of glowing bars, and each edit of its chart rebuilds them
+    // (made every edit in the chart freeze the screen while Practice was shut).
+    readonly property var shownNotes: view.visible ? view.practice.notes : []
+    readonly property var shownChords: view.visible ? view.practice.chords : []
+    readonly property int shownBars: view.visible ? Math.ceil(view.practice.length / Math.max(1, view.practice.beatsPerBar)) + 1 : 0
 
     color: "#05060a"
 
@@ -404,7 +410,7 @@ Rectangle {
 
             // A line at every bar; a section's name where it starts.
             Repeater {
-                model: Math.ceil(view.practice.length / Math.max(1, view.practice.beatsPerBar)) + 1
+                model: view.shownBars
                 delegate: Rectangle {
                     required property int index
                     readonly property real beat: index * view.practice.beatsPerBar
@@ -453,7 +459,7 @@ Rectangle {
             // The notes: glowing bars, brighter as they land.
             Repeater {
                 objectName: "practiceNotes"
-                model: view.practice.notes
+                model: view.shownNotes
                 delegate: Item {
                     id: fallingNote
                     required property var modelData
@@ -523,7 +529,7 @@ Rectangle {
 
             // Where a note lands: a beam of light up from its key and sparks.
             Repeater {
-                model: view.practice.notes
+                model: view.shownNotes
                 delegate: Item {
                     id: spark
                     required property var modelData
@@ -601,7 +607,7 @@ Rectangle {
 
             // The chords' names, beside their notes.
             Repeater {
-                model: view.practice.chords
+                model: view.shownChords
                 delegate: Text {
                     id: chordName
                     required property var modelData
