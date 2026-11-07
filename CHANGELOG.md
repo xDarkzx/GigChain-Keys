@@ -8,7 +8,7 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
-## [0.8.3] - 2026-11-07 (alpha)
+## [0.8.3] - 2026-11-08 (alpha)
 
 The chart moves with the flow, menus that open clean, Perform's parts take
 the chart there, and editing a long chart no longer freezes the screen.
