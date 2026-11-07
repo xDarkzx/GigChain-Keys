@@ -152,6 +152,11 @@ public:
     [[nodiscard]] QStringList recentFiles() const;
     [[nodiscard]] QVariantList recentSetlists() const;
     Q_INVOKABLE bool setSongChart(int song, const QString& chordPro);
+    // A song held on to while the songs change, move or go (a chart open as
+    // text): its key (its id; empty: no such song), and where it is now
+    // (-1: removed).
+    Q_INVOKABLE QString songKey(int song) const;
+    Q_INVOKABLE int songIndexOfKey(const QString& key) const;
     // Pasting a chord-site page: the site's clutter is removed, a song still
     // named "Song N" takes the sheet's title, and an unset key/tempo is filled.
     // All of it is one undo step.

@@ -2027,6 +2027,10 @@ private slots:
         QQuickItem* modeD = item(u"sawStackEnhanceMode_3"_s);
         QVERIFY(modeD != nullptr);
         QVERIFY(!modeD->property("selected").toBool());
+        // The dial lays out on its next frame (opened above the button, its
+        // settings move down once its height is known): clicked before then,
+        // the click lands where D is not yet (seen on a slow Mac runner).
+        settle();
         click(u"sawStackEnhanceMode_3"_s);
         QTRY_VERIFY(modeD->property("selected").toBool());
         shoot(u"saw-stack-pro-enhance"_s);
@@ -2443,6 +2447,125 @@ private slots:
         QTRY_COMPARE(doc.songIndex(), -1);
     }
 
+    // ⋯ > Edit as text, and the song changes before Done (a pedal, a program
+    // change, a click in the setlist): Done saves into the song the text was
+    // opened on, never over the song now shown. That song removed meanwhile:
+    // said, and the text stays in the editor.
+    void aChartTypedAsTextGoesToItsOwnSong()
+    {
+        ui::DocumentController& doc = m_session->document();
+        const QString first = u"{comment: Verse}\n[Am]First song"_s;
+        const QString second = u"{comment: Verse}\n[C]Second song"_s;
+        QVERIFY(doc.setSongChart(0, first));
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.setSongChart(1, second));
+        QVERIFY(doc.selectPatch(0, 0));
+        settle();
+        QQuickItem* scene = window()->contentItem();
+        auto* editor = findItem(scene, u"chartEditor"_s);
+        QVERIFY(editor != nullptr);
+        const auto openEditor = [this] {
+            click(u"chartMoreButton"_s);
+            QTRY_VERIFY(item(u"editAsTextItem"_s) != nullptr && item(u"editAsTextItem"_s)->isVisible());
+            QVERIFY(QMetaObject::invokeMethod(item(u"editAsTextItem"_s), "triggered"));
+            settle();
+        };
+        openEditor();
+        QVERIFY(editor->isVisible());
+        QCOMPARE(editor->property("text").toString(), first);
+        const QString typed = u"{comment: Verse}\n[Am]First song, [F]typed again"_s;
+        QVERIFY(editor->setProperty("text", typed));
+        QVERIFY(doc.selectPatch(1, 0)); // (no click: as a pedal does)
+        settle();
+        click(u"chartTextDone"_s);
+        settle();
+        QCOMPARE(doc.currentChart(), second);
+        QVERIFY(!editor->isVisible());
+        QVERIFY(doc.selectPatch(0, 0));
+        QCOMPARE(doc.currentChart(), typed);
+
+        // The song removed while its text is open: Done refuses, the text stays.
+        openEditor();
+        const QString again = u"{comment: Verse}\n[G]Kept here"_s;
+        QVERIFY(editor->setProperty("text", again));
+        QVERIFY(doc.removeSong(0));
+        settle();
+        QCOMPARE(doc.currentChart(), second);
+        click(u"chartTextDone"_s);
+        settle();
+        QCOMPARE(doc.currentChart(), second);
+        QVERIFY(editor->isVisible());
+        QCOMPARE(editor->property("text").toString(), again);
+        // Cancel: out of the editor, nothing saved.
+        click(u"chartTextCancel"_s);
+        settle();
+        QVERIFY(!editor->isVisible());
+        QCOMPARE(doc.currentChart(), second);
+    }
+
+    // Import file…, and the song changes while the file is being chosen (a
+    // pedal, a program change): the chart goes into the song it was chosen
+    // for, not the one shown when the file is picked.
+    void anImportedChartGoesToItsOwnSong()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.setSongChart(0, u"[Am]First"_s));
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.setSongChart(1, u"[C]Second"_s));
+        QVERIFY(doc.selectPatch(0, 0));
+        settle();
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        QFile file(folder.filePath(u"imported.txt"_s));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QVERIFY(file.write("{comment: Verse}\n[G]Imported words\n") > 0);
+        file.close();
+        auto* dialog = window()->findChild<QObject*>(u"chartImportDialog"_s);
+        QVERIFY(dialog != nullptr);
+        click(u"importChartButton"_s);
+        settle();
+        QVERIFY(doc.selectPatch(1, 0)); // (while the file is chosen)
+        QVERIFY(dialog->setProperty("selectedFile", QUrl::fromLocalFile(file.fileName())));
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        QVERIFY(QMetaObject::invokeMethod(dialog, "accepted"));
+        settle();
+        QCOMPARE(doc.currentChart(), u"[C]Second"_s);
+        QVERIFY(doc.selectPatch(0, 0));
+        QVERIFY2(doc.currentChart().contains(u"[G]Imported words"_s), qPrintable(doc.currentChart()));
+    }
+
+    // Stems… > Add stems…, and the song changes while the files are chosen:
+    // they go to the song they were chosen for.
+    void stemsGoToTheSongTheyWereChosenFor()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.selectPatch(0, 0));
+        QVERIFY(doc.saveAs(m_dir->filePath(u"Stems.gigchain.json"_s))); // (stems are kept in its folder)
+        QFile wav(m_dir->filePath(u"click.wav"_s));
+        QVERIFY(wav.open(QIODevice::WriteOnly));
+        QVERIFY(wav.write(QByteArray(64, '\0')) == 64);
+        wav.close();
+        settle();
+        auto* stems = window()->findChild<QObject*>(u"stemsDialog"_s);
+        auto* files = window()->findChild<QObject*>(u"stemFilesDialog"_s);
+        QVERIFY(stems != nullptr && files != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(stems, "open"));
+        settle();
+        click(u"addStem"_s);
+        settle();
+        QVERIFY(doc.selectPatch(1, 0)); // (while the files are chosen)
+        QVERIFY(QMetaObject::invokeMethod(files, "close"));
+        const QVariantList chosen{QUrl::fromLocalFile(wav.fileName())};
+        QVERIFY(QMetaObject::invokeMethod(files, "addChosen", Q_ARG(QVariant, QVariant(chosen))));
+        settle();
+        QCOMPARE(doc.songStems().size(), 0);
+        QVERIFY(doc.selectPatch(0, 0));
+        QCOMPARE(doc.songStems().size(), 1);
+        QVERIFY(QMetaObject::invokeMethod(stems, "close"));
+        settle();
+    }
+
     // Editing far down a long chart keeps the chart where it is (the lines
     // are built again with each edit: the view must not jump back up).
     void anEditDownAChartKeepsItsPlace()
@@ -2711,6 +2834,57 @@ private slots:
         QTest::keyClick(w, Qt::Key_Z, Qt::ControlModifier);
         settle();
         QCOMPARE(doc.currentChart(), u"{comment: Verse 1}\n[G]I found a love [D]for me\n[Em]Darling just dive [C]right in\n"_s);
+    }
+
+    // A chord being typed when the song changes with no click (a pedal, a
+    // program change, a key): what was typed goes to its own song, or
+    // nowhere, never into the next song's chart at the same line.
+    void aBoxOpenWhenTheSongChangesKeepsToItsSong()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        QVERIFY(root->setProperty("editKeyboardOpen", false));
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(w));
+        ui::DocumentController& doc = m_session->document();
+        const QString first = u"{comment: Verse}\nI need your love"_s;
+        const QString second = u"{comment: Verse}\nOther words go here"_s;
+        QVERIFY(doc.setSongChart(0, first));
+        QVERIFY(doc.addSong());
+        QVERIFY(doc.setSongChart(1, second));
+        QVERIFY(doc.selectPatch(0, 0));
+        settle();
+        QQuickItem* scene = w->contentItem();
+        const auto part = [scene](const QString& text, const QString& name) -> QQuickItem* {
+            QList<QQuickItem*> all;
+            findAll(scene, u"chartCell"_s, all);
+            const auto it = std::ranges::find_if(all, [&text](QQuickItem* c) { return c->property("modelData").toMap().value(u"text"_s).toString() == text; });
+            return it == all.end() ? nullptr : findItem(*it, name);
+        };
+        for (const bool word : {false, true}) {
+            QVERIFY(part(u"love"_s, u"chartWord"_s) != nullptr);
+            QTest::mouseClick(w, Qt::LeftButton, {}, centre(part(u"love"_s, u"chartWord"_s)).toPoint());
+            settle();
+            if (word) {
+                QTest::mouseDClick(w, Qt::LeftButton, {}, centre(part(u"love"_s, u"chartWord"_s)).toPoint());
+                QTRY_VERIFY(part(u"love"_s, u"wordEditInput"_s) != nullptr && part(u"love"_s, u"wordEditInput"_s)->hasActiveFocus());
+            } else {
+                QTest::mouseClick(w, Qt::LeftButton, {}, centre(part(u"love"_s, u"chordBox"_s)).toPoint());
+                QTRY_VERIFY(part(u"love"_s, u"chordEditInput"_s) != nullptr && part(u"love"_s, u"chordEditInput"_s)->hasActiveFocus());
+            }
+            for (const QChar c : u"Em"_s) QTest::keyClick(w, c.toLatin1());
+            QVERIFY(doc.selectPatch(1, 0)); // (no click: the box still has the keys)
+            settle();
+            QCOMPARE(doc.currentChart(), second);
+            QVERIFY(doc.selectPatch(0, 0));
+            settle();
+            const QString kept = doc.currentChart();
+            QVERIFY2(kept == first || kept == (word ? u"{comment: Verse}\nI need your Em"_s : u"{comment: Verse}\nI need your [Em]love"_s),
+                     qPrintable(kept));
+            QVERIFY(doc.setSongChart(0, first));
+            settle();
+        }
     }
 
     // The Chart tab edited as a player does it, with the mouse and keys, as

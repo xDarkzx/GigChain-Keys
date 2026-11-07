@@ -17,6 +17,10 @@ Rectangle {
     required property DocumentController doc
     required property EngineStatus engineStatus
     property bool editing: false // the ChordPro text editor (⋯ > Edit as text)
+    // The song the text editor was opened on (its key; "": no song yet). The
+    // song shown can change before Done (a pedal, a program change): the text
+    // is saved into its own song, never over the one now shown.
+    property string editedSong: ""
 
     readonly property bool empty: panel.doc.currentChart.trim() === ""
     // Typing in the words, a chord or a title: Ctrl+V pastes there, not a new chart.
@@ -39,9 +43,17 @@ Rectangle {
 
     FileDialog {
         id: importDialog
+        objectName: "chartImportDialog"
+        // The song it was opened for (its key; "": no song yet): the song
+        // shown can change while the file is chosen (a pedal, a program change).
+        property string song: ""
         title: qsTr("Import a chart")
         nameFilters: [qsTr("Chord charts (*.txt *.cho *.chopro *.chordpro *.crd *.pro *.onsong)"), qsTr("All files (*)")]
-        onAccepted: panel.doc.importChartFile(panel.doc.songIndex, selectedFile)
+        onAccepted: {
+            const at = song === "" ? -1 : panel.doc.songIndexOfKey(song)
+            if (song !== "" && at < 0) panel.doc.reportMessage(qsTr("The song this chart was chosen for has been removed: import it again"))
+            else panel.doc.importChartFile(at, selectedFile)
+        }
     }
 
     DropArea {
@@ -114,7 +126,10 @@ Rectangle {
                 objectName: "importChartButton"
                 text: qsTr("Import file…")
                 visible: !panel.editing
-                onClicked: importDialog.open()
+                onClicked: {
+                    importDialog.song = panel.doc.songKey(panel.doc.songIndex)
+                    importDialog.open()
+                }
             }
             StageButton {
                 objectName: "chartTextDone"
@@ -122,12 +137,26 @@ Rectangle {
                 text: qsTr("Done")
                 highlighted: true
                 onClicked: {
-                    // No song yet: the text makes the first one, as a paste
-                    // does. Refused (said): the text stays, to put right.
-                    const saved = panel.doc.songIndex >= 0 ? panel.doc.setSongChart(panel.doc.songIndex, editor.text)
-                                : editor.text.trim() === "" || panel.doc.pasteChart(-1, editor.text)
+                    // Into the song it was opened on. No song yet: the text
+                    // makes the first one, as a paste does. Refused (said),
+                    // or that song removed: the text stays, to put right.
+                    let saved = false
+                    if (panel.editedSong === "") {
+                        saved = editor.text.trim() === "" || panel.doc.pasteChart(-1, editor.text)
+                    } else {
+                        const song = panel.doc.songIndexOfKey(panel.editedSong)
+                        if (song >= 0) saved = panel.doc.setSongChart(song, editor.text)
+                        else panel.doc.reportMessage(qsTr("The song this chart was opened for has been removed. Copy the text to keep it, or Cancel."))
+                    }
                     if (saved) panel.editing = false
                 }
+            }
+            StageButton {
+                objectName: "chartTextCancel"
+                visible: panel.editing
+                text: qsTr("Cancel")
+                tip: qsTr("Close the text without saving it")
+                onClicked: panel.editing = false
             }
             StageButton {
                 objectName: "chartMoreButton"
@@ -142,6 +171,7 @@ Rectangle {
                         text: qsTr("Edit as text (ChordPro)")
                         onTriggered: {
                             editor.text = panel.doc.currentChart
+                            panel.editedSong = panel.doc.songKey(panel.doc.songIndex)
                             panel.editing = true
                         }
                     }

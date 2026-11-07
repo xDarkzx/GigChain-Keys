@@ -7,6 +7,8 @@
 #include <QJsonObject>
 #include <QtTest>
 
+#include <array>
+
 using namespace gigchain::core;
 using namespace Qt::StringLiterals;
 
@@ -638,6 +640,63 @@ private slots:
         const auto bad = withPatch(patch);
         QVERIFY(!bad.has_value());
         QVERIFY2(bad.error().message.contains(u"playMode"_s), qPrintable(bad.error().message));
+    }
+
+    // A setlist file damaged anywhere (a value of the wrong kind, a key gone,
+    // a number at its extremes, an array emptied or doubled), as a disk, a
+    // sync or a hand edit can leave it: it opens or is refused with a reason,
+    // never a crash; what opens is a setlist that saves and opens the same.
+    void aDamagedFileOpensOrIsRefusedSaid()
+    {
+        QRandomGenerator random(20261108); // (fixed: a failure can be run again)
+        const QJsonObject rich = richJson();
+        int opened = 0;
+        for (int round = 0; round < 3000; ++round) {
+            QJsonValue damaged = rich;
+            for (int n = 1 + random.bounded(3); n > 0; --n) damaged = damage(damaged, random);
+            const QByteArray bytes = QJsonDocument(damaged.toObject()).toJson();
+            const auto read = fromJson(bytes);
+            if (!read) {
+                QVERIFY2(!read.error().message.isEmpty(), qPrintable(u"round %1: refused, unsaid"_s.arg(round)));
+                continue;
+            }
+            ++opened;
+            const auto again = fromJson(toJson(*read));
+            QVERIFY2(again.has_value(), qPrintable(u"round %1: saved, then refused: %2\n%3"_s.arg(round)
+                                                       .arg(again ? QString() : again.error().message, QString::fromUtf8(bytes))));
+            QVERIFY2(*again == *read, qPrintable(u"round %1: opens differently once saved\n%2"_s.arg(round).arg(QString::fromUtf8(bytes))));
+        }
+        QVERIFY2(opened > 100 && opened < 2900, qPrintable(u"opened %1 of 3000"_s.arg(opened))); // (both happen)
+    }
+
+private:
+    // `value` with one thing in it damaged, somewhere down a random path.
+    static QJsonValue damage(const QJsonValue& value, QRandomGenerator& random)
+    {
+        if (value.isObject() && !value.toObject().isEmpty() && random.bounded(5) != 0) {
+            QJsonObject object = value.toObject();
+            const QString key = object.keys().at(random.bounded(static_cast<int>(object.size())));
+            if (random.bounded(8) == 0) object.remove(key);
+            else object.insert(key, damage(object.value(key), random));
+            return object;
+        }
+        if (value.isArray() && !value.toArray().isEmpty() && random.bounded(5) != 0) {
+            QJsonArray array = value.toArray();
+            const int at = random.bounded(static_cast<int>(array.size()));
+            switch (random.bounded(10)) {
+            case 0: array.removeAt(at); break;
+            case 1: array.append(array.at(at)); break; // (the same ids twice)
+            default: array.replace(at, damage(array.at(at), random)); break;
+            }
+            return array;
+        }
+        const std::array others{
+            QJsonValue(), QJsonValue(true), QJsonValue(-1), QJsonValue(0), QJsonValue(1e308), QJsonValue(-1e308),
+            QJsonValue(2147483648.0), QJsonValue(0.5), QJsonValue(u""_s), QJsonValue(QString(5000, u'x')),
+            QJsonValue(u"Verse"_s), QJsonValue(QJsonArray()), QJsonValue(QJsonObject()),
+            QJsonValue(random.bounded(-5, 200)), QJsonValue(QJsonArray{1, u"a"_s, QJsonValue()}),
+        };
+        return others.at(static_cast<std::size_t>(random.bounded(static_cast<int>(others.size()))));
     }
 };
 

@@ -151,4 +151,7 @@ change on, and a line like *{comment: Chorus}* starts a section:
 ```
 
 Click **Done** to go back. With no song yet (a new setlist), Done makes the
-first song from what you typed, named from its *{title: …}*.
+first song from what you typed, named from its *{title: …}*. **Cancel**
+goes back without saving. The text belongs to the song it was opened on:
+if the song shown changes before Done (a pedal, a program change), Done
+still saves it into its own song.

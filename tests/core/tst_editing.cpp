@@ -2,7 +2,10 @@
 #include "gigchain/core/Chart.h"
 #include "gigchain/core/Editing.h"
 #include "gigchain/core/Limits.h"
+#include "gigchain/core/SongMap.h"
 #include "gigchain/core/Validation.h"
+
+#include <algorithm>
 
 #include <QtTest>
 
@@ -320,6 +323,107 @@ private slots:
         QCOMPARE(song.chart, u"{start_of_chorus}\n[C]b\n{end_of_chorus}\n{start_of_verse: Verse}\n[Am]a\n{end_of_verse}\n"_s);
         QCOMPARE(song.flow.at(0).name, u"Gone"_s);
         QCOMPARE(chartSections(parseChordPro(song.chart)).at(0).name, sections.at(1).name);
+    }
+
+    // Charts of every shape put in a flow's order: no line is lost or made,
+    // each part of the flow and each section's setup still name the same
+    // music, the sections stand in the flow's order, and again changes nothing.
+    void anyChartKeepsItsMusicPutInTheFlowsOrder()
+    {
+        QRandomGenerator random(20261108); // (fixed: a failure can be run again)
+        const QStringList names{u"Verse"_s, u"Chorus"_s, u"Bridge"_s, u"Intro"_s};
+        for (int round = 0; round < 400; ++round) {
+            // The chart: maybe a title and a line first, then sections written
+            // as a comment or as a ChordPro block, each with its own lines and a gap.
+            QStringList text;
+            if (random.bounded(2) == 1) text << u"{title: Song %1}"_s.arg(round);
+            if (random.bounded(3) == 0) text << u"[D]before"_s;
+            const int count = 1 + random.bounded(7);
+            for (int s = 0; s < count; ++s) {
+                const QString& name = names.at(random.bounded(static_cast<int>(names.size())));
+                const bool block = random.bounded(3) == 0;
+                text << (block ? u"{start_of_part: %1}"_s.arg(name) : u"{comment: %1}"_s.arg(name));
+                for (int l = random.bounded(4); l > 0; --l) text << u"[C]s%1 line %2"_s.arg(s).arg(l);
+                if (block) text << u"{end_of_part}"_s;
+                for (int g = random.bounded(3); g > 0; --g) text << QString();
+            }
+            Setlist s = abc();
+            Song& song = s.songs.at(0);
+            song.chart = text.join(u'\n');
+            const std::vector<ChartSection> sections = chartSections(parseChordPro(song.chart));
+            QCOMPARE(static_cast<int>(sections.size()), count);
+            const auto refTo = [&sections](int at) {
+                return SectionRef{.name = sections.at(static_cast<std::size_t>(at)).name,
+                                  .occurrence = sections.at(static_cast<std::size_t>(at)).occurrence};
+            };
+            for (int p = 1 + random.bounded(8); p > 0; --p) {
+                song.flow.push_back(random.bounded(10) == 0 ? SectionRef{.name = u"Gone"_s, .occurrence = 1}
+                                                            : refTo(random.bounded(count)));
+            }
+            for (int at = 0; at < count; ++at) {
+                if (random.bounded(2) == 0) continue;
+                const SectionRef ref = refTo(at);
+                song.sections.push_back(SectionSetup{.name = ref.name, .occurrence = ref.occurrence, .bars = 100 + at,
+                                                     .assigned = true, .channels = {}});
+            }
+            const QString before = song.chart;
+            const std::vector<SectionRef> flowBefore = song.flow;
+            const std::vector<SectionSetup> setupsBefore = song.sections;
+
+            const QString seed = u"round %1:\n%2"_s.arg(round).arg(before);
+            QVERIFY2(arrangeSongChart(s, 0).has_value(), qPrintable(seed));
+            QStringList linesBefore = before.split(u'\n');
+            QStringList linesAfter = song.chart.split(u'\n');
+            linesBefore.sort();
+            linesAfter.sort();
+            QVERIFY2(linesAfter == linesBefore, qPrintable(seed));
+            QCOMPARE(song.flow.size(), flowBefore.size());
+            for (std::size_t p = 0; p < flowBefore.size(); ++p) {
+                QVERIFY2(musicOf(song.chart, song.flow.at(p)) == musicOf(before, flowBefore.at(p)), qPrintable(seed));
+            }
+            QCOMPARE(song.sections.size(), setupsBefore.size());
+            for (std::size_t i = 0; i < setupsBefore.size(); ++i) {
+                const SectionSetup& was = setupsBefore.at(i);
+                const SectionSetup& now = song.sections.at(i);
+                QCOMPARE(now.bars, was.bars);
+                QVERIFY2(musicOf(song.chart, {.name = now.name, .occurrence = now.occurrence})
+                             == musicOf(before, {.name = was.name, .occurrence = was.occurrence}),
+                         qPrintable(seed));
+            }
+            // The sections the flow plays come first, in the order it first plays them.
+            const std::vector<ChartSection> arranged = chartSections(parseChordPro(song.chart));
+            int next = 0;
+            std::vector<int> seen;
+            for (const SectionRef& part : song.flow) {
+                const int at = sectionIndexOf(arranged, part);
+                if (at < 0 || std::ranges::find(seen, at) != seen.end()) continue;
+                QVERIFY2(at == next, qPrintable(seed));
+                seen.push_back(at);
+                ++next;
+            }
+            const QString once = song.chart;
+            QVERIFY(arrangeSongChart(s, 0).has_value());
+            QVERIFY2(song.chart == once, qPrintable(seed));
+        }
+    }
+
+private:
+    // A section's music: its lines from its title to the next one's, without
+    // the gap closing it. Empty: no such section.
+    static QString musicOf(const QString& text, const SectionRef& ref)
+    {
+        const Chart chart = parseChordPro(text);
+        const std::vector<ChartSection> sections = chartSections(chart);
+        const int at = sectionIndexOf(sections, ref);
+        if (at < 0) return {};
+        const auto first = static_cast<std::size_t>(sections.at(static_cast<std::size_t>(at)).line);
+        std::size_t end = static_cast<std::size_t>(at) + 1 < sections.size()
+                              ? static_cast<std::size_t>(sections.at(static_cast<std::size_t>(at) + 1).line)
+                              : chart.lines.size();
+        while (end > first + 1 && chart.lines.at(end - 1).kind == ChartLine::Kind::Blank) --end;
+        QStringList lines;
+        for (std::size_t l = first; l < end; ++l) lines << chart.lines.at(l).source;
+        return lines.join(u'\n');
     }
 };
 

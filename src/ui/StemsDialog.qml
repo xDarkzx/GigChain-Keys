@@ -100,7 +100,10 @@ StageDialog {
                 text: qsTr("Add stems…")
                 iconSource: "icons/plus.svg"
                 enabled: dialog.doc.songStems.length < 8
-                onClicked: stemFiles.open()
+                onClicked: {
+                    stemFiles.song = dialog.doc.songKey(dialog.doc.songIndex)
+                    stemFiles.open()
+                }
             }
             Item { Layout.fillWidth: true }
             StageButton {
@@ -113,12 +116,22 @@ StageDialog {
 
     FileDialog {
         id: stemFiles
+        objectName: "stemFilesDialog"
+        // The song they were chosen for (its key): the song shown can change
+        // while the files are chosen (a pedal, a program change).
+        property string song: ""
         title: qsTr("Stems")
         fileMode: FileDialog.OpenFiles
         nameFilters: [qsTr("Audio files (*.wav *.mp3 *.flac *.m4a *.aac *.ogg *.aiff *.aif)"), qsTr("All files (*)")]
-        onAccepted: {
-            for (const file of selectedFiles) {
-                if (!dialog.doc.addSongStem(dialog.doc.songIndex, file)) break // (why: in the banner)
+        onAccepted: stemFiles.addChosen(selectedFiles)
+        function addChosen(files) {
+            const at = dialog.doc.songIndexOfKey(stemFiles.song)
+            if (at < 0) {
+                dialog.doc.reportMessage(qsTr("The song these stems were chosen for has been removed"))
+                return
+            }
+            for (const file of files) {
+                if (!dialog.doc.addSongStem(at, file)) break // (why: in the banner)
             }
         }
     }

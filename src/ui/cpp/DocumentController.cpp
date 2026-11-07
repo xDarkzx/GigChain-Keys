@@ -220,6 +220,19 @@ bool DocumentController::setSongChart(int song, const QString& chordPro)
     return true;
 }
 
+QString DocumentController::songKey(int song) const
+{
+    if (song < 0 || std::cmp_greater_equal(song, m_setlist.songs.size())) return {};
+    return m_setlist.songs.at(static_cast<std::size_t>(song)).id.value();
+}
+
+int DocumentController::songIndexOfKey(const QString& key) const
+{
+    if (key.isEmpty()) return -1;
+    const auto found = std::ranges::find_if(m_setlist.songs, [&key](const core::Song& s) { return s.id.value() == key; });
+    return found == m_setlist.songs.end() ? -1 : static_cast<int>(found - m_setlist.songs.begin());
+}
+
 bool DocumentController::applyChartEdit(const core::Result<QString>& edited, const QString& coalesceKey)
 {
     if (!edited) return report(edited.error());

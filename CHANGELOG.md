@@ -39,12 +39,23 @@ these (and #25, #27-#30) with videos and logs.
   exist* and the text was lost. A chart that cannot be saved now keeps the
   editor open with the text in it, and no song at all is said as *There is
   no song yet*.
+- **A chart's text stays with its own song.** With ⋯ > **Edit as text**
+  open, a song changed by a pedal, a program change or the setlist, **Done**
+  wrote the text over the song then shown. It now goes into the song it was
+  opened on (that song removed meanwhile: said, and the text stays). The
+  same for **Import file…** and **Add stems…**: what is picked goes to the
+  song it was picked for, even when the song changed while choosing.
+- **A chord or word being typed stays with its own song.** A song changed
+  with no click while a chord or a word was half typed put it into the next
+  song's chart, at the same place. It is now let go, as **Esc** does.
 
 ### Added
 
 - **Perform's parts take the chart there** ([#34](https://github.com/xDarkzx/GigChain-Keys/issues/34)):
   tap a part's tile and the chart goes to it, at once when stopped, and
   when the part comes in while playing.
+- **Cancel** beside **Done** in ⋯ > **Edit as text**: out of the text
+  without saving it.
 
 ## [0.8.2] - 2026-11-06 (alpha)
 
