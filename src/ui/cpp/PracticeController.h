@@ -182,6 +182,7 @@ private:
     double m_scheduledTo = 0.0; // Listen: notes are timed up to here (practice beats, this lap)
     double m_lapScheduled = 0.0; // looping: beats of the next lap already timed (from the loop's start)
     double m_restoreTempo = 0.0; // the engine's tempo before practice set its own; 0: not set
+    double m_appliedTempo = 0.0; // the tempo practice set (another since: a song's own, left as it is)
 };
 
 } // namespace gigchain::ui

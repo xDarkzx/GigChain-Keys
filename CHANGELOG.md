@@ -48,6 +48,20 @@ these (and #25, #27-#30) with videos and logs.
 - **A chord or word being typed stays with its own song.** A song changed
   with no click while a chord or a word was half typed put it into the next
   song's chart, at the same place. It is now let go, as **Esc** does.
+- **Removing a section's title keeps the others' instruments.** In a chart
+  with two choruses, removing the first one's title gave the second one the
+  first one's instruments, and its places in the flow. Each section now keeps
+  its own; the one removed leaves the flow. The same for a note made a
+  section in the middle of a chart.
+- **Save As keeps the backing tracks and stems.** Saved into another folder
+  (a USB stick for the gig), a setlist played none of them: they stayed in
+  the old folder. They are copied with it now; anything that cannot be is
+  said.
+- **Practice keeps each song's tempo.** Practising slower and then picking
+  another song left that song at the last one's tempo. Changing sound while
+  practising no longer stops Practice and sends it back to the start.
+- **Perform keeps your place when the sound changes.** A sound picked with a
+  pedal threw the chart back to the top of the song.
 
 ### Added
 

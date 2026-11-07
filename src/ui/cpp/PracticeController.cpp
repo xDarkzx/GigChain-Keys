@@ -72,12 +72,6 @@ void PracticeController::clearExercise()
 void PracticeController::rebuild()
 {
     if (m_exercise) return; // (the song's notes come back with clearExercise)
-    // (Stopped as a pause: its notes let go, the click's tempo back.)
-    m_timer.stop();
-    releaseAll();
-    restoreTempo();
-    m_locked = false;
-    setPlaying(false);
     const core::Chart chart = core::parseChordPro(m_document.currentChart());
     // (The song's flow; each chord as written: the same one twice is played twice, each for its time.)
     const core::SongMap map = core::buildSongMap(chart, m_document.currentSongFlow(), false);
@@ -89,13 +83,28 @@ void PracticeController::rebuild()
         names << s.value(u"name"_s).toString();
     }
     const int beats = m_document.songTimeNumerator() > 0 ? m_document.songTimeNumerator() : 4;
-    // The song's tempo; a song without one: the tempo playing (the click's).
-    m_tempo = m_document.songTempo() > 0.0 ? m_document.songTempo() : m_engine.tempo();
-    if (m_tempo <= 0.0) m_tempo = 120.0;
-    m_style.chosen.clear();
+    // The song's tempo; a song without one: the tempo it was practised at
+    // (while playing, the engine's is practice's own), else the click's.
+    double songTempo = m_document.songTempo() > 0.0 ? m_document.songTempo() : m_engine.tempo();
+    if (m_document.songTempo() <= 0.0 && m_restoreTempo > 0.0) songTempo = m_tempo;
+    if (songTempo <= 0.0) songTempo = 120.0;
+    core::VoicingStyle style = m_style;
+    style.chosen.clear();
     const QVariantMap chosen = m_document.currentChordInversions();
-    for (auto it = chosen.begin(); it != chosen.end(); ++it) m_style.chosen[it.key()] = it.value().toInt();
-    m_timeline = core::practiceTimeline(map, bars, names, beats, m_style);
+    for (auto it = chosen.begin(); it != chosen.end(); ++it) style.chosen[it.key()] = it.value().toInt();
+    core::PracticeTimeline timeline = core::practiceTimeline(map, bars, names, beats, style);
+    // Nothing practice plays changed (another sound of the song picked, a
+    // channel renamed): it plays on. (It stopped and went back to the start.)
+    if (timeline == m_timeline && qFuzzyCompare(songTempo, m_tempo) && style.chosen == m_style.chosen) return;
+    // (Stopped as a pause: its notes let go, the click's tempo back.)
+    m_timer.stop();
+    releaseAll();
+    restoreTempo();
+    m_locked = false;
+    setPlaying(false);
+    m_tempo = songTempo;
+    m_style = style;
+    m_timeline = std::move(timeline);
     publishTimeline();
 }
 
@@ -341,13 +350,19 @@ void PracticeController::applyTempo()
     if (m_restoreTempo <= 0.0) m_restoreTempo = m_engine.tempo();
     const double wanted = std::clamp(m_tempo * m_speed, 20.0, 400.0);
     if (std::abs(m_engine.tempo() - wanted) > 1e-6) m_engine.setTempo(wanted);
+    m_appliedTempo = wanted;
 }
 
 void PracticeController::restoreTempo()
 {
     if (m_restoreTempo <= 0.0) return;
-    if (std::abs(m_engine.tempo() - m_restoreTempo) > 1e-6) m_engine.setTempo(m_restoreTempo);
+    // Only practice's own tempo is put back: another song picked meanwhile
+    // set its own (a pedal, while practising), and keeps it. (It was put
+    // back to the last song's.)
+    const bool stillOurs = std::abs(m_engine.tempo() - m_appliedTempo) <= 1e-6;
+    if (stillOurs && std::abs(m_engine.tempo() - m_restoreTempo) > 1e-6) m_engine.setTempo(m_restoreTempo);
     m_restoreTempo = 0.0;
+    m_appliedTempo = 0.0;
 }
 
 void PracticeController::follow()

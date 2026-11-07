@@ -30,6 +30,12 @@ Result<void> setSongSwitchEarly(Setlist& setlist, int songIndex, bool early);
 // The song's chart with a section renamed (renameSection()'s result): its
 // flow and its sections' instruments keep to each section, by its place.
 Result<void> renameSongSection(Setlist& setlist, int songIndex, const QString& chart);
+// The song's chart with the title at `line` taken out (removeSectionTitle():
+// its lines join the section above). Each other section keeps its place in
+// the flow and its instruments under its new name or number (a second
+// chorus is the first now); the parts that played the one taken out leave
+// the flow, and its instruments go.
+Result<void> removeSongSection(Setlist& setlist, int songIndex, int line);
 // The order a song is played in (its sections, by name); empty: the chart's order.
 Result<void> setSongFlow(Setlist& setlist, int songIndex, const std::vector<SectionRef>& flow);
 // The song's chart with its sections written in the order its flow first

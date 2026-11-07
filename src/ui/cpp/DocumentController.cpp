@@ -464,7 +464,14 @@ bool DocumentController::renameChartSection(int line, const QString& label)
 
 bool DocumentController::removeChartSection(int line)
 {
-    return applyChartEdit(core::removeSectionTitle(currentChart(), line), {});
+    // (The other sections keep their places in the flow and their
+    // instruments under their new numbers; the one taken out leaves both.)
+    if (auto r = core::removeSongSection(m_setlist, m_cursor.song, line); !r) return report(r.error());
+    m_coalesceKey.clear(); // a step of its own
+    setDirty(true);
+    applySectionsToEngine(); // (and sectionsChanged)
+    emit chartChanged();
+    return true;
 }
 
 bool DocumentController::addChartSection(const QString& label)
@@ -2399,7 +2406,12 @@ bool DocumentController::saveAs(const QString& path)
         target += branding::setlistSuffix();
     }
     // Each plugin's settings (preset, knobs) are saved with it.
-    const std::vector<QString> problems = m_engine.storePluginStates(m_setlist); // each logged
+    std::vector<QString> problems = m_engine.storePluginStates(m_setlist); // each logged
+    // Saved into another folder: the backing tracks and stems go with it
+    // (they are kept by name in the setlist's folder; left behind, the copy
+    // played none of them).
+    const std::vector<QString> media = copyMediaTo(QFileInfo(target).absoluteDir());
+    problems.insert(problems.end(), media.begin(), media.end());
     if (auto r = core::saveSetlistFile(m_setlist, target); !r) return report(r.error());
     setFilePath(target);
     rememberRecent(target);
@@ -2412,6 +2424,35 @@ bool DocumentController::saveAs(const QString& path)
                       Notifications::Warning);
     }
     return true;
+}
+
+std::vector<QString> DocumentController::copyMediaTo(const QDir& folder) const
+{
+    std::vector<QString> problems;
+    if (m_filePath.isEmpty()) return problems; // never saved: nothing kept anywhere yet
+    const QDir from = QFileInfo(m_filePath).absoluteDir();
+    if (from.absolutePath() == folder.absolutePath()) return problems;
+    std::set<QString> names;
+    for (const core::Song& song : m_setlist.songs) {
+        if (!song.backingTrack.isEmpty()) names.insert(song.backingTrack);
+        std::ranges::transform(song.stems, std::inserter(names, names.end()), &core::BackingStem::file);
+    }
+    for (const QString& name : names) {
+        const QFileInfo source(from.filePath(name));
+        const QFileInfo target(folder.filePath(name));
+        QString problem;
+        if (!source.exists()) {
+            problem = tr("%1 was not in the setlist's folder, so it could not go with it").arg(name);
+        } else if (target.exists()) {
+            if (target.size() != source.size()) problem = tr("the new folder already has a different %1 (kept as it is)").arg(name);
+        } else if (!QFile::copy(source.absoluteFilePath(), target.absoluteFilePath())) {
+            problem = tr("%1 could not be copied to the new folder").arg(name);
+        }
+        if (problem.isEmpty()) continue;
+        qCWarning(lcUi).noquote() << "Save As:" << problem;
+        problems.push_back(problem);
+    }
+    return problems;
 }
 
 bool DocumentController::saveAsUrl(const QUrl& url)

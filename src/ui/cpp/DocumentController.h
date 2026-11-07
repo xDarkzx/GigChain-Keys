@@ -8,6 +8,7 @@
 #include "gigchain/core/SongMap.h"
 #include "gigchain/engine/EngineTypes.h"
 
+#include <QDir>
 #include <QObject>
 #include <QVariantList>
 #include <QString>
@@ -401,6 +402,9 @@ public:
     Q_INVOKABLE bool save();
     Q_INVOKABLE bool saveAs(const QString& path);
     Q_INVOKABLE bool saveAsUrl(const QUrl& url);
+    // The backing tracks and stems copied from the setlist's folder to
+    // `folder` (Save As elsewhere); what could not go, each said.
+    [[nodiscard]] std::vector<QString> copyMediaTo(const QDir& folder) const;
     // On start: reopens the last opened file, only when the user chose that
     // in Settings (off by default: the start screen shows). A failure is
     // reported, and no setlist is made up in its place.

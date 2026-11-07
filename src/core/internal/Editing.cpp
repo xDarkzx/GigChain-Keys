@@ -1,6 +1,7 @@
 #include "gigchain/core/Editing.h"
 
 #include "gigchain/core/Chart.h"
+#include "gigchain/core/ChartEdit.h"
 #include "gigchain/core/Limits.h"
 #include "gigchain/core/PluginSharing.h"
 #include "gigchain/core/SongMap.h"
@@ -192,10 +193,56 @@ Result<void> renameSongSection(Setlist& setlist, int songIndex, const QString& c
     const std::vector<ChartSection> before = chartSections(parseChordPro(song.chart));
     if (auto r = setSongChart(setlist, songIndex, chart); !r) return r;
     const std::vector<ChartSection> after = chartSections(parseChordPro(song.chart));
-    if (after.size() != before.size()) return {}; // not a rename: nothing to carry over
+    // A note made a section (one more): the sections after it are one further on.
+    int added = -1;
+    if (after.size() == before.size() + 1) {
+        for (std::size_t s = 0; s < after.size(); ++s) {
+            if (s >= before.size() || after.at(s).line != before.at(s).line) {
+                added = static_cast<int>(s);
+                break;
+            }
+        }
+    } else if (after.size() != before.size()) {
+        return {}; // not a rename: nothing to carry over
+    }
     // What named the section at a place names it there still.
     const auto follow = [&](QString& name, int& occurrence) {
+        int at = sectionIndexOf(before, SectionRef{.name = name, .occurrence = occurrence});
+        if (at < 0) return;
+        if (added >= 0 && at >= added) ++at;
+        name = after.at(toIndex(at)).name;
+        occurrence = after.at(toIndex(at)).occurrence;
+    };
+    for (SectionRef& part : song.flow) follow(part.name, part.occurrence);
+    for (SectionSetup& section : song.sections) follow(section.name, section.occurrence);
+    return {};
+}
+
+Result<void> removeSongSection(Setlist& setlist, int songIndex, int line)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
+    Song& song = setlist.songs.at(toIndex(songIndex));
+    auto edited = removeSectionTitle(song.chart, line);
+    if (!edited) return tl::unexpected(edited.error());
+    const std::vector<ChartSection> before = chartSections(parseChordPro(song.chart));
+    const auto gone = std::ranges::find_if(before, [line](const ChartSection& s) { return s.line == line; });
+    if (auto r = setSongChart(setlist, songIndex, *edited); !r) return r;
+    if (gone == before.end()) return {}; // a note, not a section: nothing names it
+    const auto removed = static_cast<int>(gone - before.begin());
+    const std::vector<ChartSection> after = chartSections(parseChordPro(song.chart));
+    if (after.size() + 1 != before.size()) return {}; // (read differently: nothing to carry over)
+    // Where what named a section at a place names it now; -1: the one taken out.
+    const auto now = [&](const QString& name, int occurrence) {
         const int at = sectionIndexOf(before, SectionRef{.name = name, .occurrence = occurrence});
+        if (at < 0) return -2; // named nothing before either: left as it is
+        if (at == removed) return -1;
+        return at > removed ? at - 1 : at;
+    };
+    std::erase_if(song.flow, [&](const SectionRef& part) { return now(part.name, part.occurrence) == -1; });
+    std::erase_if(song.sections, [&](const SectionSetup& s) { return now(s.name, s.occurrence) == -1; });
+    // (Each looked up by its old name in `before`: one renamed is never taken for another.)
+    const auto follow = [&](QString& name, int& occurrence) {
+        const int at = now(name, occurrence);
         if (at < 0) return;
         name = after.at(toIndex(at)).name;
         occurrence = after.at(toIndex(at)).occurrence;
