@@ -5,8 +5,10 @@
 #include <QAudioBuffer>
 #include <QAudioDecoder>
 #include <QAudioFormat>
+#include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFileInfo>
+#include <QTimer>
 #include <QUrl>
 
 #include <algorithm>
@@ -19,14 +21,31 @@ using namespace Qt::StringLiterals;
 namespace gigchain::engine {
 namespace {
 
-// Runs `decoder` on `path` until it finishes, fails, or `onBuffer` says to
-// stop (returns false). Returns what went wrong, or an empty string.
-QString runDecoder(QAudioDecoder& decoder, const QString& path, const std::function<bool(const QAudioBuffer&)>& onBuffer)
+// How long a decoder may say nothing (no audio, no end, no error) before it
+// is given up on. Qt's FFmpeg decoder can fail to set up its resampler and
+// then go silent for good; waiting on it held a piano's read, and quitting,
+// forever.
+constexpr qint64 kSilentLimitMs = 10'000;
+
+struct DecodeEnd
 {
-    QString problem;
+    QString problem; // what went wrong, or empty
+    bool stalled = false; // the decoder went silent (worth one more try)
+};
+
+// Runs `decoder` on `path` until it finishes, fails, or `onBuffer` says to
+// stop (returns false). Never waits forever: `cancel` stops it within a tenth
+// of a second, and a decoder silent for kSilentLimitMs is stopped as stalled.
+DecodeEnd runDecoder(QAudioDecoder& decoder, const QString& path, const std::atomic<bool>* cancel,
+                     const std::function<bool(const QAudioBuffer&)>& onBuffer)
+{
+    DecodeEnd end;
+    QString& problem = end.problem;
     decoder.setSource(QUrl::fromLocalFile(path));
     QEventLoop loop;
+    QElapsedTimer quiet;
     QObject::connect(&decoder, &QAudioDecoder::bufferReady, &loop, [&] {
+        quiet.restart();
         while (decoder.bufferAvailable()) {
             const QAudioBuffer buffer = decoder.read();
             if (buffer.isValid() && !onBuffer(buffer)) {
@@ -41,15 +60,34 @@ QString runDecoder(QAudioDecoder& decoder, const QString& path, const std::funct
         problem = decoder.errorString().isEmpty() ? u"it could not be decoded"_s : decoder.errorString();
         loop.quit();
     });
+    QTimer watch;
+    watch.setInterval(100);
+    QObject::connect(&watch, &QTimer::timeout, &loop, [&] {
+        const bool cancelled = cancel != nullptr && cancel->load(std::memory_order_relaxed);
+        if (!cancelled && !quiet.hasExpired(kSilentLimitMs)) return;
+        decoder.stop();
+        // (after stop(), which may say an error of its own: this is the cause)
+        problem = cancelled ? u"reading it was cancelled"_s : u"the decoder stopped answering"_s;
+        end.stalled = !cancelled;
+        loop.quit();
+    });
     decoder.start();
-    if (decoder.error() != QAudioDecoder::NoError) return decoder.errorString();
+    if (decoder.error() != QAudioDecoder::NoError) {
+        problem = decoder.errorString();
+        return end;
+    }
+    quiet.start();
+    watch.start();
     loop.exec();
-    return problem;
+    return end;
 }
 
 } // namespace
 
-core::Result<AudioClip> decodeAudioFile(const QString& path, double sampleRate, const std::atomic<bool>* cancel)
+namespace {
+
+// One try at decodeAudioFile(); `stalled` set when the decoder went silent.
+core::Result<AudioClip> decodeAudioFileOnce(const QString& path, double sampleRate, const std::atomic<bool>* cancel, bool& stalled)
 {
     if (!QFileInfo::exists(path)) return core::fail(core::ErrorCode::FileNotFound, u"Backing track not found: %1"_s.arg(path));
     if (!std::isfinite(sampleRate) || sampleRate <= 0.0) {
@@ -63,10 +101,12 @@ core::Result<AudioClip> decodeAudioFile(const QString& path, double sampleRate, 
     int sourceChannels = 0;
     {
         QAudioDecoder probe;
-        const QString problem = runDecoder(probe, path, [&sourceChannels](const QAudioBuffer& buffer) {
+        const DecodeEnd probed = runDecoder(probe, path, cancel, [&sourceChannels](const QAudioBuffer& buffer) {
             sourceChannels = buffer.format().channelCount();
             return false; // one buffer tells
         });
+        stalled = probed.stalled;
+        const QString& problem = probed.problem;
         if (sourceChannels <= 0) {
             return core::fail(core::ErrorCode::InvalidData,
                               u"Cannot play %1: %2"_s.arg(name, problem.isEmpty() ? u"it holds no audio"_s : problem));
@@ -87,7 +127,7 @@ core::Result<AudioClip> decodeAudioFile(const QString& path, double sampleRate, 
 
     QAudioDecoder decoder;
     decoder.setAudioFormat(format);
-    QString problem = runDecoder(decoder, path, [&](const QAudioBuffer& buffer) {
+    const DecodeEnd decoded = runDecoder(decoder, path, cancel, [&](const QAudioBuffer& buffer) {
         if (buffer.format().sampleFormat() != QAudioFormat::Float || buffer.format().channelCount() != channels) {
             stopped = u"it came out in an unexpected sample format"_s;
             return false;
@@ -109,6 +149,8 @@ core::Result<AudioClip> decodeAudioFile(const QString& path, double sampleRate, 
         }
         return true;
     });
+    stalled = decoded.stalled;
+    QString problem = decoded.problem;
     if (!stopped.isEmpty()) problem = stopped;
 
     if (!problem.isEmpty()) return core::fail(core::ErrorCode::InvalidData, u"Cannot play %1: %2"_s.arg(name, problem));
@@ -118,7 +160,9 @@ core::Result<AudioClip> decodeAudioFile(const QString& path, double sampleRate, 
     return clip;
 }
 
-core::Result<SampleClip> decodeSampleFile(const QString& path, double sampleRate, double keepSeconds, const std::atomic<bool>* cancel)
+// One try at decodeSampleFile(); `stalled` set when the decoder went silent.
+core::Result<SampleClip> decodeSampleFileOnce(const QString& path, double sampleRate, double keepSeconds, const std::atomic<bool>* cancel,
+                                              bool& stalled)
 {
     const QString name = QFileInfo(path).fileName();
     if (!QFileInfo::exists(path)) return core::fail(core::ErrorCode::FileNotFound, u"Sample not found: %1"_s.arg(path));
@@ -130,11 +174,13 @@ core::Result<SampleClip> decodeSampleFile(const QString& path, double sampleRate
     double sourceRate = 0.0;
     {
         QAudioDecoder probe;
-        const QString problem = runDecoder(probe, path, [&](const QAudioBuffer& buffer) {
+        const DecodeEnd probed = runDecoder(probe, path, cancel, [&](const QAudioBuffer& buffer) {
             sourceChannels = buffer.format().channelCount();
             sourceRate = buffer.format().sampleRate();
             return false;
         });
+        stalled = probed.stalled;
+        const QString& problem = probed.problem;
         if (sourceChannels <= 0 || sourceRate <= 0.0) {
             return core::fail(core::ErrorCode::InvalidData,
                               u"Cannot read the sample %1: %2"_s.arg(name, problem.isEmpty() ? u"it holds no audio"_s : problem));
@@ -154,7 +200,7 @@ core::Result<SampleClip> decodeSampleFile(const QString& path, double sampleRate
     QString stopped;
     QAudioDecoder decoder;
     decoder.setAudioFormat(format);
-    QString problem = runDecoder(decoder, path, [&](const QAudioBuffer& buffer) {
+    const DecodeEnd decoded = runDecoder(decoder, path, cancel, [&](const QAudioBuffer& buffer) {
         if (buffer.format().sampleFormat() != QAudioFormat::Float || buffer.format().channelCount() != channels) {
             stopped = u"it came out in an unexpected sample format"_s;
             return false;
@@ -172,10 +218,34 @@ core::Result<SampleClip> decodeSampleFile(const QString& path, double sampleRate
         }
         return read.clip.left.size() < keepFrames; // enough: the rest is never decoded
     });
+    stalled = decoded.stalled;
+    QString problem = decoded.problem;
     if (!stopped.isEmpty()) problem = stopped;
     if (!problem.isEmpty()) return core::fail(core::ErrorCode::InvalidData, u"Cannot read the sample %1: %2"_s.arg(name, problem));
     if (read.clip.left.empty()) return core::fail(core::ErrorCode::InvalidData, u"Cannot read the sample %1: it holds no audio"_s.arg(name));
     return read;
+}
+
+} // namespace
+
+// A stall is the decoder's, not the file's (the same file reads the next
+// time): it is tried once more before it counts as a failure.
+core::Result<AudioClip> decodeAudioFile(const QString& path, double sampleRate, const std::atomic<bool>* cancel)
+{
+    bool stalled = false;
+    auto clip = decodeAudioFileOnce(path, sampleRate, cancel, stalled);
+    if (clip || !stalled) return clip;
+    qCWarning(lcEngine).noquote() << clip.error().message << "- trying it once more";
+    return decodeAudioFileOnce(path, sampleRate, cancel, stalled);
+}
+
+core::Result<SampleClip> decodeSampleFile(const QString& path, double sampleRate, double keepSeconds, const std::atomic<bool>* cancel)
+{
+    bool stalled = false;
+    auto read = decodeSampleFileOnce(path, sampleRate, keepSeconds, cancel, stalled);
+    if (read || !stalled) return read;
+    qCWarning(lcEngine).noquote() << read.error().message << "- trying it once more";
+    return decodeSampleFileOnce(path, sampleRate, keepSeconds, cancel, stalled);
 }
 
 TrackRead readTrackSet(const std::vector<QString>& paths, double sampleRate, const std::atomic<bool>* cancel)

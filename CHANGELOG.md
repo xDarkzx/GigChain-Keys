@@ -62,6 +62,12 @@ these (and #25, #27-#30) with videos and logs.
   practising no longer stops Practice and sends it back to the start.
 - **Perform keeps your place when the sound changes.** A sound picked with a
   pedal threw the chart back to the top of the song.
+- **Quitting no longer freezes while a piano is being read.** Now and then
+  the audio decoder stopped answering partway through a file, mostly on a
+  Mac. Piano Pro's recorded piano then never arrived, and quitting waited for
+  it forever. A file the decoder stops on is now tried once more (it reads
+  the second time), and a read is let go at once when the app quits. The
+  same goes for backing tracks.
 
 ### Added
 
