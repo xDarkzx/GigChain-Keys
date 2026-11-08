@@ -8,6 +8,7 @@
 #include "gigchain/core/SongMap.h"
 #include "gigchain/engine/EngineTypes.h"
 
+#include <QDir>
 #include <QObject>
 #include <QVariantList>
 #include <QString>
@@ -152,6 +153,11 @@ public:
     [[nodiscard]] QStringList recentFiles() const;
     [[nodiscard]] QVariantList recentSetlists() const;
     Q_INVOKABLE bool setSongChart(int song, const QString& chordPro);
+    // A song held on to while the songs change, move or go (a chart open as
+    // text): its key (its id; empty: no such song), and where it is now
+    // (-1: removed).
+    Q_INVOKABLE QString songKey(int song) const;
+    Q_INVOKABLE int songIndexOfKey(const QString& key) const;
     // Pasting a chord-site page: the site's clutter is removed, a song still
     // named "Song N" takes the sheet's title, and an unset key/tempo is filled.
     // All of it is one undo step.
@@ -396,6 +402,9 @@ public:
     Q_INVOKABLE bool save();
     Q_INVOKABLE bool saveAs(const QString& path);
     Q_INVOKABLE bool saveAsUrl(const QUrl& url);
+    // The backing tracks and stems copied from the setlist's folder to
+    // `folder` (Save As elsewhere); what could not go, each said.
+    [[nodiscard]] std::vector<QString> copyMediaTo(const QDir& folder) const;
     // On start: reopens the last opened file, only when the user chose that
     // in Settings (off by default: the start screen shows). A failure is
     // reported, and no setlist is made up in its place.

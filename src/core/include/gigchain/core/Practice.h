@@ -70,6 +70,8 @@ struct PracticeChord
     std::vector<int> left;  // low to high
     std::vector<int> right;
     std::map<int, int> fingers; // pitch -> finger 1-5 (warm-ups); empty: none shown
+
+    friend bool operator==(const PracticeChord&, const PracticeChord&) = default;
 };
 
 struct PracticeSectionMark
@@ -78,6 +80,8 @@ struct PracticeSectionMark
     QString name;
     int section = 0;
     int part = -1; // which time through the flow (SongStep::part): a section played twice has two marks
+
+    friend bool operator==(const PracticeSectionMark&, const PracticeSectionMark&) = default;
 };
 
 struct PracticeTimeline
@@ -86,6 +90,8 @@ struct PracticeTimeline
     std::vector<PracticeSectionMark> sections;
     double length = 0.0;   // beats, the count-in included
     int beatsPerBar = 4;
+
+    friend bool operator==(const PracticeTimeline&, const PracticeTimeline&) = default;
 };
 
 // How long each chord of `song` lasts, in beats: as the chart writes it (a

@@ -335,6 +335,7 @@ Item {
 
     StemsDialog {
         id: stemsDialog
+        objectName: "stemsDialog"
         doc: view.doc
     }
 

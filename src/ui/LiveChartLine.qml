@@ -53,6 +53,13 @@ Item {
     property bool typingLine: false
     // A cell asked to be typed in: {cell, what: "chord" | "word"} (Tab).
     property var cellEditAsked: null
+    // The chart a box was opened on: what is typed in it is saved into that
+    // chart only. The song changed under it with no click (a pedal, a program
+    // change, a key) and the box, rebuilt away, saved into the next song's
+    // line of the same number; now it is let go, as Escape does.
+    property string boxChart: ""
+    function boxOpened() { live.boxChart = live.doc.currentChart }
+    function boxOnItsChart() { return live.doc.currentChart === live.boxChart }
 
     width: parent ? parent.width : 0
     height: live.typingLine ? lineText.y + lineText.height
@@ -110,6 +117,7 @@ Item {
     function typeLine(cursor) {
         live.openRequested(live.chartLine)
         lineText.text = live.lyrics
+        live.boxOpened()
         live.typingLine = true
         lineText.forceActiveFocus()
         lineText.cursorPosition = Math.max(0, Math.min(cursor, lineText.text.length))
@@ -397,7 +405,7 @@ Item {
                                 if (!rowChip.renaming) return // (saved once)
                                 const name = rowInput.text.trim()
                                 rowChip.renaming = false
-                                if (name !== rowSlot.modelData.name) live.doc.renameChordAt(live.chartLine, rowSlot.modelData.index, name)
+                                if (name !== rowSlot.modelData.name && live.boxOnItsChart()) live.doc.renameChordAt(live.chartLine, rowSlot.modelData.index, name)
                             }
                             onAccepted: rowInput.commit()
                             Keys.onEscapePressed: rowChip.renaming = false
@@ -407,6 +415,7 @@ Item {
                     function begin(input: TextInput) {
                         if (input === null) return
                         input.text = rowSlot.modelData.name
+                        live.boxOpened()
                         input.forceActiveFocus()
                         input.selectAll()
                     }
@@ -477,7 +486,7 @@ Item {
                     if (!rowAddInput.visible) return
                     rowAddInput.visible = false
                     const name = rowAddInput.text.trim()
-                    if (name !== "") live.doc.placeChordInRow(live.chartLine, live.rowChords.length, name)
+                    if (name !== "" && live.boxOnItsChart()) live.doc.placeChordInRow(live.chartLine, live.rowChords.length, name)
                 }
                 onAccepted: rowAddInput.commit()
                 Keys.onEscapePressed: rowAddInput.visible = false
@@ -487,6 +496,7 @@ Item {
             TapHandler {
                 onTapped: {
                     rowAddInput.text = ""
+                    live.boxOpened()
                     rowAddInput.visible = true
                     rowAddInput.forceActiveFocus()
                 }
@@ -548,6 +558,7 @@ Item {
                 function begin(input: TextInput) {
                     if (input === null) return
                     input.text = cell.startText
+                    live.boxOpened()
                     input.forceActiveFocus()
                     input.selectAll()
                 }
@@ -697,6 +708,7 @@ Item {
                                 const name = chordInput.text.trim()
                                 const index = cell.editedChord
                                 cell.editingChord = false
+                                if (!live.boxOnItsChart()) return
                                 if (index >= 0) {
                                     const before = cell.chords.find(c => c.index === index)
                                     if (before === undefined || before.name !== name) live.doc.renameChordAt(live.chartLine, index, name)
@@ -748,7 +760,7 @@ Item {
                             if (!cell.editingWord) return // (saved once)
                             const text = wordInput.text
                             cell.editingWord = false
-                            if (text !== cell.modelData.text) live.doc.setLineLyrics(live.chartLine, live.lyricsWith(cell.modelData, text))
+                            if (text !== cell.modelData.text && live.boxOnItsChart()) live.doc.setLineLyrics(live.chartLine, live.lyricsWith(cell.modelData, text))
                         }
                         onAccepted: wordInput.commit()
                         Keys.onEscapePressed: cell.editingWord = false
@@ -797,7 +809,7 @@ Item {
         function save() {
             if (!live.typingLine) return // (saved once)
             live.typingLine = false
-            if (lineText.text !== live.lyrics) live.doc.setLineLyrics(live.chartLine, lineText.text)
+            if (lineText.text !== live.lyrics && live.boxOnItsChart()) live.doc.setLineLyrics(live.chartLine, lineText.text)
         }
         Keys.onPressed: (event) => {
             if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {

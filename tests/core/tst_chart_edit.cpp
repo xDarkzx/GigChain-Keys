@@ -3,7 +3,11 @@
 // the chords staying over them; lines split and joined; sections named.
 #include "gigchain/core/ChartEdit.h"
 
+#include "gigchain/core/Chart.h"
+
 #include <QtTest>
+
+#include <cmath>
 
 using namespace gigchain::core;
 using namespace Qt::StringLiterals;
@@ -279,6 +283,78 @@ private slots:
         QCOMPARE(line.chords.at(2).at, 7);
         QCOMPARE(line.chords.at(2).name, u"D"_s);
         QCOMPARE(line.chords.at(3).at, 16);
+    }
+
+    // A session of edits on charts of every shape, at any line and place the
+    // screen could send (a stale one after the chart was rebuilt, past the
+    // end, negative): each is done or refused, never a crash; what is done
+    // reads back as a chart, written the same once read and written again.
+    void anyEditAtAnyPlaceIsDoneOrRefused()
+    {
+        QRandomGenerator random(20261108); // (fixed: a failure can be run again)
+        const QStringList shapes{
+            u"{title: Song}"_s, u"{comment: Verse}"_s, u"{comment: Chorus x2}"_s, u"{start_of_chorus}"_s,
+            u"{end_of_chorus}"_s, u"{start_of_tab}"_s, u"{end_of_tab}"_s, u"{key: G}"_s, u""_s, u"   "_s,
+            u"[C]I need your [G]love"_s, u"[Am] [F] [C] [G]"_s, u"| [C] . [G] | [Am] |"_s, u"[C] [G] x2"_s,
+            u"plain words only"_s, u"[unclosed chord"_s, u"stray ] bracket ["_s, u"[]empty [ ] chords"_s,
+            u"[C][G][Am]stacked"_s, u"{broken directive"_s, u"été [D]über \U0001F3B9 [E]"_s,
+            u"[C]\ttab\tseparated"_s, u"a\r"_s, QString(300, u'x') + u"[C]"_s,
+        };
+        const QStringList chords{u"C"_s, u"Gm7"_s, u"F#m7b5"_s, u""_s, u" "_s, u"[x]"_s, u"N.C."_s, QString(40, u'A')};
+        int done = 0;
+        int refused = 0;
+        for (int round = 0; round < 300; ++round) {
+            QStringList lines;
+            for (int n = random.bounded(14); n > 0; --n) lines << shapes.at(random.bounded(static_cast<int>(shapes.size())));
+            QString chart = lines.join(u'\n');
+            for (int edit = 0; edit < 40; ++edit) {
+                const int count = static_cast<int>(parseChordPro(chart).lines.size());
+                const auto any = [&random](int size) { return random.bounded(-2, size + 3); };
+                const int line = any(count);
+                const int to = any(count);
+                const int at = any(40);
+                const int index = any(8);
+                const QString& chord = chords.at(random.bounded(static_cast<int>(chords.size())));
+                Result<QString> r;
+                switch (random.bounded(16)) {
+                case 0: r = placeChord(chart, line, at, chord); break;
+                case 1: r = changeChord(chart, line, index, chord); break;
+                case 2: r = moveChord(chart, line, index, to, at); break;
+                case 3: r = editLyrics(chart, line, chord + u" words"_s); break;
+                case 4: r = setRowChordLength(chart, line, index, any(10)); break;
+                case 5: r = placeChordInRow(chart, line, index, chord); break;
+                case 6: r = moveChordInRow(chart, line, index, to, any(8)); break;
+                case 7: r = insertChordRow(chart, to, chord); break;
+                case 8: r = moveChordToNewRow(chart, line, index, to); break;
+                case 9: r = deleteLine(chart, line); break;
+                case 10: r = splitLyricLine(chart, line, at); break;
+                case 11: r = joinWithPrevious(chart, line); break;
+                case 12: r = renameSection(chart, line, chord + u" Bridge"_s); break;
+                case 13: r = removeSectionTitle(chart, line); break;
+                case 14: r = appendSection(chart, chord.isEmpty() ? u"Outro"_s : chord); break;
+                default: r = changeChord(chart, line, index, QString()); break;
+                }
+                if (!r) {
+                    QVERIFY2(!r.error().message.isEmpty(), qPrintable(u"round %1 edit %2: refused, unsaid"_s.arg(round).arg(edit)));
+                    ++refused;
+                    continue;
+                }
+                ++done;
+                QVERIFY2(r->size() < chart.size() + 400, qPrintable(u"round %1 edit %2 grew the chart:\n%3"_s.arg(round).arg(edit).arg(*r)));
+                chart = *r;
+                const Chart read = parseChordPro(chart);
+                const QString once = toChordPro(read);
+                QVERIFY2(toChordPro(parseChordPro(once)) == once, qPrintable(u"round %1 edit %2 reads differently:\n%3"_s.arg(round).arg(edit).arg(once)));
+                for (const ChartLine& l : read.lines) {
+                    const LyricLine lyric = lyricLineOf(l);
+                    for (const PlacedChord& placed : lyric.chords) QVERIFY(placed.at >= 0 && placed.at <= lyric.lyrics.size());
+                    for (const double bars : rowChordBars(l)) QVERIFY(std::isfinite(bars) && bars > 0);
+                }
+                (void)chordSheetToChordPro(chart);
+            }
+        }
+        // (Both happen often: the edits are not all refused, nor all done.)
+        QVERIFY2(done > 2000 && refused > 2000, qPrintable(u"done %1, refused %2"_s.arg(done).arg(refused)));
     }
 };
 

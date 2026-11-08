@@ -346,10 +346,19 @@ Rectangle {
                     contentHeight: stageChart.height
                     boundsBehavior: Flickable.StopAtBounds
                     ScrollBar.vertical: ScrollBar {}
-                    // A new song starts at its top.
+                    // A new song starts at its top. (Only a new song: the chart
+                    // is said changed at every sound picked too, and a pedal's
+                    // next sound threw the words back up to the top.)
+                    property string shownSong: "" // (set here only: never bound, it would follow by itself)
+                    Component.onCompleted: performChart.shownSong = perform.doc.songKey(perform.doc.songIndex)
                     Connections {
                         target: perform.doc
-                        function onChartChanged() { performChart.contentY = 0 }
+                        function onChartChanged() {
+                            const song = perform.doc.songKey(perform.doc.songIndex)
+                            if (song === performChart.shownSong) return
+                            performChart.shownSong = song
+                            performChart.contentY = 0
+                        }
                     }
                     // Part `place` of the flow at the top of the view.
                     function showPlace(place) {

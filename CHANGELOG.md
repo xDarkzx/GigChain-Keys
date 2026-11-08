@@ -8,7 +8,7 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
-## [0.8.3] - 2026-11-07 (alpha)
+## [0.8.3] - 2026-11-08 (alpha)
 
 The chart moves with the flow, menus that open clean, Perform's parts take
 the chart there, and editing a long chart no longer freezes the screen.
@@ -39,12 +39,43 @@ these (and #25, #27-#30) with videos and logs.
   exist* and the text was lost. A chart that cannot be saved now keeps the
   editor open with the text in it, and no song at all is said as *There is
   no song yet*.
+- **A chart's text stays with its own song.** With ⋯ > **Edit as text**
+  open, a song changed by a pedal, a program change or the setlist, **Done**
+  wrote the text over the song then shown. It now goes into the song it was
+  opened on (that song removed meanwhile: said, and the text stays). The
+  same for **Import file…** and **Add stems…**: what is picked goes to the
+  song it was picked for, even when the song changed while choosing.
+- **A chord or word being typed stays with its own song.** A song changed
+  with no click while a chord or a word was half typed put it into the next
+  song's chart, at the same place. It is now let go, as **Esc** does.
+- **Removing a section's title keeps the others' instruments.** In a chart
+  with two choruses, removing the first one's title gave the second one the
+  first one's instruments, and its places in the flow. Each section now keeps
+  its own; the one removed leaves the flow. The same for a note made a
+  section in the middle of a chart.
+- **Save As keeps the backing tracks and stems.** Saved into another folder
+  (a USB stick for the gig), a setlist played none of them: they stayed in
+  the old folder. They are copied with it now; anything that cannot be is
+  said.
+- **Practice keeps each song's tempo.** Practising slower and then picking
+  another song left that song at the last one's tempo. Changing sound while
+  practising no longer stops Practice and sends it back to the start.
+- **Perform keeps your place when the sound changes.** A sound picked with a
+  pedal threw the chart back to the top of the song.
+- **Quitting no longer freezes while a piano is being read.** Now and then
+  the audio decoder stopped answering partway through a file, mostly on a
+  Mac. Piano Pro's recorded piano then never arrived, and quitting waited for
+  it forever. A file the decoder stops on is now tried once more (it reads
+  the second time), and a read is let go at once when the app quits. The
+  same goes for backing tracks.
 
 ### Added
 
 - **Perform's parts take the chart there** ([#34](https://github.com/xDarkzx/GigChain-Keys/issues/34)):
   tap a part's tile and the chart goes to it, at once when stopped, and
   when the part comes in while playing.
+- **Cancel** beside **Done** in ⋯ > **Edit as text**: out of the text
+  without saving it.
 
 ## [0.8.2] - 2026-11-06 (alpha)
 

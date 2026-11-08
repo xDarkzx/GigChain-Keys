@@ -175,6 +175,9 @@
       "hidden": true,
       "output": {
         "outputOnFailure": true
+      },
+      "execution": {
+        "timeout": 1200
       }
     },
     {
