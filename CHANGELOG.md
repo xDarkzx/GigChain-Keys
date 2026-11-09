@@ -8,6 +8,35 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-11-10 (alpha)
+
+A Linux fix: the downloads use your own PulseAudio again.
+
+Thanks to **GrgMdmn** for the report, which traced it to the exact
+library.
+
+### Fixed
+
+- **Linux: the app no longer runs out of memory on PipeWire**
+  ([#37](https://github.com/xDarkzx/GigChain-Keys/issues/37)). The 0.8.3
+  AppImage and .deb carried their own copy of PulseAudio's library, older
+  than the system's. Playing through PulseAudio (or PipeWire, which stands
+  in for it), the two mixed in one app: sound was queued without end until
+  the system closed the app, about half a minute after it started. The same
+  copy made the app freeze for up to two minutes at start, even with JACK.
+  The downloads now use the system's own PulseAudio, D-Bus and systemd
+  libraries, and the build refuses to package a copy of a sound or graphics
+  system again.
+- **Linux: the .deb installs JACK's library.** The app needs it to start,
+  even when JACK is not used, and a system without it could not start the
+  app.
+
+### Added
+
+- **Using JACK on PipeWire** in the help (Settings > Audio) and the README:
+  start the app with `pw-jack`, or JACK's devices are not there. A JACK
+  device found missing at start now says so in its message.
+
 ## [0.8.3] - 2026-11-08 (alpha)
 
 The chart moves with the flow, menus that open clean, Perform's parts take

@@ -54,8 +54,12 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
                                  .inputDevice = {}};
     if (!opened && options.audio != systemAudio) {
         // The saved setup failed: fall back to system audio (logged by open()).
-        engine->m_pendingNotices.push_back(Notice::warning(u"%1 could not be used (%2); using system audio until it is there"_s.arg(
-            options.audio.device.isEmpty() ? u"The saved audio setup"_s : options.audio.device, opened.error().message)));
+        // (On PipeWire, JACK's devices are there only for an app started
+        // with pw-jack: the usual reason a JACK device is missing.)
+        const QString jackHint =
+            options.audio.driver == AudioDriver::Jack ? u". With PipeWire, start the app with pw-jack to use JACK"_s : QString();
+        engine->m_pendingNotices.push_back(Notice::warning(u"%1 could not be used (%2); using system audio until it is there%3"_s.arg(
+            options.audio.device.isEmpty() ? u"The saved audio setup"_s : options.audio.device, opened.error().message, jackHint)));
         opened = engine->openAudio(systemAudio);
         // The saved device (unplugged when the app started) is taken back
         // when it is plugged in.
