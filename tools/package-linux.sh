@@ -120,6 +120,19 @@ cp "$WORK/$PACKAGE.xml" "$APPDIR/usr/share/mime/packages/"
 # Qt's database drivers for ODBC, PostgreSQL and Mimer need libraries no
 # player has: they could never load (the app uses no database).
 rm -f "$APPDIR"/usr/plugins/sqldrivers/libqsql{odbc,psql,mimer}.so
+# The Qt plugin deploys Qt Multimedia without the --exclude-library list
+# above, so it brought PulseAudio in anyway (#37): the build machine's
+# libpulse next to the player's own libpulse-simple, two Pulse versions in
+# one process, and writes that never wait (memory grew until the system
+# killed the app). PulseAudio stays the player's own, with what came only
+# for it (its sound file codecs, asyncns, AppArmor) and the system services
+# it talks through (D-Bus, systemd: the player's PulseAudio needs their
+# versions, not older copies).
+for lib in 'libpulse*.so*' 'libasound.so*' 'libpipewire*.so*' 'libjack.so*' 'libGL*.so*' 'libEGL*.so*' \
+    'libsndfile.so*' 'libFLAC.so*' 'libogg.so*' 'libopus.so*' 'libvorbis.so*' 'libvorbisenc.so*' \
+    'libasyncns.so*' 'libapparmor.so*' 'libdbus-1.so*' 'libsystemd.so*'; do
+    find "$APPDIR/usr/lib" -maxdepth 1 -name "$lib" -print -delete
+done
 
 # ------------------------------------------------------------ checks
 step checks
@@ -141,6 +154,12 @@ for needed in "usr/bin/$EXE" "usr/bin/${EXE}Scan" usr/lib/libQt6Core.so.6 usr/li
     [ -e "$APPDIR/$needed" ] || problems+=("missing: $needed")
 done
 ls "$APPDIR"/usr/plugins/multimedia/*ffmpeg* >/dev/null 2>&1 || problems+=("missing: Qt's FFmpeg plugin (backing tracks)")
+# The sound and graphics systems are the player's own: a copy from the build
+# machine in the package is a mistake (#37), wherever it came from.
+while IFS= read -r -d '' file; do
+    problems+=("the build machine's copy of a system library: ${file#"$APPDIR/"}")
+done < <(find "$APPDIR/usr" \( -name 'libpulse*.so*' -o -name 'libasound.so*' -o -name 'libpipewire*.so*' -o -name 'libjack.so*' \
+    -o -name 'libGL*.so*' -o -name 'libEGL*.so*' -o -name 'libdbus-1.so*' -o -name 'libsystemd.so*' \) -print0)
 # The scanner starts with only the package's libraries: it answers a missing
 # plugin with its usage error (exit 2), not a missing library.
 set +e
@@ -187,7 +206,7 @@ Installed-Size: $SIZE
 Section: sound
 Priority: optional
 Homepage: $WEBSITE
-Depends: libc6 (>= 2.35), libasound2, libpulse0, libgl1, libegl1, libfontconfig1, libfreetype6, libx11-6, libx11-xcb1, libxcb1, libxcb-cursor0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-shape0, libxcb-xinerama0, libxcb-xkb1, libxkbcommon0, libxkbcommon-x11-0, libdbus-1-3
+Depends: libc6 (>= 2.35), libasound2, libpulse0, libjack-jackd2-0 | libjack-0.125, libgl1, libegl1, libfontconfig1, libfreetype6, libx11-6, libx11-xcb1, libxcb1, libxcb-cursor0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-shape0, libxcb-xinerama0, libxcb-xkb1, libxkbcommon0, libxkbcommon-x11-0, libdbus-1-3
 Recommends: pipewire-pulse | pulseaudio
 Suggests: jackd2
 Description: Live VST3 host for keyboard players

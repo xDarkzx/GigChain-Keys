@@ -12,6 +12,13 @@ Open **Settings > Audio**.
 1. **Driver.** On Windows the system driver (WASAPI) works with every sound
    card and is the safe choice. If your audio interface came with an
    **ASIO** driver, choose ASIO for the lowest delay between key and sound.
+   On Linux the system driver is PulseAudio (or PipeWire, which stands in
+   for it). **JACK** gives the lowest delay. On PipeWire (most current
+   distributions), JACK's devices are there only when the app is started
+   with `pw-jack`: type `pw-jack gigchain-keys` (or
+   `pw-jack ./GigChainKeys-*-x86_64.AppImage`). Started without it, a JACK
+   device you chose is missing; the app says so and plays through the
+   system driver meanwhile.
 2. **Device.** Pick your audio interface or speakers.
 3. **Buffer size.** This sets the delay (shown as **Latency** in
    milliseconds). Smaller feels tighter under your fingers; bigger is safer

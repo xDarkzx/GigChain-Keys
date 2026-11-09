@@ -102,8 +102,11 @@ chmod +x GigChainKeys-*-x86_64.AppImage
 **GigChain Keys** from your menu or type `gigchain-keys`. Remove it with
 `sudo apt remove gigchain-keys`.
 
-Sound goes through PulseAudio or PipeWire (or JACK, chosen in **Settings**);
-Linux VST3 plugins are found in `~/.vst3` and `/usr/lib/vst3`.
+Sound goes through PulseAudio or PipeWire (or JACK, chosen in **Settings**;
+on PipeWire, start the app with `pw-jack` to use JACK);
+Linux VST3 plugins are found in `~/.vst3` and `/usr/lib/vst3`. The AppImage
+uses your system's sound libraries: if it says `libjack.so.0` is missing,
+install `libjack-jackd2-0` (the .deb installs it for you).
 
 ### First start on Windows
 
@@ -270,7 +273,8 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
-| 0.8.3 | Alpha: the chart moves with the flow; a chord's menu opens on its own; tap a part in Perform and the chart goes there; editing a long chart no longer freezes |
+| 0.8.4 | Alpha: Linux: the downloads use your own PulseAudio again (0.8.3's ran out of memory on PipeWire and could freeze for minutes at start); the .deb installs JACK's library; how to use JACK on PipeWire |
+| 0.8.3 | Alpha: the chart moves with the flow; a chord's menu opens on its own; tap a part in Perform and the chart goes there; editing a long chart no longer freezes; typing, imports and stems stay with their own song; sections keep their instruments; Save As takes the backing tracks; Practice and Perform keep their place; quitting no longer freezes while a piano is read |
 | 0.8.2 | Alpha: Practice in time with the click and matching Perform; drag the flow, the chart follows it on stage; chord lengths in rows; a big count-in; Practice's parts to jump to; the click's volume and "only while playing" |
 | 0.8.1 | Alpha: fixes: Sustain Pads wait for Activate; drag chords anywhere in a chart, rows of chords for intros and solos, delete a line in one click; the window's buttons always in sight |
 | 0.8.0 | Alpha: Sustain Pads (a Tonic-style pad held on one key under the song) with its own mixer strip: Pads Pro or your own VST pad, your own effects; Pads Pro, a third instrument of its own; the mixer along the bottom, down a side or in its own window; section names fixed |
