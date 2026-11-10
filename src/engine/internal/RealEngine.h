@@ -196,6 +196,8 @@ public:
     std::optional<PluginParameter> takeTouchedParameter(const core::ChannelId& id, int target) override;
     [[nodiscard]] double pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const override;
     core::Result<void> setPluginParameter(const core::ChannelId& id, int target, uint32_t parameter, double value) override;
+    [[nodiscard]] QString instrumentFile(const core::ChannelId& id) const override;
+    core::Result<void> setInstrumentFile(const core::ChannelId& id, const QString& path) override;
     std::optional<std::pair<int, int>> takeMovedController() override;
     [[nodiscard]] std::vector<AudioInputDevice> audioInputDevices() const override;
     [[nodiscard]] int audioInputChannels() const override { return m_audio.inputChannels(); }

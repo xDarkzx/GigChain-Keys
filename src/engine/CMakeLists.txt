@@ -79,6 +79,10 @@ add_library(gigchain_engine STATIC
     internal/PadsPro.cpp
     internal/PadsProNode.h
     internal/PadsProNode.cpp
+    internal/SoundFont.h
+    internal/SoundFont.cpp
+    internal/SoundFontNode.h
+    internal/SoundFontNode.cpp
     internal/SustainPads.h
     internal/SustainPads.cpp
     internal/RealEngine.h
@@ -93,7 +97,7 @@ target_include_directories(gigchain_engine
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/internal)
 target_link_libraries(gigchain_engine PUBLIC gigchain::core gigchain::platform
-    PRIVATE vst3_host_support RtAudio::rtaudio RtMidi::rtmidi Qt6::Multimedia)
+    PRIVATE vst3_host_support RtAudio::rtaudio RtMidi::rtmidi Qt6::Multimedia FluidSynth::libfluidsynth)
 if(WIN32)
     target_compile_definitions(gigchain_engine PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()

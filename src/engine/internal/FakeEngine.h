@@ -162,6 +162,9 @@ public:
     // The app's own instruments: their settings go through the real (unprepared)
     // instrument, so a type brings its own; a reading (not a setting) is kept as set.
     core::Result<void> setPluginParameter(const core::ChannelId& id, int target, uint32_t parameter, double value) override;
+    // Kept as chosen, per channel (nothing is read).
+    [[nodiscard]] QString instrumentFile(const core::ChannelId& id) const override;
+    core::Result<void> setInstrumentFile(const core::ChannelId& id, const QString& path) override;
     std::optional<std::pair<int, int>> takeMovedController() override { return std::exchange(m_moved, std::nullopt); }
     [[nodiscard]] std::vector<AudioInputDevice> audioInputDevices() const override
     {
@@ -318,6 +321,7 @@ public:
 private:
     std::optional<std::pair<int, int>> m_moved; // the last controller injected (channel 1-16, number), not yet taken
     std::map<uint32_t, double> m_parameterValues; // set through setPluginParameter (any plugin; the built-ins' readings)
+    std::map<QString, QString> m_instrumentFiles;  // set through setInstrumentFile, by channel id
     std::map<QString, std::shared_ptr<PluginNode>> m_builtins; // each built-in channel's instrument (never played), by channel id
     MidiTrigger m_learned;                      // the last pad, key or button pressed, not yet taken (Learn)
     PanelTriggers m_panel;                      // the panel's pads

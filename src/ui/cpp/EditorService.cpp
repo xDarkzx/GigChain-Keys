@@ -6,6 +6,7 @@
 #include "gigchain/engine/IEngine.h"
 #include "gigchain/engine/SidechainCurves.h"
 
+#include <QUrl>
 #include <QVariantMap>
 
 #include <algorithm>
@@ -179,7 +180,25 @@ double EditorService::builtinReading(const QString& name) const
 {
     if (name == u"pianoRecordings"_s) return builtinValue(static_cast<int>(engine::readings::kPianoRecordings));
     if (name == u"pianoSource"_s) return builtinValue(static_cast<int>(engine::readings::kPianoSource));
+    if (name == u"soundFontFile"_s) return builtinValue(static_cast<int>(engine::readings::kSoundFontFile));
+    if (name == u"soundFontPresets"_s) return builtinValue(static_cast<int>(engine::readings::kSoundFontPresets));
     return -1.0;
+}
+
+QString EditorService::builtinFile() const
+{
+    const core::Channel* channel = builtinChannel();
+    return channel != nullptr ? m_engine.instrumentFile(channel->id) : QString();
+}
+
+void EditorService::setBuiltinFile(const QString& pathOrUrl)
+{
+    const core::Channel* channel = builtinChannel();
+    if (channel == nullptr) return;
+    const QUrl url(pathOrUrl);
+    const QString path = url.isLocalFile() ? url.toLocalFile() : pathOrUrl;
+    // (The engine logs the cause.)
+    if (auto set = m_engine.setInstrumentFile(channel->id, path); !set) m_document.reportMessage(set.error().message);
 }
 
 QString EditorService::builtinId() const

@@ -29,7 +29,7 @@ mkdir -p "$app/MacOS" "$app/Resources" "$build/installer" "$build/_deps/vst3sdk-
 "${CC[@]}" "$work/libSystem.B.dylib" "$work/main.c" -o "$app/MacOS/GigChainKeysScan"
 echo notices > "$build/installer/THIRD-PARTY-NOTICES.txt"
 echo vst3 > "$build/_deps/vst3sdk-src/LICENSE.txt"
-for port in rtaudio rtmidi tl-expected; do
+for port in rtaudio rtmidi tl-expected fluidsynth gcem; do
     mkdir -p "$build/vcpkg_installed/arm64-osx-13/share/$port"
     echo "$port" > "$build/vcpkg_installed/arm64-osx-13/share/$port/copyright"
 done
@@ -62,7 +62,7 @@ check() { if eval "$2"; then echo "PASS: $1"; else echo "FAIL: $1"; fail=1; fi; 
 PATH="$bin:$PATH" QT_ROOT_DIR="$work/qt" bash "$ROOT/tools/package-mac.sh" "$build" 9.9.9 > "$work/out.txt" 2>&1 ||
     { echo "FAIL: packaging stopped:"; cat "$work/out.txt"; exit 1; }
 check "macdeployqt was given the scanner too" 'grep -q "executable=.*GigChainKeysScan" "$log"'
-check "the licences were in the app before it was signed" 'grep -q "codesign --force.*licences=rtaudio.txt rtmidi.txt tl-expected.txt vst3sdk.txt" "$log"'
+check "the licences were in the app before it was signed" 'grep -q "codesign --force.*licences=fluidsynth.txt gcem.txt rtaudio.txt rtmidi.txt tl-expected.txt vst3sdk.txt" "$log"'
 check "the app carries the licence and the notices" '[ -f "$app/Resources/LICENSE.txt" ] && [ -f "$app/Resources/THIRD-PARTY-NOTICES.txt" ]'
 check "the .dmg holds the app, Applications, the licence, the notices and the licences folder" \
     'grep -qx "./GigChain Keys.app" "$work/dmg-contents.txt" && grep -qx "./Applications" "$work/dmg-contents.txt" &&

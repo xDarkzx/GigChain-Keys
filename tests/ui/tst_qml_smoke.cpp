@@ -8,6 +8,8 @@
 #include "gigchain/engine/FakeEngineFactory.h"
 #include "gigchain/engine/SidechainCurves.h"
 
+#include "../common/MakeSoundFont.h"
+
 #include <QClipboard>
 #include <QElapsedTimer>
 #include <QRegularExpression>
@@ -2044,6 +2046,65 @@ private slots:
         click(u"sawStackNext"_s);
         QTRY_COMPARE(display->property("text").toString(), u"Future Bass Chords"_s);
         settle();
+    }
+
+    // The SoundFont Player: FL Studio's SoundFont Player's layout (the file;
+    // patch, bank, name; reverb and chorus; the envelope's four sliders; LFO
+    // and Misc; the options), asking for a file until it has one.
+    void soundFontPlayerShowsFlsLayout()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"builtin:soundfont"_s, u"SoundFont Player"_s));
+        doc.setSelectedChannel(static_cast<int>(doc.currentPatch()->channels.size()) - 1);
+        auto* tabs = window()->findChild<QObject*>(u"mainTabs"_s);
+        QVERIFY(tabs != nullptr);
+        tabs->setProperty("currentIndex", 1); // the Instrument tab
+        settle();
+        QTRY_VERIFY(item(u"soundFontPanel"_s) != nullptr && item(u"soundFontPanel"_s)->isVisible());
+        QVERIFY(item(u"pianoProPanel"_s) == nullptr || !item(u"pianoProPanel"_s)->isVisible()); // one window at a time
+        QCOMPARE(item(u"soundFontFileName"_s)->property("text").toString(), u"No SoundFont loaded"_s);
+        QVERIFY(item(u"soundFontLoadBig"_s) != nullptr && item(u"soundFontLoadBig"_s)->isVisible());
+        QVERIFY(item(u"soundFontLoad"_s) != nullptr);
+        for (const char* knob : {"ReverbLevel", "ChorusLevel", "LfoDelay", "LfoAmount", "LfoSpeed", "Cutoff", "CutoffMod"}) {
+            QVERIFY2(item(u"soundFontKnob_%1"_s.arg(QLatin1StringView(knob))) != nullptr, knob);
+        }
+        for (const char* fader : {"A", "D", "S", "R"}) {
+            QVERIFY2(item(u"soundFontFader_%1"_s.arg(QLatin1StringView(fader))) != nullptr, fader);
+        }
+        QVERIFY(item(u"soundFontReverbLight"_s) != nullptr && item(u"soundFontReverbLight"_s)->property("lit").toBool());
+        QVERIFY(item(u"soundFontChorusLight"_s) != nullptr);
+        // The options are read back from the player: Standard quality, Auto, velocity to cutoff on.
+        QTRY_VERIFY(item(u"soundFontChoice_QUALITY_1"_s) != nullptr && item(u"soundFontChoice_QUALITY_1"_s)->property("on").toBool());
+        QVERIFY(item(u"soundFontChoice_MODE_0"_s)->property("on").toBool());
+        scrollIntoView(item(u"soundFontChoice_QUALITY_2"_s)); // (at the bottom: scrolled to, as a player would)
+        settle();
+        click(u"soundFontChoice_QUALITY_2"_s);
+        QTRY_VERIFY(item(u"soundFontChoice_QUALITY_2"_s)->property("on").toBool());
+        scrollIntoView(item(u"soundFontReverbLight"_s));
+        settle();
+        click(u"soundFontReverbLight"_s);
+        QTRY_VERIFY(!item(u"soundFontReverbLight"_s)->property("lit").toBool());
+        click(u"soundFontReverbLight"_s);
+        // A SoundFont chosen: its name, its first preset's (patch, bank, name), the arrows step through them.
+        QTemporaryDir dir;
+        const QString file = testing::makeSoundFont(dir.path());
+        QVERIFY(!file.isEmpty());
+        QVERIFY(m_engine->setInstrumentFile(doc.currentPatch()->channels.back().id, file));
+        QTRY_COMPARE(item(u"soundFontFileName"_s)->property("text").toString(), u"Test Tone.sf2"_s);
+        QTRY_VERIFY(!item(u"soundFontLoadBig"_s)->isVisible());
+        QTRY_COMPARE(item(u"soundFontName"_s)->property("shown").toString(), u"Tone"_s);
+        click(u"soundFontPatchNext"_s);
+        QTRY_COMPARE(item(u"soundFontName"_s)->property("shown").toString(), u"Kit"_s);
+        click(u"soundFontBankNext"_s);
+        QTRY_COMPARE(item(u"soundFontName"_s)->property("shown").toString(), u"Tone"_s);
+        shoot(u"soundfont-player"_s);
+        if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
+            const QSharedPointer<QQuickItemGrabResult> grab = item(u"soundFontPanel"_s)->grabToImage();
+            QVERIFY(grab);
+            QSignalSpy ready(grab.data(), &QQuickItemGrabResult::ready);
+            QVERIFY(ready.wait(5000));
+            QVERIFY(grab->image().save(folder + u"/soundfont-player-full.png"_s));
+        }
     }
 
     void pianoProShowsItsPianoLayersKnobsAndSidechain()

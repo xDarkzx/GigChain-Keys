@@ -932,6 +932,8 @@ std::vector<Notice> RealEngine::poll()
     }
     for (const auto& [key, node] : m_nodes) {
         node->serviceMainThread();
+        const QStringList messages = node->takeMessages(); // (logged by the node)
+        std::ranges::transform(messages, std::back_inserter(notices), [](const QString& m) { return Notice::warning(m); });
         const auto problems = node->takeProblems();
         if (!problems.any()) continue;
         qCWarning(lcEngine).noquote() << node->name() << "problems: process failures" << problems.processFailures
@@ -1943,6 +1945,24 @@ core::Result<void> RealEngine::setPluginParameter(const core::ChannelId& id, int
     if (!node) return core::fail(core::ErrorCode::InvalidData, u"That plugin is not loaded"_s);
     auto set = node->setParameter(parameter, value);
     if (!set) qCWarning(lcEngine).noquote() << "Setting a parameter:" << set.error().message;
+    return set;
+}
+
+QString RealEngine::instrumentFile(const core::ChannelId& id) const
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto node = currentNode(id, -1);
+    return node ? node->file() : QString();
+}
+
+core::Result<void> RealEngine::setInstrumentFile(const core::ChannelId& id, const QString& path)
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto node = currentNode(id, -1);
+    if (!node) return core::fail(core::ErrorCode::InvalidData, u"That instrument is not loaded"_s);
+    auto set = node->setFile(path);
+    if (!set) qCWarning(lcEngine).noquote() << "Choosing a file:" << set.error().message;
+    else qCInfo(lcEngine).noquote() << node->name() << "plays" << (path.isEmpty() ? u"no file"_s : path);
     return set;
 }
 

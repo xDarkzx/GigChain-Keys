@@ -8,6 +8,7 @@
 
 #include <QByteArray>
 #include <QString>
+#include <QStringList>
 
 #include <cstdint>
 #include <memory>
@@ -78,6 +79,16 @@ public:
     virtual void serviceMainThread() {}
     // Main thread: the next block starts with every held note let go.
     virtual void releaseAllNotes() = 0;
+    // Main thread, polled: what went wrong for the player to see (a file
+    // that could not be read), each logged already.
+    [[nodiscard]] virtual QStringList takeMessages() { return {}; }
+    // Main thread: the file it plays, for the instruments that play one (the
+    // SoundFont Player); the others have none and refuse one.
+    virtual core::Result<void> setFile(const QString& /*path*/)
+    {
+        return core::fail(core::ErrorCode::InvalidData, QStringLiteral("%1 plays no file").arg(name()));
+    }
+    [[nodiscard]] virtual QString file() const { return {}; }
 
     // Main thread. The plugin's sound and settings as the setlist stores them
     // (core::PluginSlot::state: compressed, tagged with the format), and back.

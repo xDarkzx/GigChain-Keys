@@ -393,6 +393,13 @@ public:
         parameterValues[parameter] = value;
         return {};
     }
+    QString instrumentFilePath; // what setInstrumentFile set
+    [[nodiscard]] QString instrumentFile(const core::ChannelId&) const override { return instrumentFilePath; }
+    core::Result<void> setInstrumentFile(const core::ChannelId&, const QString& path) override
+    {
+        instrumentFilePath = path;
+        return {};
+    }
     std::optional<std::pair<int, int>> movedController;
     std::optional<std::pair<int, int>> takeMovedController() override { return std::exchange(movedController, std::nullopt); }
     [[nodiscard]] std::vector<engine::AudioInputDevice> audioInputDevices() const override

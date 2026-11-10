@@ -61,7 +61,7 @@ StageDialog {
             Layout.rightMargin: Theme.spacingLarge * 2
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
-            text: qsTr("Built with Qt, RtAudio, RtMidi and the Steinberg VST3 SDK. VST is a trademark of Steinberg Media Technologies GmbH.")
+            text: qsTr("Built with Qt, RtAudio, RtMidi, FluidSynth and the Steinberg VST3 SDK. VST is a trademark of Steinberg Media Technologies GmbH.")
             color: Theme.textDim
             font.pixelSize: Theme.smallFontSize
         }

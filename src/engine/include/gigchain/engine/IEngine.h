@@ -356,6 +356,11 @@ public:
     // window), with the reason.
     [[nodiscard]] virtual double pluginParameterValue(const core::ChannelId& id, int target, uint32_t parameter) const = 0;
     virtual core::Result<void> setPluginParameter(const core::ChannelId& id, int target, uint32_t parameter, double value) = 0;
+    // The file a channel's instrument plays (the SoundFont Player's .sf2;
+    // empty: none, or an instrument that plays none), and choosing another
+    // (read in the background; problems come through poll()).
+    [[nodiscard]] virtual QString instrumentFile(const core::ChannelId& id) const = 0;
+    virtual core::Result<void> setInstrumentFile(const core::ChannelId& id, const QString& path) = 0;
     // For "learn": the last keyboard knob, fader or pedal moved (any value)
     // since the previous call, as {MIDI channel 1-16, controller 0-127}.
     virtual std::optional<std::pair<int, int>> takeMovedController() = 0;

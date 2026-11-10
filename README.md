@@ -273,6 +273,7 @@ what was fixed in the [**changelog**](CHANGELOG.md) and on the
 
 | Version | Status |
 |---|---|
+| 0.9.0 | Alpha: the SoundFont Player: play .sf2 SoundFonts, with FL Studio's SoundFont Player controls (patch and bank, reverb and chorus, envelope, pitch LFO, filter, quality, drum mode) |
 | 0.8.4 | Alpha: Linux: the downloads use your own PulseAudio again (0.8.3's ran out of memory on PipeWire and could freeze for minutes at start); the .deb installs JACK's library; how to use JACK on PipeWire |
 | 0.8.3 | Alpha: the chart moves with the flow; a chord's menu opens on its own; tap a part in Perform and the chart goes there; editing a long chart no longer freezes; typing, imports and stems stay with their own song; sections keep their instruments; Save As takes the backing tracks; Practice and Perform keep their place; quitting no longer freezes while a piano is read |
 | 0.8.2 | Alpha: Practice in time with the click and matching Perform; drag the flow, the chart follows it on stage; chord lengths in rows; a big count-in; Practice's parts to jump to; the click's volume and "only while playing" |
@@ -322,6 +323,7 @@ It is built with:
 - the [Steinberg VST3 SDK](https://github.com/steinbergmedia/vst3sdk) (MIT)
 - the Steinberg ASIO SDK (GPL-3.0)
 - [RtAudio](https://github.com/thestk/rtaudio) and [RtMidi](https://github.com/thestk/rtmidi) (MIT-style)
+- [FluidSynth](https://github.com/FluidSynth/fluidsynth) (LGPL-2.1-or-later), which plays SoundFonts in the SoundFont Player
 - effects ported from [Vital](https://github.com/mtytel/vital) (GPL-3.0) in Saw Stack Pro and Piano Pro
 - Piano Pro's recorded grand and upright from Versilian Studios' [VCSL](https://github.com/sgossner/VCSL) (CC0, public domain)
 

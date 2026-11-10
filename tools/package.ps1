@@ -65,6 +65,10 @@ foreach ($required in "$exeName.exe", "$($exeName)Scan.exe", 'Qt6Core.dll', 'Qt6
     if (-not (Test-Path (Join-Path $stage $required))) { $problems += "missing: $required" }
 }
 if (-not (Get-ChildItem $stage -Filter 'rtaudio*.dll')) { $problems += 'missing: the RtAudio library' }
+if (-not (Get-ChildItem $stage -Filter '*fluidsynth*.dll')) { $problems += 'missing: the FluidSynth library (the SoundFont Player)' }
+foreach ($licence in 'fluidsynth', 'gcem') {
+    if (-not (Test-Path (Join-Path $stage "licenses\$licence.txt"))) { $problems += "missing: licenses\$licence.txt" }
+}
 if (Get-ChildItem $stage -Recurse -Filter '*d.dll' | Where-Object { $_.Name -match '^(Qt6\w+d|rtaudiod)\.dll$' }) {
     $problems += 'debug libraries were staged'
 }

@@ -8,6 +8,23 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-11 (alpha)
+
+The SoundFont Player: GigChain Keys now plays SoundFonts (.sf2).
+
+### Added
+
+- **The SoundFont Player: play .sf2 SoundFonts.** A built-in instrument
+  that works as FL Studio's SoundFont Player does: choose a SoundFont file,
+  step through its sounds by patch and bank or pick one from the list, and
+  shape them with the same controls: Reverb and Chorus (built in, with their
+  level), the envelope's four sliders, the pitch LFO, the filter's cutoff
+  and modulation, and the quality, mode (instrument or drums) and
+  velocity-to-cutoff options. Every slider and knob all the way down plays
+  the SoundFont as it was made. The file is saved with the song; a moved or
+  missing one is named, and its settings kept. Played by FluidSynth.
+  Asked for on YouTube.
+
 ## [0.8.4] - 2026-11-10 (alpha)
 
 A Linux fix: the downloads use your own PulseAudio again.
