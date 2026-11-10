@@ -14,7 +14,7 @@ Waves' do), are not played yet.
 
 ## The built-in instruments: Saw Stack Pro, Piano Pro and Pads Pro
 
-Three instruments come with GigChain Keys, in the **Instruments** list as
+Three instruments come with GigChain Keys (and the SoundFont Player, below), in the **Instruments** list as
 *Built into GigChain Keys*. Their windows are the app's own, in the same
 style, and work the same way:
 
@@ -55,6 +55,40 @@ moves **Tone** across and **Shimmer** (the reverb climbing an octave) up.
 swells in, **Tail** how long it rings after you let go, **Width** how wide it
 is, and **Touch** how much playing harder makes it louder (none at first).
 **Reverb** sets the room.
+
+## The SoundFont Player
+
+The **SoundFont Player** (also in the Instruments list, *Built into
+GigChain Keys*) plays SoundFont files (**.sf2**): a whole General MIDI set
+of 128 sounds, or one instrument. Thousands are free online. It works as FL
+Studio's SoundFont Player does:
+
+- **The folder** (top left) chooses the file. It is read in the background
+  ("Reading…"), and saved with the song by where it is: if you move or
+  delete the file, the song says so and keeps its settings; put it back and
+  open the song again.
+- **Patch** and **Bank** step through its sounds with **‹ ›**; click the
+  **name** for the whole list. (Bank 128 is a General MIDI SoundFont's drum
+  kits.)
+- **Reverb** and **Chorus:** the light switches the built-in effect on or
+  off; **Level** is how much of it (the middle is as the SoundFont's maker
+  set it). For other effects, use the channel strip.
+- **Envelope:** **A**ttack, **D**ecay, **S**ustain and **R**elease. **All
+  the way down, a slider plays the SoundFont's own value**; up, it sets
+  that stage for every note. (Double-click a slider to send it back down.)
+- **LFO** is the pitch wobble (vibrato): **DEL** waits before it starts,
+  **AMT** is how much (fully left: the SoundFont's own; 12 o'clock: none;
+  left and right of that it wobbles the other way round), **SPD** how fast.
+- **Misc** is the filter: **CUT** closes it (darker), **MOD** opens it with
+  the SoundFont's filter envelope. Fully left, both are the SoundFont's own.
+- **Quality:** *Crunchy* is the gritty 1990s sound, *Standard* the usual,
+  *HQ* the cleanest (a little more work for the computer). It matters for
+  notes far from where a sound was recorded.
+- **Mode:** *Instrument* stops a note when you let go; *Drums* plays every
+  hit to its end; *Auto* plays bank 128 as drums and the rest as
+  instruments.
+- **Vel → Cut:** on, softer notes are darker, as the SoundFont standard
+  has it; off, every note is as bright.
 
 ## Sustain Pads
 

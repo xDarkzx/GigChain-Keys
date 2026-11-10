@@ -83,6 +83,11 @@ public:
     // What the selected built-in shows besides its settings (engine::readings),
     // by name: "pianoRecordings", "pianoSource". Below 0 when not known.
     Q_INVOKABLE [[nodiscard]] double builtinReading(const QString& name) const;
+    // The file the selected built-in plays (the SoundFont Player's .sf2), as
+    // a path; empty when none. Choosing one (a path or a file: URL) reads it
+    // in the background; problems are shown and logged.
+    Q_INVOKABLE [[nodiscard]] QString builtinFile() const;
+    Q_INVOKABLE void setBuiltinFile(const QString& pathOrUrl);
 
     // nullptr when there is nothing to show. Failures are shown to the user
     // (banner) and logged, and returned.

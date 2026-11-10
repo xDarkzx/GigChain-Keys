@@ -20,6 +20,7 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Network Qml Quick QuickControl
 find_package(tl-expected CONFIG REQUIRED)
 find_package(RtAudio CONFIG REQUIRED)
 find_package(RtMidi CONFIG REQUIRED)
+find_package(FluidSynth CONFIG REQUIRED)
 # MSVC refuses to link ASan-instrumented objects with uninstrumented ones
 # that use the same STL containers, so third-party code built here (the VST3
 # SDK) is instrumented too.

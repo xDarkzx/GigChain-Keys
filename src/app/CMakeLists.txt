@@ -80,7 +80,7 @@ endif()
 configure_file(${PROJECT_SOURCE_DIR}/installer/THIRD-PARTY-NOTICES.txt.in ${CMAKE_BINARY_DIR}/installer/THIRD-PARTY-NOTICES.txt @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/installer/THIRD-PARTY-NOTICES.txt DESTINATION .)
 install(FILES ${vst3sdk_SOURCE_DIR}/LICENSE.txt DESTINATION licenses RENAME vst3sdk.txt)
-foreach(_port rtaudio rtmidi tl-expected)
+foreach(_port rtaudio rtmidi tl-expected fluidsynth gcem)
     install(FILES ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/${_port}/copyright
             DESTINATION licenses RENAME ${_port}.txt)
 endforeach()

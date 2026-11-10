@@ -22,6 +22,16 @@ RtMidi (Gary P. Scavone and contributors)
   RtMidi licence (MIT-style): licenses/rtmidi.txt
   https://github.com/thestk/rtmidi
 
+FluidSynth (Peter Hanappe, Tom Moebert and contributors)
+  The SoundFont Player plays SoundFont files with FluidSynth.
+  GNU Lesser General Public License v2.1 or later: licenses/fluidsynth.txt
+  This app's own source is open (GPLv3): you may rebuild it with your own
+  FluidSynth. Source code: https://github.com/FluidSynth/fluidsynth
+
+gcem (Keith O'Hara), used by FluidSynth
+  Apache License 2.0: licenses/gcem.txt
+  https://github.com/kthohr/gcem
+
 VST 3 SDK (Steinberg Media Technologies GmbH)
   MIT licence: licenses/vst3sdk.txt
   https://github.com/steinbergmedia/vst3sdk

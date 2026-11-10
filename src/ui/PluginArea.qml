@@ -99,6 +99,11 @@ Rectangle {
                 visible: area.editorService.builtinId === "builtin:pads-pro" && !area.detached
                 service: area.editorService
             }
+            SoundFontPanel {
+                anchors.fill: parent
+                visible: area.editorService.builtinId === "builtin:soundfont" && !area.detached
+                service: area.editorService
+            }
 
             // Shown only where no plugin window covers the area.
             Label {

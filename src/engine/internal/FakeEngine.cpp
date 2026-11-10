@@ -4,6 +4,7 @@
 
 #include "EngineLog.h"
 #include "PadsProNode.h"
+#include "SoundFontNode.h"
 #include "PianoProNode.h"
 #include "SawStackNode.h"
 
@@ -89,6 +90,7 @@ void FakeEngine::applyPatch(const core::SongId&, const core::Patch& patch)
         if (c.builtin == QLatin1StringView(SawStackNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<SawStackNode>();
         if (c.builtin == QLatin1StringView(PianoProNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<PianoProNode>();
         if (c.builtin == QLatin1StringView(PadsProNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<PadsProNode>();
+        if (c.builtin == QLatin1StringView(SoundFontNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<SoundFontNode>();
     }
 }
 
@@ -124,6 +126,21 @@ core::Result<void> FakeEngine::setPluginParameter(const core::ChannelId& id, int
     // it refuses is a reading (the sidechain's place, the piano's state): kept as set.
     if (PluginNode* node = builtinOf(id, target); node != nullptr && node->setParameter(parameter, value)) return {};
     m_parameterValues[parameter] = std::clamp(value, 0.0, 1.0);
+    return {};
+}
+
+QString FakeEngine::instrumentFile(const core::ChannelId& id) const
+{
+    if (const PluginNode* node = builtinOf(id, -1)) return node->file();
+    const auto found = m_instrumentFiles.find(id.value());
+    return found != m_instrumentFiles.end() ? found->second : QString();
+}
+
+core::Result<void> FakeEngine::setInstrumentFile(const core::ChannelId& id, const QString& path)
+{
+    // The SoundFont Player takes it as the real engine's does (and refuses a file that is not there).
+    if (PluginNode* node = builtinOf(id, -1)) return node->setFile(path);
+    m_instrumentFiles[id.value()] = path;
     return {};
 }
 
@@ -246,7 +263,16 @@ void FakeEngine::injectController(int midiChannel, int controller, int value)
 
 std::vector<Notice> FakeEngine::poll()
 {
-    return {};
+    // The SoundFont Player taking in a file it read (the others stay as they
+    // are: Piano Pro would start reading its recordings), and what it says.
+    std::vector<Notice> notices;
+    for (const auto& [id, node] : m_builtins) {
+        if (node->bundlePath() != QLatin1StringView(SoundFontNode::kPluginId)) continue;
+        node->serviceMainThread();
+        const QStringList messages = node->takeMessages();
+        std::ranges::transform(messages, std::back_inserter(notices), [](const QString& m) { return Notice::warning(m); });
+    }
+    return notices;
 }
 
 core::Result<std::unique_ptr<IPluginEditor>> FakeEngine::createEditor(const core::ChannelId&)

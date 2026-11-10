@@ -33,7 +33,7 @@ bash "$ROOT/tools/check-mac-links.sh" "$APP"
 NOTICES="$BUILD/installer/THIRD-PARTY-NOTICES.txt"
 TRIPLET=arm64-osx-13 # (the mac-release preset's)
 LICENCES=("$ROOT/LICENSE" "$NOTICES" "$BUILD/_deps/vst3sdk-src/LICENSE.txt")
-for port in rtaudio rtmidi tl-expected; do LICENCES+=("$BUILD/vcpkg_installed/$TRIPLET/share/$port/copyright"); done
+for port in rtaudio rtmidi tl-expected fluidsynth gcem; do LICENCES+=("$BUILD/vcpkg_installed/$TRIPLET/share/$port/copyright"); done
 for file in "${LICENCES[@]}"; do
     [ -f "$file" ] || { echo "A licence the app must carry is missing: $file" >&2; exit 1; }
 done
@@ -42,7 +42,7 @@ mkdir -p "$RES/licenses"
 cp "$ROOT/LICENSE" "$RES/LICENSE.txt"
 cp "$NOTICES" "$RES/THIRD-PARTY-NOTICES.txt"
 cp "$BUILD/_deps/vst3sdk-src/LICENSE.txt" "$RES/licenses/vst3sdk.txt"
-for port in rtaudio rtmidi tl-expected; do
+for port in rtaudio rtmidi tl-expected fluidsynth gcem; do
     cp "$BUILD/vcpkg_installed/$TRIPLET/share/$port/copyright" "$RES/licenses/$port.txt"
 done
 # Piano Pro's recorded pianos (VCSL, CC0) and their licence, where the app

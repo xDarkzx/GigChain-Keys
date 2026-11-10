@@ -119,6 +119,7 @@ qt_add_qml_module(gigchain_ui
         SawStackPanel.qml
         PianoProPanel.qml
         PadsProPanel.qml
+        SoundFontPanel.qml
         PadXY.qml
         SustainPadsBar.qml
         SustainPadsWindow.qml
@@ -167,6 +168,7 @@ qt_add_qml_module(gigchain_ui
         icons/music.svg
         icons/piano.svg
         icons/plus.svg
+        icons/folder.svg
         icons/ripple.svg
         icons/vinyl.svg
         icons/volume.svg
