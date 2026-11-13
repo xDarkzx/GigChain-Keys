@@ -31,6 +31,8 @@ Item {
     }
     property int frameWidth: 1040
     property int frameHeight: 600
+    // Its own top bar instead of this one (Pads Pro's browser).
+    property bool ownTopBar: false
     readonly property int contentTop: 64
     default property alias content: frame.data
 
@@ -176,6 +178,7 @@ Item {
                 id: topBar
                 anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 18; rightMargin: 14 }
                 height: panel.contentTop
+                visible: !panel.ownTopBar
 
                 Row {
                     id: logo
@@ -257,49 +260,53 @@ Item {
                         }
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: typeMenu.opened ? typeMenu.close() : typeMenu.open() }
                     }
-                    // The list drops down under the display, as wide as it.
+                    // The list drops down under the display, as wide as it (a
+                    // long one scrolls, within the window).
                     Popup {
                         id: typeMenu
                         y: display.height + 6
                         width: display.width
+                        height: Math.min(panel.typeNames.length * 30, 450) + 2 * padding
                         padding: 6
                         background: Rectangle { color: "#1a1e26"; border.color: panel.cardEdge; radius: 12 }
-                        contentItem: Column {
-                            Repeater {
-                                model: panel.typeNames
-                                delegate: Rectangle {
-                                    id: entry
-                                    required property string modelData
-                                    required property int index
-                                    objectName: panel.namePrefix + "Type_" + index
-                                    width: typeMenu.availableWidth
-                                    height: 30
-                                    radius: 8
-                                    color: index === panel.typeIndex ? "#1f3a4d" : (entryArea.containsMouse ? "#262b35" : "transparent")
-                                    Text {
-                                        anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
-                                        width: 70
-                                        text: panel.category(entry.modelData)
-                                        color: panel.soundColour
-                                        font.family: Theme.fontFamily
-                                        font.pixelSize: 9
-                                        font.weight: Font.Bold
-                                        font.letterSpacing: 1
-                                    }
-                                    Text {
-                                        anchors { left: parent.left; leftMargin: 86; verticalCenter: parent.verticalCenter }
-                                        text: entry.modelData
-                                        color: panel.text
-                                        font.family: Theme.fontFamily
-                                        font.pixelSize: 12
-                                    }
-                                    MouseArea {
-                                        id: entryArea
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: { panel.chooseType(entry.index); typeMenu.close() }
-                                    }
+                        contentItem: ListView {
+                            objectName: panel.namePrefix + "TypeList"
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+                            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                            model: panel.typeNames
+                            delegate: Rectangle {
+                                id: entry
+                                required property string modelData
+                                required property int index
+                                objectName: panel.namePrefix + "Type_" + index
+                                width: typeMenu.availableWidth
+                                height: 30
+                                radius: 8
+                                color: index === panel.typeIndex ? "#1f3a4d" : (entryArea.containsMouse ? "#262b35" : "transparent")
+                                Text {
+                                    anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
+                                    width: 70
+                                    text: panel.category(entry.modelData)
+                                    color: panel.soundColour
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 9
+                                    font.weight: Font.Bold
+                                    font.letterSpacing: 1
+                                }
+                                Text {
+                                    anchors { left: parent.left; leftMargin: 86; verticalCenter: parent.verticalCenter }
+                                    text: entry.modelData
+                                    color: panel.text
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 12
+                                }
+                                MouseArea {
+                                    id: entryArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: { panel.chooseType(entry.index); typeMenu.close() }
                                 }
                             }
                         }

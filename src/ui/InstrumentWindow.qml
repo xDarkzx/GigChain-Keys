@@ -210,17 +210,17 @@ ApplicationWindow {
             Loader {
                 anchors.fill: parent
                 active: win.builtin && win.service.builtinId === "builtin:saw-stack-pro"
-                sourceComponent: SawStackPanel { service: win.service }
+                sourceComponent: SawStackPanel { service: win.service; engineStatus: win.engineStatus }
             }
             Loader {
                 anchors.fill: parent
                 active: win.builtin && win.service.builtinId === "builtin:piano-pro"
-                sourceComponent: PianoProPanel { service: win.service }
+                sourceComponent: PianoProPanel { service: win.service; engineStatus: win.engineStatus }
             }
             Loader {
                 anchors.fill: parent
                 active: win.builtin && win.service.builtinId === "builtin:pads-pro"
-                sourceComponent: PadsProPanel { service: win.service }
+                sourceComponent: PadsProPanel { service: win.service; engineStatus: win.engineStatus }
             }
             Loader {
                 anchors.fill: parent

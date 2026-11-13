@@ -131,6 +131,7 @@ qt_add_qml_module(gigchain_ui
         BuiltinLayerRow.qml
         SidechainCard.qml
         EnhanceButton.qml
+        BuiltinFxWindow.qml
     RESOURCES
         icons/adjustments-horizontal.svg
         icons/layout-grid.svg
@@ -176,6 +177,77 @@ qt_add_qml_module(gigchain_ui
         icons/wave-sine.svg
         icons/wave-square.svg
         icons/x.svg
+        # Pads Pro's backgrounds, one for each pad (tools/make-pad-art.py).
+        padart/01-juno.jpg
+        padart/02-supersaw.jpg
+        padart/03-moog.jpg
+        padart/04-flute.jpg
+        padart/05-fmbells.jpg
+        padart/06-tapechoir.jpg
+        padart/07-violins.jpg
+        padart/08-tonewheel.jpg
+        padart/09-angelic.jpg
+        padart/10-piano.jpg
+        padart/11-epiano.jpg
+        padart/12-ebow.jpg
+        padart/13-stringmachine.jpg
+        padart/14-pipeorgan.jpg
+        padart/15-harmonium.jpg
+        padart/16-twin.jpg
+        padart/17-vector.jpg
+        padart/18-bowl.jpg
+        padart/19-nebula.jpg
+        padart/20-wind.jpg
+        padart/21-ocean.jpg
+        padart/22-forest.jpg
+        padart/23-cave.jpg
+        sawart/01-supersaw-lead.jpg
+        sawart/02-trance-lead.jpg
+        sawart/03-anthem-lead.jpg
+        sawart/04-big-room-lead.jpg
+        sawart/05-melodic-dubstep-lead.jpg
+        sawart/06-hoover-lead.jpg
+        sawart/07-silk-lead.jpg
+        sawart/08-supersaw-chords.jpg
+        sawart/09-future-bass-chords.jpg
+        sawart/10-deep-house-chords.jpg
+        sawart/11-gated-trance-chords.jpg
+        sawart/12-synthwave-chords.jpg
+        sawart/13-uplifting-chords.jpg
+        sawart/14-supersaw-pluck.jpg
+        sawart/15-future-pluck.jpg
+        sawart/16-trance-pluck.jpg
+        sawart/17-tropical-pluck.jpg
+        sawart/18-rave-stab.jpg
+        sawart/19-supersaw-pad.jpg
+        sawart/20-dream-pad.jpg
+        sawart/21-analog-pad.jpg
+        sawart/22-swell-pad.jpg
+        sawart/23-air-pad.jpg
+        sawart/24-reese-bass.jpg
+        sawart/25-saw-bass.jpg
+        sawart/26-octave-bass.jpg
+        sawart/27-hoover-bass.jpg
+        sawart/28-pluck-bass.jpg
+        pianoart/01-grand-piano.jpg
+        pianoart/02-bright-grand.jpg
+        pianoart/03-ballad-grand.jpg
+        pianoart/04-upright-piano.jpg
+        pianoart/05-felt-piano.jpg
+        pianoart/06-electric-piano.jpg
+        pianoart/07-suitcase-rhodes.jpg
+        pianoart/08-wurlitzer.jpg
+        pianoart/09-electric-grand.jpg
+        pianoart/10-pianet.jpg
+        pianoart/11-dx-piano.jpg
+        pianoart/12-lofi-keys.jpg
+        pianoart/13-poly-keys.jpg
+        pianoart/14-poly-strings.jpg
+        pianoart/15-poly-brass.jpg
+        pianoart/16-house-piano.jpg
+        pianoart/17-big-house-piano.jpg
+        pianoart/18-prog-house-piano.jpg
+        pianoart/19-emotional-piano.jpg
 )
 target_include_directories(gigchain_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 target_link_libraries(gigchain_ui PUBLIC

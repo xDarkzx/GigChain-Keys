@@ -28,33 +28,46 @@ style, and work the same way:
   to read its value. **MIDI Learn** above the window learns any of them to a
   knob on your keyboard.
 
-**Saw Stack Pro** is the big layered saw sound of EDM: *Supersaw Lead,
-Supersaw Chords, Future Bass Chords, Melodic Dubstep Lead, Trance Lead,
-Anthem Lead, Big Room Lead, Supersaw Pad, Supersaw Pluck* and *Reese Bass*.
-Each is up to eight layers (sub, low saw, main, wide, octave up, body, pluck
-and air noise). **Cutoff, Resonance, Spread, Attack** and **Release** shape
-the sound; **Reverb, Delay, OTT** and **Width** finish it.
+**Saw Stack Pro** is the big layered saw sound of EDM, built the way
+producers build a stack: each layer sits in its own part of the sound (sub,
+bass, mids, highs and air) so nothing clashes or gets muddy. Its 28 types
+come in five families: **Lead, Chords, Pluck, Pad** and **Bass**. **The
+Stack** shows each layer with the part of the sound it fills, its level and
+its light. **Cutoff, Resonance, Spread, Attack** and **Release** shape the
+sound; **Reverb, Delay** and **Width** finish it. For Squash, Enhance or the
+sidechain pumping, add those effects after it (below).
 
-**Piano Pro** is the piano of EDM records: *House Piano, Big House Piano,
-Prog House Piano, Emotional Piano, Felt Piano, Grand Piano, Upright Piano,
-Electric Piano, DX Piano* and *Lo-fi Keys*. The acoustic types play a
-recorded Kawai grand or Yamaha upright: struck softly or hard, let go (you
-hear the dampers) and held with the sustain pedal. The electric types are
-FM pianos. Its layers are the piano, the same piano an octave up, soft
-strings and a sub. The **Piano** card says which piano plays. The first
-time a recorded piano is used it takes a few seconds to load ("Loading…"),
-and the FM piano plays meanwhile. **Tone, Resonance, Attack, Release** and
-**Width** shape it; **Reverb, Delay, OTT** and **Tape** (wobble, warmth and
-hiss) finish it.
+**Piano Pro** is a stage keyboard's pianos, in four families:
 
-**Pads Pro** is the lush pad of worship sets, in the spirit of the classic
-analog synths: *Warm, Lush, Dark, Air, Shimmer, Choir, Strings* and
-*Organ*, all equally loud, so switching never jumps in level. The square
-moves **Tone** across and **Shimmer** (the reverb climbing an octave) up.
-**Motion** is how much the pad breathes and drifts, **Bloom** how slowly it
-swells in, **Tail** how long it rings after you let go, **Width** how wide it
-is, and **Touch** how much playing harder makes it louder (none at first).
-**Reverb** sets the room.
+- **Acoustic:** *Concert Grand* (a recorded Yamaha C5, ten loudness
+  layers), *Bright Grand*, *Ballad Grand*, *Upright Piano* and *Felt Piano*.
+  Struck softly or hard, let go (you hear the dampers), and held with the
+  sustain pedal: a held note rings on and fades as a piano does.
+- **Electric:** a recorded *Rhodes* and *Suitcase Rhodes* (its tremolo
+  swinging left and right), *Wurlitzer*, *Electric Grand* (a Yamaha CP80),
+  *Pianet*, the FM *DX Piano* and *Lo-fi Keys*.
+- **Synth:** *Poly Keys, Poly Strings* and *Poly Brass*, an 80s polysynth
+  (saw, pulse and sub into a 24 dB filter, with its chorus).
+- **House:** *House Piano, Big House Piano, Prog House Piano* and
+  *Emotional Piano*, the grand as dance records use it.
+
+Choose one from the list at the top (by family) or with the arrows. Its
+layers are the piano, the same piano an octave up, soft strings and a sub.
+Under its name it says what plays; the first time a recorded piano is used
+it takes a few seconds to load ("Loading…") and an FM piano plays
+meanwhile. **Tone, Resonance, Attack, Release** and **Width** shape it;
+**Reverb, Delay** and **Tape** (wobble, warmth and hiss) finish it. Play it
+from the keyboard at the bottom of its window.
+
+**Pads Pro** is a pad to sit under the band: 23 pads in seven families
+(**Piano, Guitar, Strings, Organ, Synth, Air** and **Atmos**), from a Juno's
+warmth and a recorded string section to wind and the sea, all about as loud
+as each other, so switching never jumps in level. Four knobs change any
+pad: **Brightness** (darker or brighter), **Timbre** (warmer or more
+forward), **Time** (how slowly it swells in and how long it rings) and
+**Movement** (how much it moves). In the middle each pad is as designed.
+**Chorus, Phaser, Delay** and **Reverb** finish it, and **Touch** sets how
+much playing harder makes it louder (none at first).
 
 ## The SoundFont Player
 
@@ -138,11 +151,28 @@ the mixer (**PADS**, before **Aux**), as a channel has:
 The pad never starts by itself when GigChain Keys opens. **Panic** stops it
 too. Its sound, effects, fade, volume and place are remembered.
 
+## The built-in effects: Squash, Enhance and Sidechain
+
+Three effects come with GigChain Keys, in the **Add Effect** menu as *Built
+into GigChain Keys*. They work after any instrument, your VSTs too. Click
+one in a channel's effects to open its window; its settings are saved with
+the song.
+
+### Squash
+
+Three-band upward and downward compression: quiet parts of the sound are
+pulled up and loud parts pushed down, the lows, mids and highs each on
+their own. It makes saws, plucks and pads big, dense and in your face.
+
+- **Depth** is how much of it you hear (start around half).
+- **The meters** show each band at work: orange when it is lifted, blue
+  when it is pushed down.
+- **Time** is how fast it reacts; **Upward** and **Downward** how hard it
+  lifts and pushes; **In** and **Out** the level going in and coming out.
+
 ### Enhance
 
-Both have **Enhance** next to the OTT: one knob that makes a sound fuller
-and more finished, the way FL Studio's Soundgoodizer does. Click it to
-switch it on and open its dial. Its four settings:
+One knob that makes a sound fuller and more finished. Its four settings:
 
 - **A:** tighter, mono lows, a little more width in the middle, and brighter
   highs. Light compression and saturation.
@@ -152,24 +182,23 @@ switch it on and open its dial. Its four settings:
 - **D:** one compressor into a limiter, to glue any sound together.
 
 **Amount** blends from the sound as it was to the full effect. Enhance keeps
-the sound at the same volume, so it gets fuller without getting louder. To
-switch it off, click the light in its dial.
+the sound at the same volume, so it gets fuller without getting louder.
 
-### The sidechain
+### Sidechain
 
-Both have the pumping of a dance track built in, on the **Sidechain** card:
+The pumping of a dance track:
 
-- **The light** by its name switches it on (yellow) or off (grey); its
-  settings are kept while it is off.
 - **Sync** ducks on the song's beat; **Note** starts again on every note you
   play.
-- **The length:** how often it ducks, from **1/16** to a whole bar **1/1**,
-  with dotted (**D**) and triplet (**T**) lengths.
+- **Rate:** how often it ducks, from **1/16** to a whole bar **1/1**, with
+  dotted (**D**) and triplet (**T**) lengths.
 - **The display** shows the duck as it happens. **Drag across it** to make
   each dip shorter or longer (**Slope**).
 - **The curves** under it: ordinary ducks, slower ones for bass, reverse
-  "suction" swells, and rhythmic gates.
-- **Mix** sets how far it ducks.
+  "suction" swells, and rhythmic gates (pick **Gate** for a trance gate).
+- **Depth** sets how far it ducks.
+
+To switch any of them off for a while, use the power button on its slot.
 
 ## No instruments yet?
 

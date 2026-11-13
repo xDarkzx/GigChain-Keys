@@ -49,6 +49,16 @@ Setter toDouble(double Region::* field)
     };
 }
 
+Setter toFrame(int64_t Region::* field)
+{
+    return [field](Region& r, const QString& v) {
+        const auto n = whole(v);
+        if (!n || *n < 0) return false;
+        r.*field = *n;
+        return true;
+    };
+}
+
 const std::map<QString, Setter>& setters()
 {
     static const std::map<QString, Setter> all{
@@ -82,6 +92,10 @@ const std::map<QString, Setter>& setters()
         {u"rt_decay"_s, toDouble(&Region::rtDecayDb)},
         {u"seq_length"_s, toInt(&Region::seqLength)},
         {u"seq_position"_s, toInt(&Region::seqPosition)},
+        {u"loop_start"_s, toFrame(&Region::loopStart)},
+        {u"loop_end"_s, toFrame(&Region::loopEnd)},
+        {u"tail_start"_s, toFrame(&Region::tailStart)},
+        {u"tail_decay"_s, toDouble(&Region::tailDecayDb)},
     };
     return all;
 }

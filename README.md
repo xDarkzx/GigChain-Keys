@@ -121,8 +121,9 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
 ### What you need
 
-- **Instruments:** two come built in (**Saw Stack Pro** and **Piano Pro**,
-  below), and any VST3 or VST2 instruments and effects play too. GigChain Keys
+- **Instruments:** four come built in (**Saw Stack Pro**, **Piano Pro**,
+  **Pads Pro** and the **SoundFont Player**, below), and any VST3 or VST2
+  instruments and effects play too. GigChain Keys
   finds them in the usual plugin folders by itself. Want more? These free ones
   cover pianos, synths and pads:
 
@@ -145,7 +146,7 @@ go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
 | | |
 |---|---|
-| 🔊 **Its own EDM instruments** | **Saw Stack Pro**: the big layered supersaws of EDM (future bass chords, trance and big room leads, pads, plucks, a reese bass), eight layers each, finished with OTT, chorus, width, delay and reverb. **Piano Pro**: the pianos of EDM records (house, big house, prog house, emotional, felt, grand, upright, electric, DX, lo-fi), from a real recorded grand and upright. Both have a Kickstart-style sidechain (12 curves, 1/16 to a bar, dotted and triplet, from the beat or from each note), and every knob can be learned to your keyboard. No plugin to buy. |
+| 🔊 **Its own EDM instruments** | **Saw Stack Pro**: the big layered supersaws of EDM (future bass chords, trance and big room leads, pads, plucks, a reese bass), each layer in its own band (sub, bass, mids, highs, air), 28 types in five families, finished with chorus, width, delay and reverb. **Piano Pro**: a stage keyboard's pianos: a recorded concert grand and upright, a recorded Rhodes, Wurlitzer, CP80 electric grand and Pianet, the DX piano, 80s polysynth keys, strings and brass, and the house pianos of dance records. **Pads Pro**: 23 pads to sit under the band, from synths and a recorded string section to wind and the sea. Three effects of its own for any channel: **Squash** (three-band upward and downward compression), **Enhance** (one knob, A–D, for a fuller sound) and **Sidechain** (12 curves, 1/16 to a bar, dotted and triplet, from the beat or from each note). Every knob can be learned to your keyboard. No plugin to buy. |
 | 🎹 **Plays your plugins** | Hosts VST3 and VST2 instruments and effects with their own windows. Every sound in the setlist is loaded up front, so switching songs is instant, and held notes and reverb tails ring on across the change. |
 | 🎚️ **A real mixer** | Logic-style channel strips: instrument, effects, pan, fader, meters, mute and solo. An Aux strip for one shared reverb or delay, fed by each channel's Send knob. A master strip with its own effects, and a safety limiter before your speakers. Any channel, the click or a stem can go to outputs of its own (your in-ears, the sound desk). |
 | 🎼 **Splits, layers and knobs** | Key zones, transpose and velocity layers per instrument; a layer can ignore the sustain pedal, expression, mod wheel, pitch bend or aftertouch. A chord trigger and an arpeggiator per channel. Right-click any fader, pan knob or plugin setting and learn a knob, fader or pedal on your keyboard for it; learned knobs pick up where the sound is (no jumps) and can have a curve. One instrument can be shared by many songs, loaded once. |
@@ -325,7 +326,8 @@ It is built with:
 - [RtAudio](https://github.com/thestk/rtaudio) and [RtMidi](https://github.com/thestk/rtmidi) (MIT-style)
 - [FluidSynth](https://github.com/FluidSynth/fluidsynth) (LGPL-2.1-or-later), which plays SoundFonts in the SoundFont Player
 - effects ported from [Vital](https://github.com/mtytel/vital) (GPL-3.0) in Saw Stack Pro and Piano Pro
-- Piano Pro's recorded grand and upright from Versilian Studios' [VCSL](https://github.com/sgossner/VCSL) (CC0, public domain)
+- Piano Pro's concert grand: Alexander Holm's [Salamander Grand Piano](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html) (CC BY 3.0); its upright from Versilian Studios' [VCSL](https://github.com/sgossner/VCSL) (CC0); its Rhodes: Jeff Learman's [jRhodes3d](https://github.com/sfzinstruments/jlearman.jRhodes3d) (samples CC BY-NC 4.0); its Wurlitzer, CP80 and Pianet: [Greg Sullivan's E-Pianos](https://github.com/sfzinstruments/GregSullivan.E-Pianos) (CC BY 3.0)
+- Pads Pro's string section from Versilian Studios' [VSCO 2 CE](https://versilian-studios.com/vsco-community/) (CC0) and its piano from the [Splendid Grand Piano](https://github.com/sfzinstruments/splendid_grand_piano) (public domain)
 
 The full notices ship with the app (`THIRD-PARTY-NOTICES.txt`).
 

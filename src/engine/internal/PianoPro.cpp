@@ -35,13 +35,14 @@ constexpr std::array<const char*, kMacros> kMacroKeys{"type",    "tone",      "r
                                                       "enhanceOn"};
 constexpr auto kRates = static_cast<int>(sidechain::kRates.size());
 constexpr auto kCurves = static_cast<int>(sidechain::kCurves.size());
-constexpr auto kTriggers = static_cast<int>(sidechain::kTriggers.size());
 constexpr double kEnhanceStart = 0.75; // where Enhance's knob is when it is first switched on
 
 constexpr double kOutputDb = -14.0;  // every type's level before its own trim
 // Each piano brought to about the same level going into the effects
-// (VCSL's recordings are quiet; measured with a chord at velocity 100).
-constexpr std::array<float, kSources> kSourceGainDb{24.0F, 22.0F, 22.0F, 20.0F};
+// (measured with a chord at velocity 100: tst_piano_pro, every type's loudness).
+// Grand, Upright, Rhodes, Wurlitzer, Electric Grand, Pianet, DX, Poly.
+constexpr std::array<float, kSources> kSourceGainDb{26.5F, 24.1F, 14.4F, 19.0F, 18.4F, 23.0F, 20.0F, 20.0F};
+constexpr float kFmGainDb = 22.0F; // the FM piano that plays while a recorded one is missing
 
 float sourceGain(Source s)
 {
@@ -274,6 +275,9 @@ void Synth::applyParams() noexcept
         m_fx.setDesign(t.fx);
         m_source = t.source;
         m_softness = t.softness;
+        m_poly = t.poly;
+        m_tremolo = static_cast<float>(t.tremolo);
+        m_tremoloHz = t.tremoloHz;
         m_lowCutL.set(t.lowCutHz, 0.7071, m_rate);
         m_lowCutR.set(t.lowCutHz, 0.7071, m_rate);
     }
@@ -282,16 +286,11 @@ void Synth::applyParams() noexcept
                    .q = 0.7071 + 9.0 * knob(Macro::Resonance),
                    .reverb = knob(Macro::Reverb),
                    .delay = knob(Macro::Delay),
-                   .ott = knob(Macro::Ott),
+                   // OTT, Enhance and the sidechain are effects of their own now
+                   // (BuiltinEffects.h), loaded after it: their settings here are kept, unused.
+                   .ott = 0.0,
                    .width = knob(Macro::Width),
-                   .tape = knob(Macro::Tape),
-                   .enhance = knob(Macro::EnhanceOn) >= 0.5 ? knob(Macro::Enhance) : 0.0,
-                   .enhanceMode = Ranges::choice(knob(Macro::EnhanceMode), sawstack::Enhance::kModes),
-                   .sidechain = knob(Macro::SidechainOn) >= 0.5 ? knob(Macro::Sidechain) : 0.0,
-                   .curve = Ranges::choice(knob(Macro::SidechainCurve), kCurves),
-                   .beats = sidechain::kRates.at(static_cast<std::size_t>(Ranges::choice(knob(Macro::SidechainRate), kRates))).beats,
-                   .slope = knob(Macro::SidechainSlope),
-                   .fromNotes = Ranges::choice(knob(Macro::SidechainTrigger), kTriggers) == 1});
+                   .tape = knob(Macro::Tape)});
 }
 
 void Synth::process(std::span<const MidiEvent> events, const AudioBlock& io, const TimeInfo& time) noexcept
@@ -421,6 +420,31 @@ void Synth::startRecorded(Voice& v, const SampleSet& set, int note, int playedVe
     const double release = v.zone->release >= 2.0 ? v.zone->release : m_d.release;
     v.amp.set(std::max(v.zone->attack, m_d.attack), 0.0, 1.0, release, m_rate);
     v.panL = v.panR = 1.0F;
+    // Looped: from its tail on, it fades as the recording was fading (as
+    // fast as it plays: a note played higher fades faster).
+    v.tail = 1.0F;
+    v.tailStep = static_cast<float>(std::pow(10.0, -static_cast<double>(v.zone->tailDecayDb) * v.step / set.sampleRate / 20.0));
+}
+
+void Synth::startPoly(Voice& v, int pitchNote, float velocity) noexcept
+{
+    const PolyDesign& p = m_poly;
+    v.zone = nullptr;
+    v.poly = true;
+    v.freq = 440.0 * std::exp2((pitchNote - 69) / 12.0);
+    v.phase = m_random.unit(); // (free-running, as the oscillators of a real one are)
+    v.subPhase = static_cast<float>(v.phase) * 0.5F;
+    v.lfoPhase = m_random.unit();
+    // The low-pass follows the key, and opens a little more played harder.
+    v.cutoffScale = static_cast<float>(std::exp2((p.keyTrack * (pitchNote - 60) / 12.0) + (1.2 * (velocity - 0.7))));
+    v.filterCount = 0;
+    v.lowL.reset();
+    v.lowR.reset();
+    v.filterEnv.set(p.fAttack, p.fDecay, p.fSustain, p.fRelease, m_rate);
+    v.filterEnv.gateOn();
+    v.gain = (0.55F + (0.45F * velocity)) * sourceGain(Source::Poly);
+    v.amp.set(std::max(0.002, m_d.attack), p.decay, p.sustain, m_d.release, m_rate);
+    v.panL = v.panR = 1.0F;
 }
 
 void Synth::startFm(Voice& v, int pitchNote, float velocity) noexcept
@@ -439,8 +463,8 @@ void Synth::startFm(Voice& v, int pitchNote, float velocity) noexcept
     v.tineDecay = perSample(dx ? 0.1 : 0.04, m_rate);
     v.tineLevel = static_cast<float>(dx ? 0.5 + (0.3 * velocity) : 0.3 + (0.4 * velocity));
     v.tineLevelDecay = perSample(dx ? 0.6 : 0.3, m_rate);
-    // (Without recordings, a recorded type's FM piano at the electric's level.)
-    v.gain = (0.35F + (0.65F * velocity)) * sourceGain(dx ? Source::Dx : Source::Electric);
+    // (Without recordings, a recorded type's FM piano.)
+    v.gain = (0.35F + (0.65F * velocity)) * (dx ? sourceGain(Source::Dx) : std::pow(10.0F, kFmGainDb / 20.0F));
     // Low notes ring longer.
     const double decay = (dx ? 3.5 : 3.0) * std::exp2(-(pitchNote - 60) / 24.0);
     v.amp.set(std::max(0.001, m_d.attack), decay, 0.0, m_d.release, m_rate);
@@ -452,8 +476,8 @@ void Synth::startFm(Voice& v, int pitchNote, float velocity) noexcept
 
 void Synth::noteOn(int note, int velocity) noexcept
 {
-    // Felt and lo-fi play the softer recordings (soft hammers).
-    const int played = std::max(1, static_cast<int>(std::lround(velocity * (1.0 - (0.6 * m_softness)))));
+    // Felt and lo-fi play the softer recordings (soft hammers); bright ones the harder.
+    const int played = std::clamp(static_cast<int>(std::lround(velocity * (1.0 - (0.6 * m_softness)))), 1, 127);
     const float struck = static_cast<float>(played) / 127.0F;
     // The same key again: the note it already plays is damped quickly (no doubling, no click).
     for (Voice& v : m_voices) {
@@ -481,6 +505,8 @@ void Synth::noteOn(int note, int velocity) noexcept
             v.lowR.set(2500.0, 0.7071, m_rate);
             v.gain = 0.5F + (0.5F * struck);
             v.amp.set(std::max(0.15, m_d.attack), 0.3, 0.8, std::max(0.6, m_d.release), m_rate);
+        } else if (m_source == Source::Poly) {
+            startPoly(v, pitchNote, struck);
         } else if (set != nullptr) {
             startRecorded(v, *set, note, played, pitchNote);
         } else {
@@ -593,24 +619,33 @@ void Synth::renderVoice(Voice& v, std::size_t frames, double bend) noexcept
     const std::span<float> outR(m_layerR.at(layer).data(), frames);
     auto toR = outR.begin();
     if (v.zone != nullptr) {
-        const std::span<const int16_t> recording(v.zone->frames);
-        const auto end = static_cast<double>(v.zone->length() - 2);
+        const SampleZone& zone = *v.zone;
+        const std::span<const int16_t> recording(zone.frames);
+        const bool looped = zone.looped();
+        const auto end = static_cast<double>(zone.length() - 2);
+        const double loopLength = zone.loopEnd - zone.loopStart;
         const double step = v.step * bend;
         for (float& l : outL) {
             float& r = *toR++;
-            if (v.position >= end) { // the recording is over
+            if (looped && v.position >= zone.loopEnd) v.position -= loopLength; // round its loop again
+            if (v.position >= end || v.tail < 1e-4F) { // the recording is over (or its loop has faded away)
                 v.amp.stage = Envelope::Stage::Idle;
                 v.amp.level = 0.0F;
                 break;
             }
-            const float env = v.amp.tick() * v.gain;
+            const float env = v.amp.tick() * v.gain * v.tail;
             l += hermite(recording, 0, v.position) * env;
             r += hermite(recording, 1, v.position) * env;
+            if (looped && v.position >= zone.tailStart) v.tail *= v.tailStep;
             v.position += step;
         }
         return;
     }
     const double inc = v.freq * bend / m_rate;
+    if (v.poly) {
+        renderPoly(v, outL, outR, inc);
+        return;
+    }
     if (v.layer == static_cast<int>(Layer::Strings)) {
         sawstack::UnisonSpread spread;
         spread.set(kStringVoices, 0.3, 0.6, 0.8);
@@ -671,6 +706,44 @@ void Synth::renderVoice(Voice& v, std::size_t frames, double bend) noexcept
     if (v.amp.stage == Envelope::Stage::Sustain && v.amp.level <= 1e-4F) v.amp.stage = Envelope::Stage::Idle;
 }
 
+void Synth::renderPoly(Voice& v, std::span<float> outL, std::span<float> outR, double inc) noexcept
+{
+    const PolyDesign& p = m_poly;
+    constexpr int kFilterEvery = 16; // the low-pass follows its envelope this often (samples)
+    const auto dt = static_cast<float>(inc);
+    const auto lfoStep = static_cast<float>(p.pwmHz / m_rate);
+    const double q = 0.7071 + (4.0 * p.resonance);
+    auto toR = outR.begin();
+    for (float& l : outL) {
+        float& r = *toR++;
+        const float fe = v.filterEnv.tick();
+        if (v.filterCount-- <= 0) {
+            v.filterCount = kFilterEvery - 1;
+            const double hz = p.cutoffHz * v.cutoffScale * std::exp2(p.envOctaves * fe);
+            v.lowL.set(hz, q, m_rate);
+            v.lowR.set(hz, 0.7071, m_rate);
+        }
+        const auto width = static_cast<float>(
+            std::clamp(p.pulseWidth + (p.pwm * std::sin(static_cast<double>(v.lfoPhase) * kTwoPi)), 0.05, 0.95));
+        auto phase = static_cast<float>(v.phase);
+        const float osc = (static_cast<float>(p.saw) * sawstack::oscillator(sawstack::Wave::Saw, phase, dt))
+                        + (static_cast<float>(p.pulse) * sawstack::oscillator(sawstack::Wave::Pulse, phase, dt, width))
+                        + (static_cast<float>(p.sub) * sawstack::oscillator(sawstack::Wave::Square, v.subPhase, dt * 0.5F));
+        const float s = v.lowR.lowPass(v.lowL.lowPass(osc * 0.35F)) * v.amp.tick() * v.gain;
+        l += s;
+        r += s;
+        phase += dt;
+        if (phase >= 1.0F) phase -= 1.0F;
+        v.phase = phase;
+        v.subPhase += dt * 0.5F;
+        if (v.subPhase >= 1.0F) v.subPhase -= 1.0F;
+        v.lfoPhase += lfoStep;
+        if (v.lfoPhase >= 1.0F) v.lfoPhase -= 1.0F;
+    }
+    // Decayed away (a level that falls to nothing while held).
+    if (v.amp.stage == Envelope::Stage::Sustain && v.amp.level <= 1e-4F) v.amp.stage = Envelope::Stage::Idle;
+}
+
 void Synth::render(std::span<float> left, std::span<float> right) noexcept
 {
     const std::size_t frames = left.size();
@@ -699,6 +772,18 @@ void Synth::render(std::span<float> left, std::span<float> right) noexcept
             gain += (target - gain) * kSmoothing;
             *toL++ += *fromL++ * gain;
             *toR++ += *fromR++ * gain;
+        }
+    }
+    // The suitcase's tremolo: the sound swung left to right and back.
+    if (m_tremolo > 0.0F) {
+        const double step = m_tremoloHz / m_rate;
+        auto toR = right.begin();
+        for (float& l : left) {
+            const auto swing = static_cast<float>(std::sin(m_tremoloPhase * kTwoPi));
+            l *= 1.0F - (m_tremolo * 0.5F * (1.0F + swing));
+            *toR++ *= 1.0F - (m_tremolo * 0.5F * (1.0F - swing));
+            m_tremoloPhase += step;
+            if (m_tremoloPhase >= 1.0) m_tremoloPhase -= 1.0;
         }
     }
     // The type's low cut on the piano (prog house cuts its bass away).

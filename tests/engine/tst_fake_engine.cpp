@@ -202,7 +202,7 @@ private slots:
     }
 
     // The demo's own instruments behave as the real ones: a type chosen
-    // brings its own settings (Felt Piano: its tape on, its sidechain off), a
+    // brings its own settings (Felt Piano: its tape on, its tone dark), a
     // setting stays as set; a reading for the window (not a setting) is
     // shown as the demo sets it.
     void theAppsOwnInstrumentsKeepTheirSettingsAsTheRealOnes()
@@ -220,11 +220,12 @@ private slots:
         };
         const engine::PluginParameter& type = parameters.front();
         QCOMPARE(type.name, u"Type"_s);
-        QCOMPARE(engine->pluginParameterValue(channel.id, -1, idOf(u"Tape"_s)), 0.0); // House Piano: no tape
+        QCOMPARE(engine->pluginParameterValue(channel.id, -1, idOf(u"Tape"_s)), 0.0); // Concert Grand: no tape
+        QCOMPARE(engine->pluginParameterValue(channel.id, -1, idOf(u"Tone"_s)), 1.0); // and open
         const auto felt = static_cast<double>(type.choices.indexOf(u"Felt Piano"_s)) / static_cast<double>(type.choices.size() - 1);
         QVERIFY(engine->setPluginParameter(channel.id, -1, type.id, felt).has_value());
         QVERIFY(engine->pluginParameterValue(channel.id, -1, idOf(u"Tape"_s)) > 0.3);
-        QCOMPARE(engine->pluginParameterValue(channel.id, -1, idOf(u"Sidechain On"_s)), 0.0);
+        QVERIFY(engine->pluginParameterValue(channel.id, -1, idOf(u"Tone"_s)) < 0.8);
         QVERIFY(engine->setPluginParameter(channel.id, -1, idOf(u"Tone"_s), 0.25).has_value());
         QVERIFY(std::abs(engine->pluginParameterValue(channel.id, -1, idOf(u"Tone"_s)) - 0.25) < 1e-6);
         // A reading the window shows (where the sidechain is), as the demo sets it.

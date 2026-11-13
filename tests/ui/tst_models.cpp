@@ -481,13 +481,14 @@ private slots:
         again.setFadeSeconds(0.0);
         again.setTone(-3.0);
         again.setOctave(-5);
-        QCOMPARE(again.preset(), 7);
+        const auto presets = static_cast<int>(SustainPadsController::presetNames().size());
+        QCOMPARE(again.preset(), presets - 1); // (kept to the last)
         QCOMPARE(again.volumeDb(), 0.0);
         QCOMPARE(again.fadeSeconds(), 0.1);
         QCOMPARE(again.tone(), 0.0);
         QCOMPARE(again.octave(), -1);
-        QCOMPARE(SustainPadsController::presetNames().size(), 8);
-        QCOMPARE(SustainPadsController::presetNames().at(0), u"Warm"_s);
+        QCOMPARE(presets, 23); // Pads Pro's pads
+        QCOMPARE(SustainPadsController::presetNames().at(0), u"Juno Warmth"_s);
     }
 
     // A song with a key (from its chart) takes the pad to its key when it is

@@ -19,13 +19,25 @@ void FxChain::prepare(double sampleRate)
     m_tape.prepare(m_rate);
     m_delay.prepare(m_rate);
     m_reverb.prepare(m_rate);
-    m_eq.at(0).set(EqBand::Kind::Peak, 500.0, -2.5, 1.0, m_rate);
-    m_eq.at(1).set(EqBand::Kind::Peak, 3500.0, -2.0, 1.2, m_rate);
-    m_eq.at(2).set(EqBand::Kind::HighShelf, 10000.0, 2.0, 0.7071, m_rate);
+    setFilters();
+}
+
+void FxChain::setFilters()
+{
+    m_eq.at(0).set(EqBand::Kind::Peak, 500.0, m_design.mudDb, 1.0, m_rate);
+    m_eq.at(1).set(EqBand::Kind::Peak, 3500.0, m_design.harshDb, 1.2, m_rate);
+    m_eq.at(2).set(EqBand::Kind::HighShelf, 10000.0, m_design.airDb, 0.7071, m_rate);
+    // Butterworth's two stages (Q 0.5412 and 1.3066): flat, then a smooth fall.
+    m_top = m_design.topHz < 19500.0;
+    for (std::size_t i = 0; i < m_topFilter.size(); ++i) m_topFilter.at(i).set(m_design.topHz, i % 2 == 0 ? 0.5412 : 1.3066, m_rate);
+    m_mono = m_design.monoBelowHz > 0.0;
+    m_sideLowCut.set(std::max(m_design.monoBelowHz, 20.0), 0.7071, m_rate);
 }
 
 void FxChain::setDesign(const FxDesign& fx)
 {
+    m_design = fx;
+    setFilters();
     m_drive = fx.driveDb <= 0.0 ? 0.0F : static_cast<float>(std::pow(10.0, fx.driveDb / 20.0));
     m_cutMud = fx.cutMud;
     m_chorus.setMix(fx.chorus);
@@ -98,6 +110,18 @@ void FxChain::process(std::span<float> left, std::span<float> right, std::span<c
         m_tape.tick(l, r, random);
         m_delay.tick(l, r, tempo);
         m_reverb.tick(l, r);
+        // The smooth top over all of it (the OTT and the echoes too): bright, never sharp.
+        if (m_top) {
+            l = m_topFilter.at(1).lowPass(m_topFilter.at(0).lowPass(l));
+            r = m_topFilter.at(3).lowPass(m_topFilter.at(2).lowPass(r));
+        }
+        // The low end in the middle: what differs between the ears is cut below monoBelowHz.
+        if (m_mono) {
+            const float mid = 0.5F * (l + r);
+            const float side = m_sideLowCut.highPass(0.5F * (l - r));
+            l = mid + side;
+            r = mid - side;
+        }
         const float duck = m_sidechain.gain(ppq) * m_trim;
         ppq += ppqStep;
         l = (l + bassL) * duck;

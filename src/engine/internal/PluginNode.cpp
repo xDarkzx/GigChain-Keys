@@ -1,5 +1,6 @@
 #include "PluginNode.h"
 
+#include "BuiltinEffects.h"
 #include "EngineLog.h"
 #include "PadsProNode.h"
 #include "PianoProNode.h"
@@ -26,7 +27,8 @@ bool PluginNode::isBuiltin(const QString& pluginId)
 
 std::vector<PluginInfo> PluginNode::builtins()
 {
-    return {SawStackNode::info(), PianoProNode::info(), PadsProNode::info(), SoundFontNode::info()};
+    return {SawStackNode::info(),   PianoProNode::info(),       PadsProNode::info(),          SoundFontNode::info(),
+            OttEffectNode::info(), EnhanceEffectNode::info(), SidechainEffectNode::info()};
 }
 
 core::Result<std::shared_ptr<PluginNode>> PluginNode::load(const QString& pluginId, double sampleRate, int maxBlock)
@@ -43,6 +45,15 @@ core::Result<std::shared_ptr<PluginNode>> PluginNode::load(const QString& plugin
         }
         if (pluginId == QLatin1StringView(SoundFontNode::kPluginId)) {
             return std::shared_ptr<PluginNode>(SoundFontNode::create(sampleRate, maxBlock));
+        }
+        if (pluginId == QLatin1StringView(OttEffectNode::kPluginId)) {
+            return std::shared_ptr<PluginNode>(OttEffectNode::create(sampleRate, maxBlock));
+        }
+        if (pluginId == QLatin1StringView(EnhanceEffectNode::kPluginId)) {
+            return std::shared_ptr<PluginNode>(EnhanceEffectNode::create(sampleRate, maxBlock));
+        }
+        if (pluginId == QLatin1StringView(SidechainEffectNode::kPluginId)) {
+            return std::shared_ptr<PluginNode>(SidechainEffectNode::create(sampleRate, maxBlock));
         }
         const QString why = u"%1 is not one of the app's own instruments (a newer version's, maybe)"_s.arg(pluginId);
         qCWarning(lcEngine).noquote() << why;

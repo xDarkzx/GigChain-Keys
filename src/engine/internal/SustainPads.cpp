@@ -16,9 +16,6 @@ constexpr double kTailSeconds = 15.0;
 constexpr int64_t kIdle = std::numeric_limits<int64_t>::max() / 2;
 constexpr float kMinFadeSeconds = 0.1F;
 constexpr float kMaxFadeSeconds = 30.0F;
-// The pads start at once: the fade is the swell (a pad's own bloom on top
-// would dip the crossfade).
-constexpr double kAttackSeconds = 0.05;
 constexpr uint8_t kVelocity = 100;
 // Two pads sound together through a crossfade (equal power: up to 3 dB
 // over one): full volume leaves that room.
@@ -161,9 +158,9 @@ void SustainPads::applySound(Slot& slot) noexcept
     using pads::Param;
     using pads::paramId;
     slot.synth.setParam(paramId(Param::Tone), m_tone.load(std::memory_order_relaxed));
-    slot.synth.setParam(paramId(Param::Shimmer), m_shimmer.load(std::memory_order_relaxed));
     slot.synth.setParam(paramId(Param::Motion), m_motion.load(std::memory_order_relaxed));
-    slot.synth.setParam(paramId(Param::Attack), pads::Ranges::fromSeconds(kAttackSeconds));
+    slot.synth.setExtraShimmer(m_shimmer.load(std::memory_order_relaxed)); // (over the pad's own)
+    slot.synth.setQuickAttack(true); // (the pads start at once: the fade is the swell; a pad's own bloom on top would dip the crossfade)
 }
 
 bool SustainPads::running(const Slot& slot) const noexcept

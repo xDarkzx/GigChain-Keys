@@ -8,9 +8,11 @@
 #include <cstdint>
 #include <vector>
 
-// Piano Pro's recorded pianos (VCSL, CC0): an SFZ map and its recordings,
-// read into memory at the playing rate, 16-bit, each trimmed to a length
-// that suits its register and faded out there.
+// Piano Pro's recorded pianos (its piano pack: tools/make-piano-pack.py): an
+// SFZ map and its recordings, read into memory at the playing rate, 16-bit.
+// A looped recording is kept whole (the pack cut it to its loop); one
+// without a loop is trimmed to a length that suits its register and faded
+// out there.
 namespace gigchain::engine {
 
 // One recording and where it plays.
@@ -23,9 +25,14 @@ struct SampleZone
     double attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.001; // seconds; sustain 0-1
     double rtDecayDb = 0.0; // release recordings: dB quieter per second the key was held
     int seqLength = 1, seqPosition = 1;
+    // Its loop (frames at the set's rate; loopEnd 0: none): played round
+    // while the note sounds, fading from tailStart at tailDecayDb a second.
+    double loopStart = 0.0, loopEnd = 0.0, tailStart = 0.0;
+    float tailDecayDb = 0.0F;
     std::vector<int16_t> frames; // stereo, left then right, from where the map says it starts
 
     [[nodiscard]] int64_t length() const { return static_cast<int64_t>(frames.size() / 2); }
+    [[nodiscard]] bool looped() const { return loopEnd > loopStart; }
 };
 
 struct SampleSet

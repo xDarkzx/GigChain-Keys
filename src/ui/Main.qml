@@ -358,6 +358,40 @@ ApplicationWindow {
         engineStatus: root.engineStatus
         owner: root
     }
+    // The app's own effects' windows (Squash, Enhance, Sidechain): one per
+    // effect clicked, brought to the front when clicked again.
+    Connections {
+        target: root.effectWindows
+        property var fxWindows: ({})
+        function onBuiltinEffectRequested(channel: int, effect: int, pluginId: string, title: string, owner: var) {
+            const key = channel + ":" + effect + ":" + pluginId
+            const open = fxWindows[key]
+            if (open) {
+                open.raise()
+                open.requestActivate()
+                return
+            }
+            const made = fxWindowComponent.createObject(root, {
+                windows: root.effectWindows, channel: channel, effect: effect,
+                pluginId: pluginId, title: title, transientParent: owner || root
+            })
+            if (!made) {
+                console.warn("Could not open the window of", title)
+                return
+            }
+            fxWindows[key] = made
+            made.closing.connect(() => {
+                delete fxWindows[key]
+                Qt.callLater(() => made.destroy())
+            })
+            made.show()
+            made.requestActivate()
+        }
+    }
+    Component {
+        id: fxWindowComponent
+        BuiltinFxWindow {}
+    }
     // The mixer in a window of its own (the toolbar's Mixer menu, Ctrl+Shift+M).
     Loader {
         objectName: "mixerWindowLoader"

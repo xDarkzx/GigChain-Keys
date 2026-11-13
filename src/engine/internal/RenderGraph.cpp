@@ -254,7 +254,7 @@ void ChannelStrip::produce(std::span<const MidiEvent> routed, int frames, const 
         std::fill_n(block.right, count, 0.0F);
     }
     for (const auto& effect : m_effects) {
-        effect->process({}, block, time);
+        effect->process(effect->wantsNotes() ? routed : std::span<const MidiEvent>{}, block, time);
     }
 }
 

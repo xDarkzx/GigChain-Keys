@@ -181,6 +181,7 @@ private:
         int filterCountdown = 0;
         int note = -1;      // mono layers: the note playing
         float velocity = 1.0F;
+        double age = 0.0;   // seconds since the note started (the pitch glide, the vibrato's delay)
     };
     struct Voice
     {
@@ -204,6 +205,16 @@ private:
         bool lowestOnly = false;
         bool ownEnvelope = false; // the pluck: keeps its own short shape whatever Attack and Release say
         double attack = 0.003, decay = 0.1, sustain = 1.0, release = 0.35, filterDecay = 0.2, filterRelease = 0.35;
+        // The type's (LayerDesign): movement and pitch.
+        int semitones = 0;
+        double vibratoCents = 0.0, vibratoHz = 5.0, vibratoDelay = 0.0;
+        double filterLfoOctaves = 0.0, filterLfoHz = 0.2;
+        double pwmDepth = 0.0, pwmHz = 0.6;
+        double pitchSemitones = 0.0, pitchSeconds = 0.08;
+    };
+    struct LayerLfos // one each per layer, every note together (phases 0-1)
+    {
+        double vibrato = 0.0, filter = 0.0, pwm = 0.0;
     };
     struct LayerBus // where a layer's notes are added up
     {
@@ -233,7 +244,7 @@ private:
     void releaseAll(bool fast) noexcept;
     void updateMono() noexcept;
     void render(std::span<float> left, std::span<float> right) noexcept;
-    void renderLayer(LayerVoice& lv, const LayerSetup& setup, int note, float velocity, std::size_t frames) noexcept;
+    void renderLayer(LayerVoice& lv, const LayerSetup& setup, const LayerLfos& lfo, int note, float velocity, std::size_t frames) noexcept;
     void renderNoise(std::size_t frames) noexcept;
     [[nodiscard]] double noteHz(int note, const LayerSetup& setup) const noexcept;
 
@@ -256,6 +267,7 @@ private:
     std::array<float, 7> m_pinkL{}, m_pinkR{};
 
     std::array<LayerBus, kLayers> m_bus{};
+    std::array<LayerLfos, kLayers> m_lfo{};
     std::atomic<int> m_type{-1};
 
     // The effects (the main filter is Cutoff and Resonance, on the whole stack but the sub).

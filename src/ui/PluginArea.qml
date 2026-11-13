@@ -88,16 +88,19 @@ Rectangle {
                 anchors.fill: parent
                 visible: area.editorService.builtinId === "builtin:saw-stack-pro" && !area.detached
                 service: area.editorService
+                engineStatus: area.engineStatus
             }
             PianoProPanel {
                 anchors.fill: parent
                 visible: area.editorService.builtinId === "builtin:piano-pro" && !area.detached
                 service: area.editorService
+                engineStatus: area.engineStatus
             }
             PadsProPanel {
                 anchors.fill: parent
                 visible: area.editorService.builtinId === "builtin:pads-pro" && !area.detached
                 service: area.editorService
+                engineStatus: area.engineStatus
             }
             SoundFontPanel {
                 anchors.fill: parent

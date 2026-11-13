@@ -2,6 +2,7 @@
 // when no audio device can be opened. See FakeEngineFactory.h for why.
 #include "FakeEngine.h"
 
+#include "BuiltinEffects.h"
 #include "EngineLog.h"
 #include "PadsProNode.h"
 #include "SoundFontNode.h"
@@ -92,11 +93,34 @@ void FakeEngine::applyPatch(const core::SongId&, const core::Patch& patch)
         if (c.builtin == QLatin1StringView(PadsProNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<PadsProNode>();
         if (c.builtin == QLatin1StringView(SoundFontNode::kPluginId)) m_builtins[c.id.value()] = std::make_shared<SoundFontNode>();
     }
+    // Each of the app's own effects, likewise (kept while it stays in its place).
+    for (const core::Channel& channel : patch.channels) {
+        for (std::size_t i = 0; i < channel.effects.size(); ++i) {
+            const QString& pluginId = channel.effects.at(i).pluginId;
+            const QString key = u"%1/%2/%3"_s.arg(channel.id.value()).arg(i).arg(pluginId);
+            if (m_builtinEffects.contains(key)) continue;
+            if (pluginId == QLatin1StringView(OttEffectNode::kPluginId)) m_builtinEffects[key] = std::make_shared<OttEffectNode>();
+            if (pluginId == QLatin1StringView(EnhanceEffectNode::kPluginId)) m_builtinEffects[key] = std::make_shared<EnhanceEffectNode>();
+            if (pluginId == QLatin1StringView(SidechainEffectNode::kPluginId)) m_builtinEffects[key] = std::make_shared<SidechainEffectNode>();
+        }
+    }
+    m_effectIds.clear();
+    for (const core::Channel& channel : patch.channels) {
+        std::vector<QString> ids;
+        std::ranges::transform(channel.effects, std::back_inserter(ids), [](const core::PluginSlot& s) { return s.pluginId; });
+        m_effectIds[channel.id.value()] = std::move(ids);
+    }
 }
 
 PluginNode* FakeEngine::builtinOf(const core::ChannelId& id, int target) const
 {
-    if (target >= 0) return nullptr;
+    if (target >= 0) {
+        const auto ids = m_effectIds.find(id.value());
+        if (ids == m_effectIds.end() || std::cmp_greater_equal(target, ids->second.size())) return nullptr;
+        const QString key = u"%1/%2/%3"_s.arg(id.value()).arg(target).arg(ids->second.at(static_cast<std::size_t>(target)));
+        const auto effect = m_builtinEffects.find(key);
+        return effect != m_builtinEffects.end() ? effect->second.get() : nullptr;
+    }
     const auto found = m_builtins.find(id.value());
     return found != m_builtins.end() ? found->second.get() : nullptr;
 }
