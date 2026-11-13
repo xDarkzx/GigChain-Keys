@@ -117,6 +117,8 @@ public:
         m_size = size;
         m_compose = std::move(compose);
     }
+    // Windows of their own (an effect's) drawn in where they sit over the main window.
+    void setExtras(std::function<QList<QQuickWindow*>()> extras) { m_extras = std::move(extras); }
 
     bool start(const QString& path, const QJsonArray& lines)
     {
@@ -190,6 +192,19 @@ private:
                 QPainter painter(&frame);
                 painter.drawImage(QPoint(m_toasts->x() - m_window->x(), m_toasts->y() - m_window->y()), m_toasts->grabWindow());
             }
+            if (!m_compose && m_extras) {
+                QPainter painter(&frame);
+                const qreal dpr = frame.devicePixelRatio();
+                for (QQuickWindow* extra : m_extras()) {
+                    if (extra == nullptr || !extra->isVisible()) continue;
+                    const QRect at((extra->x() - m_window->x()), (extra->y() - m_window->y()), extra->width(), extra->height());
+                    // A soft shadow under it, as a window has.
+                    painter.fillRect(at.translated(6, 8), QColor(0, 0, 0, 90));
+                    QImage image = extra->grabWindow();
+                    image.setDevicePixelRatio(dpr);
+                    painter.drawImage(at.topLeft(), image);
+                }
+            }
             if (frame.size() != m_size) frame = frame.scaled(m_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
             frame = frame.convertToFormat(QImage::Format_RGB32); // (blue, green, red, 255 in memory: ffmpeg's bgra)
             QByteArray bytes(frame.sizeInBytes(), Qt::Uninitialized);
@@ -207,6 +222,7 @@ private:
     QQuickWindow* m_toasts;
     QSize m_size{kWidth, kHeight};
     std::function<QImage()> m_compose;
+    std::function<QList<QQuickWindow*>()> m_extras;
     QProcess m_ffmpeg;
     QElapsedTimer m_clock;
     QTimer m_timer;
@@ -4177,7 +4193,7 @@ private slots:
     {
         const QString folder = qEnvironmentVariable("GIGCHAIN_FEATURE_VIDEO");
         if (folder.isEmpty()) QSKIP("Set GIGCHAIN_FEATURE_VIDEO to a feature video's folder to record it");
-        const QString feature = QFileInfo(folder).fileName().left(1); // "1".."4"
+        const QString feature = QFileInfo(folder).fileName().section(u'-', 0, 0); // "1".."12": the folder's number
         const QStringList only = qEnvironmentVariable("GIGCHAIN_DEMO_SCENES").split(u',', Qt::SkipEmptyParts);
         QFile subsFile(folder + u"/subs.json"_s);
         QVERIFY2(subsFile.open(QIODevice::ReadOnly), qPrintable(subsFile.errorString()));
@@ -5367,6 +5383,249 @@ private slots:
             // ---- 14: the close ----------------------------------------------------------------------------------
             closing(u"14"_s, 3.0); // the logo and links stay a little after the last word
             setPads(false);
+        }
+
+        if (feature == u"12"_s) {
+            // ================= 12: the sound update: Piano Pro, Saw Stack Pro, Pads Pro, the effects =================
+            // Every scene from plan.json (make_plan.py), as its sound (sound_NN.wav,
+            // rendered by tst_piano_pro from the same plan) plays it: each
+            // preset, knob and effect changed on its beat; the pointer there just before.
+            QFile planFile(folder + u"/plan.json"_s);
+            QVERIFY2(planFile.open(QIODevice::ReadOnly), qPrintable(planFile.errorString()));
+            const QJsonObject plan = QJsonDocument::fromJson(planFile.readAll()).object();
+            const double beatSeconds = 60.0 / plan.value(u"tempo"_s).toDouble(124.0);
+            const QJsonObject planned = plan.value(u"scenes"_s).toObject();
+            // The three instruments, each on a channel of the first song.
+            toEdit(0);
+            const std::map<QString, std::pair<QString, QString>> kinds{{u"piano"_s, {u"builtin:piano-pro"_s, u"Piano Pro"_s}},
+                                                                        {u"saw"_s, {u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s}},
+                                                                        {u"pads"_s, {u"builtin:pads-pro"_s, u"Pads Pro"_s}}};
+            std::map<QString, int> channelOf;
+            for (const auto& [kind, plugin] : kinds) {
+                QVERIFY(doc.addChannel(plugin.first, plugin.second));
+                channelOf[kind] = static_cast<int>(doc.currentPatch()->channels.size()) - 1;
+            }
+            const auto idOf = [&](int channel) { return doc.currentPatch()->channels.at(static_cast<std::size_t>(channel)).id; };
+            const auto prefixOf = [](const QString& kind) {
+                return kind == u"piano" ? u"pianoPro"_s : (kind == u"saw" ? u"sawStack"_s : u"padsPro"_s);
+            };
+            const auto pidOf = [&](int channel, int target, const QString& name) -> uint32_t {
+                const std::vector<engine::PluginParameter> params = m_engine->pluginParameters(idOf(channel), target);
+                const auto found = std::ranges::find_if(params, [&](const engine::PluginParameter& p) { return p.name == name; });
+                if (found != params.end()) return found->id;
+                qWarning().noquote() << "Scene: no parameter" << name;
+                return 0;
+            };
+            const auto setType = [&](int channel, const QString& name) {
+                const QStringList types = m_engine->pluginParameters(idOf(channel), -1).front().choices;
+                const auto index = types.indexOf(name);
+                QVERIFY2(index >= 0, qPrintable(name));
+                (void)m_engine->setPluginParameter(idOf(channel), -1, pidOf(channel, -1, u"Type"_s),
+                                                   static_cast<double>(index) / static_cast<double>(types.size() - 1));
+            };
+            // The effects' own windows (each a window of its own: drawn into the frames where it sits).
+            auto* fxWindows = root->property("effectWindows").value<QObject*>();
+            QVERIFY(fxWindows != nullptr);
+            const auto openFx = [&]() {
+                QList<QQuickWindow*> open;
+                for (QWindow* top : QGuiApplication::topLevelWindows()) {
+                    auto* quick = qobject_cast<QQuickWindow*>(top);
+                    if (quick != nullptr && quick->isVisible() && quick->property("pluginId").isValid()) open << quick;
+                }
+                return open;
+            };
+            recorder.setExtras(openFx);
+            bool spreadFx = false; // (a scene with several effects: side by side)
+            const auto showFx = [&](int channel, int effect) {
+                bool opened = false;
+                QVERIFY(QMetaObject::invokeMethod(fxWindows, "open", Q_RETURN_ARG(bool, opened), Q_ARG(int, channel), Q_ARG(int, effect),
+                                                  Q_ARG(QWindow*, w)));
+                QTest::qWait(150);
+                // One effect: to the right, the instrument still in sight. Three:
+                // side by side across the window, each one's name in sight.
+                for (QQuickWindow* fx : openFx()) {
+                    if (fx->property("effect").toInt() != effect) continue;
+                    const int x = !spreadFx ? SceneRecorder::kWindowWidth - fx->width() - 60 : 40 + (effect * 450);
+                    fx->setPosition(w->x() + x, w->y() + 110 + (effect * 40));
+                }
+            };
+            const auto fxIndex = [](const QJsonArray& chain, const QString& name) {
+                for (qsizetype i = 0; i < chain.size(); ++i) {
+                    if (chain.at(i).toObject().value(u"fx"_s).toString() == name) return static_cast<int>(i);
+                }
+                return -1;
+            };
+            const std::map<QString, std::pair<QString, QString>> effects{{u"squash"_s, {u"builtin:ott"_s, u"Squash"_s}},
+                                                                          {u"enhance"_s, {u"builtin:enhance"_s, u"Enhance"_s}},
+                                                                          {u"sidechain"_s, {u"builtin:sidechain"_s, u"Sidechain"_s}}};
+
+            for (const QString& key : planned.keys()) {
+                const QJsonObject s = planned.value(key).toObject();
+                const QString kind = s.value(u"instrument"_s).toString();
+                const int channel = channelOf.at(kind);
+                const QString prefix = prefixOf(kind);
+                const QJsonArray events = s.value(u"events"_s).toArray();
+                const QJsonArray chain = s.value(u"fx"_s).toArray();
+                const double length = s.value(u"beats"_s).toDouble() * beatSeconds;
+                spreadFx = chain.size() > 1;
+                // The instrument's window, as big as it gets, at the scene's first preset.
+                toEdit(0);
+                root->setProperty("editMixerOpen", false);
+                QVERIFY(root->setProperty("editKeyboardOpen", false));
+                doc.setSelectedChannel(channel);
+                tabs->setProperty("currentIndex", 1);
+                setType(channel, events.at(0).toObject().value(u"type"_s).toString());
+                if (kind == u"piano") (void)m_engine->setPluginParameter(idOf(channel), -1, engine::readings::kPianoRecordings, 1.0);
+                // Its effects, from where the scene starts them.
+                for (const auto& v : chain) {
+                    const QJsonObject e = v.toObject();
+                    const auto& [id, name] = effects.at(e.value(u"fx"_s).toString());
+                    QVERIFY(doc.addEffect(channel, id, name));
+                }
+                QTest::qWait(300);
+                for (qsizetype i = 0; i < chain.size(); ++i) {
+                    const QJsonObject e = chain.at(i).toObject();
+                    for (auto it = e.begin(); it != e.end(); ++it) {
+                        if (it.key() != u"fx") (void)m_engine->setPluginParameter(idOf(channel), static_cast<int>(i), pidOf(channel, static_cast<int>(i), it.key()), it.value().toDouble());
+                    }
+                }
+                QTest::qWait(400);
+                const bool lastScene = key == u"14";
+                if (!begin(key)) continue;
+                // The effects a scene is about, open from its start (the effects' scene opens them on their names).
+                if (key != u"10") {
+                    for (qsizetype i = 0; i < chain.size(); ++i) showFx(channel, static_cast<int>(i));
+                }
+                // What happens when: the pointer aimed just before, the change on the beat.
+                struct Action
+                {
+                    Action(double when, std::function<void()> what) : at(when), run(std::move(what)) {}
+                    double at = 0.0;
+                    std::function<void()> run;
+                };
+                std::vector<Action> actions;
+                struct Turn
+                {
+                    Turn(double fromSeconds, double toSeconds, std::function<void(double)> setter, double first, double last)
+                        : from(fromSeconds), to(toSeconds), set(std::move(setter)), start(first), end(last)
+                    {
+                    }
+                    double from = 0.0, to = 0.0;
+                    std::function<void(double)> set;
+                    double start = 0.0, end = 0.0;
+                };
+                std::vector<Turn> turns;
+                const auto aim = [&](const QString& name, double atSeconds) {
+                    actions.emplace_back(std::max(0.0, atSeconds - 0.7), [this, name, prefix] {
+                        if (const QQuickItem* target = shownOne(prefix + name)) {
+                            m_overlay->setProperty("glide", 500);
+                            m_overlay->setProperty("pointer", centre(target));
+                        }
+                    });
+                };
+                const auto ripple = [this] { QMetaObject::invokeMethod(m_overlay, "click"); };
+                for (const auto& v : events) {
+                    const QJsonObject e = v.toObject();
+                    const double t = e.value(u"beat"_s).toDouble() * beatSeconds;
+                    if (e.contains(u"type"_s) && t > 0.0) {
+                        aim(u"TypeShown"_s, t);
+                        const QString preset = e.value(u"type"_s).toString();
+                        actions.emplace_back(t, [&, preset] {
+                            ripple();
+                            setType(channel, preset);
+                        });
+                    }
+                    if (e.contains(u"knob"_s)) {
+                        const QString knob = e.value(u"knob"_s).toString();
+                        aim(u"Knob_"_s + knob, t);
+                        const double value = e.value(u"value"_s).toDouble();
+                        actions.emplace_back(t, [&, knob, value] { (void)m_engine->setPluginParameter(idOf(channel), -1, pidOf(channel, -1, knob), value); });
+                    }
+                    if (e.contains(u"sweep"_s)) {
+                        const QString knob = e.value(u"sweep"_s).toString();
+                        aim(u"Knob_"_s + knob, t);
+                        const uint32_t id = pidOf(channel, -1, knob);
+                        turns.emplace_back(t, t + (e.value(u"beats"_s).toDouble() * beatSeconds),
+                                           [&, id](double x) { (void)m_engine->setPluginParameter(idOf(channel), -1, id, x); }, e.value(u"from"_s).toDouble(),
+                                           e.value(u"to"_s).toDouble());
+                    }
+                    if (e.contains(u"layer"_s)) {
+                        const int l = e.value(u"layer"_s).toInt();
+                        aim(u"LayerOn_%1"_s.arg(l), t);
+                        const double on = e.value(u"on"_s).toDouble();
+                        constexpr uint32_t kLayerParams = 18; // (sawstack::paramId(layer, LayerParam::On))
+                        actions.emplace_back(t, [&, l, on] {
+                            ripple();
+                            (void)m_engine->setPluginParameter(idOf(channel), -1, static_cast<uint32_t>(l) * kLayerParams, on);
+                        });
+                    }
+                    if (e.contains(u"fx"_s) && e.contains(u"param"_s)) {
+                        const int index = fxIndex(chain, e.value(u"fx"_s).toString());
+                        const uint32_t id = pidOf(channel, index, e.value(u"param"_s).toString());
+                        if (e.contains(u"sweepTo"_s)) {
+                            const double start = m_engine->pluginParameterValue(idOf(channel), index, id);
+                            turns.emplace_back(t, t + (e.value(u"beats"_s).toDouble() * beatSeconds),
+                                               [&, index, id](double x) { (void)m_engine->setPluginParameter(idOf(channel), index, id, x); }, start,
+                                               e.value(u"sweepTo"_s).toDouble());
+                        } else {
+                            const double value = e.value(u"value"_s).toDouble();
+                            actions.emplace_back(t, [&, index, id, value] { (void)m_engine->setPluginParameter(idOf(channel), index, id, value); });
+                        }
+                    }
+                    if (e.contains(u"show"_s)) {
+                        const int index = fxIndex(chain, e.value(u"show"_s).toString());
+                        actions.emplace_back(t, [&, index] { showFx(channel, index); });
+                    }
+                    if (e.contains(u"browse"_s)) {
+                        aim(u"Menu"_s, t);
+                        actions.emplace_back(t, [&, prefix] {
+                            ripple();
+                            if (const QQuickItem* menu = shownOne(prefix + u"Menu"_s)) QTest::mouseClick(w, Qt::LeftButton, {}, centre(menu).toPoint());
+                        });
+                        actions.emplace_back(t + 3.0, [&, prefix] {
+                            for (QObject* popup : root->findChildren<QObject*>(prefix + u"Browser"_s)) QMetaObject::invokeMethod(popup, "close");
+                        });
+                    }
+                }
+                if (lastScene) { // the logo over the piano as the last chord rings
+                    const double voiceEnd = s.value(u"voiceEndBeat"_s).toDouble() * beatSeconds;
+                    actions.emplace_back(voiceEnd, [this] {
+                        unspot();
+                        m_overlay->setProperty("logo", 1.0);
+                        m_overlay->setProperty("logoLine", u"Free  ·  Open source"_s);
+                        m_overlay->setProperty("logoLine2", u"github.com/xDarkzx/GigChain-Keys"_s);
+                    });
+                }
+                std::ranges::stable_sort(actions, {}, &Action::at);
+                std::size_t next = 0;
+                const int sidechain = fxIndex(chain, u"sidechain"_s);
+                while (recorder.now() < length) {
+                    const double now = recorder.now();
+                    for (; next < actions.size() && actions.at(next).at <= now; ++next) actions.at(next).run();
+                    // The demo engine plays nothing: the sidechain's playhead moved here with the beat (its rate's length).
+                    if (sidechain >= 0) {
+                        const double rate = m_engine->pluginParameterValue(idOf(channel), sidechain, pidOf(channel, sidechain, u"Rate"_s));
+                        const auto r = static_cast<std::size_t>(std::lround(rate * static_cast<double>(engine::sidechain::kRates.size() - 1)));
+                        const double beats = engine::sidechain::kRates.at(std::min(r, engine::sidechain::kRates.size() - 1)).beats;
+                        constexpr uint32_t kPlayhead = 0x5C00; // (BuiltinEffectNode::kReadings: where it is in its cycle)
+                        (void)m_engine->setPluginParameter(idOf(channel), sidechain, kPlayhead, std::fmod(now / beatSeconds, beats) / beats);
+                    }
+                    for (const Turn& turn : turns) {
+                        if (now >= turn.from && now <= turn.to + 0.05) {
+                            const double x = std::clamp((now - turn.from) / std::max(turn.to - turn.from, 1e-6), 0.0, 1.0);
+                            turn.set(turn.start + ((turn.end - turn.start) * x));
+                        }
+                    }
+                    QTest::qWait(15);
+                }
+                QVERIFY2(recorder.stop(), qPrintable(recorder.problem()));
+                m_overlay->setProperty("logo", 0.0);
+                unspot();
+                // Its effects away again (their windows close with them).
+                while (!doc.currentPatch()->channels.at(static_cast<std::size_t>(channel)).effects.empty()) QVERIFY(doc.removeEffect(channel, 0));
+                QTest::qWait(300);
+            }
+            return;
         }
 
         if (feature == u"6"_s || feature == u"7"_s) {

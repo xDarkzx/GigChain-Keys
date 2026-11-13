@@ -7,6 +7,7 @@
 // listen to.
 #include "PadsPro.h"
 #include "PadsProNode.h"
+#include "PluginNode.h"
 #include "VideoSounds.h"
 
 #include <QDir>
@@ -323,6 +324,93 @@ private slots:
         }
         qInfo().noquote() << u"cents from true:"_s << report.join(u", "_s);
         QVERIFY2(off.isEmpty(), qPrintable(u"out of tune (cents): %1"_s.arg(off.join(u", "_s))));
+    }
+
+    // Another pad chosen while a chord is held (a player changing sound
+    // live): the held notes ring out as the pad they were, the new pad
+    // plays the next chord, and nothing breaks, whichever pads they are
+    // (a recorded pad's notes never read a synth's leftovers).
+    void anotherPadWhileAChordIsHeldRingsOutAndPlaysOn()
+    {
+        // As the app plays it (the instrument loaded, its recordings read),
+        // chords overlapping as a player's do: each pressed before the last
+        // is let go, the pad changed between them.
+        // C, G, Am, F a bar each at 124 BPM, the bass an octave down, each
+        // chord held a little past the next (seen breaking: Juno Warmth to
+        // Orchestra Strings on the third bar).
+        {
+            auto loaded = PluginNode::load(QString::fromLatin1(PadsProNode::kPluginId), kRate, kBlock);
+            QVERIFY(loaded.has_value());
+            PluginNode& node = **loaded;
+            QVERIFY(node.setParameter(paramId(Param::Type), typeValue(0)).has_value());
+            const std::array<std::array<int, 4>, 4> bars{{{36, 60, 64, 67}, {31, 59, 62, 67}, {33, 60, 64, 69}, {29, 60, 65, 69}}};
+            const double samplesPerBeat = kRate * 60.0 / 124.0;
+            struct Ev
+            {
+                Ev(int64_t when, MidiEvent event) : at(when), midi(event) {}
+                int64_t at = 0;
+                MidiEvent midi{};
+            };
+            std::vector<Ev> evs;
+            for (int bar = 0; bar < 8; ++bar) {
+                for (const int k : bars.at(static_cast<std::size_t>(bar % 4))) {
+                    evs.emplace_back(static_cast<int64_t>(bar * 4.0 * samplesPerBeat), noteOn(k, 88));
+                    evs.emplace_back(static_cast<int64_t>(((bar * 4.0) + 4.05) * samplesPerBeat), noteOff(k));
+                }
+            }
+            std::ranges::stable_sort(evs, {}, &Ev::at);
+            std::vector<float> l(kBlock), r(kBlock);
+            std::size_t next = 0;
+            bool finite = true;
+            const auto changeAt = static_cast<int64_t>(12.0 * samplesPerBeat);
+            for (int64_t at = 0; at < static_cast<int64_t>(32.0 * samplesPerBeat); at += kBlock) {
+                if (changeAt >= at && changeAt < at + kBlock) QVERIFY(node.setParameter(paramId(Param::Type), typeValue(6)).has_value());
+                std::vector<MidiEvent> block;
+                for (; next < evs.size() && evs.at(next).at < at + kBlock; ++next) {
+                    MidiEvent e = evs.at(next).midi;
+                    e.sampleOffset = static_cast<int32_t>(std::max<int64_t>(evs.at(next).at - at, 0));
+                    block.push_back(e);
+                }
+                const TimeInfo time{.tempo = 124.0, .sampleRate = kRate, .samplePosition = at, .ppqPosition = static_cast<double>(at) / samplesPerBeat};
+                node.process(block, AudioBlock{.left = l.data(), .right = r.data(), .frames = kBlock}, time);
+                finite = finite && std::ranges::all_of(l, [](float x) { return std::isfinite(x); });
+            }
+            QVERIFY(finite);
+        }
+        const std::vector<std::vector<int>> chords{{48, 60, 64, 67}, {45, 60, 64, 69}};
+        for (int i = 0; i < padTypeCount(); ++i) {
+            for (const auto& [from, to] : {std::pair{0, i}, std::pair{i, 0}, std::pair{i, (i + 7) % padTypeCount()}}) {
+                if (from == to) continue;
+                auto loaded = PluginNode::load(QString::fromLatin1(PadsProNode::kPluginId), kRate, kBlock);
+                QVERIFY(loaded.has_value());
+                PluginNode& node = **loaded;
+                QVERIFY(node.setParameter(paramId(Param::Type), typeValue(from)).has_value());
+                std::vector<float> l(kBlock), r(kBlock);
+                bool finite = true;
+                double lastLevel = 0.0;
+                for (int block = 0; block < static_cast<int>(4.0 * kRate) / kBlock; ++block) {
+                    std::vector<MidiEvent> events;
+                    const int bar = block / (static_cast<int>(kRate) / kBlock); // a chord a second
+                    if (block % (static_cast<int>(kRate) / kBlock) == 0) {
+                        if (bar == 2) QVERIFY(node.setParameter(paramId(Param::Type), typeValue(to)).has_value());
+                        std::ranges::transform(chords.at(static_cast<std::size_t>(bar % 2)), std::back_inserter(events), [](int k) { return noteOn(k); });
+                        if (bar > 0) {
+                            for (const int k : chords.at(static_cast<std::size_t>((bar + 1) % 2))) {
+                                MidiEvent off = noteOff(k);
+                                off.sampleOffset = 100; // (let go just after the next is pressed)
+                                events.push_back(off);
+                            }
+                        }
+                    }
+                    node.process(events, AudioBlock{.left = l.data(), .right = r.data(), .frames = kBlock}, TimeInfo{});
+                    finite = finite && std::ranges::all_of(l, [](float x) { return std::isfinite(x); })
+                             && std::ranges::all_of(r, [](float x) { return std::isfinite(x); });
+                    lastLevel = std::accumulate(l.begin(), l.end(), 0.0, [](double sum, float x) { return sum + (static_cast<double>(x) * x); });
+                }
+                QVERIFY2(finite, qPrintable(u"%1 to %2"_s.arg(nameOf(from), nameOf(to))));
+                QVERIFY2(lastLevel > 1e-12, qPrintable(u"%1 to %2: the new pad is silent"_s.arg(nameOf(from), nameOf(to))));
+            }
+        }
     }
 
     // Every note its own voice (as an analog polysynth's), yet each one in

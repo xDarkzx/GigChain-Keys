@@ -380,6 +380,20 @@ void Synth::applyParams() noexcept
     const auto knob = [&now](Param p) { return static_cast<double>(now.at(at(p))); };
     const int index = typeIndex(knob(Param::Type));
     const PadType& t = padType(index);
+    if (index != m_type) {
+        // Another pad: the notes sounding ring out as the pad they are
+        // (their own engine), and the keys play the new one when pressed
+        // again. (A classic pad's notes follow the pad's settings, worked
+        // out for the new pad now: they fade out in a few milliseconds.)
+        for (Voice& v : m_voices) {
+            if (!v.active()) continue;
+            v.keyDown = v.sustained = false;
+            for (LayerVoice& lv : v.layer) {
+                if (v.kind == Engine::Classic) lv.amp.fastRelease(m_voiceRate);
+                else lv.amp.gateOff();
+            }
+        }
+    }
     m_type = index;
     m_d.type = &t;
     m_d.engine = engineFor(static_cast<std::size_t>(index));
@@ -558,7 +572,9 @@ void Synth::noteOn(int note, int velocity) noexcept
     if (m_d.type == nullptr) return;
     const float vel = 1.0F - (m_d.velocity * (1.0F - (static_cast<float>(velocity) / 127.0F)));
     // The same note again: its voice plays it again from where it is (no click).
-    auto same = std::ranges::find_if(m_voices, [&](const Voice& v) { return v.note == note && v.active() && !v.stolen; });
+    auto same = std::ranges::find_if(m_voices, [&](const Voice& v) {
+        return v.note == note && v.active() && !v.stolen && v.type == m_type && v.kind == m_d.engine;
+    });
     Voice* target = same != m_voices.end() ? &*same : nullptr;
     if (target == nullptr) {
         const auto sounding = [](const Voice& v) { return v.active() && !v.stolen; };
@@ -599,6 +615,8 @@ void Synth::startVoice(Voice& v, int note) noexcept
     v = Voice{};
     v.engine = std::move(engine);
     v.note = note;
+    v.type = m_type;
+    v.kind = m_d.engine;
     if (m_d.engine != Engine::Classic) {
         v.engine.start(m_d.engine, t.patch, engineContext(v), m_random);
         setEnvelopes(v);
@@ -877,7 +895,7 @@ EngineContext Synth::engineContext(const Voice& v) const noexcept
     c.brightness = m_d.brightness;
     c.character = m_d.character;
     c.held = v.keyDown || v.sustained;
-    const auto index = static_cast<std::size_t>(std::max(m_type, 0));
+    const auto index = static_cast<std::size_t>(std::max(v.type, 0)); // (its own pad's recordings and tables)
     c.waves = index < m_wavesFor.size() ? m_wavesFor.at(index).get() : nullptr;
     c.spectral = index < m_engineSpectralFor.size() ? m_engineSpectralFor.at(index) : nullptr;
     c.samples = index < m_samplesFor.size() ? m_samplesFor.at(index).get() : nullptr;
@@ -894,10 +912,10 @@ Engine Synth::engineFor(std::size_t index) const noexcept
 // An engine's note: the engine makes it, the swell and tail shape it.
 void Synth::renderEngineVoice(Voice& v, std::span<float> left, std::span<float> right) noexcept
 {
-    const PadType& t = *m_d.type;
+    const PadType& t = padType(v.type); // (the pad it was started as)
     const std::span<float> l = std::span<float>(m_engineLeft).first(left.size());
     const std::span<float> r = std::span<float>(m_engineRight).first(right.size());
-    v.engine.render(m_d.engine, t.patch, engineContext(v), m_random, l, r);
+    v.engine.render(v.kind, t.patch, engineContext(v), m_random, l, r);
     const float gain = m_d.layer.at(0).gain * v.velocity;
     auto fromL = l.begin();
     auto fromR = r.begin();
@@ -917,7 +935,7 @@ void Synth::renderEngineVoice(Voice& v, std::span<float> left, std::span<float> 
 void Synth::renderVoice(Voice& v, std::span<float> left, std::span<float> right) noexcept
 {
     const PadType& t = *m_d.type;
-    if (m_d.engine != Engine::Classic) {
+    if (v.kind != Engine::Classic) {
         renderEngineVoice(v, left, right);
         return;
     }

@@ -6,6 +6,7 @@
 // harder; without its recordings it still plays (its FM piano); every control
 // on its window changes the sound; its types are named as players name
 // them and sit at about the same loudness; it saves and loads.
+#include "BuiltinEffects.h"
 #include "PianoLibrary.h"
 #include "PianoPro.h"
 #include "PianoProNode.h"
@@ -20,10 +21,14 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
+#include <array>
 #include <cmath>
+#include <functional>
+#include <iterator>
 #include <numbers>
 #include <numeric>
 #include <ranges>
+#include <utility>
 #include <vector>
 
 using namespace gigchain::engine;
@@ -761,6 +766,276 @@ private slots:
             const QString path = u"%1/sound_%2.wav"_s.arg(folder).arg(number, 2, 10, QLatin1Char('0'));
             QVERIFY2(video::writeWav(path, sound), qPrintable(path));
             qInfo().noquote() << path << u"%1 s"_s.arg(static_cast<double>(sound.size()) / 2.0 / video::kRate, 0, 'f', 1);
+        }
+    }
+
+    // Feature video 12's sound (its plan.json, from make_plan.py): each
+    // scene's instrument (Piano Pro, Saw Stack Pro or Pads Pro) through its
+    // real engine, then the app's own effects, playing C G Am F (a bar each)
+    // in the part its preset plays, presets, knobs and effects changing on
+    // the plan's beats. Made only when GIGCHAIN_VIDEO12 names the folder.
+    void renderSoundUpdateVideo()
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_VIDEO12");
+        if (folder.isEmpty()) QSKIP("Set GIGCHAIN_VIDEO12 to video 12's folder to make its sounds");
+        QFile planFile(folder + u"/plan.json"_s);
+        QVERIFY2(planFile.open(QIODevice::ReadOnly), qPrintable(planFile.errorString()));
+        const QJsonObject plan = QJsonDocument::fromJson(planFile.readAll()).object();
+        const double tempo = plan.value(u"tempo"_s).toDouble(124.0);
+        const QJsonObject scenes = plan.value(u"scenes"_s).toObject();
+        QVERIFY(!scenes.isEmpty());
+        const QStringList only = qEnvironmentVariable("GIGCHAIN_DEMO_SCENES").split(u',', Qt::SkipEmptyParts);
+        // Every recorded piano read first (a preset changed mid-scene plays its recordings at once).
+        auto& library = PianoLibrary::instance();
+        for (int s = 0; s < kSources; ++s) (void)library.request(static_cast<Source>(s), video::kRate);
+        QTRY_VERIFY_WITH_TIMEOUT(std::ranges::none_of(std::views::iota(0, kSources),
+                                                      [&](int s) { return library.state(static_cast<Source>(s), video::kRate) == PianoLibrary::State::Loading; }),
+                                 180000);
+
+        // C, G, Am, F: the bass note and the chord, voiced close.
+        struct Chord
+        {
+            constexpr Chord(int bassKey, std::array<int, 3> keys) : bass(bassKey), triad(keys) {}
+            int bass = 0;
+            std::array<int, 3> triad{};
+        };
+        constexpr std::array<Chord, 4> kProgression{
+            {Chord(48, {60, 64, 67}), Chord(43, {59, 62, 67}), Chord(45, {60, 64, 69}), Chord(41, {60, 65, 69})}};
+        struct Hit
+        {
+            Hit(double atBeat, int note, int strength, double beats) : beat(atBeat), key(note), velocity(strength), length(beats) {}
+            double beat = 0.0;
+            int key = 60;
+            int velocity = 100;
+            double length = 1.0;
+        };
+        // What a part plays in one bar of `c`, from the bar's start.
+        const auto pattern = [](const QString& part, const Chord& c) {
+            std::vector<Hit> hits;
+            const auto chordAt = [&](double beat, double length, int velocity, bool bass) {
+                std::ranges::transform(c.triad, std::back_inserter(hits), [&](int k) { return Hit(beat, k, velocity, length); });
+                if (bass) hits.emplace_back(beat, c.bass - 12, velocity, length);
+            };
+            const std::array<int, 3>& t = c.triad;
+            if (part == u"keys") { // a ballad: the bass and the chord, the chord again on three
+                hits.emplace_back(0.0, c.bass - 12, 84, 3.9);
+                hits.emplace_back(0.0, c.bass, 76, 3.9);
+                chordAt(0.0, 1.9, 80, false);
+                chordAt(2.0, 1.9, 68, false);
+                hits.emplace_back(3.0, t.at(2) + 12, 60, 0.9);
+            } else if (part == u"house") { // stabs off the beat
+                for (const double b : {0.0, 1.5, 3.0}) chordAt(b, 0.55, 100, false);
+                hits.emplace_back(0.0, c.bass - 12, 96, 1.4);
+            } else if (part == u"stabs") {
+                for (const double b : {0.0, 1.5, 3.0}) chordAt(b, 0.9, 92, false);
+                hits.emplace_back(0.0, c.bass - 12, 88, 3.8);
+            } else if (part == u"pad") {
+                chordAt(0.0, 4.05, 88, true);
+            } else if (part == u"chords") { // the EDM chord rhythm
+                chordAt(0.0, 1.3, 104, true);
+                chordAt(1.5, 0.4, 96, false);
+                chordAt(2.5, 1.3, 100, true);
+            } else if (part == u"lead") {
+                const std::array<std::pair<double, int>, 6> line{{{0.0, t.at(2)}, {1.0, t.at(1)}, {1.5, t.at(0)}, {2.0, t.at(1)}, {3.0, t.at(2)}, {3.5, t.at(1)}}};
+                for (const auto& [b, k] : line) hits.emplace_back(b, k + 12, 104, b == 0.0 || b == 2.0 ? 0.95 : 0.45);
+            } else if (part == u"pluck") {
+                const std::array<int, 8> arp{t.at(0), t.at(1), t.at(2), t.at(0) + 12, t.at(2), t.at(1), t.at(0) + 12, t.at(2)};
+                for (std::size_t i = 0; i < arp.size(); ++i) hits.emplace_back(0.5 * static_cast<double>(i), arp.at(i) + 12, 96, 0.4);
+            } else { // bass
+                hits.emplace_back(0.0, c.bass - 12, 110, 3.8);
+            }
+            return hits;
+        };
+
+        for (const QString& key : scenes.keys()) {
+            if (!only.isEmpty() && !only.contains(key)) continue;
+            const QJsonObject scene = scenes.value(key).toObject();
+            const QString instrument = scene.value(u"instrument"_s).toString();
+            const QString pluginId = instrument == u"piano" ? QString::fromLatin1(PianoProNode::kPluginId)
+                                     : instrument == u"saw" ? u"builtin:saw-stack-pro"_s
+                                                             : u"builtin:pads-pro"_s;
+            auto loaded = PluginNode::load(pluginId, video::kRate, video::kBlock);
+            QVERIFY2(loaded.has_value(), qPrintable(pluginId));
+            const std::shared_ptr<PluginNode> node = *loaded;
+            const auto params = node->parameters();
+            const auto idOf = [&](const QString& name) -> uint32_t {
+                const auto found = std::ranges::find_if(params, [&](const PluginNode::Parameter& p) { return p.name == name; });
+                if (found == params.end()) qFatal("%s has no %s", qPrintable(pluginId), qPrintable(name));
+                return found->id;
+            };
+            const QStringList types = params.front().choices;
+            // The scene's effects, in order, from where it starts them.
+            std::vector<std::pair<QString, std::shared_ptr<BuiltinEffectNode>>> chain;
+            const auto effectSetting = [](const QString& effect, const QString& name) -> uint32_t {
+                if (effect == u"squash") return name == u"Depth" ? OttEffectNode::Depth : OttEffectNode::Time;
+                if (effect == u"enhance") return name == u"Amount" ? EnhanceEffectNode::Amount : EnhanceEffectNode::Mode;
+                if (name == u"Depth") return SidechainEffectNode::Depth;
+                if (name == u"Rate") return SidechainEffectNode::Rate;
+                if (name == u"Curve") return SidechainEffectNode::Curve;
+                if (name == u"Slope") return SidechainEffectNode::Slope;
+                return SidechainEffectNode::Trigger;
+            };
+            for (const auto& v : scene.value(u"fx"_s).toArray()) {
+                const QJsonObject e = v.toObject();
+                const QString name = e.value(u"fx"_s).toString();
+                std::shared_ptr<BuiltinEffectNode> fx;
+                if (name == u"squash") fx = OttEffectNode::create(video::kRate, video::kBlock);
+                if (name == u"enhance") fx = EnhanceEffectNode::create(video::kRate, video::kBlock);
+                if (name == u"sidechain") fx = SidechainEffectNode::create(video::kRate, video::kBlock);
+                QVERIFY(fx != nullptr);
+                for (auto it = e.begin(); it != e.end(); ++it) {
+                    if (it.key() != u"fx") QVERIFY(fx->setParameter(effectSetting(name, it.key()), it.value().toDouble()).has_value());
+                }
+                chain.emplace_back(name, fx);
+            }
+            const auto effectNamed = [&](const QString& name) -> BuiltinEffectNode* {
+                const auto found = std::ranges::find_if(chain, [&](const auto& f) { return f.first == name; });
+                return found != chain.end() ? found->second.get() : nullptr;
+            };
+
+            // The plan's changes, and what part plays from when.
+            const QJsonArray events = scene.value(u"events"_s).toArray();
+            const double beats = scene.value(u"beats"_s).toDouble();
+            std::vector<std::pair<double, QString>> parts;
+            for (const auto& v : events) {
+                const QJsonObject e = v.toObject();
+                if (e.contains(u"part"_s)) parts.emplace_back(e.value(u"beat"_s).toDouble(), e.value(u"part"_s).toString());
+            }
+            const auto partAt = [&](double beat) {
+                QString part = parts.front().second;
+                for (const auto& [from, p] : parts) {
+                    if (from <= beat + 1e-9) part = p;
+                }
+                return part;
+            };
+            // Every note: each bar's pattern for the part playing then (a part
+            // changed mid-bar plays its own pattern from there).
+            std::vector<Hit> notes;
+            // (Playing on past the scene's end: the crossfade into the next scene carries music, not a dying tail.)
+            for (int bar = 0; bar * 4 < static_cast<int>(beats) + 2; ++bar) {
+                const double start = bar * 4.0;
+                const Chord& chord = kProgression.at(static_cast<std::size_t>(bar % 4));
+                std::vector<double> cuts{start};
+                for (const auto& [from, p] : parts) {
+                    if (from > start && from < start + 4.0) cuts.push_back(from);
+                }
+                cuts.push_back(start + 4.0);
+                for (std::size_t s = 0; s + 1 < cuts.size(); ++s) {
+                    for (const Hit& h : pattern(partAt(cuts.at(s)), chord)) {
+                        const double at = start + h.beat;
+                        if (at >= cuts.at(s) - 1e-9 && at < cuts.at(s + 1) - 1e-9 && at < beats + 2.0) notes.emplace_back(at, h.key, h.velocity, h.length);
+                    }
+                }
+            }
+            // As MIDI, with the pedal for the keys (down each bar, up just before the next).
+            struct Event
+            {
+                Event(int64_t when, MidiEvent event) : at(when), midi(event) {}
+                int64_t at = 0;
+                MidiEvent midi{};
+            };
+            const double samplesPerBeat = video::kRate * 60.0 / tempo;
+            const auto when = [&](double beat) { return static_cast<int64_t>(beat * samplesPerBeat); };
+            std::vector<Event> midi;
+            for (const Hit& h : notes) {
+                midi.push_back({when(h.beat), {.status = 0x90, .data1 = static_cast<uint8_t>(h.key), .data2 = static_cast<uint8_t>(h.velocity)}});
+                midi.push_back({when(h.beat + h.length), {.status = 0x80, .data1 = static_cast<uint8_t>(h.key), .data2 = 0}});
+            }
+            for (int bar = 0; bar * 4 < static_cast<int>(beats); ++bar) {
+                if (partAt(bar * 4.0) != u"keys") continue;
+                midi.push_back({when(bar * 4.0 + 0.05), {.status = 0xB0, .data1 = 64, .data2 = 127}});
+                midi.push_back({when(bar * 4.0 + 3.92), {.status = 0xB0, .data1 = 64, .data2 = 0}});
+            }
+            std::ranges::stable_sort(midi, {}, &Event::at);
+
+            // Played: the plan's changes on their beats, a sweep step by step.
+            struct Sweep
+            {
+                Sweep(double fromBeat, double toBeat, std::function<void(double)> setter, double first, double last)
+                    : from(fromBeat), to(toBeat), set(std::move(setter)), start(first), end(last)
+                {
+                }
+                double from = 0.0, to = 0.0;
+                std::function<void(double)> set;
+                double start = 0.0, end = 0.0;
+            };
+            std::vector<Sweep> sweeps;
+            std::size_t nextEvent = 0;
+            const auto apply = [&](const QJsonObject& e) {
+                const double beat = e.value(u"beat"_s).toDouble();
+                if (e.contains(u"type"_s)) {
+                    const auto index = types.indexOf(e.value(u"type"_s).toString());
+                    QVERIFY2(index >= 0, qPrintable(e.value(u"type"_s).toString()));
+                    QVERIFY(node->setParameter(idOf(u"Type"_s), static_cast<double>(index) / static_cast<double>(types.size() - 1)).has_value());
+                    node->serviceMainThread();
+                    // (A piano's pedalled chords stack up: 8 dB of room under the top, the mix's levels set afterwards.)
+                    if (instrument == u"piano") QVERIFY(node->setParameter(idOf(u"Level"_s), Ranges::fromLevelDb(-22.0)).has_value());
+                }
+                if (e.contains(u"knob"_s)) QVERIFY(node->setParameter(idOf(e.value(u"knob"_s).toString()), e.value(u"value"_s).toDouble()).has_value());
+                if (e.contains(u"sweep"_s)) {
+                    const uint32_t id = idOf(e.value(u"sweep"_s).toString());
+                    sweeps.emplace_back(beat, beat + e.value(u"beats"_s).toDouble(), [&node, id](double v) { (void)node->setParameter(id, v); },
+                                        e.value(u"from"_s).toDouble(), e.value(u"to"_s).toDouble());
+                }
+                if (e.contains(u"layer"_s)) {
+                    const auto id = sawstack::paramId(e.value(u"layer"_s).toInt(), sawstack::LayerParam::On);
+                    QVERIFY(node->setParameter(id, e.value(u"on"_s).toDouble()).has_value());
+                }
+                if (e.contains(u"fx"_s)) {
+                    BuiltinEffectNode* fx = effectNamed(e.value(u"fx"_s).toString());
+                    QVERIFY2(fx != nullptr, qPrintable(e.value(u"fx"_s).toString()));
+                    const uint32_t id = effectSetting(e.value(u"fx"_s).toString(), e.value(u"param"_s).toString());
+                    if (e.contains(u"sweepTo"_s)) {
+                        sweeps.emplace_back(beat, beat + e.value(u"beats"_s).toDouble(), [fx, id](double v) { (void)fx->setParameter(id, v); },
+                                            fx->parameterValue(id), e.value(u"sweepTo"_s).toDouble());
+                    } else {
+                        QVERIFY(fx->setParameter(id, e.value(u"value"_s).toDouble()).has_value());
+                    }
+                }
+            };
+            // (Four beats past the scene: its tail ringing on under the next scene's start, for the crossfade.)
+            const auto total = static_cast<int64_t>((beats + 4.0) * samplesPerBeat);
+            std::vector<float> out;
+            out.reserve(static_cast<std::size_t>(total) * 2);
+            std::vector<float> left(video::kBlock);
+            std::vector<float> right(video::kBlock);
+            std::vector<MidiEvent> block;
+            std::size_t nextMidi = 0;
+            for (int64_t at = 0; at < total; at += video::kBlock) {
+                const int frames = static_cast<int>(std::min<int64_t>(video::kBlock, total - at));
+                const double beat = static_cast<double>(at) / samplesPerBeat;
+                for (; std::cmp_less(nextEvent, events.size()) && when(events.at(static_cast<qsizetype>(nextEvent)).toObject().value(u"beat"_s).toDouble()) < at + frames;
+                     ++nextEvent) {
+                    apply(events.at(static_cast<qsizetype>(nextEvent)).toObject());
+                    if (QTest::currentTestFailed()) return;
+                }
+                for (const Sweep& s : sweeps) {
+                    if (beat >= s.from && beat <= s.to) s.set(s.start + ((s.end - s.start) * (beat - s.from) / std::max(s.to - s.from, 1e-9)));
+                }
+                block.clear();
+                for (; nextMidi < midi.size() && midi.at(nextMidi).at < at + frames; ++nextMidi) {
+                    MidiEvent e = midi.at(nextMidi).midi;
+                    e.sampleOffset = static_cast<int32_t>(std::max<int64_t>(midi.at(nextMidi).at - at, 0));
+                    block.push_back(e);
+                }
+                const TimeInfo time{.tempo = tempo, .sampleRate = video::kRate, .samplePosition = at, .ppqPosition = beat};
+                const AudioBlock io{.left = left.data(), .right = right.data(), .frames = frames};
+                node->process(block, io, time);
+                for (const auto& [name, fx] : chain) fx->process(block, io, time);
+                for (int i = 0; i < frames; ++i) {
+                    out.push_back(left.at(static_cast<std::size_t>(i)));
+                    out.push_back(right.at(static_cast<std::size_t>(i)));
+                }
+            }
+            // Under the top (a squashed stack comes out above it; the mix sets its level anyway).
+            const float peak = std::accumulate(out.begin(), out.end(), 0.0F, [](float most, float s) { return std::max(most, std::abs(s)); });
+            if (peak > 0.9F) {
+                const float scale = 0.9F / peak;
+                std::ranges::transform(out, out.begin(), [scale](float s) { return s * scale; });
+            }
+            const QString path = folder + u"/sound_"_s + key + u".wav"_s;
+            QVERIFY2(video::writeWav(path, out), qPrintable(path));
+            qInfo().noquote() << path << u"%1 s, peak %2"_s.arg(static_cast<double>(out.size()) / 2.0 / video::kRate, 0, 'f', 1).arg(peak, 0, 'f', 2);
         }
     }
 

@@ -323,6 +323,10 @@ private:
     std::map<uint32_t, double> m_parameterValues; // set through setPluginParameter (any plugin; the built-ins' readings)
     std::map<QString, QString> m_instrumentFiles;  // set through setInstrumentFile, by channel id
     std::map<QString, std::shared_ptr<PluginNode>> m_builtins; // each built-in channel's instrument (never played), by channel id
+    // The app's own effects in a channel's effects (never played), by
+    // "channel id/index/plugin id": their windows show their real settings.
+    std::map<QString, std::shared_ptr<PluginNode>> m_builtinEffects;
+    std::map<QString, std::vector<QString>> m_effectIds; // each channel's effects' plugin ids, in order (the patch's)
     MidiTrigger m_learned;                      // the last pad, key or button pressed, not yet taken (Learn)
     PanelTriggers m_panel;                      // the panel's pads
     std::vector<PanelPress> m_panelPresses;     // pressed since last asked

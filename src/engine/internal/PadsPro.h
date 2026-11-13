@@ -397,6 +397,10 @@ private:
         bool sustained = false;
         bool stolen = false;
         uint64_t order = 0;
+        // The pad it was started as, and its engine: it plays on as that
+        // pad until it ends (another pad chosen meanwhile lets it go).
+        int type = 0;
+        Engine kind = Engine::Classic;
         std::array<LayerVoice, kLayers> layer{};
         std::array<float, kDrawbars> organPhase{};
         float organStep = 0.0F; // the drawbars' fundamental, phase per sample
