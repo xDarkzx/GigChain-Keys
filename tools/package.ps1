@@ -61,7 +61,8 @@ Write-Output '== checks'
 $problems = @()
 foreach ($required in "$exeName.exe", "$($exeName)Scan.exe", 'Qt6Core.dll', 'Qt6Quick.dll', 'Qt6Network.dll', 'Qt6Multimedia.dll',
     'vcruntime140.dll', 'msvcp140.dll', 'LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'platforms\qwindows.dll', 'qml\QtQuick\Controls',
-    'samples\piano\Grand Piano, K.sfz', 'samples\piano\Upright Piano, Y.sfz', 'samples\piano\LICENSE-VCSL.txt') {
+    'samples\piano\Concert Grand.sfz', 'samples\piano\Upright.sfz', 'samples\piano\Rhodes.sfz', 'samples\piano\CREDITS.txt',
+    'samples\pads\strings.txt', 'samples\pads\piano.txt', 'samples\pads\CREDITS.txt') {
     if (-not (Test-Path (Join-Path $stage $required))) { $problems += "missing: $required" }
 }
 if (-not (Get-ChildItem $stage -Filter 'rtaudio*.dll')) { $problems += 'missing: the RtAudio library' }

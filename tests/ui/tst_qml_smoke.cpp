@@ -1952,6 +1952,54 @@ private slots:
     }
 
     // Dropping an instrument on the mixer loads it and shows it.
+    // The app's own effects (Squash, Enhance, Sidechain) are offered with the
+    // effects, and clicking one opens its own window (drawn by the app),
+    // which closes by itself when the effect is removed.
+    void theAppsOwnEffectsOpenTheirOwnWindows()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
+        const std::array<std::pair<QString, QString>, 3> effects{
+            {{u"builtin:ott"_s, u"SQUASH"_s}, {u"builtin:enhance"_s, u"ENHANCE"_s}, {u"builtin:sidechain"_s, u"SIDECHAIN"_s}}};
+        for (const auto& [id, heading] : effects) QVERIFY(doc.addEffect(0, id, heading));
+        settle();
+        auto* windows = m_qml->rootObjects().value(0)->property("effectWindows").value<QObject*>();
+        QVERIFY(windows != nullptr);
+        const auto fxWindowNamed = [](const QString& heading) -> QQuickWindow* {
+            for (QWindow* w : QGuiApplication::topLevelWindows()) {
+                auto* quick = qobject_cast<QQuickWindow*>(w);
+                // (Only the effects' own windows: they are the main window's children too.)
+                if (quick == nullptr || !quick->isVisible() || !quick->property("pluginId").isValid()) continue;
+                const auto* name = quick->findChild<QQuickItem*>(u"builtinFxName"_s);
+                if (name != nullptr && name->property("text").toString() == heading) return quick;
+            }
+            return nullptr;
+        };
+        for (int i = 0; i < 3; ++i) {
+            bool opened = false;
+            QVERIFY(QMetaObject::invokeMethod(windows, "open", Q_RETURN_ARG(bool, opened), Q_ARG(int, 0), Q_ARG(int, i),
+                                              Q_ARG(QWindow*, window())));
+            QVERIFY(opened);
+            QTRY_VERIFY2(fxWindowNamed(effects.at(static_cast<std::size_t>(i)).second) != nullptr,
+                         qPrintable(effects.at(static_cast<std::size_t>(i)).second));
+        }
+        // Its controls are there.
+        QQuickWindow* ott = fxWindowNamed(u"SQUASH"_s);
+        QVERIFY(ott->findChild<QQuickItem*>(u"ottDepth"_s) != nullptr);
+        QQuickWindow* sidechain = fxWindowNamed(u"SIDECHAIN"_s);
+        QVERIFY(sidechain->findChild<QQuickItem*>(u"sidechainDisplay"_s) != nullptr);
+        if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
+            QTest::qWait(300); // (the knobs and curves paint after they show)
+            for (const auto& [id, heading] : effects) {
+                if (QQuickWindow* w = fxWindowNamed(heading)) QVERIFY(w->grabWindow().save(folder + u"/fx-%1.png"_s.arg(heading.toLower())));
+            }
+        }
+        // The effect removed: its window goes.
+        QVERIFY(doc.removeEffect(0, 2));
+        QTRY_VERIFY(fxWindowNamed(u"SIDECHAIN"_s) == nullptr);
+        QVERIFY(fxWindowNamed(u"SQUASH"_s) != nullptr);
+    }
+
     // Saw Stack Pro (the app's own instrument) shows its window in the main
     // area: its types as keys, the one playing lit and on the display, and
     // its five knobs; a key picks that type.
@@ -1980,67 +2028,37 @@ private slots:
             QVERIFY(ready.wait(5000));
             QVERIFY(grab->image().save(folder + u"/saw-stack-pro-full.png"_s));
         }
-        // The sidechain's lengths, triggers and curves are buttons that stay
-        // lit once chosen (read back from the instrument).
-        for (const char* knob : {"Sidechain", "SidechainSlope", "Reverb", "Delay", "OTT", "Width"}) {
+        for (const char* knob : {"Reverb", "Delay", "Width", "Master"}) {
             QVERIFY2(item(u"sawStackKnob_%1"_s.arg(QLatin1StringView(knob))) != nullptr, knob);
         }
-        QVERIFY(item(u"sawStackSidechainDisplay"_s) != nullptr);
+        // Squash, Enhance and the sidechain are effects of their own now: not here.
+        for (const char* gone : {"sawStackKnob_OTT", "sawStackKnob_Sidechain", "sawStackEnhance", "sawStackSidechainDisplay"}) {
+            QVERIFY2(item(QString::fromLatin1(gone)) == nullptr, gone);
+        }
+        // Its family over its own picture; a layer's light switches it.
+        QQuickItem* family = item(u"sawStackFamily"_s);
+        QVERIFY(family != nullptr);
+        QCOMPARE(family->property("text").toString(), u"CHORDS"_s);
+        // (The stack's strips are made again as a layer changes: each looked up afresh.)
+        const auto lit = [&] {
+            QQuickItem* light = item(u"sawStackLayerOn_0"_s);
+            return light != nullptr && light->property("lit").toBool();
+        };
         QQuickItem* scroll = item(u"sawStackScroll"_s);
         QVERIFY(scroll != nullptr);
         auto* content = scroll->property("contentItem").value<QQuickItem*>();
         QVERIFY(content != nullptr);
-        for (const QString& name : {u"sawStackRate_4"_s, u"sawStackTrigger_1"_s, u"sawStackCurve_10"_s}) {
-            QQuickItem* button = item(name);
-            QVERIFY2(button != nullptr, qPrintable(name));
-            QVERIFY2(!button->property("selected").toBool(), qPrintable(name));
-            // Scrolled to, as a player would when the panel is shown small.
-            scroll->setProperty("contentY", std::max(0.0, button->mapToItem(content, QPointF(0, 0)).y() - 20.0));
-            settle();
-            click(name);
-            QTRY_VERIFY2(button->property("selected").toBool(), qPrintable(name));
-        }
-        // A layer's light switches it.
-        QVERIFY(item(u"sawStackLayerOn_7"_s) != nullptr);
-        // The sidechain's light, by its name, switches it off (greyed) and on.
-        QQuickItem* sidechainOn = item(u"sawStackSidechainOn"_s);
-        QVERIFY(sidechainOn != nullptr);
-        QVERIFY(sidechainOn->property("lit").toBool());
-        scroll->setProperty("contentY", 0.0);
+        QVERIFY(item(u"sawStackLayerOn_0"_s) != nullptr);
+        // Scrolled to, as a player would when the panel is shown small.
+        scroll->setProperty("contentY", std::max(0.0, item(u"sawStackLayerOn_0"_s)->mapToItem(content, QPointF(0, 0)).y() - 40.0));
         settle();
-        click(u"sawStackSidechainOn"_s);
-        QTRY_VERIFY(!sidechainOn->property("lit").toBool());
-        click(u"sawStackSidechainOn"_s);
-        QTRY_VERIFY(sidechainOn->property("lit").toBool());
-        // Enhance, beside the OTT: off; a click switches it on and opens its
-        // dial (A-D and the amount); its light there switches it off again.
-        QQuickItem* enhance = item(u"sawStackEnhance"_s);
-        QVERIFY(enhance != nullptr);
-        QVERIFY(!enhance->property("lit").toBool());
-        scroll->setProperty("contentY", std::max(0.0, enhance->mapToItem(content, QPointF(0, 0)).y() - 20.0));
+        QVERIFY(lit());
+        click(u"sawStackLayerOn_0"_s);
+        QTRY_VERIFY(!lit());
         settle();
-        auto* dial = window()->findChild<QObject*>(u"sawStackEnhanceDial"_s);
-        QVERIFY(dial != nullptr);
-        QVERIFY(!dial->property("opened").toBool());
-        click(u"sawStackEnhance"_s);
-        QTRY_VERIFY(enhance->property("lit").toBool());
-        QTRY_VERIFY(dial->property("opened").toBool());
-        QVERIFY(item(u"sawStackKnob_Enhance"_s) != nullptr && item(u"sawStackKnob_Enhance"_s)->isVisible());
-        QQuickItem* modeD = item(u"sawStackEnhanceMode_3"_s);
-        QVERIFY(modeD != nullptr);
-        QVERIFY(!modeD->property("selected").toBool());
-        // The dial lays out on its next frame (opened above the button, its
-        // settings move down once its height is known): clicked before then,
-        // the click lands where D is not yet (seen on a slow Mac runner).
-        settle();
-        click(u"sawStackEnhanceMode_3"_s);
-        QTRY_VERIFY(modeD->property("selected").toBool());
-        shoot(u"saw-stack-pro-enhance"_s);
-        click(u"sawStackEnhanceOn"_s);
-        QTRY_VERIFY(!enhance->property("lit").toBool());
-        QVERIFY(QMetaObject::invokeMethod(dial, "close"));
-        QTRY_VERIFY(!dial->property("opened").toBool());
-        // The display's arrow (back at the top) steps to the next type.
+        click(u"sawStackLayerOn_0"_s);
+        QTRY_VERIFY(lit());
+        // The browser's arrow (back at the top) steps to the next type.
         scroll->setProperty("contentY", 0.0);
         settle();
         click(u"sawStackNext"_s);
@@ -2107,7 +2125,7 @@ private slots:
         }
     }
 
-    void pianoProShowsItsPianoLayersKnobsAndSidechain()
+    void pianoProShowsItsPianosByFamilyItsLayersKnobsAndKeyboard()
     {
         ui::DocumentController& doc = m_session->document();
         QVERIFY(doc.addChannel(u"builtin:piano-pro"_s, u"Piano Pro"_s));
@@ -2120,18 +2138,29 @@ private slots:
         QVERIFY(item(u"sawStackPanel"_s) == nullptr || !item(u"sawStackPanel"_s)->isVisible()); // one window at a time
         QQuickItem* display = item(u"pianoProTypeShown"_s);
         QVERIFY(display != nullptr);
-        QCOMPARE(display->property("text").toString(), u"House Piano"_s);
-        for (const char* knob : {"Tone", "Resonance", "Attack", "Release", "Width", "Reverb", "Delay", "OTT", "Tape", "Sidechain",
-                                 "SidechainSlope"}) {
+        QCOMPARE(display->property("text").toString(), u"Concert Grand"_s);
+        // Its family in big letters over its own picture.
+        QQuickItem* family = item(u"pianoProFamily"_s);
+        QVERIFY(family != nullptr);
+        QCOMPARE(family->property("text").toString(), u"ACOUSTIC"_s);
+        QQuickItem* art = item(u"pianoProArt"_s);
+        QVERIFY(art != nullptr);
+        QTRY_COMPARE(art->property("status").toInt(), 1); // Image.Ready: the picture is in the app
+        for (const char* knob : {"Tone", "Resonance", "Attack", "Release", "Width", "Reverb", "Delay", "Tape", "Master"}) {
             QVERIFY2(item(u"pianoProKnob_%1"_s.arg(QLatin1StringView(knob))) != nullptr, knob);
         }
-        for (int layer = 0; layer < 4; ++layer) QVERIFY(item(u"pianoProLayerOn_%1"_s.arg(layer)) != nullptr);
-        QVERIFY(item(u"pianoProEnhance"_s) != nullptr); // Enhance, beside the OTT (as Saw Stack Pro's)
+        // Squash, Enhance and the sidechain are effects of their own now: not here.
+        QVERIFY(item(u"pianoProKnob_OTT"_s) == nullptr);
+        QVERIFY(item(u"pianoProEnhance"_s) == nullptr);
+        for (int layer = 0; layer < 4; ++layer) {
+            QVERIFY(item(u"pianoProLayerOn_%1"_s.arg(layer)) != nullptr);
+            QVERIFY(item(u"pianoProLayerLevel_%1"_s.arg(layer)) != nullptr);
+        }
+        QVERIFY(item(u"pianoProKeyboard"_s) != nullptr);
         // It says what plays (here, with no recordings in the test app: that they are missing).
         QQuickItem* status = item(u"pianoProStatus"_s);
         QVERIFY(status != nullptr);
         QTRY_VERIFY(!status->property("text").toString().isEmpty());
-        QVERIFY(item(u"pianoProSidechainDisplay"_s) != nullptr);
         shoot(u"piano-pro"_s);
         if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
             const QSharedPointer<QQuickItemGrabResult> grab = item(u"pianoProPanel"_s)->grabToImage();
@@ -2141,7 +2170,13 @@ private slots:
             QVERIFY(grab->image().save(folder + u"/piano-pro-full.png"_s));
         }
         click(u"pianoProNext"_s);
-        QTRY_COMPARE(display->property("text").toString(), u"Big House Piano"_s);
+        QTRY_COMPARE(display->property("text").toString(), u"Bright Grand"_s);
+        // The browser: every piano, by family; choosing one from it.
+        click(u"pianoProMenu"_s);
+        QTRY_VERIFY(item(u"pianoProType_12"_s) != nullptr && item(u"pianoProType_12"_s)->isVisible());
+        click(u"pianoProType_12"_s);
+        QTRY_COMPARE(display->property("text").toString(), u"Poly Keys"_s);
+        QTRY_COMPARE(family->property("text").toString(), u"SYNTH"_s);
         settle();
     }
 
@@ -3527,6 +3562,11 @@ private slots:
         QVERIFY2(!splash.isNull(), "splash.png is not in the folder above the short's");
         // Which: Detach and Reattach (two screens), or Enhance (the app and a close-up of its dial).
         const bool enhanceShort = QFileInfo(folder).fileName().contains(u"enhance"_s);
+        // Or the SoundFont Player (the app and a close-up of its window), playing GIGCHAIN_SHORT_SOUNDFONT.
+        const bool soundFontShort = QFileInfo(folder).fileName().contains(u"soundfont"_s);
+        const QString soundFont = qEnvironmentVariable("GIGCHAIN_SHORT_SOUNDFONT");
+        if (soundFontShort) QVERIFY2(QFileInfo::exists(soundFont), "Set GIGCHAIN_SHORT_SOUNDFONT to the .sf2 the short plays");
+        const bool closeUpShort = enhanceShort || soundFontShort;
 
         QQuickWindow* w = window();
         w->setGeometry(0, 0, SceneRecorder::kWindowWidth, SceneRecorder::kWindowHeight);
@@ -3537,11 +3577,16 @@ private slots:
         QVERIFY(root->setProperty("editKeyboardOpen", false)); // (the room goes to the instrument)
         QVERIFY(root->setProperty("editPanelOpen", false));
         // Enhance: the whole instrument in sight, Enhance's row too (no mixer: nothing is picked in it).
-        if (enhanceShort) QVERIFY(root->setProperty("editMixerOpen", false));
+        if (closeUpShort) QVERIFY(root->setProperty("editMixerOpen", false));
         if (auto* engineName = w->findChild<QQuickItem*>(u"statusAudio"_s)) engineName->setVisible(false);
         QVERIFY(doc.renameSong(0, u"Saturday Night"_s));
-        QVERIFY(doc.addChannel(u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s));
-        if (!enhanceShort) QVERIFY(doc.addChannel(u"builtin:piano-pro"_s, u"Piano Pro"_s));
+        if (soundFontShort) {
+            QVERIFY(doc.addChannel(u"builtin:soundfont"_s, u"SoundFont Player"_s));
+            QVERIFY(m_engine->setInstrumentFile(doc.currentPatch()->channels.back().id, soundFont));
+        } else {
+            QVERIFY(doc.addChannel(u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s));
+        }
+        if (!closeUpShort) QVERIFY(doc.addChannel(u"builtin:piano-pro"_s, u"Piano Pro"_s));
         QVERIFY(doc.saveAs(m_dir->filePath(u"Saturday Gig.gigchain.json"_s))); // (the title bar names it)
         doc.setSelectedChannel(0);
         auto* tabs = w->findChild<QObject*>(u"mainTabs"_s);
@@ -3566,12 +3611,33 @@ private slots:
             crop = QRectF(0, 0, h * 16.0 / 9.0, h);
             crop.moveCenter(both.center());
         }
+        // The close-up (SoundFont): the part of the player's window in sight, wherever the scene has it
+        // (shaped as the close-up below: 1040 x 760).
+        constexpr double kCloseUpShape = 1040.0 / 760.0;
+        QPointer<QQuickItem> soundFontFrame;
+        QPointer<QQuickItem> soundFontView;
+        const auto soundFontCrop = [&]() {
+            if (!soundFontFrame || !soundFontFrame->isVisible()) soundFontFrame = item(u"soundFontPanel"_s);
+            if (!soundFontView || !soundFontView->isVisible()) soundFontView = item(u"soundFontScroll"_s);
+            if (!soundFontFrame || !soundFontView) return crop;
+            const QRectF shown = rectOf(soundFontFrame).intersected(rectOf(soundFontView)).adjusted(-14, -14, 14, 14);
+            const double h = std::max(shown.height(), shown.width() / kCloseUpShape);
+            QRectF fitted(0, 0, h * kCloseUpShape, h);
+            fitted.moveCenter(shown.center());
+            return fitted;
+        };
+        if (soundFontShort) {
+            QTRY_VERIFY(item(u"soundFontPanel"_s) != nullptr && item(u"soundFontPanel"_s)->isVisible());
+            QTRY_COMPARE(item(u"soundFontName"_s)->property("shown").toString(), u"Grand Piano"_s);
+            crop = soundFontCrop();
+        }
 
         // ---- The frame: two screens, the windows on them ------------------
         constexpr QSize kFrame(1080, 1920);
-        constexpr double kScale = 0.65; // the windows' units to the frame's (1600 x 900: 1040 x 585)
-        const QRectF top(20, 300, 1040, 585);
-        const QRectF bottom(20, 990, 1040, 585);
+        // (SoundFont: its window is nearly square, so a smaller app and a taller close-up.)
+        const QRectF top = soundFontShort ? QRectF(130, 290, 820, 461.25) : QRectF(20, 300, 1040, 585);
+        const QRectF bottom = soundFontShort ? QRectF(20, 830, 1040, 760) : QRectF(20, 990, 1040, 585);
+        const double kScale = top.width() / SceneRecorder::kWindowWidth; // the windows' units to the frame's (1600 x 900: 1040 x 585)
         QObject captions; // the line being said ("sub", set by the recorder)
         QPointer<QQuickWindow> own; // the instrument's own window, drawn at ownRect
         QRectF ownRect;
@@ -3612,16 +3678,19 @@ private slots:
             p.setPen(Qt::white);
             p.setFont(font(58, true));
             p.drawText(QRectF(0, 80, kFrame.width(), 76), Qt::AlignCenter,
-                       enhanceShort ? u"One knob, a bigger sound"_s : u"Your instrument on a second screen"_s);
+                       soundFontShort ? u"Play any SoundFont"_s
+                                      : (enhanceShort ? u"One knob, a bigger sound"_s : u"Your instrument on a second screen"_s));
             p.setPen(QColor(0x4c, 0xc3, 0xff));
             p.setFont(font(30, true));
             p.drawText(QRectF(0, 160, kFrame.width(), 44), Qt::AlignCenter,
-                       enhanceShort ? u"GigChain Keys  ·  Enhance"_s : u"GigChain Keys  ·  Detach & Reattach"_s);
+                       soundFontShort ? u"GigChain Keys  ·  SoundFont Player"_s
+                                      : (enhanceShort ? u"GigChain Keys  ·  Enhance"_s : u"GigChain Keys  ·  Detach & Reattach"_s));
             const QImage app = w->grabWindow();
-            screen(p, top, enhanceShort ? u"THE APP"_s : u"SCREEN 1  ·  THE APP"_s);
+            screen(p, top, closeUpShort ? u"THE APP"_s : u"SCREEN 1  ·  THE APP"_s);
             p.drawImage(top, app);
-            screen(p, bottom, enhanceShort ? u"CLOSE-UP"_s : u"SCREEN 2"_s);
-            if (enhanceShort) {
+            screen(p, bottom, closeUpShort ? u"CLOSE-UP"_s : u"SCREEN 2"_s);
+            if (soundFontShort) crop = soundFontCrop();
+            if (closeUpShort) {
                 const double ratio = app.width() / static_cast<double>(w->width()); // (the grab is in pixels)
                 p.drawImage(bottom, app, QRectF(crop.topLeft() * ratio, crop.size() * ratio));
                 if (!badge.isEmpty()) {
@@ -3681,7 +3750,7 @@ private slots:
                 p.drawPolygon(arrow.translated(at));
             };
             drawPointer(pointer, 1.0);
-            if (enhanceShort && top.contains(pointer)) {
+            if (closeUpShort && top.contains(pointer)) {
                 const QPointF inWindow = (pointer - top.topLeft()) / kScale;
                 if (crop.contains(inWindow)) drawPointer(bottom.topLeft() + ((inWindow - crop.topLeft()) * (bottom.width() / crop.width())), 1.4);
             }
@@ -3771,6 +3840,148 @@ private slots:
         const auto onMain = [&](QPointF scenePoint) { return top.topLeft() + (scenePoint * kScale); };
         const auto onOwn = [&](QPointF scenePoint) { return ownRect.topLeft() + (scenePoint * (ownRect.width() / own->width())); };
         const auto inOwn = [&](const QString& name) { return own ? own->findChild<QQuickItem*>(name) : nullptr; };
+
+        // ================= The SoundFont Player =================
+        if (soundFontShort) {
+            const auto clickOn = [&](const QQuickItem* target) {
+                QVERIFY(target != nullptr);
+                glideTo(onMain(centre(target)), 450);
+                clickedAt = recorder.now();
+                QTest::mouseClick(w, Qt::LeftButton, {}, centre(target).toPoint());
+            };
+            // The player's window (it picks a preset by its place in the list, as its menu does).
+            const auto player = [&]() -> QObject* {
+                for (QQuickItem* up = item(u"soundFontPanel"_s); up != nullptr; up = up->parentItem()) {
+                    if (up->metaObject()->indexOfMethod("choosePreset(QVariant)") >= 0) return up;
+                }
+                return nullptr;
+            };
+            const auto preset = [&](int index, const QString& name) {
+                QObject* panel = player();
+                QVERIFY(panel != nullptr);
+                QVERIFY(QMetaObject::invokeMethod(panel, "choosePreset", Q_ARG(QVariant, index)));
+                QTRY_COMPARE(item(u"soundFontName"_s)->property("shown").toString(), name);
+            };
+            // A fader or knob dragged up (more) until it reaches `target`, the pointer with it.
+            const auto drag = [&](const QString& name, double target) {
+                QQuickItem* control = item(name);
+                QVERIFY2(control != nullptr, qPrintable(name));
+                scrollIntoView(control);
+                QTest::qWait(60);
+                // (The knob holds its drag; a fader's is held by the fader round its mouse area.)
+                QObject* holder = control->property("dragging").isValid() ? static_cast<QObject*>(control) : control->parentItem();
+                QVERIFY(holder != nullptr && holder->property("dragging").isValid());
+                glideTo(onMain(centre(control)), 450);
+                const QPoint from = centre(control).toPoint();
+                QTest::mousePress(w, Qt::LeftButton, {}, from);
+                QPoint now = from;
+                for (int step = 0; step < 400 && holder->property("dragging").toDouble() < target; ++step) {
+                    now -= QPoint(0, 2);
+                    QTest::mouseMove(w, now);
+                    pointer = onMain(QPointF(now));
+                    QTest::qWait(16);
+                }
+                QTest::mouseRelease(w, Qt::LeftButton, {}, now);
+                QTest::qWait(30);
+            };
+            // ---- 01: the hook: a SoundFont playing ------------------------------
+            if (begin(u"01"_s)) {
+                badge = u"GENERALUSER GS  ·  GRAND PIANO"_s;
+                atWord(u"listen"_s, 0.6);
+                glideTo(onMain(centre(item(u"soundFontName"_s))) + QPointF(40, 60), 800);
+                end();
+            }
+            // ---- 02: one added, its file picked ---------------------------------
+            if (begin(u"02"_s)) {
+                badge = QString();
+                atWord(u"add"_s, 0.05);
+                QVERIFY(root->setProperty("editPanelOpen", true));
+                auto* sideTabs = w->findChild<QObject*>(u"sidePanelTabs"_s);
+                QVERIFY(sideTabs != nullptr);
+                sideTabs->setProperty("currentIndex", 1); // the Instruments tab
+                QTest::qWait(250);
+                auto* search = w->findChild<QQuickItem*>(u"pluginSearch"_s);
+                QVERIFY(search != nullptr);
+                for (const QChar letter : u"SoundFont"_s) {
+                    QVERIFY(search->setProperty("text", search->property("text").toString() + letter));
+                    QTest::qWait(60);
+                }
+                const QQuickItem* list = item(u"pluginList"_s);
+                QVERIFY(list != nullptr);
+                const QRectF listArea = rectOf(list);
+                glideTo(onMain(QPointF(listArea.x() + 120, listArea.y() + 40)), 500);
+                ring = QRectF(onMain(listArea.topLeft()), QSizeF(listArea.width(), 84) * kScale);
+                atWord(u"player"_s, 0.25);
+                clickedAt = recorder.now();
+                QVERIFY(doc.addChannel(u"builtin:soundfont"_s, u"SoundFont Player 2"_s)); // (what a double-click on it does)
+                doc.setSelectedChannel(1);
+                ring = QRectF();
+                QVERIFY(search->setProperty("text", QString()));
+                QVERIFY(root->setProperty("editPanelOpen", false));
+                QTRY_VERIFY(item(u"soundFontLoadBig"_s) != nullptr && item(u"soundFontLoadBig"_s)->isVisible());
+                atWord(u"folder"_s, 0.4);
+                glideTo(onMain(centre(item(u"soundFontLoadBig"_s))), 500);
+                clickedAt = recorder.now(); // (the file dialog is the system's: the file picked as it would be)
+                atWord(u"pick"_s, 0.5);
+                badge = u"GeneralUser-GS.sf2"_s;
+                QVERIFY(m_engine->setInstrumentFile(doc.currentPatch()->channels.back().id, soundFont));
+                QTRY_VERIFY(!item(u"soundFontLoadBig"_s)->isVisible());
+                atWord(u"nearly"_s, 0.75);
+                ring = QRectF(onMain(rectOf(item(u"soundFontStatus"_s)).topLeft()), rectOf(item(u"soundFontStatus"_s)).size() * kScale);
+                badge = u"287 SOUNDS"_s;
+                end();
+                ring = QRectF();
+            }
+            // ---- 03: Patch and Bank --------------------------------------------
+            if (begin(u"03"_s)) {
+                badge = QString();
+                atWord(u"patch"_s, 0.15);
+                clickOn(item(u"soundFontPatchNext"_s));
+                QTest::qWait(500);
+                clickOn(item(u"soundFontPatchNext"_s));
+                atWord(u"strings"_s, 0.3);
+                clickOn(item(u"soundFontPatchNext"_s));
+                preset(49, u"Slow Strings"_s);
+                badge = u"PATCH 49  ·  SLOW STRINGS"_s;
+                atWord(u"warm"_s, 0.5);
+                clickOn(item(u"soundFontPatchNext"_s));
+                preset(89, u"Warm Pad"_s);
+                badge = u"PATCH 89  ·  WARM PAD"_s;
+                atWord(u"drum"_s, 0.7);
+                clickOn(item(u"soundFontBankNext"_s));
+                preset(274, u"Standard 1"_s);
+                badge = u"BANK 128  ·  DRUM KITS"_s;
+                end();
+            }
+            // ---- 04: shaped: attack, vibrato, filter (on the piano) --------------
+            if (begin(u"04"_s)) {
+                preset(0, u"Grand Piano"_s);
+                badge = u"GRAND PIANO"_s;
+                atWord(u"attack"_s, 0.15);
+                badge = u"ATTACK  ·  A SLOW SWELL"_s;
+                drag(u"soundFontFader_A"_s, 0.7); // about 0.6 s
+                atWord(u"vibrato"_s, 0.45);
+                badge = u"LFO  ·  VIBRATO"_s;
+                drag(u"soundFontKnob_LfoAmount"_s, 0.72); // about 30 cents
+                drag(u"soundFontKnob_LfoSpeed"_s, 0.72);  // about 5 Hz
+                atWord(u"close"_s, 0.75);
+                badge = u"CUT  ·  DARKER"_s;
+                drag(u"soundFontKnob_Cutoff"_s, 0.4); // about 300 Hz
+                end();
+            }
+            // ---- 05: the close: the logo -----------------------------------------
+            if (begin(u"05"_s)) {
+                badge = QString();
+                atWord(u"free"_s, 0.3);
+                for (int step = 1; step <= 20; ++step) {
+                    logo = step / 20.0;
+                    QTest::qWait(20);
+                }
+                end(1.5);
+            }
+            logo = 0.0;
+            return;
+        }
 
         // ================= Enhance =================
         if (enhanceShort) {

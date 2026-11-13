@@ -44,10 +44,24 @@ Vital (Matt Tytel)
   from Vital's, under the GNU General Public License v3.
   https://github.com/mtytel/vital
 
-VCSL Keys (Versilian Studios LLC)
-  Piano Pro's recorded grand and upright pianos, in samples/piano.
-  CC0 1.0 (public domain dedication): samples/piano/LICENSE-VCSL.txt
-  https://github.com/sgossner/VCSL
+Piano Pro's piano pack, in samples/piano (each one's credit and licence:
+samples/piano/CREDITS.txt; trimmed, looped and re-encoded by
+tools/make-piano-pack.py)
+  Salamander Grand Piano V3 (Alexander Holm): the Concert Grand.
+    Creative Commons Attribution 3.0. https://freepats.zenvoid.org/Piano/
+  VCSL Keys (Versilian Studios LLC): the Upright.
+    CC0 1.0 (public domain dedication). https://github.com/sgossner/VCSL
+  jRhodes3d (Jeff Learman): the Rhodes. Samples: Creative Commons
+    Attribution-NonCommercial 4.0. https://github.com/sfzinstruments/jlearman.jRhodes3d
+  Greg Sullivan's E-Pianos: the Wurlitzer, Electric Grand (CP80) and Pianet.
+    Creative Commons Attribution 3.0. https://github.com/sfzinstruments/GregSullivan.E-Pianos
+
+Pads Pro's recordings, in samples/pads (samples/pads/CREDITS.txt; trimmed,
+looped and levelled by tools/make-pad-samples.py)
+  VSCO 2 Community Edition (Versilian Studios LLC): Orchestra Strings.
+    CC0 1.0 (public domain dedication). https://versilian-studios.com/vsco-community/
+  Splendid Grand Piano (public domain samples by AKAI): the Grand Piano pad.
+    https://github.com/sfzinstruments/splendid_grand_piano
 
 @NOTICE_RUNTIME@VST is a registered trademark and ASIO a trademark of Steinberg Media
 Technologies GmbH. Windows is a trademark of the Microsoft group of

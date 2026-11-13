@@ -21,7 +21,17 @@ std::pair<int, long long> keyOf(Source which, double sampleRate)
 
 QString sfzFileFor(Source which)
 {
-    return which == Source::Upright ? u"Upright Piano, Y.sfz"_s : u"Grand Piano, K.sfz"_s;
+    switch (which) {
+    case Source::Grand: return u"Concert Grand.sfz"_s;
+    case Source::Upright: return u"Upright.sfz"_s;
+    case Source::Rhodes: return u"Rhodes.sfz"_s;
+    case Source::Wurlitzer: return u"Wurlitzer.sfz"_s;
+    case Source::ElectricGrand: return u"Electric Grand.sfz"_s;
+    case Source::Pianet: return u"Pianet.sfz"_s;
+    case Source::Dx:
+    case Source::Poly: break; // (not recorded)
+    }
+    return {};
 }
 
 PianoLibrary& PianoLibrary::instance()
@@ -54,7 +64,8 @@ const std::atomic<const SampleSet*>* PianoLibrary::request(Source which, double 
     Entry* e = entry.get();
     const QString path = pianoSampleFolder() + u'/' + sfzFileFor(which);
     e->loader = std::thread([e, path, sampleRate] {
-        auto loaded = loadSampleSet(path, sampleRate, {}, &e->cancel);
+        // Every loudness layer the pack kept (it chose how many each piano has).
+        auto loaded = loadSampleSet(path, sampleRate, {.maxLayers = 16}, &e->cancel);
         if (!loaded) {
             e->problem = loaded.error().message;
             qCWarning(lcEngine).noquote() << "Piano Pro plays its FM piano instead:" << e->problem;

@@ -30,6 +30,8 @@ add_library(gigchain_engine STATIC
     internal/MidiQueue.h
     internal/PluginNode.h
     internal/PluginNode.cpp
+    internal/BuiltinEffects.h
+    internal/BuiltinEffects.cpp
     internal/Vst2Abi.h
     internal/Vst2Node.h
     internal/Vst2Node.cpp
@@ -77,6 +79,11 @@ add_library(gigchain_engine STATIC
     internal/PianoProNode.cpp
     internal/PadsPro.h
     internal/PadsPro.cpp
+    internal/PadsProEngines.h
+    internal/PadsProEngines.cpp
+    internal/PadsProFx.h
+    internal/PadsProSpectral.h
+    internal/PadsProSpectral.cpp
     internal/PadsProNode.h
     internal/PadsProNode.cpp
     internal/SoundFont.h

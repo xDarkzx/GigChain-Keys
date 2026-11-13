@@ -27,12 +27,10 @@ constexpr std::array<const char*, kMacros> kMacroKeys{"type",   "cutoff", "reson
                                                       "enhance", "enhanceMode", "enhanceOn"};
 constexpr auto kSidechainRates = static_cast<int>(sidechain::kRates.size());
 constexpr auto kSidechainCurves = static_cast<int>(sidechain::kCurves.size());
-constexpr auto kSidechainTriggers = static_cast<int>(sidechain::kTriggers.size());
 constexpr double kEnhanceStart = 0.75; // where Enhance's knob is when it is first switched on
 
 constexpr float kSmoothing = 0.002F;       // per sample: about 10 ms at 48 kHz
 constexpr std::size_t kSubLayer = 0;       // stays one clean sine whatever Spread says
-constexpr std::size_t kPluckLayer = 6;     // keeps its own short shape whatever Attack and Release say
 constexpr auto kAir = static_cast<std::size_t>(kNoiseLayer);
 constexpr double kOutputDb = -14.0;        // every type's level before its own trim
 constexpr double kButterworthQ = 0.7071;
@@ -73,7 +71,8 @@ std::array<float, kParamCount> typeParams(int which)
         set(LayerParam::Detune, d.detune);
         set(LayerParam::Mix, d.mix);
         set(LayerParam::Width, d.width);
-        set(LayerParam::Wave, Ranges::fromChoice(d.wave, 3));
+        // (A type's own waves, triangle and pulse, are its design's: the setting shows the nearest of its three.)
+        set(LayerParam::Wave, Ranges::fromChoice(std::min(d.wave, kParamWaves - 1), kParamWaves));
         set(LayerParam::Cutoff, Ranges::fromHz(d.cutoffHz));
         set(LayerParam::Resonance, d.resonance);
         set(LayerParam::FilterEnv, d.filterEnv);
@@ -228,13 +227,27 @@ void Synth::applyParams() noexcept
     const double spread = 2.0 * knob(Macro::Spread);
     const double attack = Ranges::seconds(knob(Macro::Attack));
     const double release = Ranges::seconds(knob(Macro::Release));
+    const StackType& design = stackType(typeIndex(knob(Macro::Type)));
     for (int l = 0; l < kLayers; ++l) {
         const auto at = static_cast<std::size_t>(l);
         LayerSetup& s = m_d.layers.at(at);
+        const LayerDesign& d = design.layers.at(at);
         s.on = v(l, LayerParam::On) >= 0.5;
         s.gain = static_cast<float>(Ranges::levelGain(v(l, LayerParam::Level)));
         s.octave = Ranges::octave(v(l, LayerParam::Octave));
-        s.wave = static_cast<Wave>(Ranges::choice(v(l, LayerParam::Wave), 3));
+        // The type's own waves (triangle, pulse) are beyond the setting's three.
+        s.wave = d.wave >= kParamWaves && at != kAir ? static_cast<Wave>(d.wave)
+                                                     : static_cast<Wave>(Ranges::choice(v(l, LayerParam::Wave), kParamWaves));
+        s.semitones = d.semitones;
+        s.vibratoCents = d.vibratoCents;
+        s.vibratoHz = d.vibratoHz;
+        s.vibratoDelay = d.vibratoDelay;
+        s.filterLfoOctaves = d.filterLfoOctaves;
+        s.filterLfoHz = d.filterLfoHz;
+        s.pwmDepth = d.pwmDepth;
+        s.pwmHz = d.pwmHz;
+        s.pitchSemitones = d.pitchSemitones;
+        s.pitchSeconds = std::max(d.pitchSeconds, 0.001);
         const bool spreads = at != kSubLayer;
         s.spread.set(Ranges::voices(v(l, LayerParam::Voices)),
                      spreads ? std::min(v(l, LayerParam::Detune) * spread, 1.0) : v(l, LayerParam::Detune), v(l, LayerParam::Mix),
@@ -244,8 +257,8 @@ void Synth::applyParams() noexcept
         s.filterOctaves = Ranges::filterOctaves(v(l, LayerParam::FilterEnv));
         s.highpass = Ranges::hz(v(l, LayerParam::Highpass));
         s.lowestOnly = at != kAir && v(l, LayerParam::LowestOnly) >= 0.5;
-        // Attack and Release are the knobs' (the pluck keeps its own short shape).
-        s.ownEnvelope = at == kPluckLayer;
+        // Attack and Release are the knobs' (a pluck layer keeps its own short shape).
+        s.ownEnvelope = d.ownEnvelope;
         s.attack = s.ownEnvelope ? Ranges::seconds(v(l, LayerParam::Attack)) : attack;
         s.decay = Ranges::seconds(v(l, LayerParam::Decay));
         s.sustain = v(l, LayerParam::Sustain);
@@ -286,16 +299,11 @@ void Synth::applyParams() noexcept
                    .q = 0.7071 + 9.0 * knob(Macro::Resonance),
                    .reverb = knob(Macro::Reverb),
                    .delay = knob(Macro::Delay),
-                   .ott = knob(Macro::Ott),
+                   // OTT, Enhance and the sidechain are effects of their own now
+                   // (BuiltinEffects.h), loaded after it: their settings here are kept, unused.
+                   .ott = 0.0,
                    .width = knob(Macro::Width),
-                   .tape = 0.0,
-                   .enhance = knob(Macro::EnhanceOn) >= 0.5 ? knob(Macro::Enhance) : 0.0,
-                   .enhanceMode = Ranges::choice(knob(Macro::EnhanceMode), Enhance::kModes),
-                   .sidechain = knob(Macro::SidechainOn) >= 0.5 ? knob(Macro::Sidechain) : 0.0,
-                   .curve = Ranges::choice(knob(Macro::SidechainCurve), kSidechainCurves),
-                   .beats = sidechain::kRates.at(static_cast<std::size_t>(Ranges::choice(knob(Macro::SidechainRate), kSidechainRates))).beats,
-                   .slope = knob(Macro::SidechainSlope),
-                   .fromNotes = Ranges::choice(knob(Macro::SidechainTrigger), kSidechainTriggers) == 1});
+                   .tape = 0.0});
 }
 
 void Synth::setEnvelopes(LayerVoice& lv, const LayerSetup& setup) const noexcept
@@ -307,7 +315,7 @@ void Synth::setEnvelopes(LayerVoice& lv, const LayerSetup& setup) const noexcept
 
 double Synth::noteHz(int note, const LayerSetup& setup) const noexcept
 {
-    return 440.0 * std::pow(2.0, (note - 69 + 12 * setup.octave + m_bend) / 12.0);
+    return 440.0 * std::pow(2.0, (note - 69 + 12 * setup.octave + setup.semitones + m_bend) / 12.0);
 }
 
 void Synth::process(std::span<const MidiEvent> events, const AudioBlock& io, const TimeInfo& time) noexcept
@@ -412,6 +420,7 @@ void Synth::noteOn(int note, int velocity) noexcept
         if (s.lowestOnly || &lv == &target->layers.at(kAir)) continue;
         lv.amp.gateOn();
         lv.filter.gateOn();
+        lv.age = 0.0; // its glide and vibrato start again
     }
     m_noiseEnv.gateOn(); // the air comes in again with each chord
     m_fx.noteAt(m_ppq);
@@ -492,6 +501,7 @@ void Synth::updateMono() noexcept
         if (mono.note < 0 || mono.amp.stage == Envelope::Stage::Release || !mono.amp.active()) {
             mono.amp.gateOn();
             mono.filter.gateOn();
+            mono.age = 0.0;
         }
         mono.note = lowest;
         mono.velocity = velocity;
@@ -519,15 +529,22 @@ void Synth::render(std::span<float> left, std::span<float> right) noexcept
         } else {
             std::ranges::fill(layerL, 0.0F);
             std::ranges::fill(layerR, 0.0F);
+            const LayerLfos& lfo = m_lfo.at(l);
             if (setup.lowestOnly) {
                 LayerVoice& mono = m_mono.at(l);
-                if (mono.amp.active()) renderLayer(mono, setup, mono.note, mono.velocity, frames);
+                if (mono.amp.active()) renderLayer(mono, setup, lfo, mono.note, mono.velocity, frames);
             } else {
                 for (Voice& v : m_voices) {
                     LayerVoice& lv = v.layers.at(l);
-                    if (lv.amp.active()) renderLayer(lv, setup, v.note, v.velocity, frames);
+                    if (lv.amp.active()) renderLayer(lv, setup, lfo, v.note, v.velocity, frames);
                 }
             }
+            // The layer's movement goes on, every note together.
+            const double seconds = static_cast<double>(frames) / m_rate;
+            const auto turn = [](double& phase, double hz, double s) { phase = std::fmod(phase + hz * s, 1.0); };
+            turn(m_lfo.at(l).vibrato, setup.vibratoHz, seconds);
+            turn(m_lfo.at(l).filter, setup.filterLfoHz, seconds);
+            turn(m_lfo.at(l).pwm, setup.pwmHz, seconds);
             // The layer's own low cut: each layer keeps to its own range.
             if (setup.highpass > 21.0) {
                 std::ranges::transform(layerL, layerL.begin(), [&bus](float s) { return bus.lowCutL.highPass(s); });
@@ -553,28 +570,54 @@ void Synth::render(std::span<float> left, std::span<float> right) noexcept
     m_sidechainPosition.store(static_cast<float>(m_fx.sidechainPosition()), std::memory_order_relaxed);
 }
 
-void Synth::renderLayer(LayerVoice& lv, const LayerSetup& setup, int note, float velocity, std::size_t frames) noexcept
+void Synth::renderLayer(LayerVoice& lv, const LayerSetup& setup, const LayerLfos& lfo, int note, float velocity,
+                        std::size_t frames) noexcept
 {
     const UnisonSpread& spread = setup.spread;
     const auto voices = static_cast<std::size_t>(spread.voices);
     const double hz = noteHz(note, setup);
+    const double dtSeconds = 1.0 / m_rate;
+    // The pitch moves (a glide in, vibrato): worked out again every kFilterUpdate samples.
+    const bool moves = setup.vibratoCents > 0.0 || setup.pitchSemitones != 0.0;
     std::array<float, kMaxUnison> step{};
-    for (std::size_t i = 0; i < voices; ++i) {
-        step.at(i) = static_cast<float>(std::min(hz * (1.0 + spread.offset.at(i)) / m_rate, 0.45));
-    }
+    const auto setSteps = [&](double now) {
+        for (std::size_t i = 0; i < voices; ++i) {
+            step.at(i) = static_cast<float>(std::min(now * (1.0 + spread.offset.at(i)) / m_rate, 0.45));
+        }
+    };
+    const auto pitchAt = [&](std::size_t sample) {
+        const double age = lv.age + static_cast<double>(sample) * dtSeconds;
+        double semitones = setup.pitchSemitones * std::exp(-age / setup.pitchSeconds);
+        if (setup.vibratoCents > 0.0) {
+            // (It fades in over half a second after its delay.)
+            const double fade = std::clamp((age - setup.vibratoDelay) / 0.5, 0.0, 1.0);
+            const double phase = lfo.vibrato + setup.vibratoHz * static_cast<double>(sample) * dtSeconds;
+            semitones += setup.vibratoCents / 100.0 * fade * std::sin(2.0 * std::numbers::pi * phase);
+        }
+        return hz * std::exp2(semitones / 12.0);
+    };
+    setSteps(moves ? pitchAt(0) : hz);
     // A gentle low cut at the note itself (as the original hardware): the
     // detuned saws' rumble under the note goes, the note stays.
-    const bool cutRumble = setup.wave != Wave::Sine && voices > 1;
+    const bool cutRumble = setup.wave != Wave::Sine && setup.wave != Wave::Triangle && voices > 1;
     const auto hpCoef = static_cast<float>(std::exp(-2.0 * std::numbers::pi * std::min(hz, m_rate * 0.45) / m_rate));
-    const bool filtered = setup.cutoff < 19000.0 || setup.filterOctaves > 0.0;
+    const bool filtered = setup.cutoff < 19000.0 || setup.filterOctaves > 0.0 || setup.filterLfoOctaves > 0.0;
+    const bool pulse = setup.wave == Wave::Pulse;
+    float duty = 0.5F;
     const std::span<float> layerL(m_layerL.data(), frames);
     auto toR = m_layerR.begin();
+    std::size_t sample = 0;
     for (float& outL : layerL) {
+        if (sample % kFilterUpdate == 0 && sample > 0 && moves) setSteps(pitchAt(sample));
+        if (pulse && sample % kFilterUpdate == 0) {
+            const double phase = lfo.pwm + setup.pwmHz * static_cast<double>(sample) * dtSeconds;
+            duty = static_cast<float>(0.5 + 0.42 * setup.pwmDepth * std::sin(2.0 * std::numbers::pi * phase));
+        }
         float left = 0.0F;
         float right = 0.0F;
         for (std::size_t i = 0; i < voices; ++i) {
             float& phase = lv.phase.at(i);
-            const float s = oscillator(setup.wave, phase, step.at(i));
+            const float s = oscillator(setup.wave, phase, step.at(i), duty);
             left += s * spread.left.at(i);
             right += s * spread.right.at(i);
             phase += step.at(i);
@@ -592,7 +635,12 @@ void Synth::renderLayer(LayerVoice& lv, const LayerSetup& setup, int note, float
         if (filtered) {
             if (lv.filterCountdown-- <= 0) {
                 lv.filterCountdown = kFilterUpdate;
-                const double cutoff = setup.cutoff * std::exp2(setup.filterOctaves * env);
+                double octaves = setup.filterOctaves * env;
+                if (setup.filterLfoOctaves > 0.0) {
+                    const double phase = lfo.filter + setup.filterLfoHz * static_cast<double>(sample) * dtSeconds;
+                    octaves += setup.filterLfoOctaves * std::sin(2.0 * std::numbers::pi * phase);
+                }
+                const double cutoff = setup.cutoff * std::exp2(octaves);
                 lv.lpL.set(cutoff, setup.q, m_rate);
                 lv.lpR.set(cutoff, setup.q, m_rate);
             }
@@ -602,7 +650,9 @@ void Synth::renderLayer(LayerVoice& lv, const LayerSetup& setup, int note, float
         const float amp = lv.amp.tick() * velocity;
         outL += left * amp;
         *toR++ += right * amp;
+        ++sample;
     }
+    lv.age += static_cast<double>(frames) * dtSeconds;
 }
 
 void Synth::renderNoise(std::size_t frames) noexcept

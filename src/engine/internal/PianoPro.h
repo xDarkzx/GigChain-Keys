@@ -15,9 +15,10 @@
 #include <span>
 #include <vector>
 
-// Piano Pro's sound: a piano (VCSL's recorded grand or upright, or an FM
-// electric piano), the same piano an octave up, soft strings and a sub, then
-// the same effects and sidechain as Saw Stack Pro, plus tape. Parameters are
+// Piano Pro's sound: a piano (a recorded grand, upright or electric piano
+// from its piano pack, the DX's FM piano, or an 80s polysynth), the same
+// piano an octave up, soft strings and a sub, then the same effects as Saw
+// Stack Pro, plus tape and the suitcase's tremolo. Parameters are
 // 0-1 (as plugins have) and may be set from any thread; the audio thread
 // picks changes up at the next block. process() never allocates, locks or logs.
 namespace gigchain::engine::piano {
@@ -127,13 +128,19 @@ private:
         // Recorded.
         const SampleZone* zone = nullptr;
         double position = 0.0, step = 0.0;
+        float tail = 1.0F, tailStep = 1.0F; // the loop's fading (SampleZone::tailDecayDb)
         // FM, strings and sub.
         double phase = 0.0, modPhase = 0.0, tinePhase = 0.0, tineModPhase = 0.0, freq = 0.0;
         float modIndex = 0.0F, tineIndex = 0.0F, tineLevel = 0.0F;
         float modDecay = 1.0F, tineDecay = 1.0F, tineLevelDecay = 1.0F;
         std::array<float, 5> unisonPhase{};
-        sawstack::Svf lowL, lowR;
+        sawstack::Svf lowL, lowR; // the strings' low-pass; the polysynth's two (24 dB)
         sawstack::Envelope amp;
+        // The polysynth (Source::Poly).
+        bool poly = false;
+        float subPhase = 0.0F, lfoPhase = 0.0F, cutoffScale = 1.0F;
+        int filterCount = 0;
+        sawstack::Envelope filterEnv;
     };
     struct Derived
     {
@@ -160,6 +167,8 @@ private:
     void makeRoomForANote() noexcept;
     void startRecorded(Voice& v, const SampleSet& set, int note, int playedVelocity, int pitchNote) noexcept;
     void startFm(Voice& v, int pitchNote, float velocity) noexcept;
+    void startPoly(Voice& v, int pitchNote, float velocity) noexcept;
+    void renderPoly(Voice& v, std::span<float> outL, std::span<float> outR, double inc) noexcept;
     void render(std::span<float> left, std::span<float> right) noexcept;
     // Adds `frames` of `v` into its layer's buffers; `bend` is the pitch bend as a ratio.
     void renderVoice(Voice& v, std::size_t frames, double bend) noexcept;
@@ -174,6 +183,9 @@ private:
     int m_fxType = -1;
     Source m_source = Source::Grand;
     double m_softness = 0.0;
+    PolyDesign m_poly{};
+    float m_tremolo = 0.0F;
+    double m_tremoloHz = 4.5, m_tremoloPhase = 0.0;
     sawstack::Svf m_lowCutL, m_lowCutR;
 
     double m_rate = 48000.0;

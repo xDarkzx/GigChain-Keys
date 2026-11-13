@@ -2,6 +2,7 @@
 // layers keep to their jobs, its types and knobs do what they say, it stays
 // clean and in level, notes end, and it saves and loads its settings as a
 // plugin does.
+#include "BuiltinEffects.h"
 #include "PluginNode.h"
 #include "SawStack.h"
 #include "SawStackNode.h"
@@ -16,6 +17,7 @@
 #include <cmath>
 #include <numbers>
 #include <numeric>
+#include <span>
 #include <vector>
 
 using namespace gigchain::engine;
@@ -140,14 +142,41 @@ void soloPlain(Synth& synth, int layer, Wave wave = Wave::Saw)
     synth.setParam(paramId(layer, LayerParam::Sustain), 1.0);
 }
 
-// One steady 440 Hz sine, ducked by the sidechain full on with `curve` at `rate` (120 bpm).
-void steadySineUnderTheSidechain(Synth& synth, int curve, int rate)
+float sine(double hz, int i);
+
+// `seconds` of one steady 440 Hz sine (0.5) through the Sidechain effect at
+// `depth`, with `curve` at `rate`, following the beat or (`noteTrigger`)
+// the notes, at 120 bpm from the song's start; a note played at `noteAt`
+// seconds (below 0: none). Its left side.
+std::vector<float> throughSidechain(double depth, int curve, int rate, bool noteTrigger, double seconds, double noteAt = -1.0)
 {
-    soloPlain(synth, 2, Wave::Sine);
-    synth.setParam(paramId(Macro::Sidechain), 1.0);
-    synth.setParam(paramId(Macro::SidechainSlope), 0.5);
-    synth.setParam(paramId(Macro::SidechainCurve), Ranges::fromChoice(curve, static_cast<int>(sidechain::kCurves.size())));
-    synth.setParam(paramId(Macro::SidechainRate), Ranges::fromChoice(rate, static_cast<int>(sidechain::kRates.size())));
+    auto node = SidechainEffectNode::create(kRate, kBlock);
+    const auto choice = [](int index, std::size_t count) { return Ranges::fromChoice(index, static_cast<int>(count)); };
+    (void)node->setParameter(SidechainEffectNode::Depth, depth);
+    (void)node->setParameter(SidechainEffectNode::Slope, 0.5);
+    (void)node->setParameter(SidechainEffectNode::Curve, choice(curve, sidechain::kCurves.size()));
+    (void)node->setParameter(SidechainEffectNode::Rate, choice(rate, sidechain::kRates.size()));
+    (void)node->setParameter(SidechainEffectNode::Trigger, noteTrigger ? 1.0 : 0.0);
+    const auto frames = static_cast<int>(seconds * kRate);
+    std::vector<float> left(static_cast<std::size_t>(frames));
+    for (int i = 0; i < frames; ++i) left.at(static_cast<std::size_t>(i)) = 0.5F * sine(440.0, i);
+    std::vector<float> right = left;
+    const int noteFrame = noteAt >= 0.0 ? static_cast<int>(noteAt * kRate) : -1;
+    TimeInfo time{.tempo = 120.0, .sampleRate = kRate};
+    for (int at = 0; at < frames; at += kBlock) {
+        const int n = std::min(kBlock, frames - at);
+        time.samplePosition = at;
+        time.ppqPosition = at * 2.0 / kRate;
+        std::vector<MidiEvent> events;
+        if (noteFrame >= at && noteFrame < at + n) {
+            MidiEvent on = noteOn(69);
+            on.sampleOffset = noteFrame - at;
+            events.push_back(on);
+        }
+        const auto from = static_cast<std::size_t>(at);
+        node->process(events, AudioBlock{.left = std::span(left).subspan(from).data(), .right = std::span(right).subspan(from).data(), .frames = n}, time);
+    }
+    return left;
 }
 
 // A second of what Enhance (setting `mode`, at `amount`) makes of
@@ -232,17 +261,9 @@ private slots:
         row("Release", paramId(Macro::Release), Ranges::fromSeconds(0.1), Ranges::fromSeconds(2.0), true);
         row("Reverb", paramId(Macro::Reverb), 0.0, 0.8, true);
         row("Delay", paramId(Macro::Delay), 0.0, 0.7, true);
-        row("OTT", paramId(Macro::Ott), 0.0, 1.0);
+        // (Squash, Enhance and the sidechain are effects of their own:
+        // theAppsOwnEffectsWorkOnTheirOwn and the sidechain's tests below.)
         row("Width", paramId(Macro::Width), 0.0, 1.0);
-        row("Sidechain", paramId(Macro::Sidechain), 0.0, 1.0);
-        row("Sidechain Rate", paramId(Macro::SidechainRate), Ranges::fromChoice(5, 9), 0.0);
-        row("Sidechain Slope", paramId(Macro::SidechainSlope), 0.5, 1.0);
-        row("Sidechain Curve", paramId(Macro::SidechainCurve), 0.0, 1.0);
-        row("Sidechain Trigger", paramId(Macro::SidechainTrigger), 0.0, 1.0);
-        row("Sidechain On", paramId(Macro::SidechainOn), 1.0, 0.0);
-        row("Enhance On", paramId(Macro::EnhanceOn), 0.0, 1.0);
-        row("Enhance", paramId(Macro::Enhance), 0.1, 1.0);
-        row("Enhance Mode", paramId(Macro::EnhanceMode), 0.0, 1.0);
         row("Master", paramId(GlobalParam::Level), Ranges::fromLevelDb(-14.0), Ranges::fromLevelDb(-24.0));
         for (int l = 0; l < kLayers; ++l) {
             row(qPrintable(u"Layer %1 on"_s.arg(layerName(l))), paramId(l, LayerParam::On), 1.0, 0.0);
@@ -260,18 +281,14 @@ private slots:
             Synth synth;
             synth.prepare(kRate, kBlock);
             synth.setParam(paramId(Macro::Type), typeValue(kDefaultType));
-            // Every layer on (each layer's light is tested on its own), and
-            // the sidechain's settings heard with it full on, the chord
-            // played off the beat (so following the notes differs from the beat).
+            // Every layer on (each layer's light is tested on its own).
             for (int l = 0; l < kLayers; ++l) synth.setParam(paramId(l, LayerParam::On), 1.0);
-            const bool sidechain = id == paramId(Macro::SidechainRate) || id == paramId(Macro::SidechainSlope)
-                                   || id == paramId(Macro::SidechainCurve) || id == paramId(Macro::SidechainTrigger)
-                                   || id == paramId(Macro::SidechainOn);
-            if (sidechain) synth.setParam(paramId(Macro::Sidechain), 1.0);
             if (id == paramId(Macro::Resonance)) synth.setParam(paramId(Macro::Cutoff), 0.6); // heard at the cutoff
-            if (id == paramId(Macro::Enhance) || id == paramId(Macro::EnhanceMode)) synth.setParam(paramId(Macro::EnhanceOn), 1.0);
+            // The air is a breath under the stack, lost under the chord: its light heard on its own.
+            if (id == paramId(kNoiseLayer, LayerParam::On)) {
+                for (int l = 0; l < kNoiseLayer; ++l) synth.setParam(paramId(l, LayerParam::On), 0.0);
+            }
             synth.setParam(id, value);
-            if (sidechain) (void)play(synth, {}, 0.13);
             const Audio held = play(synth, {noteOn(48), noteOn(60), noteOn(64), noteOn(67)}, 1.0);
             if (!tail) return held.left;
             return play(synth, {noteOff(48), noteOff(60), noteOff(64), noteOff(67)}, 1.5).left;
@@ -422,6 +439,9 @@ private slots:
             synth.prepare(kRate, kBlock);
             for (int l = 0; l < kLayers; ++l) synth.setParam(paramId(l, LayerParam::On), l == kNoiseLayer ? 1.0 : 0.0);
             synth.setParam(paramId(kNoiseLayer, LayerParam::Sustain), 1.0);
+            // White noise (crackle's sparse clicks measure differently every run).
+            synth.setParam(paramId(kNoiseLayer, LayerParam::Wave), 0.0);
+            for (const Macro effect : {Macro::Reverb, Macro::Delay}) synth.setParam(paramId(effect), 0.0);
             return rms(play(synth, notes, 0.5).left, 2 * kTenthOfASecond);
         };
         const double one = noiseLevel({noteOn(60)});
@@ -477,11 +497,9 @@ private slots:
         // Players see the type, five sound knobs and five effect knobs, nothing else.
         QStringList names;
         for (const auto& p : node->parameters()) names << p.name;
+        // (Squash, Enhance and the sidechain are effects of their own: not here.)
         QCOMPARE(names, (QStringList{u"Type"_s, u"Cutoff"_s, u"Resonance"_s, u"Attack"_s, u"Release"_s, u"Spread"_s,
-                                     u"Reverb"_s, u"Delay"_s, u"OTT"_s, u"Width"_s, u"Sidechain"_s,
-                                     u"Sidechain Rate"_s, u"Sidechain Slope"_s, u"Sidechain Curve"_s,
-                                     u"Sidechain Trigger"_s, u"Sidechain On"_s, u"Enhance"_s, u"Enhance Mode"_s,
-                                     u"Enhance On"_s}));
+                                     u"Reverb"_s, u"Delay"_s, u"Width"_s}));
         const uint32_t type = paramId(Macro::Type);
         const uint32_t cutoff = paramId(Macro::Cutoff);
         QVERIFY(node->setParameter(type, typeValue(typeNamed("Trance Lead"))).has_value());
@@ -512,24 +530,23 @@ private slots:
     // triplet lengths Kickstart lacks.
     void theSidechainOffersCurvesLengthsAndTriggers()
     {
-        auto loaded = PluginNode::load(QString::fromLatin1(SawStackNode::kPluginId), kRate, kBlock);
+        auto loaded = PluginNode::load(QString::fromLatin1(SidechainEffectNode::kPluginId), kRate, kBlock);
         QVERIFY(loaded.has_value());
         const auto params = (*loaded)->parameters();
-        const auto choicesOf = [&](Macro m) {
-            const auto found = std::ranges::find_if(params, [&](const PluginNode::Parameter& p) { return p.id == paramId(m); });
+        const auto choicesOf = [&](uint32_t id) {
+            const auto found = std::ranges::find_if(params, [&](const PluginNode::Parameter& p) { return p.id == id; });
             return found != params.end() ? found->choices : QStringList{u"(missing)"_s};
         };
-        QCOMPARE(choicesOf(Macro::SidechainRate),
+        QCOMPARE(choicesOf(SidechainEffectNode::Rate),
                  (QStringList{u"1/16"_s, u"1/8T"_s, u"1/8"_s, u"1/4T"_s, u"1/8D"_s, u"1/4"_s, u"1/4D"_s, u"1/2"_s, u"1/1"_s}));
-        QCOMPARE(choicesOf(Macro::SidechainTrigger), (QStringList{u"Sync"_s, u"Note"_s}));
+        QCOMPARE(choicesOf(SidechainEffectNode::Trigger), (QStringList{u"Sync"_s, u"Note"_s}));
         QStringList curves;
         for (const sidechain::Curve& c : sidechain::kCurves) curves << QString::fromLatin1(c.name);
-        QCOMPARE(choicesOf(Macro::SidechainCurve), curves);
+        QCOMPARE(choicesOf(SidechainEffectNode::Curve), curves);
         QCOMPARE(curves.size(), 12);
-        // A new stack ducks every quarter note, as Kickstart starts.
-        Synth synth;
-        QCOMPARE(sidechain::kRates.at(static_cast<std::size_t>(Ranges::choice(synth.param(paramId(Macro::SidechainRate)), 9))).beats,
-                 1.0);
+        // A new one ducks every quarter note, as Kickstart starts.
+        const double rate = (*loaded)->parameterValue(SidechainEffectNode::Rate);
+        QCOMPARE(sidechain::kRates.at(static_cast<std::size_t>(Ranges::choice(rate, 9))).beats, 1.0);
     }
 
     void eachLengthDucksThatOften_data()
@@ -545,10 +562,7 @@ private slots:
     {
         QFETCH(int, rate);
         QFETCH(double, seconds);
-        Synth synth;
-        synth.prepare(kRate, kBlock);
-        steadySineUnderTheSidechain(synth, 0, rate);
-        const std::vector<double> levels = levelPerCycle(play(synth, {noteOn(69)}, 6.2).left); // three 1/1 ducks after the start
+        const std::vector<double> levels = levelPerCycle(throughSidechain(1.0, 0, rate, false, 6.2)); // three 1/1 ducks after the start
         const double loudest = *std::ranges::max_element(levels);
         // Where it goes down (past a fifth of the level), after the first half second.
         std::vector<double> downs;
@@ -565,17 +579,13 @@ private slots:
     {
         // The note comes 0.2 s after the beat: following the beat, the duck
         // is already over; following the note, it ducks as the note starts.
-        const auto start = [](double trigger) {
-            Synth synth;
-            synth.prepare(kRate, kBlock);
-            steadySineUnderTheSidechain(synth, 0, 5);
-            synth.setParam(paramId(Macro::SidechainTrigger), trigger);
-            (void)play(synth, {}, 0.2);
-            const std::vector<float> s = play(synth, {noteOn(69)}, 0.3).left;
-            return std::pair{rms(std::span<const float>(s).subspan(240, 960)), rms(std::span<const float>(s).subspan(9600, 2400))};
+        const auto start = [](bool noteTrigger) {
+            const std::vector<float> all = throughSidechain(1.0, 0, 5, noteTrigger, 0.5, 0.2);
+            const std::span<const float> s = std::span<const float>(all).subspan(static_cast<std::size_t>(0.2 * kRate));
+            return std::pair{rms(s.subspan(240, 960)), rms(s.subspan(9600, 2400))};
         };
-        const auto [syncStart, syncLater] = start(0.0);
-        const auto [noteStart, noteLater] = start(1.0);
+        const auto [syncStart, syncLater] = start(false);
+        const auto [noteStart, noteLater] = start(true);
         QVERIFY2(noteStart < 0.3 * syncStart, qPrintable(u"note %1, sync %2"_s.arg(noteStart).arg(syncStart)));
         QVERIFY(noteLater > 3.0 * noteStart); // and comes back up after it
     }
@@ -594,24 +604,17 @@ private slots:
         QVERIFY2(loudest > 0.9F, qPrintable(u"stuck at %1"_s.arg(loudest)));
     }
 
-    void theSidechainSwitchesOffAndBackOnWithItsSettingsKept()
+    void theSidechainsDepthSetsHowFarItDucks()
     {
-        // Off: the sound is steady, as with no sidechain at all; on again:
-        // it ducks as it was set, Mix and all.
-        const auto ducking = [](double on) {
-            Synth synth;
-            synth.prepare(kRate, kBlock);
-            steadySineUnderTheSidechain(synth, 0, 5);
-            synth.setParam(paramId(Macro::SidechainOn), on);
-            const std::vector<double> levels = levelPerCycle(play(synth, {noteOn(69)}, 1.2).left);
+        // No depth: the sound steady, as with no sidechain at all; full: down to nearly nothing on each beat.
+        const auto ducking = [](double depth) {
+            const std::vector<double> levels = levelPerCycle(throughSidechain(depth, 0, 5, false, 1.2));
             const auto [quietest, loudest] = std::ranges::minmax(std::span<const double>(levels).subspan(50));
             return quietest / loudest;
         };
-        QVERIFY2(ducking(0.0) > 0.95, "still ducks when off");
-        QVERIFY2(ducking(1.0) < 0.2, "does not duck when on");
-        const Synth fresh;
-        QVERIFY(fresh.param(paramId(Macro::SidechainOn)) >= 0.5); // a new stack has it on
-        QVERIFY(fresh.param(paramId(Macro::Sidechain)) > 0.0);   // its Mix kept whether on or off
+        QVERIFY2(ducking(0.0) > 0.95, "ducks with no depth");
+        QVERIFY2(ducking(1.0) < 0.2, "does not duck at full depth");
+        QVERIFY(ducking(0.5) > ducking(1.0) && ducking(0.5) < ducking(0.0));
     }
 
     void everySidechainCurveIsItsOwnShape()
@@ -667,9 +670,17 @@ private slots:
     {
         QStringList names;
         for (const StackType& t : stackTypes()) names << QString::fromLatin1(t.name);
-        QCOMPARE(names, (QStringList{u"Supersaw Lead"_s, u"Supersaw Chords"_s, u"Future Bass Chords"_s,
-                                     u"Melodic Dubstep Lead"_s, u"Trance Lead"_s, u"Anthem Lead"_s, u"Big Room Lead"_s,
-                                     u"Supersaw Pad"_s, u"Supersaw Pluck"_s, u"Reese Bass"_s}));
+        QCOMPARE(names, (QStringList{u"Supersaw Lead"_s, u"Trance Lead"_s, u"Anthem Lead"_s, u"Big Room Lead"_s,
+                                     u"Melodic Dubstep Lead"_s, u"Hoover Lead"_s, u"Silk Lead"_s, u"Supersaw Chords"_s,
+                                     u"Future Bass Chords"_s, u"Deep House Chords"_s, u"Gated Trance Chords"_s,
+                                     u"Synthwave Chords"_s, u"Uplifting Chords"_s, u"Supersaw Pluck"_s, u"Future Pluck"_s,
+                                     u"Trance Pluck"_s, u"Tropical Pluck"_s, u"Rave Stab"_s, u"Supersaw Pad"_s, u"Dream Pad"_s,
+                                     u"Analog Warm Pad"_s, u"Swell Pad"_s, u"Airy Saw Pad"_s, u"Reese Bass"_s, u"Saw Bass"_s,
+                                     u"Octave Bass"_s, u"Hoover Bass"_s, u"Pluck Bass"_s}));
+        // Every type saved before keeps its key (old songs find their stack).
+        QStringList keys;
+        for (const StackType& t : stackTypes()) keys << QString::fromLatin1(t.key);
+        QCOMPARE(QSet<QString>(keys.begin(), keys.end()).size(), keys.size());
     }
 
     void everyTypePlaysCleanAndAboutAsLoudAsTheOthers()
@@ -684,7 +695,7 @@ private slots:
             Synth synth;
             synth.prepare(kRate, kBlock);
             synth.setParam(paramId(Macro::Type), typeValue(t));
-            const bool bass = t == typeNamed("Reese Bass");
+            const bool bass = std::string_view(stackType(t).family) == "BASS";
             const std::vector<MidiEvent> notes = bass ? std::vector<MidiEvent>{noteOn(36)}
                                                       : std::vector<MidiEvent>{noteOn(60), noteOn(64), noteOn(67), noteOn(72)};
             const Audio a = play(synth, notes, 1.5);
@@ -742,6 +753,7 @@ private slots:
             Synth synth;
             synth.prepare(kRate, kBlock);
             synth.setParam(paramId(Macro::Release), Ranges::fromSeconds(seconds));
+            for (const Macro effect : {Macro::Reverb, Macro::Delay}) synth.setParam(paramId(effect), 0.0); // the note's own tail
             play(synth, {noteOn(60)}, 0.3);
             const Audio after = play(synth, {noteOff(60)}, 1.0);
             return rms(after.left, 5 * kTenthOfASecond); // half a second after letting go
@@ -866,17 +878,25 @@ private slots:
         }
     }
 
-    // Every setting fuller, never just louder: a chord with Enhance full on
-    // is within a decibel or so of the chord without it, and clean.
+    // Every setting fuller, never just louder: a chord through the Enhance
+    // effect full on is within a decibel or so of the chord without it, and clean.
     void enhanceKeepsTheLevel()
     {
-        const auto level = [](bool on, int mode) {
-            Synth synth;
-            synth.prepare(kRate, kBlock);
-            synth.setParam(paramId(Macro::EnhanceOn), on ? 1.0 : 0.0);
-            synth.setParam(paramId(Macro::Enhance), 1.0);
-            synth.setParam(paramId(Macro::EnhanceMode), Ranges::fromChoice(mode, Enhance::kModes));
-            const Audio a = play(synth, {noteOn(48), noteOn(60), noteOn(64), noteOn(67)}, 3.0);
+        Synth synth;
+        synth.prepare(kRate, kBlock);
+        const Audio chord = play(synth, {noteOn(48), noteOn(60), noteOn(64), noteOn(67)}, 3.0);
+        const auto level = [&](bool on, int mode) {
+            Audio a = chord;
+            if (on) {
+                auto enhance = EnhanceEffectNode::create(kRate, kBlock);
+                (void)enhance->setParameter(EnhanceEffectNode::Amount, 1.0);
+                (void)enhance->setParameter(EnhanceEffectNode::Mode, Ranges::fromChoice(mode, Enhance::kModes));
+                for (std::size_t at = 0; at < a.left.size(); at += kBlock) {
+                    const int n = std::min(kBlock, static_cast<int>(a.left.size() - at));
+                    enhance->process({}, AudioBlock{.left = std::span(a.left).subspan(at).data(), .right = std::span(a.right).subspan(at).data(), .frames = n},
+                                     TimeInfo{});
+                }
+            }
             if (!allFinite(a) || peak(a) >= 1.0F) return 99.0;
             return 20.0 * std::log10(rms(a.left, static_cast<std::size_t>(kRate)));
         };
@@ -887,10 +907,10 @@ private slots:
             QVERIFY2(std::abs(on - off) < 1.5, qPrintable(u"%1: %2 dB, off %3 dB"_s.arg(mode).arg(on).arg(off)));
         }
         // Its settings by name, A to D.
-        auto loaded = PluginNode::load(QString::fromLatin1(SawStackNode::kPluginId), kRate, kBlock);
+        auto loaded = PluginNode::load(QString::fromLatin1(EnhanceEffectNode::kPluginId), kRate, kBlock);
         QVERIFY(loaded.has_value());
         const auto params = (*loaded)->parameters();
-        const auto mode = std::ranges::find_if(params, [](const PluginNode::Parameter& p) { return p.id == paramId(Macro::EnhanceMode); });
+        const auto mode = std::ranges::find_if(params, [](const PluginNode::Parameter& p) { return p.id == EnhanceEffectNode::Mode; });
         QVERIFY(mode != params.end());
         QCOMPARE(mode->choices, (QStringList{u"A"_s, u"B"_s, u"C"_s, u"D"_s}));
     }
@@ -909,7 +929,7 @@ private slots:
             Synth synth;
             synth.prepare(kRate, kBlock);
             synth.setParam(paramId(Macro::Type), typeValue(t));
-            const bool bass = t == typeNamed("Reese Bass");
+            const bool bass = std::string_view(stackType(t).family) == "BASS";
             Audio all;
             for (const std::vector<int>& chord : chords) {
                 std::vector<MidiEvent> on;
@@ -1196,6 +1216,86 @@ private slots:
         }));
         QVERIFY(!PluginNode::isVst2(QString::fromLatin1(SawStackNode::kPluginId)));
         QVERIFY(!PluginNode::load(u"builtin:no-such-thing"_s, kRate, kBlock).has_value());
+    }
+
+    // OTT, Enhance and Sidechain are effects of their own: offered as
+    // effects, each changing the sound it is given as it says, its settings
+    // saved and read back by name.
+    void theAppsOwnEffectsWorkOnTheirOwn()
+    {
+        const auto list = PluginNode::builtins();
+        for (const char* id : {OttEffectNode::kPluginId, EnhanceEffectNode::kPluginId, SidechainEffectNode::kPluginId}) {
+            QVERIFY2(std::ranges::any_of(list, [id](const PluginInfo& p) { return p.id == QLatin1StringView(id) && p.kind == PluginKind::Effect; }), id);
+        }
+        // A quiet 220 Hz tone, 2 s (four beats at 120 bpm), through `node`: the level in dB, and the quietest 10 ms.
+        const auto run = [](PluginNode& node, double& quietestDb) {
+            const int frames = static_cast<int>(2 * kRate);
+            std::vector<float> left(static_cast<std::size_t>(frames));
+            for (int i = 0; i < frames; ++i) left.at(static_cast<std::size_t>(i)) = 0.03F * static_cast<float>(std::sin(2 * std::numbers::pi * 220.0 * i / kRate));
+            std::vector<float> right = left;
+            TimeInfo time{.tempo = 120.0, .sampleRate = kRate};
+            for (int at = 0; at < frames; at += kBlock) {
+                const int n = std::min(kBlock, frames - at);
+                time.samplePosition = at;
+                time.ppqPosition = at * 2.0 / kRate;
+                const auto from = static_cast<std::size_t>(at);
+                node.process({}, AudioBlock{.left = std::span(left).subspan(from).data(), .right = std::span(right).subspan(from).data(), .frames = n},
+                             time);
+            }
+            const auto rms = [&](int from, int count) {
+                double sum = 0;
+                for (int i = from; i < from + count; ++i) {
+                    sum += static_cast<double>(left.at(static_cast<std::size_t>(i))) * left.at(static_cast<std::size_t>(i));
+                }
+                return 10 * std::log10(sum / count + 1e-20);
+            };
+            quietestDb = 0;
+            const int window = static_cast<int>(kRate / 100);
+            for (int at = static_cast<int>(kRate / 2); at + window <= frames; at += window) quietestDb = std::min(quietestDb, rms(at, window));
+            return rms(static_cast<int>(kRate / 2), frames - static_cast<int>(kRate / 2));
+        };
+        const double toneDb = 20 * std::log10(0.03 / std::numbers::sqrt2);
+        double quietest = 0;
+
+        auto ott = OttEffectNode::create(kRate, kBlock);
+        QVERIFY(ott->setParameter(OttEffectNode::Depth, 1.0));
+        const double ottDb = run(*ott, quietest);
+        QVERIFY2(ottDb > toneDb + 6.0, qPrintable(u"OTT %1 dB, the tone %2 dB"_s.arg(ottDb).arg(toneDb))); // pulled up
+        QVERIFY(ott->parameterValue(BuiltinEffectNode::kReadings) > 0.5); // the lows' meter: lifted (0.5 is none)
+
+        // Enhance keeps the level the sound came in at: what changes is its shape.
+        auto enhance = EnhanceEffectNode::create(kRate, kBlock);
+        QVERIFY(enhance->setParameter(EnhanceEffectNode::Amount, 1.0));
+        std::vector<float> dry(static_cast<std::size_t>(kRate));
+        for (std::size_t i = 0; i < dry.size(); ++i) {
+            dry.at(i) = 0.3F * static_cast<float>(std::sin(2 * std::numbers::pi * 110.0 * static_cast<double>(i) / kRate));
+        }
+        std::vector<float> wetL = dry;
+        std::vector<float> wetR = dry;
+        for (std::size_t at = 0; at < dry.size(); at += kBlock) {
+            const int n = std::min(kBlock, static_cast<int>(dry.size() - at));
+            enhance->process({}, AudioBlock{.left = std::span(wetL).subspan(at).data(), .right = std::span(wetR).subspan(at).data(), .frames = n},
+                             TimeInfo{});
+        }
+        double change = 0;
+        for (std::size_t i = dry.size() / 2; i < dry.size(); ++i) change = std::max(change, static_cast<double>(std::abs(wetL.at(i) - dry.at(i))));
+        QVERIFY2(change > 0.02, qPrintable(u"Enhance changed the sound by at most %1"_s.arg(change)));
+
+        auto duck = SidechainEffectNode::create(kRate, kBlock);
+        QVERIFY(duck->setParameter(SidechainEffectNode::Depth, 1.0));
+        run(*duck, quietest);
+        QVERIFY2(quietest < toneDb - 20.0, qPrintable(u"Sidechain at its lowest %1 dB, the tone %2 dB"_s.arg(quietest).arg(toneDb))); // ducks on the beat
+        QVERIFY(duck->parameterValue(BuiltinEffectNode::kReadings) >= 0.0);
+
+        // Saved and read back by name.
+        QVERIFY(duck->setParameter(SidechainEffectNode::Slope, 0.8));
+        const auto saved = duck->saveEncodedState();
+        QVERIFY(saved.has_value());
+        auto other = SidechainEffectNode::create(kRate, kBlock);
+        QVERIFY(other->restoreEncodedState(*saved).has_value());
+        QCOMPARE(other->parameterValue(SidechainEffectNode::Slope), 0.8);
+        QCOMPARE(other->parameterValue(SidechainEffectNode::Depth), 1.0);
+        QVERIFY(!other->restoreEncodedState(QByteArray("nonsense")).has_value());
     }
 };
 

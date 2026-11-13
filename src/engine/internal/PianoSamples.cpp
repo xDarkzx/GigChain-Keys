@@ -108,15 +108,30 @@ core::Result<SampleSet> loadSampleSet(const QString& sfzPath, double sampleRate,
                 return core::fail(core::ErrorCode::InvalidData, u"Reading the piano %1 was cancelled"_s.arg(set.name));
             }
             const double place = std::clamp((r.keyCenter - 21) / 87.0, 0.0, 1.0);
-            const double keepSeconds = options.longestSeconds + ((options.shortestSeconds - options.longestSeconds) * place);
+            const bool looped = r.loopEnd > 0;
+            if (looped && (r.loopStart >= r.loopEnd || r.tailStart > r.loopStart || r.loopStart < r.offset)) {
+                return core::fail(core::ErrorCode::InvalidData,
+                                  u"The piano %1: %2's loop (%3 to %4, fading from %5) is not a loop"_s.arg(set.name, r.sample)
+                                      .arg(r.loopStart)
+                                      .arg(r.loopEnd)
+                                      .arg(r.tailStart));
+            }
+            constexpr double kWhole = 120.0; // a looped recording: all of it (the pack cut it at its loop)
+            const double keepSeconds =
+                looped ? kWhole : options.longestSeconds + ((options.shortestSeconds - options.longestSeconds) * place);
             constexpr double kOffsetRoom = 0.25; // the map's start offsets are a few milliseconds
             auto clip = decodeSampleFile(folder + u'/' + r.sample, sampleRate, keepSeconds + kOffsetRoom, cancel);
             if (!clip) return tl::unexpected(clip.error());
-            const auto skip = std::min(static_cast<std::size_t>(std::lround(static_cast<double>(r.offset) * sampleRate / clip->sourceRate)),
-                                       clip->clip.left.size());
+            const double ratio = sampleRate / clip->sourceRate;
+            const auto skip = std::min(static_cast<std::size_t>(std::lround(static_cast<double>(r.offset) * ratio)), clip->clip.left.size());
             const std::size_t available = clip->clip.left.size() - skip;
             const auto keep = std::min(available, static_cast<std::size_t>(keepSeconds * sampleRate));
-            const bool trimmed = keep < available;
+            const bool trimmed = !looped && keep < available;
+            const auto at = [&](int64_t frame) { return static_cast<double>(frame - r.offset) * ratio; };
+            if (looped && at(r.loopEnd) + 4.0 > static_cast<double>(keep)) {
+                return core::fail(core::ErrorCode::InvalidData, u"The piano %1: %2 ends before its loop does (frame %3)"_s.arg(set.name, r.sample)
+                                                                    .arg(r.loopEnd));
+            }
             const auto fade = trimmed ? std::min(keep, static_cast<std::size_t>(options.fadeSeconds * sampleRate)) : std::size_t{0};
             SampleZone zone;
             zone.loKey = r.loKey;
@@ -133,6 +148,12 @@ core::Result<SampleSet> loadSampleSet(const QString& sfzPath, double sampleRate,
             zone.rtDecayDb = r.rtDecayDb;
             zone.seqLength = r.seqLength;
             zone.seqPosition = r.seqPosition;
+            if (looped) {
+                zone.loopStart = at(r.loopStart);
+                zone.loopEnd = at(r.loopEnd);
+                zone.tailStart = at(std::max(r.tailStart, r.offset));
+                zone.tailDecayDb = static_cast<float>(std::max(r.tailDecayDb, 0.0));
+            }
             zone.frames.resize(keep * 2);
             auto left = std::next(clip->clip.left.cbegin(), static_cast<std::ptrdiff_t>(skip));
             auto right = std::next(clip->clip.right.cbegin(), static_cast<std::ptrdiff_t>(skip));

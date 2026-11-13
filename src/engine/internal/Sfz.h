@@ -27,6 +27,13 @@ struct Region
     double attack = 0.0, decay = 0.0, sustainPercent = 100.0, releaseSeconds = 0.001;
     double rtDecayDb = 0.0; // a release recording is this many dB quieter per second the key was held
     int seqLength = 1, seqPosition = 1; // round robin
+    // A loop near its end (loop_start, loop_end: its own frames, from the
+    // offset): played round while the note sounds. Piano Pro's own maps
+    // (tools/make-piano-pack.py) take the recording's fading out of the loop
+    // and the stretch before it, from tail_start; tail_decay puts it back
+    // (dB a second). No loop: loopEnd 0.
+    int64_t loopStart = 0, loopEnd = 0, tailStart = 0;
+    double tailDecayDb = 0.0;
 };
 
 // The regions of `text`, in order. A setting not known here, a value that

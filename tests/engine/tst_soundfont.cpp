@@ -11,6 +11,7 @@
 #include "SoundFontNode.h"
 
 #include "../common/MakeSoundFont.h"
+#include "VideoSounds.h"
 
 #include "gigchain/engine/BuiltinReadings.h"
 
@@ -567,6 +568,121 @@ private slots:
         QVERIFY(overrides(values).empty()); // a new player plays the SoundFont exactly as made
         values.at(paramId(Param::Release)) = 0.5;
         QCOMPARE(overrides(values).size(), std::size_t{1});
+    }
+
+    // The SoundFont short's sounds (features\11-soundfont-short): one WAV a
+    // scene, a real SoundFont (GIGCHAIN_SHORT_SOUNDFONT) through the player,
+    // each change on the word that names it (its subs.json). Only made when
+    // asked (GIGCHAIN_SHORT_SOUNDS=<the short's folder>).
+    void renderShortSounds()
+    {
+        const QString folder = qEnvironmentVariable("GIGCHAIN_SHORT_SOUNDS");
+        if (folder.isEmpty()) QSKIP("Set GIGCHAIN_SHORT_SOUNDS to a short's folder to make its sounds");
+        const QString soundFont = qEnvironmentVariable("GIGCHAIN_SHORT_SOUNDFONT");
+        QVERIFY2(QFile::exists(soundFont), "Set GIGCHAIN_SHORT_SOUNDFONT to the .sf2 the short plays");
+        const video::Cues cues(folder);
+        QVERIFY2(cues.loaded(), "the short's subs.json (make_subs.py) is needed: its words time the sound");
+        const auto at = [&](const char* scene, const char* word, double fallback) {
+            return cues.beatOf(QString::fromLatin1(scene), QString::fromLatin1(word), fallback);
+        };
+        // The player as the video's renderer plays an instrument.
+        struct Played
+        {
+            Player player;
+            void setParam(uint32_t id, double value)
+            {
+                player.setParam(id, value);
+                player.service(); // (a preset or an option: another synth, handed over before the next block)
+            }
+            void process(std::span<const MidiEvent> events, const AudioBlock& io, const TimeInfo& /*time*/) { player.process(events, io); }
+        };
+        int presetCount = 0;
+        {
+            Rig probe(soundFont);
+            QCOMPARE(probe.player.fileState(), Player::FileState::Ready);
+            presetCount = static_cast<int>(probe.player.presets().size());
+        }
+        // The presets (in the window's order): Grand Piano, Slow Strings, Warm Pad, Standard 1 (bank 128).
+        const auto preset = [&](video::Take& t, double beat, int index) {
+            t.add({beat, paramId(Param::Preset), stepValue(index, presetCount)});
+        };
+        // A minor: Am, F, C, G, a chord every `every` beats from `from` to `to`.
+        const auto chords = [](video::Take& t, double from, double to, double every) {
+            const std::array<std::array<int, 4>, 4> progression{{{57, 60, 64, 69}, {53, 57, 60, 65}, {48, 55, 60, 64}, {55, 59, 62, 67}}};
+            for (int n = 0; from + (n * every) < to - 0.5; ++n) {
+                const double beat = from + (n * every);
+                for (const int key : progression.at(static_cast<std::size_t>(n % 4))) {
+                    t.notes.push_back({.beat = beat, .key = key, .velocity = 96, .length = every * 0.95});
+                }
+            }
+        };
+        // A drum groove (General MIDI): kick, snare, closed hat in eighths.
+        const auto groove = [](video::Take& t, double from, double to) {
+            for (int n = 0; from + n < to - 0.5; ++n) {
+                const double beat = from + n;
+                const int inBar = n % 4;
+                t.notes.push_back({.beat = beat, .key = (inBar % 2 == 0) ? 36 : 38, .velocity = 110, .length = 0.4});
+                t.notes.push_back({.beat = beat, .key = 42, .velocity = 85, .length = 0.2});
+                t.notes.push_back({.beat = beat + 0.5, .key = 42, .velocity = 60, .length = 0.2});
+            }
+        };
+        std::vector<std::pair<int, video::Take>> scenes;
+        const auto piano = [&](const char* scene, double every) {
+            video::Take t{cues.beatsOf(QString::fromLatin1(scene), 24)};
+            preset(t, 0, 0);
+            chords(t, 1, t.beats, every);
+            return t;
+        };
+        scenes.emplace_back(1, piano("01", 2)); // heard after "Listen"
+        scenes.emplace_back(2, piano("02", 2)); // and after "sounds"
+        { // 03: strings, a warm pad, then the drum kits
+            video::Take t{cues.beatsOf(u"03"_s, 36)};
+            const double strings = at("03", "strings", 6);
+            const double pad = at("03", "warm", 12);
+            const double drums = at("03", "drum", 18);
+            preset(t, 0, 49);
+            chords(t, strings, pad, 4);
+            preset(t, pad - 0.25, 89);
+            chords(t, pad, drums, 4);
+            preset(t, drums - 0.25, 274);
+            groove(t, drums, t.beats);
+            scenes.emplace_back(3, t);
+        }
+        { // 04: the piano, then a slow attack, vibrato, and the filter closed, each as it is said
+            video::Take t{cues.beatsOf(u"04"_s, 36)};
+            const double attack = at("04", "attack", 6);
+            const double vibrato = at("04", "vibrato", 14);
+            const double close = at("04", "close", 22);
+            preset(t, 0, 0);
+            chords(t, 1, attack, 2);
+            t.add({attack - 0.25, paramId(Param::Attack), 0.7});
+            chords(t, attack, vibrato, 4);
+            t.add({vibrato - 0.25, paramId(Param::LfoAmount), 0.72});
+            t.add({vibrato - 0.25, paramId(Param::LfoSpeed), 0.72});
+            chords(t, vibrato, close, 4);
+            t.add({close - 0.25, paramId(Param::Cutoff), 0.4});
+            chords(t, close, t.beats, 4);
+            scenes.emplace_back(4, t);
+        }
+        scenes.emplace_back(5, piano("05", 2)); // (the video fades it out)
+        for (const auto& [number, take] : scenes) {
+            Played played;
+            played.player.prepare(video::kRate);
+            played.player.setFile(soundFont);
+            QElapsedTimer clock;
+            clock.start();
+            while (played.player.fileState() != Player::FileState::Ready && clock.elapsed() < 20000) {
+                played.player.service();
+                QThread::msleep(5);
+            }
+            QCOMPARE(played.player.fileState(), Player::FileState::Ready);
+            played.player.service();
+            const std::vector<float> sound = video::render(played, take);
+            QVERIFY(std::ranges::any_of(sound, [](float s) { return std::abs(s) > 0.05F; })); // it played
+            const QString path = u"%1/sound_%2.wav"_s.arg(folder).arg(number, 2, 10, QLatin1Char('0'));
+            QVERIFY2(video::writeWav(path, sound), qPrintable(path));
+            qInfo().noquote() << path << u"%1 s"_s.arg(static_cast<double>(sound.size()) / 2.0 / video::kRate, 0, 'f', 1);
+        }
     }
 
 private:

@@ -306,6 +306,10 @@ struct SustainPadsSettings
 };
 
 // Sustain Pads' pads, by `preset`: Pads Pro's, in its order.
-inline constexpr std::array<const char*, 8> kSustainPadPresets{"Warm", "Lush", "Dark", "Air", "Shimmer", "Choir", "Strings", "Organ"};
+inline constexpr std::array<const char*, 23> kSustainPadPresets{
+    "Juno Warmth",    "Supersaw Haze",  "Moog Low Glow", "Breath Flute",   "FM Crystal Bells", "Tape Choir",    "Orchestra Strings",
+    "Tonewheel Organ", "Angelic",       "Grand Piano",   "Electric Dream", "E-Bow Sky",        "String Machine", "Pipe Organ",
+    "Harmonium",      "Twin Horizon",   "Vector Sky",    "Singing Bowl",   "Nebula",           "Mountain Wind", "Ocean Shore",
+    "Forest Dawn",    "Cave Dwelling"};
 
 } // namespace gigchain::engine

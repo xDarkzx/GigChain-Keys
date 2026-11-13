@@ -77,23 +77,34 @@ public:
             c.highSplit.set(2500.0, sampleRate);
             c.bands = {};
         }
-        // Vital's band timings (attack, release in ms) at its default 0.5.
-        constexpr std::array<std::array<double, 2>, kBands> kTimes{{{2.8, 40.0}, {1.4, 28.0}, {0.7, 15.0}}};
-        for (std::size_t b = 0; b < kBands; ++b) {
-            const double perMs = sampleRate / 1000.0;
-            const double attack = std::max(kTimes.at(b).at(0) * perMs, 5.0);
-            const double release = std::max(kTimes.at(b).at(1) * perMs, 5.0);
-            m_attack.at(b) = {.samples = static_cast<float>(attack), .scale = static_cast<float>(1.0 / (attack + 1.0))};
-            m_release.at(b) = {.samples = static_cast<float>(release), .scale = static_cast<float>(1.0 / (release + 1.0))};
-        }
+        setTimes();
     }
     void setMix(double mix) { m_mix = static_cast<float>(std::clamp(mix, 0.0, 1.0)); }
+    // The OTT effect's other controls (their defaults: as Vital's OTT is).
+    // `time` 0-1 (0.5: Vital's timing; 0 a quarter as long, 1 four times);
+    // `upward`/`downward` 0-1 scale how hard quiet parts are pulled up and
+    // loud parts down; the gains are before and after it, in dB.
+    void setControls(double time, double upward, double downward, double inDb, double outDb)
+    {
+        const auto scale = static_cast<float>(std::exp2((std::clamp(time, 0.0, 1.0) - 0.5) * 4.0));
+        if (scale != m_timeScale) {
+            m_timeScale = scale;
+            setTimes();
+        }
+        m_upward = static_cast<float>(std::clamp(upward, 0.0, 1.0));
+        m_downward = static_cast<float>(std::clamp(downward, 0.0, 1.0));
+        m_inGain = static_cast<float>(std::pow(10.0, inDb / 20.0));
+        m_outGain = static_cast<float>(std::pow(10.0, outDb / 20.0));
+    }
+    // How hard each band (lows, mids, highs) is being worked now, in dB:
+    // above 0 pulled up, below 0 pushed down (the left side's, for meters).
+    [[nodiscard]] float bandDb(std::size_t band) const { return m_meterDb.at(band); }
 
     void tick(float& left, float& right)
     {
         if (m_mix <= 0.0F) return;
-        left = process(m_channels.at(0), left);
-        right = process(m_channels.at(1), right);
+        left = process(m_channels.at(0), left, true);
+        right = process(m_channels.at(1), right, false);
     }
 
 private:
@@ -123,8 +134,22 @@ private:
 
     static float power(float db) { return std::pow(10.0F, db / 10.0F); } // dB to mean square
 
-    float process(Channel& c, float in)
+    void setTimes()
     {
+        // Vital's band timings (attack, release in ms) at its default 0.5.
+        constexpr std::array<std::array<double, 2>, kBands> kTimes{{{2.8, 40.0}, {1.4, 28.0}, {0.7, 15.0}}};
+        for (std::size_t b = 0; b < kBands; ++b) {
+            const double perMs = m_rate / 1000.0 * m_timeScale;
+            const double attack = std::max(kTimes.at(b).at(0) * perMs, 5.0);
+            const double release = std::max(kTimes.at(b).at(1) * perMs, 5.0);
+            m_attack.at(b) = {.samples = static_cast<float>(attack), .scale = static_cast<float>(1.0 / (attack + 1.0))};
+            m_release.at(b) = {.samples = static_cast<float>(release), .scale = static_cast<float>(1.0 / (release + 1.0))};
+        }
+    }
+
+    float process(Channel& c, float dryIn, bool metered)
+    {
+        const float in = dryIn * m_inGain;
         float low = 0.0F;
         float rest = 0.0F;
         c.lowSplit.split(in, low, rest);
@@ -143,18 +168,26 @@ private:
             band.above = std::max((square + band.above * above.samples) * above.scale, upper);
             const Timing& below = square > band.below ? m_attack.at(b) : m_release.at(b);
             band.below = std::min((square + band.below * below.samples) * below.scale, lower);
-            const float down = std::pow(upper / band.above, kUpperRatio.at(b) * 0.5F);
-            const float up = std::pow(lower / std::max(band.below, 1e-30F), kLowerRatio.at(b) * 0.5F);
-            const float gain = std::clamp(down * up, 0.0F, kMaxExpand) * std::pow(10.0F, kGainDb.at(b) / 20.0F);
+            const float down = std::pow(upper / band.above, kUpperRatio.at(b) * 0.5F * m_downward);
+            const float up = std::pow(lower / std::max(band.below, 1e-30F), kLowerRatio.at(b) * 0.5F * m_upward);
+            const float squash = std::clamp(down * up, 0.0F, kMaxExpand);
+            const float gain = squash * std::pow(10.0F, kGainDb.at(b) / 20.0F);
+            if (metered) {
+                const float db = 20.0F * std::log10(std::max(squash, 1e-6F));
+                m_meterDb.at(b) += (db - m_meterDb.at(b)) * 0.001F; // steady enough to read
+            }
             out += x * gain;
         }
-        return in + (out - in) * m_mix;
+        // Depth blends from the sound as it came in; the output gain comes in with it.
+        return (dryIn + ((out - dryIn) * m_mix)) * (1.0F + ((m_outGain - 1.0F) * m_mix));
     }
 
     double m_rate = 48000.0;
     std::array<Channel, 2> m_channels{};
     std::array<Timing, kBands> m_attack{}, m_release{};
     float m_mix = 0.0F;
+    float m_timeScale = 1.0F, m_upward = 1.0F, m_downward = 1.0F, m_inGain = 1.0F, m_outGain = 1.0F;
+    std::array<float, kBands> m_meterDb{};
 };
 
 // A delay line read between samples (cubic), for the chorus and reverb.

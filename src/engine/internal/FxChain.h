@@ -48,6 +48,8 @@ public:
     [[nodiscard]] double sidechainPosition() const { return m_sidechain.position(); }
 
 private:
+    void setFilters(); // the design's EQ, top and mono low end at this rate
+
     double m_rate = 48000.0;
     Knobs m_knobs{};
     float m_masterGain = 0.0F;
@@ -56,6 +58,11 @@ private:
     std::array<Svf, 4> m_mainFilter{}; // two in a row each side: 24 dB/octave
     float m_drive = 0.0F;              // soft clip amount (0: off)
     bool m_cutMud = false;
+    FxDesign m_design{};               // the type's (its EQ, top and mono low end set again at prepare)
+    bool m_top = false;                // the smooth top on
+    std::array<Svf, 4> m_topFilter{};  // 4th-order Butterworth each side (two in a row)
+    bool m_mono = false;               // the sides' low cut on
+    Svf m_sideLowCut{};
     double m_delayFeedback = 0.3, m_delayBeats = 0.75;
     std::array<EqBand, 3> m_eq{};
     Chorus m_chorus;

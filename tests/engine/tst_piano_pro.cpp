@@ -1,9 +1,10 @@
-// Piano Pro, the app's own EDM piano: its recorded pianos play in tune
+// Piano Pro, the app's own stage piano: its recorded pianos play in tune
 // between their recordings, harder is louder (and from the louder
 // recordings), let-go keys ring out with their release sound, the pedal
-// holds; its FM electric pianos play in tune and brighten when struck
+// holds, and a held note rings on round its loop, fading, without a click;
+// its DX piano and its polysynth play in tune and brighten when struck
 // harder; without its recordings it still plays (its FM piano); every control
-// on its window changes the sound; its types are named as producers name
+// on its window changes the sound; its types are named as players name
 // them and sit at about the same loudness; it saves and loads.
 #include "PianoLibrary.h"
 #include "PianoPro.h"
@@ -22,6 +23,7 @@
 #include <cmath>
 #include <numbers>
 #include <numeric>
+#include <ranges>
 #include <vector>
 
 using namespace gigchain::engine;
@@ -113,6 +115,34 @@ double pitchOf(const std::vector<float>& s, std::size_t from)
     return crossings > 1 ? (crossings - 1) * kRate / static_cast<double>(last - first) : 0.0;
 }
 
+// The pitch by autocorrelation over 8192 samples from `from` (a sound rich in
+// harmonics crosses zero more than once a period); 40 Hz to 2 kHz.
+double periodPitchOf(const std::vector<float>& s, std::size_t from)
+{
+    constexpr std::size_t kLength = 8192;
+    if (from + kLength + 1200 > s.size()) return 0.0;
+    const auto at = [&](std::size_t lag) {
+        double sum = 0.0;
+        for (std::size_t i = 0; i < kLength; ++i) sum += double{s.at(from + i)} * s.at(from + i + lag);
+        return sum;
+    };
+    const auto lo = static_cast<std::size_t>(kRate / 2000.0);
+    const auto hi = static_cast<std::size_t>(kRate / 40.0);
+    const double zero = at(0);
+    // The first lag that comes back nearly as alike as none (the period, not a multiple of it).
+    std::vector<double> c(hi + 2);
+    for (std::size_t lag = lo; lag <= hi + 1; ++lag) c.at(lag) = at(lag);
+    for (std::size_t lag = lo + 1; lag <= hi; ++lag) {
+        if (c.at(lag) > 0.8 * zero && c.at(lag) >= c.at(lag - 1) && c.at(lag) >= c.at(lag + 1)) {
+            // Between samples: a parabola through the peak.
+            const double a = c.at(lag - 1), b = c.at(lag), d = c.at(lag + 1);
+            const double shift = 0.5 * (a - d) / (a - 2.0 * b + d);
+            return kRate / (static_cast<double>(lag) + shift);
+        }
+    }
+    return 0.0;
+}
+
 // How bright: the level of the sound's changes against its level.
 double brightness(const std::vector<float>& s, std::size_t from, std::size_t count)
 {
@@ -121,7 +151,7 @@ double brightness(const std::vector<float>& s, std::size_t from, std::size_t cou
     return rms(change) / std::max(rms(s, from, count), 1e-12);
 }
 
-// The level VCSL's recordings come in at (about -24 dB, which Piano Pro makes up).
+// A level the made-up piano's recordings come in at (about -24 dB).
 constexpr float kQuietAsVcsl = 0.063F;
 
 // A recorded piano made here: sines at each recording's key, two loudness
@@ -213,7 +243,7 @@ private slots:
         for (const int note : {60, 64, 57, 79}) {
             Synth synth;
             withPiano(synth);
-            plainPiano(synth, "Grand Piano");
+            plainPiano(synth, "Concert Grand");
             const Audio a = play(synth, {noteOn(note)}, 0.6);
             const double expected = 440.0 * std::exp2((note - 69) / 12.0);
             const double got = pitchOf(a.left, 2400);
@@ -226,7 +256,7 @@ private slots:
         const auto level = [this](int velocity) {
             Synth synth;
             withPiano(synth);
-            plainPiano(synth, "Grand Piano");
+            plainPiano(synth, "Concert Grand");
             return rms(play(synth, {noteOn(60, velocity)}, 0.4).left, 2400);
         };
         QVERIFY2(level(120) > 2.0 * level(40), qPrintable(u"%1 vs %2"_s.arg(level(120)).arg(level(40))));
@@ -239,7 +269,7 @@ private slots:
             Synth synth;
             synth.useRecordings(Source::Grand, &slot);
             synth.prepare(kRate, kBlock);
-            plainPiano(synth, "Grand Piano");
+            plainPiano(synth, "Concert Grand");
             (void)play(synth, {noteOn(60)}, 0.5);
             const Audio a = play(synth, {noteOff(60)}, 0.3);
             return std::pair{rms(a.left, 0, 2400), rms(a.left, static_cast<std::size_t>(0.25 * kRate))};
@@ -256,7 +286,7 @@ private slots:
     {
         Synth synth;
         withPiano(synth);
-        plainPiano(synth, "Grand Piano");
+        plainPiano(synth, "Concert Grand");
         (void)play(synth, {pedal(true), noteOn(60)}, 0.2);
         const Audio held = play(synth, {noteOff(60)}, 0.5);
         QVERIFY(rms(held.left, static_cast<std::size_t>(0.4 * kRate)) > 0.01);
@@ -282,9 +312,9 @@ private slots:
         QVERIFY2(synth.soundingNotes() <= kMaxNotes, qPrintable(QString::number(synth.soundingNotes())));
     }
 
-    void theElectricPianosPlayInTuneAndBrightenWhenStruckHarder()
+    void theSynthesisedPianosPlayInTuneAndBrightenWhenStruckHarder()
     {
-        for (const char* type : {"Electric Piano", "DX Piano"}) {
+        for (const char* type : {"DX Piano", "Poly Keys", "Poly Brass"}) {
             const auto render = [&](int velocity) {
                 Synth synth;
                 synth.prepare(kRate, kBlock);
@@ -292,9 +322,11 @@ private slots:
                 return play(synth, {noteOn(69, velocity)}, 0.5).left;
             };
             const std::vector<float> hard = render(120);
-            const double got = pitchOf(hard, 14400); // after the hammer's bright moment
-
-            QVERIFY2(std::abs(got / 440.0 - 1.0) < 0.01, qPrintable(u"%1: %2 Hz"_s.arg(QLatin1StringView(type)).arg(got)));
+            const double got = periodPitchOf(hard, 14400); // after the hammer's bright moment
+            // A (or, with the polysynth's sub under it, its octave down: the period that repeats).
+            const double octaves = std::log2(std::max(got, 1.0) / 440.0);
+            QVERIFY2(got > 100.0 && std::abs(octaves - std::round(octaves)) < 0.015,
+                     qPrintable(u"%1: %2 Hz"_s.arg(QLatin1StringView(type)).arg(got)));
             const std::vector<float> soft = render(30);
             QVERIFY2(brightness(hard, 0, 4800) > 1.2 * brightness(soft, 0, 4800), type);
         }
@@ -304,7 +336,7 @@ private slots:
     {
         Synth synth; // no recordings given: the FM piano plays
         synth.prepare(kRate, kBlock);
-        plainPiano(synth, "Grand Piano");
+        plainPiano(synth, "Concert Grand");
         const Audio a = play(synth, {noteOn(60)}, 0.5);
         QVERIFY(rms(a.left) > 0.01);
         QVERIFY(allFinite(a));
@@ -326,17 +358,7 @@ private slots:
         row("Width", paramId(Macro::Width), 0.0, 1.0);
         row("Reverb", paramId(Macro::Reverb), 0.0, 0.8, true);
         row("Delay", paramId(Macro::Delay), 0.0, 0.7, true);
-        row("OTT", paramId(Macro::Ott), 0.0, 1.0);
         row("Tape", paramId(Macro::Tape), 0.0, 1.0);
-        row("Sidechain", paramId(Macro::Sidechain), 0.0, 1.0);
-        row("Sidechain Rate", paramId(Macro::SidechainRate), Ranges::fromChoice(5, 9), 0.0);
-        row("Sidechain Slope", paramId(Macro::SidechainSlope), 0.5, 1.0);
-        row("Sidechain Curve", paramId(Macro::SidechainCurve), 0.0, 1.0);
-        row("Sidechain Trigger", paramId(Macro::SidechainTrigger), 0.0, 1.0);
-        row("Sidechain On", paramId(Macro::SidechainOn), 1.0, 0.0);
-        row("Enhance On", paramId(Macro::EnhanceOn), 0.0, 1.0);
-        row("Enhance", paramId(Macro::Enhance), 0.1, 1.0);
-        row("Enhance Mode", paramId(Macro::EnhanceMode), 0.0, 1.0);
         row("Master", paramId(GlobalParam::Level), Ranges::fromLevelDb(-14.0), Ranges::fromLevelDb(-24.0));
         for (const Layer l : {Layer::Piano, Layer::Octave, Layer::Strings, Layer::Sub}) {
             row(qPrintable(u"%1 on"_s.arg(layerName(l))), paramId(l, LayerParam::On), 1.0, 0.0);
@@ -355,9 +377,7 @@ private slots:
             withPiano(synth);
             synth.setParam(paramId(Macro::Type), typeValue(typeNamed("Big House Piano")));
             for (const Layer l : {Layer::Piano, Layer::Octave, Layer::Strings, Layer::Sub}) synth.setParam(paramId(l, LayerParam::On), 1.0);
-            synth.setParam(paramId(Macro::Sidechain), 1.0);
             if (id == paramId(Macro::Resonance)) synth.setParam(paramId(Macro::Tone), 0.6); // heard at the cutoff
-            if (id == paramId(Macro::Enhance) || id == paramId(Macro::EnhanceMode)) synth.setParam(paramId(Macro::EnhanceOn), 1.0);
             synth.setParam(id, value);
             (void)play(synth, {}, 0.13); // the chord off the beat (following the notes differs from the beat)
             const std::vector<MidiEvent> chord{noteOn(48), noteOn(60), noteOn(64), noteOn(67)};
@@ -387,8 +407,55 @@ private slots:
     {
         QStringList names;
         for (const PianoType& t : pianoTypes()) names << QString::fromLatin1(t.name);
-        QCOMPARE(names, (QStringList{u"House Piano"_s, u"Big House Piano"_s, u"Prog House Piano"_s, u"Emotional Piano"_s, u"Felt Piano"_s,
-                                     u"Grand Piano"_s, u"Upright Piano"_s, u"Electric Piano"_s, u"DX Piano"_s, u"Lo-fi Keys"_s}));
+        QCOMPARE(names, (QStringList{u"Concert Grand"_s, u"Bright Grand"_s, u"Ballad Grand"_s, u"Upright Piano"_s, u"Felt Piano"_s,
+                                     u"Rhodes"_s, u"Suitcase Rhodes"_s, u"Wurlitzer"_s, u"Electric Grand"_s, u"Pianet"_s, u"DX Piano"_s,
+                                     u"Lo-fi Keys"_s, u"Poly Keys"_s, u"Poly Strings"_s, u"Poly Brass"_s, u"House Piano"_s,
+                                     u"Big House Piano"_s, u"Prog House Piano"_s, u"Emotional Piano"_s}));
+        // Every type saved before keeps its key (old songs find their piano).
+        QStringList keys;
+        for (const PianoType& t : pianoTypes()) keys << QString::fromLatin1(t.key);
+        for (const char* old : {"house-piano", "big-house-piano", "prog-house-piano", "emotional-piano", "felt-piano", "grand-piano",
+                                "upright-piano", "electric-piano", "dx-piano", "lofi-keys"}) {
+            QVERIFY2(keys.contains(QLatin1StringView(old)), old);
+        }
+        QCOMPARE(QSet<QString>(keys.begin(), keys.end()).size(), keys.size());
+    }
+
+    // The real concert grand (when fetched): a note held with the pedal rings
+    // on round its loop well past the recording, fading as a piano does, and
+    // never clicks where the loop turns round.
+    void aHeldNoteRingsOnRoundItsLoopWithoutAClick()
+    {
+        auto& library = PianoLibrary::instance();
+        const auto* grand = library.request(Source::Grand, kRate);
+        QTRY_VERIFY_WITH_TIMEOUT(library.state(Source::Grand, kRate) != PianoLibrary::State::Loading, 60000);
+        if (grand->load() == nullptr) QSKIP("The piano pack is not fetched here");
+        for (const int note : {33, 48, 60, 72, 84}) {
+            Synth synth;
+            synth.useRecordings(Source::Grand, grand);
+            synth.prepare(kRate, kBlock);
+            plainPiano(synth, "Concert Grand");
+            const Audio a = play(synth, {pedal(true), noteOn(note, 90), noteOff(note)}, 12.0);
+            QVERIFY(allFinite(a));
+            const auto second = [&](double s) { return rms(a.left, static_cast<std::size_t>(s * kRate), static_cast<std::size_t>(kRate)); };
+            // The low and middle strings: still sounding long after the
+            // recording (5 s at most) ended (within 60 dB of where they
+            // started), and quieter than they were. (High ones die sooner, as a piano's do.)
+            if (note <= 60) {
+                QVERIFY2(second(10.0) > 1e-3 * second(1.0), qPrintable(u"note %1 stopped: %2 against %3"_s.arg(note).arg(second(10.0)).arg(second(1.0))));
+                QVERIFY2(second(10.0) < second(1.0), qPrintable(u"note %1 did not fade"_s.arg(note)));
+            }
+            // No click: no sample-to-sample jump much bigger than the note's own steepest.
+            double steepest = 0.0;
+            double jump = 0.0;
+            const auto start = static_cast<std::size_t>(0.5 * kRate);
+            for (std::size_t i = start + 1; i < a.left.size(); ++i) {
+                const double d = std::abs(double{a.left.at(i)} - double{a.left.at(i - 1)});
+                if (i < start + static_cast<std::size_t>(kRate)) steepest = std::max(steepest, d);
+                else jump = std::max(jump, d);
+            }
+            QVERIFY2(jump <= steepest * 1.05, qPrintable(u"note %1: a jump of %2 (its steepest %3)"_s.arg(note).arg(jump).arg(steepest)));
+        }
     }
 
     // With the real recordings (when fetched) and the FM pianos: every type
@@ -396,20 +463,24 @@ private slots:
     void everyTypePlaysCleanAndAboutAsLoudAsTheOthers()
     {
         auto& library = PianoLibrary::instance();
-        const auto* grand = library.request(Source::Grand, kRate);
-        const auto* upright = library.request(Source::Upright, kRate);
-        QTRY_VERIFY_WITH_TIMEOUT(library.state(Source::Grand, kRate) != PianoLibrary::State::Loading
-                                     && library.state(Source::Upright, kRate) != PianoLibrary::State::Loading,
-                                 60000);
-        const bool recordings = grand->load() != nullptr && upright->load() != nullptr;
+        std::array<const std::atomic<const SampleSet*>*, kSources> pianos{};
+        for (int s = 0; s < kSources; ++s) pianos.at(static_cast<std::size_t>(s)) = library.request(static_cast<Source>(s), kRate);
+        QTRY_VERIFY_WITH_TIMEOUT(std::ranges::none_of(std::views::iota(0, kSources),
+                                                      [&](int s) { return library.state(static_cast<Source>(s), kRate) == PianoLibrary::State::Loading; }),
+                                 120000);
+        bool recordings = true;
+        for (int s = 0; s < kSources; ++s) {
+            if (recorded(static_cast<Source>(s)) && pianos.at(static_cast<std::size_t>(s))->load() == nullptr) recordings = false;
+        }
         std::vector<std::pair<QString, double>> levels;
         const auto types = static_cast<int>(pianoTypes().size());
         for (int t = 0; t < types; ++t) {
             const PianoType& type = pianoType(t);
             if (recorded(type.source) && !recordings) continue;
             Synth synth;
-            synth.useRecordings(Source::Grand, grand);
-            synth.useRecordings(Source::Upright, upright);
+            for (int s = 0; s < kSources; ++s) {
+                if (pianos.at(static_cast<std::size_t>(s)) != nullptr) synth.useRecordings(static_cast<Source>(s), pianos.at(static_cast<std::size_t>(s)));
+            }
             synth.prepare(kRate, kBlock);
             synth.setParam(paramId(Macro::Type), typeValue(t));
             const Audio a = play(synth, {noteOn(48, 100), noteOn(60, 100), noteOn(64, 100), noteOn(67, 100)}, 2.0);
@@ -433,10 +504,9 @@ private slots:
         QVERIFY(node->isInstrument());
         QStringList names;
         for (const auto& p : node->parameters()) names << p.name;
+        // (OTT, Enhance and the sidechain are effects of their own: not here.)
         QCOMPARE(names, (QStringList{u"Type"_s, u"Tone"_s, u"Resonance"_s, u"Attack"_s, u"Release"_s, u"Width"_s, u"Reverb"_s,
-                                     u"Delay"_s, u"OTT"_s, u"Tape"_s, u"Sidechain"_s, u"Sidechain Rate"_s, u"Sidechain Slope"_s,
-                                     u"Sidechain Curve"_s, u"Sidechain Trigger"_s, u"Sidechain On"_s, u"Enhance"_s, u"Enhance Mode"_s,
-                                     u"Enhance On"_s, u"Piano On"_s, u"Piano Level"_s,
+                                     u"Delay"_s, u"Tape"_s, u"Piano On"_s, u"Piano Level"_s,
                                      u"Octave On"_s, u"Octave Level"_s, u"Strings On"_s, u"Strings Level"_s, u"Sub On"_s,
                                      u"Sub Level"_s, u"Level"_s}));
         QCOMPARE(node->parameters().front().choices.size(), static_cast<qsizetype>(pianoTypes().size()));
@@ -460,11 +530,11 @@ private slots:
         const double recordingsState = node->parameterValue(kRecordingsParameter);
         QVERIFY(recordingsState == 0.0 || recordingsState == 0.5 || recordingsState == 1.0);
         QVERIFY(node->parameterValue(sidechain::kPositionParameter) >= 0.0);
-        // The electric types need no recordings.
-        QCOMPARE(node->parameterValue(kSourceParameter), 1.0 / 3.0); // Felt: the upright
-        QVERIFY(node->setParameter(type, typeValue(typeNamed("Electric Piano"))).has_value());
+        // The synthesised types need no recordings.
+        QCOMPARE(node->parameterValue(kSourceParameter), 1.0 / (kSources - 1)); // Felt: the upright
+        QVERIFY(node->setParameter(type, typeValue(typeNamed("DX Piano"))).has_value());
         QCOMPARE(node->parameterValue(kRecordingsParameter), 1.0);
-        QCOMPARE(node->parameterValue(kSourceParameter), 2.0 / 3.0);
+        QCOMPARE(node->parameterValue(kSourceParameter), 6.0 / (kSources - 1));
     }
 
     void aPianoIsReadOnceAndSharedAndAMissingOneSaysWhy()
@@ -475,9 +545,10 @@ private slots:
         constexpr double kOddRate = 22050.0; // a rate no other test asked for
         const auto* first = library.request(Source::Upright, kOddRate);
         QCOMPARE(library.request(Source::Upright, kOddRate), first); // the same piano, not read twice
-        QVERIFY(library.request(Source::Electric, kOddRate) == nullptr);
+        QVERIFY(library.request(Source::Dx, kOddRate) == nullptr);
+        QVERIFY(library.request(Source::Poly, kOddRate) == nullptr);
         QTRY_COMPARE_WITH_TIMEOUT(library.state(Source::Upright, kOddRate), PianoLibrary::State::Failed, 10000);
-        QVERIFY2(library.problem(Source::Upright, kOddRate).contains(u"Upright Piano, Y.sfz"_s), qPrintable(library.problem(Source::Upright, kOddRate)));
+        QVERIFY2(library.problem(Source::Upright, kOddRate).contains(u"Upright.sfz"_s), qPrintable(library.problem(Source::Upright, kOddRate)));
         QVERIFY(first->load() == nullptr);
         qunsetenv("GIGCHAIN_PIANO_SAMPLES");
     }
@@ -502,7 +573,7 @@ private slots:
         QCOMPARE(library.state(Source::Grand, kOddRate), PianoLibrary::State::NotAsked);
         QVERIFY(library.state(Source::Upright, kOddRate) != PianoLibrary::State::NotAsked);
         // A type changed from a keyboard knob (the audio thread): its piano is asked for next.
-        node->queueParameter(paramId(Macro::Type), typeValue(typeNamed("Grand Piano")), 0);
+        node->queueParameter(paramId(Macro::Type), typeValue(typeNamed("Concert Grand")), 0);
         QCOMPARE(library.state(Source::Grand, kOddRate), PianoLibrary::State::NotAsked);
         QCOMPARE(node->parameterValue(kRecordingsParameter), 0.5); // shown as on its way
         node->serviceMainThread();
@@ -581,7 +652,7 @@ private slots:
         { // 02: the grand, then "a real upright"
             Take t = takeFor("02");
             const double toUpright = at("02", "upright", 16);
-            t.add({0, typeId, type("Grand Piano")});
+            t.add({0, typeId, type("Concert Grand")});
             phrases(t, 0, toUpright, 85);
             t.add({toUpright, typeId, type("Upright Piano")});
             phrases(t, toUpright, t.beats, 85);
@@ -592,7 +663,7 @@ private slots:
             const double soft = at("03", "softly", 6);
             const double hard = at("03", "hard", 12);
             const double pedal = at("03", "pedal", 24);
-            t.add({0, typeId, type("Grand Piano")});
+            t.add({0, typeId, type("Concert Grand")});
             chord(t, 0, {48, 60, 64, 67}, 4, 75);
             chord(t, soft, {48, 60, 64, 67}, hard - soft - 1, 35);
             chord(t, hard, {36, 48, 55, 64, 67, 72}, 3, 125);
@@ -632,7 +703,7 @@ private slots:
         { // 08: Electric Piano, soft, then "the harder you play"
             Take t = takeFor("08");
             const double harder = at("08", "harder", 16);
-            t.add({0, typeId, type("Electric Piano")});
+            t.add({0, typeId, type("Rhodes")});
             const int softBars = static_cast<int>(harder / 4);
             const int hardBars = static_cast<int>((t.beats - harder) / 4);
             heldChords(t, 0, softBars, 4.0, 45);

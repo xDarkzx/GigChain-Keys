@@ -149,8 +149,9 @@ while IFS= read -r -d '' file; do
     [ -n "$leaked" ] && problems+=("${file#"$APPDIR/"} loads from the build machine: $leaked")
 done < <(find "$APPDIR/usr" -type f \( -perm -u+x -o -name '*.so*' \) -print0)
 for needed in "usr/bin/$EXE" "usr/bin/${EXE}Scan" usr/lib/libQt6Core.so.6 usr/lib/libQt6Quick.so.6 usr/plugins/platforms/libqxcb.so \
-    usr/qml/QtQuick/Controls usr/bin/LICENSE.txt usr/bin/THIRD-PARTY-NOTICES.txt "usr/bin/samples/piano/Grand Piano, K.sfz" \
-    "usr/bin/samples/piano/Upright Piano, Y.sfz" usr/bin/samples/piano/LICENSE-VCSL.txt; do
+    usr/qml/QtQuick/Controls usr/bin/LICENSE.txt usr/bin/THIRD-PARTY-NOTICES.txt "usr/bin/samples/piano/Concert Grand.sfz" \
+    usr/bin/samples/piano/Upright.sfz usr/bin/samples/piano/Rhodes.sfz usr/bin/samples/piano/CREDITS.txt \
+    usr/bin/samples/pads/strings.txt usr/bin/samples/pads/piano.txt usr/bin/samples/pads/CREDITS.txt; do
     [ -e "$APPDIR/$needed" ] || problems+=("missing: $needed")
 done
 ls "$APPDIR"/usr/plugins/multimedia/*ffmpeg* >/dev/null 2>&1 || problems+=("missing: Qt's FFmpeg plugin (backing tracks)")

@@ -4,6 +4,7 @@
 #include "FreezeWatchdog.h"
 
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/engine/SidechainCurves.h"
 #include "gigchain/core/Checks.h"
 #include "gigchain/platform/Windows.h"
 
@@ -87,6 +88,12 @@ bool EffectWindows::open(int channel, int effect, QWindow* owner)
         return false;
     }
     const core::PluginSlot& slot = strip.effects.at(static_cast<std::size_t>(effect));
+
+    // One of the app's own effects: its window is drawn by the app.
+    if (slot.pluginId.startsWith(u"builtin:"_s)) {
+        emit builtinEffectRequested(channel, effect, slot.pluginId, u"%1 — %2"_s.arg(slot.displayName, strip.name), owner);
+        return true;
+    }
 
     for (const auto& entry : m_open) {
         if (entry->channel == strip.id && entry->effect == effect && entry->pluginId == slot.pluginId) {
@@ -289,6 +296,56 @@ void EffectWindows::sweep()
         if (!stillThere) gone.push_back(entry.get());
     }
     for (Entry* entry : gone) close(*entry);
+}
+
+const core::Channel* EffectWindows::channelAt(int channel) const
+{
+    const core::Patch* patch = m_document.currentPatch();
+    if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size())) return nullptr;
+    return &patch->channels.at(static_cast<std::size_t>(channel));
+}
+
+QString EffectWindows::effectPluginId(int channel, int effect) const
+{
+    const core::Channel* strip = channelAt(channel);
+    if (strip == nullptr || effect < 0 || std::cmp_greater_equal(effect, strip->effects.size())) return {};
+    return strip->effects.at(static_cast<std::size_t>(effect)).pluginId;
+}
+
+QVariantList EffectWindows::builtinEffectParameters(int channel, int effect) const
+{
+    QVariantList list;
+    const core::Channel* strip = channelAt(channel);
+    if (strip == nullptr || effect < 0) return list;
+    for (const engine::PluginParameter& p : m_engine.pluginParameters(strip->id, effect)) {
+        list.append(QVariantMap{{u"id"_s, static_cast<int>(p.id)}, {u"name"_s, p.name}, {u"choices"_s, p.choices}});
+    }
+    return list;
+}
+
+double EffectWindows::builtinEffectValue(int channel, int effect, int parameter) const
+{
+    const core::Channel* strip = channelAt(channel);
+    if (strip == nullptr || effect < 0 || parameter < 0) return -1.0;
+    return m_engine.pluginParameterValue(strip->id, effect, static_cast<uint32_t>(parameter));
+}
+
+void EffectWindows::setBuiltinEffectValue(int channel, int effect, int parameter, double value)
+{
+    const core::Channel* strip = channelAt(channel);
+    if (strip == nullptr || effect < 0 || parameter < 0) return;
+    // (The engine logs the cause.)
+    if (auto set = m_engine.setPluginParameter(strip->id, effect, static_cast<uint32_t>(parameter), value); !set) {
+        m_document.reportMessage(set.error().message);
+    }
+}
+
+QVariantList EffectWindows::sidechainCurve(int curve, double slope, int points) const
+{
+    QVariantList levels;
+    const int count = std::clamp(points, 2, 1024);
+    for (int i = 0; i < count; ++i) levels.append(engine::sidechain::curveGain(curve, i / static_cast<double>(count - 1), slope));
+    return levels;
 }
 
 } // namespace gigchain::ui

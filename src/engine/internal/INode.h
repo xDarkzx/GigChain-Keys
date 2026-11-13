@@ -72,6 +72,9 @@ public:
     [[nodiscard]] virtual double parameterValue(uint32_t /*id*/) const { return -1.0; }
     // Audio thread: true while the node holds notes (keys or sustain not yet released).
     [[nodiscard]] virtual bool holdsNotes() const noexcept { return false; }
+    // An effect that follows the notes played on its channel (the Sidechain
+    // effect): its process() is given them. Other effects are given none.
+    [[nodiscard]] virtual bool wantsNotes() const noexcept { return false; }
 
 protected:
     INode() = default;

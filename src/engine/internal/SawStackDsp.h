@@ -107,23 +107,32 @@ struct UnisonSpread
     return 0.0F;
 }
 
+// The first three are a layer's Wave setting (0-2); the rest only a type's
+// design picks (LayerDesign::wave), so saved settings keep their meaning.
 enum class Wave : uint8_t
 {
     Saw,
     Square,
     Sine,
+    Triangle, // soft: odd harmonics falling fast (the mellow stacks)
+    Pulse,    // a square whose width moves (PWM: the Juno's and the hoover's chorus-like sweep)
 };
+inline constexpr int kParamWaves = 3; // the Wave setting's choices
 
-[[nodiscard]] inline float oscillator(Wave wave, float phase, float dt)
+// `duty`: the pulse's width (0-1; 0.5 a square), for Wave::Pulse.
+[[nodiscard]] inline float oscillator(Wave wave, float phase, float dt, float duty = 0.5F)
 {
     switch (wave) {
     case Wave::Saw: return 2.0F * phase - 1.0F - polyBlep(phase, dt);
-    case Wave::Square: {
-        float shifted = phase + 0.5F;
+    case Wave::Square: duty = 0.5F; [[fallthrough]];
+    case Wave::Pulse: {
+        float shifted = phase + 1.0F - duty;
         if (shifted >= 1.0F) shifted -= 1.0F;
-        return (phase < 0.5F ? 1.0F : -1.0F) + polyBlep(phase, dt) - polyBlep(shifted, dt);
+        // (Centred: no offset as the width moves.)
+        return (phase < duty ? 1.0F : -1.0F) + polyBlep(phase, dt) - polyBlep(shifted, dt) + (1.0F - 2.0F * duty);
     }
     case Wave::Sine: return std::sin(2.0F * std::numbers::pi_v<float> * phase);
+    case Wave::Triangle: return 4.0F * std::abs(phase - 0.5F) - 1.0F;
     }
     return 0.0F;
 }

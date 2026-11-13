@@ -1730,9 +1730,9 @@ private slots:
         const core::ChannelId& stack = patch.channels.front().id;
 
         const std::vector<PluginParameter> parameters = engine.pluginParameters(stack, -1);
-        QCOMPARE(parameters.size(), std::size_t{19});
+        QCOMPARE(parameters.size(), std::size_t{9}); // (Squash, Enhance and the sidechain are effects of their own)
         QCOMPARE(parameters.front().name, u"Type"_s);
-        QCOMPARE(parameters.front().choices.size(), qsizetype{10});
+        QCOMPARE(parameters.front().choices.size(), qsizetype{28});
         const uint32_t cutoff = parameters.at(1).id;
         QVERIFY(engine.setPluginParameter(stack, -1, cutoff, 0.3).has_value());
         QVERIFY(std::abs(engine.pluginParameterValue(stack, -1, cutoff) - 0.3) < 1e-6);
@@ -1744,10 +1744,6 @@ private slots:
         const float peak = loudestUntilAbove(engine, [&] { return engine.channelLevel(stack).peak; }, 0.001F);
         engine.injectNote(1, 60, 0);
         QVERIFY2(peak > 0.001F, "Saw Stack Pro stayed silent");
-        // Its window's sidechain playhead moves with the sound.
-        const double position = engine.pluginParameterValue(stack, -1, sidechain::kPositionParameter);
-        QVERIFY(position >= 0.0 && position < 1.0);
-        QTRY_VERIFY(engine.pluginParameterValue(stack, -1, sidechain::kPositionParameter) != position);
     }
 
     void bundledPluginsAreFoundWithTheInstalledOnes()

@@ -8,6 +8,9 @@
 #include <QJsonObject>
 #include <QtEndian>
 
+#include <algorithm>
+#include <array>
+
 using namespace Qt::StringLiterals;
 
 namespace gigchain::engine {
@@ -88,6 +91,13 @@ std::vector<PluginNode::Parameter> SawStackNode::parameters() const
     choose(sawstack::Macro::SidechainCurve, names(sidechain::kCurves, [](const sidechain::Curve& c) { return c.name; }));
     choose(sawstack::Macro::SidechainTrigger, names(sidechain::kTriggers, [](const char* t) { return t; }));
     choose(sawstack::Macro::EnhanceMode, names(sawstack::Enhance::kModeNames, [](const char* m) { return m; }));
+    // OTT, Enhance and the sidechain are effects of their own now: not offered here.
+    using M = sawstack::Macro;
+    constexpr std::array kGone{M::Ott,          M::Sidechain,   M::SidechainRate, M::SidechainSlope, M::SidechainCurve,
+                               M::SidechainTrigger, M::SidechainOn, M::Enhance,      M::EnhanceMode,    M::EnhanceOn};
+    std::erase_if(list, [&kGone](const Parameter& p) {
+        return std::ranges::any_of(kGone, [&p](M m) { return p.id == sawstack::paramId(m); });
+    });
     return list;
 }
 

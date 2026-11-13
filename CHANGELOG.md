@@ -8,6 +8,29 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **Piano Pro: real recorded pianos and electric pianos, and a new window.**
+  A concert grand (the Salamander Yamaha C5, ten loudness layers), an
+  upright, a Rhodes and a suitcase Rhodes, a Wurlitzer, a CP80 electric
+  grand and a Pianet, all recorded; held and pedalled notes ring on and fade
+  as a piano's do. Three 80s polysynth sounds (Poly Keys, Strings, Brass).
+  The window is laid out as Pads Pro's: a browser by family, a picture for
+  each piano, its layers, its knobs and a keyboard to play it.
+- **Squash, Enhance and Sidechain: effects of their own,** each with its own
+  window, to load on any channel.
+
+### Changed
+
+- Piano Pro's and Pads Pro's recordings now come as one 110 MB sound pack
+  (was a 650 MB download), and the installers include Pads Pro's string
+  section and piano.
+- Saw Stack Pro and Piano Pro no longer carry their own OTT, Enhance and
+  sidechain (use the effects instead).
+- Pads Pro: Brightness, Timbre, Time and Movement now change every pad;
+  its Grand Piano rings on while held; Orchestra Strings and Twin Horizon
+  are in tune; Nebula takes half the computer it did.
+
 ## [0.9.0] - 2026-11-11 (alpha)
 
 The SoundFont Player: GigChain Keys now plays SoundFonts (.sf2).
