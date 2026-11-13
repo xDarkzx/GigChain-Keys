@@ -8,6 +8,11 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-14 (alpha)
+
+The sound update: real pianos in Piano Pro, every Pads Pro knob on every
+pad, and Squash, Enhance and Sidechain as effects of their own.
+
 ### Added
 
 - **Piano Pro: real recorded pianos and electric pianos, and a new window.**
