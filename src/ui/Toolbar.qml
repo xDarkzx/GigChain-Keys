@@ -17,6 +17,7 @@ ToolBar {
     required property bool mixerOpen
     property MixerLayout mixerLayout: null // where the mixer goes (its button's menu)
     property SustainPadsController sustainPads: null // Sustain Pads (its button's menu)
+    property SettingsController settings: null // the whole rig's transpose (its badge)
     required property bool keyboardOpen
     required property LoopController loops
 
@@ -588,6 +589,24 @@ ToolBar {
                 ToolTip.visible: tempoHover.hovered && !tempoInput.visible
                 ToolTip.text: qsTr("Tempo for arpeggiators, delays and the click: click to type one. Songs can have their own (right-click a song).")
             }
+            // The whole rig transposed (Settings > General): never forgotten on.
+            // A click opens its menu (a stray click mid-song never changes key).
+            StageButton {
+                id: transposeBadge
+                objectName: "transposeBadge"
+                visible: bar.settings !== null && bar.settings.globalTranspose !== 0
+                text: bar.settings ? qsTr("Transpose %1%2").arg(bar.settings.globalTranspose > 0 ? "+" : "").arg(bar.settings.globalTranspose) : ""
+                tone: "accent"
+                tip: qsTr("Every keyboard is transposed. Click to change it or turn it off.")
+                onClicked: transposeMenu.popup(transposeBadge, 0, transposeBadge.height)
+                StageMenu {
+                    id: transposeMenu
+                    // (Finger-sized rows: a neighbouring row would change the key.)
+                    StageMenuItem { implicitHeight: Theme.touchTarget; text: qsTr("Up a semitone"); onTriggered: bar.settings.globalTranspose += 1 }
+                    StageMenuItem { implicitHeight: Theme.touchTarget; text: qsTr("Down a semitone"); onTriggered: bar.settings.globalTranspose -= 1 }
+                    StageMenuItem { implicitHeight: Theme.touchTarget; text: qsTr("Off"); onTriggered: bar.settings.globalTranspose = 0 }
+                }
+            }
             StageButton {
                 id: tapButton
                 objectName: "tapButton"
@@ -907,6 +926,12 @@ ToolBar {
                     objectName: "freeInstrumentsItem"
                     text: qsTr("Get free instruments…")
                     onTriggered: bar.freeInstrumentsRequested()
+                }
+                StageMenuItem {
+                    objectName: "starItem"
+                    implicitHeight: Theme.touchTarget
+                    text: qsTr("⭐ Star %1 on GitHub").arg(Branding.name)
+                    onTriggered: if (!Qt.openUrlExternally(Branding.website)) bar.doc.reportMessage(qsTr("Could not open the browser: the page is %1").arg(Branding.website))
                 }
                 StageMenuItem { text: qsTr("About %1").arg(Branding.name); onTriggered: bar.aboutRequested() }
             }

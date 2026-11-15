@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SawStackDsp.h"
+#include "Tuning.h"
 #include "gigchain/engine/SidechainCurves.h"
 
 #include <algorithm>
@@ -38,9 +39,10 @@ struct OnePole
     }
 };
 
+// A note's pitch, at the app's tuning (Tuning.h: A4 = 440 Hz unless set).
 [[nodiscard]] inline double midiHz(double note)
 {
-    return 440.0 * std::exp2((note - 69.0) / 12.0);
+    return 440.0 * tuning::ratio() * std::exp2((note - 69.0) / 12.0);
 }
 
 // A Linkwitz-Riley crossover (two Butterworth sections each way): the low

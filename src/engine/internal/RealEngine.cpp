@@ -2,12 +2,14 @@
 
 #include "EngineLog.h"
 #include "PluginCatalog.h"
+#include "Tuning.h"
 #include "gigchain/core/Chart.h"
 #include "gigchain/core/Checks.h"
 
 #include "gigchain/core/Limits.h"
 #include "gigchain/platform/PluginFolders.h"
 
+#include <QCryptographicHash>
 #include <QElapsedTimer>
 #include <QDir>
 #include <QFileInfo>
@@ -32,6 +34,29 @@ namespace {
 constexpr std::size_t kMaxTails = 8;
 // The slowest tempo taken (the fastest is core::limits::kMaxTempo).
 constexpr double kMinTempo = 20.0;
+
+// The user's plugin folders that can be looked in: each once, cleaned. One
+// that is missing, or a whole drive (every program on it would be read as a
+// plugin), is left out and logged.
+QStringList usableUserFolders(const QStringList& folders)
+{
+    QStringList usable;
+    for (const QString& folder : folders) {
+        const QString clean = QDir::cleanPath(QFileInfo(folder).absoluteFilePath());
+        if (folder.trimmed().isEmpty() || !QFileInfo(clean).isDir()) {
+            qCWarning(lcEngine).noquote() << "Plugin folder not found, left out:" << QDir::toNativeSeparators(folder);
+            continue;
+        }
+        // Where it really is (a link or junction to a drive is that drive).
+        const QString real = QFileInfo(clean).canonicalFilePath();
+        if (QDir(clean).isRoot() || real.isEmpty() || QDir(real).isRoot()) {
+            qCWarning(lcEngine).noquote() << "A whole drive is not looked in for plugins, left out:" << QDir::toNativeSeparators(clean);
+            continue;
+        }
+        if (!usable.contains(clean, platform::fileNameCase())) usable << clean;
+    }
+    return usable;
+}
 
 } // namespace
 
@@ -106,24 +131,50 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
         };
     }
     engine->m_pluginFolder = options.pluginFolder.isEmpty() ? PluginCatalog::standardFolder() : options.pluginFolder;
-    engine->m_plugins = PluginCatalog::scan(engine->m_pluginFolder, options.pluginCacheFile, nullptr, scanProgress,
-                                            &engine->m_guard, options.pluginScanner);
+    engine->m_scanStandardFolders = options.pluginFolder.isEmpty();
+    engine->m_pluginCacheFile = options.pluginCacheFile;
+    engine->m_pluginScanner = options.pluginScanner;
+    if (!options.bundledPluginFolder.isEmpty() && QFileInfo(options.bundledPluginFolder).isDir()) {
+        engine->m_bundledPluginFolder = options.bundledPluginFolder;
+    }
+    engine->m_userPluginFolders = usableUserFolders(options.userPluginFolders);
+    engine->scanPlugins(scanProgress);
+    return engine;
+}
+
+void RealEngine::scanPlugins(const std::function<void(const QString&, int, int)>& progress)
+{
+    GC_ONLY_MAIN_THREAD();
+    const auto cacheFor = [this](const QString& suffix) {
+        return m_pluginCacheFile.isEmpty() ? QString() : m_pluginCacheFile + suffix;
+    };
+    // A plugin found twice is taken once (by name and maker; VST2 names in
+    // any case). Returns how many were new.
+    const auto add = [this](std::vector<PluginInfo> found, Qt::CaseSensitivity nameCase) {
+        int added = 0;
+        for (PluginInfo& plugin : found) {
+            const bool known = std::ranges::any_of(m_plugins, [&plugin, nameCase](const PluginInfo& p) {
+                return QString::compare(p.name, plugin.name, nameCase) == 0
+                       && QString::compare(p.vendor, plugin.vendor, nameCase) == 0;
+            });
+            if (known) continue;
+            m_plugins.push_back(std::move(plugin));
+            ++added;
+        }
+        return added;
+    };
+    m_plugins = PluginCatalog::scan(m_pluginFolder, m_pluginCacheFile, nullptr, progress, &m_guard, m_pluginScanner);
+    m_otherPluginFolders.clear();
     // The system's other standard folders (Linux has several; Windows one),
-    // each with a cache of its own. A plugin found twice is taken once.
-    if (options.pluginFolder.isEmpty()) {
+    // each with a cache of its own.
+    if (m_scanStandardFolders) {
         const QStringList standard = platform::standardVst3Folders();
         for (qsizetype i = 1; i < standard.size(); ++i) {
             if (!QFileInfo(standard.at(i)).isDir()) continue;
-            engine->m_otherPluginFolders << standard.at(i);
-            const QString cache =
-                options.pluginCacheFile.isEmpty() ? QString() : options.pluginCacheFile + u".%1"_s.arg(i + 1);
-            for (PluginInfo& plugin : PluginCatalog::scan(standard.at(i), cache, nullptr, scanProgress, &engine->m_guard,
-                                                          options.pluginScanner)) {
-                const bool found = std::ranges::any_of(engine->m_plugins, [&plugin](const PluginInfo& p) {
-                    return p.name == plugin.name && p.vendor == plugin.vendor;
-                });
-                if (!found) engine->m_plugins.push_back(std::move(plugin));
-            }
+            m_otherPluginFolders << standard.at(i);
+            (void)add(PluginCatalog::scan(standard.at(i), cacheFor(u".%1"_s.arg(i + 1)), nullptr, progress, &m_guard,
+                                          m_pluginScanner),
+                      Qt::CaseSensitive);
         }
         // VST2 plugins (older and free ones often come only as VST2). One
         // installed both ways is taken as VST3 (its newer, better version).
@@ -131,40 +182,69 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
         int vst2Added = 0;
         for (qsizetype i = 0; i < vst2.size(); ++i) {
             if (!QFileInfo(vst2.at(i)).isDir()) continue;
-            engine->m_otherPluginFolders << vst2.at(i);
-            const QString cache = options.pluginCacheFile.isEmpty() ? QString() : options.pluginCacheFile + u".vst2-%1"_s.arg(i + 1);
-            for (PluginInfo& plugin : PluginCatalog::scan(vst2.at(i), cache, nullptr, scanProgress, &engine->m_guard,
-                                                          options.pluginScanner, PluginFormat::Vst2)) {
-                const bool found = std::ranges::any_of(engine->m_plugins, [&plugin](const PluginInfo& p) {
-                    return QString::compare(p.name, plugin.name, Qt::CaseInsensitive) == 0
-                           && QString::compare(p.vendor, plugin.vendor, Qt::CaseInsensitive) == 0;
-                });
-                if (found) continue;
-                engine->m_plugins.push_back(std::move(plugin));
-                ++vst2Added;
-            }
+            m_otherPluginFolders << vst2.at(i);
+            vst2Added += add(PluginCatalog::scan(vst2.at(i), cacheFor(u".vst2-%1"_s.arg(i + 1)), nullptr, progress, &m_guard,
+                                                 m_pluginScanner, PluginFormat::Vst2),
+                             Qt::CaseInsensitive);
         }
         qCInfo(lcEngine).noquote() << "VST2 plugins added:" << vst2Added << "(those also installed as VST3 are taken as VST3)";
     }
+    // The user's own folders (Settings > Plugins): VST3 and VST2 alike, each
+    // folder with caches of its own (named by the folder, so one removed and
+    // added again reads nothing twice).
+    for (const QString& folder : m_userPluginFolders) {
+        const QString named = platform::fileNameCase() == Qt::CaseInsensitive ? folder.toLower() : folder;
+        const QString key =
+            QString::fromLatin1(QCryptographicHash::hash(named.toUtf8(), QCryptographicHash::Sha1).toHex().left(12));
+        const int vst3 = add(PluginCatalog::scan(folder, cacheFor(u".user-%1"_s.arg(key)), nullptr, progress, &m_guard,
+                                                 m_pluginScanner),
+                             Qt::CaseSensitive);
+        const int vst2 = add(PluginCatalog::scan(folder, cacheFor(u".user-%1-vst2"_s.arg(key)), nullptr, progress, &m_guard,
+                                                 m_pluginScanner, PluginFormat::Vst2),
+                             Qt::CaseInsensitive);
+        qCInfo(lcEngine).noquote() << "Plugins added from" << QDir::toNativeSeparators(folder) << ":" << vst3 << "VST3," << vst2
+                                   << "VST2";
+    }
     // The app's own plugins, unless the same one is installed already.
-    if (!options.bundledPluginFolder.isEmpty() && QFileInfo(options.bundledPluginFolder).isDir()) {
-        engine->m_bundledPluginFolder = options.bundledPluginFolder;
-        const QString bundledCache = options.pluginCacheFile.isEmpty() ? QString() : options.pluginCacheFile + u".bundled"_s;
-        int added = 0;
-        for (PluginInfo& plugin : PluginCatalog::scan(options.bundledPluginFolder, bundledCache, nullptr, scanProgress,
-                                                      &engine->m_guard, options.pluginScanner)) {
-            const bool installed = std::ranges::any_of(engine->m_plugins, [&plugin](const PluginInfo& p) {
-                return p.name == plugin.name && p.vendor == plugin.vendor;
-            });
-            if (installed) continue;
-            engine->m_plugins.push_back(std::move(plugin));
-            ++added;
-        }
-        qCInfo(lcEngine).noquote() << "Plugins that come with the app:" << added << "from" << options.bundledPluginFolder;
+    if (!m_bundledPluginFolder.isEmpty()) {
+        const int added = add(PluginCatalog::scan(m_bundledPluginFolder, cacheFor(u".bundled"_s), nullptr, progress, &m_guard,
+                                                  m_pluginScanner),
+                              Qt::CaseSensitive);
+        qCInfo(lcEngine).noquote() << "Plugins that come with the app:" << added << "from" << m_bundledPluginFolder;
     }
     // The app's own instruments (built in, nothing to scan).
-    std::ranges::move(PluginNode::builtins(), std::back_inserter(engine->m_plugins));
-    return engine;
+    std::ranges::move(PluginNode::builtins(), std::back_inserter(m_plugins));
+}
+
+QStringList RealEngine::pluginFolders() const
+{
+    QStringList folders;
+    if (QFileInfo(m_pluginFolder).isDir()) folders << m_pluginFolder;
+    return folders + m_otherPluginFolders + m_userPluginFolders;
+}
+
+void RealEngine::setTuning(double a4Hz)
+{
+    tuning::setCents(tuning::centsFor(a4Hz));
+    qCInfo(lcEngine).noquote() << "Tuning: A4 =" << QString::number(440.0 * tuning::ratio(), 'f', 1) << "Hz ("
+                               << QString::number(tuning::cents(), 'f', 1) << "cents)";
+}
+
+void RealEngine::setGlobalTranspose(int semitones)
+{
+    const int clamped = std::clamp(semitones, -kMaxGlobalTranspose, kMaxGlobalTranspose);
+    if (clamped == m_globalTranspose.exchange(clamped, std::memory_order_relaxed)) return;
+    qCInfo(lcEngine) << "Global transpose:" << clamped << "semitones";
+}
+
+void RealEngine::rescanPlugins(const QStringList& userFolders)
+{
+    GC_ONLY_MAIN_THREAD();
+    m_userPluginFolders = usableUserFolders(userFolders);
+    QElapsedTimer timer;
+    timer.start();
+    scanPlugins({});
+    qCInfo(lcEngine).noquote() << "Plugins rescanned:" << m_plugins.size() << "found in" << timer.elapsed() << "ms";
 }
 
 RealEngine::~RealEngine()
@@ -324,12 +404,18 @@ bool RealEngine::isInstalledPlugin(const QString& pluginId) const
     // every DAW sees it; only an administrator can put a link there.
     if (!QFileInfo::exists(pluginId)) return false;
     const QString file = QDir::cleanPath(QFileInfo(pluginId).absoluteFilePath());
-    const QStringList folders = QStringList{m_pluginFolder, m_bundledPluginFolder} + m_otherPluginFolders;
-    return std::ranges::any_of(folders, [&file](const QString& folder) {
+    const auto isIn = [&file](const QString& folder) {
         const QString inside = folder.isEmpty() ? QString() : QDir::cleanPath(QFileInfo(folder).absoluteFilePath());
         // Paths compared as this system does (on Windows the same whatever the case).
         return !inside.isEmpty() && file.startsWith(inside + u'/', platform::fileNameCase());
-    });
+    };
+    const QStringList folders = QStringList{m_pluginFolder, m_bundledPluginFolder} + m_otherPluginFolders;
+    if (std::ranges::any_of(folders, isIn)) return true;
+    // A folder the user added may be one anyone can write to: there, only
+    // the plugins the scan found, never just any file a setlist names.
+    return std::ranges::any_of(m_userPluginFolders, isIn) && std::ranges::any_of(m_plugins, [&file](const PluginInfo& p) {
+               return QString::compare(QDir::cleanPath(QFileInfo(p.id).absoluteFilePath()), file, platform::fileNameCase()) == 0;
+           });
 }
 
 core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QString& name) const
@@ -623,6 +709,10 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
+    // Another patch, or this one again (an edit to it, a master or aux effect
+    // switched: a rebuild): "stop the previous sound at once" is for the first only.
+    const bool anotherPatch = &patch != &m_patch && (!(song == m_song) || !(patch.id == m_patch.id));
+    const bool silence = m_silencePrevious && anotherPatch;
     if (&patch != &m_patch) m_patch = patch;
     callUpExternalSounds(patch);
     m_song = song;
@@ -709,7 +799,9 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     // What rings out of the sounding graph: strips the new patch does not
     // play (held notes until let go, reverbs until they fade), and effects a
     // sound plays on without; a sound playing on glides from its level.
-    CarryOver carried = carryOver(m_exchange.currentShared().get(), specs, hardwareUsed, kMaxTails);
+    // (Unless the player wants the old patch silenced at once: MainStage's
+    // "Instantly silence previous patch".)
+    CarryOver carried = carryOver(m_exchange.currentShared().get(), specs, hardwareUsed, silence ? 0 : kMaxTails);
     std::vector<std::shared_ptr<ChannelStrip>>& tails = carried.tails;
     const std::set<const INode*>& ringing = carried.ringing;
     const std::set<const INode*>& releasing = carried.releasing;
@@ -726,8 +818,12 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
 
     // Instruments leaving the sound (and not ringing out) release their
     // notes, so they do not hang when the patch comes back.
+    // Silencing the previous patch: every note it held stops, also on an
+    // instrument the new patch plays too (only new notes sound).
     for (const auto& [key, node] : m_nodes) {
-        if ((used.count(node.get()) == 0 && !ringing.contains(node.get())) || releasing.contains(node.get())) node->releaseAllNotes();
+        if (silence || (used.count(node.get()) == 0 && !ringing.contains(node.get())) || releasing.contains(node.get())) {
+            node->releaseAllNotes();
+        }
     }
     auto next = std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(), busNodes(m_master),
                                               std::move(tails), busNodes(m_aux));
@@ -2177,6 +2273,19 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     while (count < m_events.size() && m_injected.pop(injected)) m_events.at(count++) = injected; // room checked
     count = takeControlMessages(count);
     m_keyboard.apply(std::span<const MidiEvent>(m_events.data(), count));
+    // The whole rig's transpose: a note pressed takes the one in force, its
+    // release and pressure the same (changed while held: nothing hangs).
+    const auto shift = static_cast<int8_t>(m_globalTranspose.load(std::memory_order_relaxed));
+    for (MidiEvent& e : std::span<MidiEvent>(m_events.data(), count)) {
+        const int type = e.status & 0xF0;
+        int8_t& held = m_heldTranspose.at(e.status & 0x0F).at(e.data1 & 0x7F); // (per MIDI channel and key)
+        if (type == 0x90 && e.data2 > 0) {
+            held = shift;
+            e.transpose = shift;
+        } else if (type == 0x80 || type == 0x90 || type == 0xA0) {
+            e.transpose = held;
+        }
+    }
 
     // The clock: the set tempo, or a followed MIDI clock's (whose Start
     // begins bar 1 here too).

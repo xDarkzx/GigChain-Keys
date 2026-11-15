@@ -31,6 +31,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -66,6 +67,13 @@ public:
     bool takePluginEdits() override;
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override { return m_plugins; }
     [[nodiscard]] QString pluginFolder() const override { return m_pluginFolder; }
+    [[nodiscard]] QStringList pluginFolders() const override;
+    void rescanPlugins(const QStringList& userFolders) override;
+    void setTuning(double a4Hz) override;
+    void setDropoutWarnings(bool on) override { m_audio.setDropoutWarnings(on); }
+    void setSilencePreviousPatch(bool silence) override { m_silencePrevious = silence; }
+    void setGlobalTranspose(int semitones) override;
+    [[nodiscard]] int globalTranspose() const override { return m_globalTranspose.load(std::memory_order_relaxed); }
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
     [[nodiscard]] LevelReading masterLevel() override;
     [[nodiscard]] float cpuLoad() const override { return m_cpuLoad.load(std::memory_order_relaxed); }
@@ -282,6 +290,13 @@ private:
     QString m_pluginFolder;        // where m_plugins were found
     QStringList m_otherPluginFolders; // the system's other standard folders that exist (Linux)
     QString m_bundledPluginFolder; // the app's own plugins (empty: none)
+    QStringList m_userPluginFolders; // the user's own (Settings > Plugins) that are used
+    // How plugins are looked for (RealEngineOptions), kept for rescanPlugins.
+    QString m_pluginCacheFile;
+    QString m_pluginScanner;
+    bool m_scanStandardFolders = true; // false: a test's own plugin folder only
+    // Fills m_plugins from every folder above (and the built-in instruments).
+    void scanPlugins(const std::function<void(const QString&, int, int)>& progress);
     PluginLoadGuard m_guard; // plugins that crashed the app while loading
 
     // Main thread: every plugin instance created so far, by channel slot.
@@ -339,6 +354,9 @@ private:
 
     // Audio thread only.
     std::array<MidiEvent, kMaxEventsPerBlock> m_events{};
+    std::atomic<int> m_globalTranspose{0};   // main thread -> audio thread (setGlobalTranspose)
+    bool m_silencePrevious = false;          // main thread: no tails at a patch change
+    std::array<std::array<int8_t, 128>, 16> m_heldTranspose{}; // audio thread: the shift each key (per MIDI channel) was pressed with
 
     std::atomic<float> m_masterGain{1.0F};
     // What left the app (after the master fader): peak since masterLevel()

@@ -15,13 +15,9 @@ namespace gigchain::ui {
 
 ChannelModel::ChannelModel(const DocumentController& document, engine::IEngine& engine,
                            const OfficialArtwork& artwork, QObject* parent)
-    : QAbstractListModel(parent), m_document(document), m_engine(engine)
+    : QAbstractListModel(parent), m_document(document), m_engine(engine), m_artwork(artwork)
 {
-    for (const auto& plugin : m_engine.availablePlugins()) {
-        m_plugins.insert(plugin.id, plugin);
-        const PluginArtwork art = artwork.find(plugin);
-        if (!art.icon.isEmpty()) m_officialIcons.insert(plugin.id, PluginIconProvider::url(art.icon));
-    }
+    readPlugins();
     connect(&m_document, &DocumentController::channelsChanged, this, &ChannelModel::reset);
     connect(&m_document, &DocumentController::channelUpdated, this, [this](int row) {
         if (row >= 0 && row < m_rowCount) emit dataChanged(index(row), index(row));
@@ -30,6 +26,23 @@ ChannelModel::ChannelModel(const DocumentController& document, engine::IEngine& 
         if (m_rowCount > 0) emit dataChanged(index(0), index(m_rowCount - 1), {SelectedRole});
     });
     reset();
+}
+
+void ChannelModel::readPlugins()
+{
+    m_plugins.clear();
+    m_officialIcons.clear();
+    for (const auto& plugin : m_engine.availablePlugins()) {
+        m_plugins.insert(plugin.id, plugin);
+        const PluginArtwork art = m_artwork.find(plugin);
+        if (!art.icon.isEmpty()) m_officialIcons.insert(plugin.id, PluginIconProvider::url(art.icon));
+    }
+}
+
+void ChannelModel::reloadPlugins()
+{
+    readPlugins();
+    if (m_rowCount > 0) emit dataChanged(index(0), index(m_rowCount - 1), {IconRole, OfficialIconRole});
 }
 
 int ChannelModel::rowCount(const QModelIndex& parent) const

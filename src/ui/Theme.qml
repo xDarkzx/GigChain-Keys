@@ -26,6 +26,13 @@ QtObject {
         return order.filter(m => parts.indexOf(m) >= 0).map(m => symbols[m]).join("") + key
     }
 
+    // ---- note names (Settings > MIDI: middle C is C4, or C3 as Yamaha and
+    // MainStage's option name it). Set at start and on OK by Main.qml.
+    property int middleCOctave: 4
+    readonly property var noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+    function noteName(n) { return noteNames[((n % 12) + 12) % 12] + octaveOf(n) }
+    function octaveOf(n) { return Math.floor(n / 12) - 1 - (4 - middleCOctave) }
+
     // ---- surfaces: neutral graphite, as MainStage's (not blue-tinted)
     readonly property color background: "#141414"
     readonly property color panel: "#1d1d1e"

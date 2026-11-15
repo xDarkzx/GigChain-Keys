@@ -16,8 +16,7 @@ StageDialog {
     readonly property var learning: panel !== null ? panel.zoneLearning : ({ active: false })
     onAboutToHide: if (panel !== null) panel.cancelZoneLearning()
 
-    readonly property var noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-    function noteName(n) { return noteNames[n % 12] + (Math.floor(n / 12) - 1) }
+    function noteName(n) { return Theme.noteName(n) }
 
     title: !learning.active ? qsTr("Keyboard zone: %1").arg(dialog.channel.name)
                             : learning.step === 0 ? qsTr("Press the lowest key or pad it should play…")

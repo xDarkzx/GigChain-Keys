@@ -31,6 +31,41 @@ private slots:
         QCOMPARE(ports[0].channel, 0);
     }
 
+    // A keyboard's touch: Light plays louder, Heavy softer, Fixed always the
+    // same; the ends stay put and a played note never becomes silent.
+    void velocityCurvesBendTheTouch()
+    {
+        for (int v = 1; v <= 127; ++v) {
+            QCOMPARE(curvedVelocity(v, VelocityCurve::Normal), v);
+            const int light = curvedVelocity(v, VelocityCurve::Light);
+            const int heavy = curvedVelocity(v, VelocityCurve::Heavy);
+            QVERIFY2(light >= v && light <= 127, qPrintable(u"light %1 -> %2"_s.arg(v).arg(light)));
+            QVERIFY2(heavy <= v && heavy >= 1, qPrintable(u"heavy %1 -> %2"_s.arg(v).arg(heavy)));
+            QCOMPARE(curvedVelocity(v, VelocityCurve::Fixed), kFixedVelocity);
+        }
+        QVERIFY(curvedVelocity(64, VelocityCurve::Light) > 80); // a soft touch, clearly louder
+        QVERIFY(curvedVelocity(64, VelocityCurve::Heavy) < 50);
+        for (const VelocityCurve curve : {VelocityCurve::Light, VelocityCurve::Heavy}) {
+            QCOMPARE(curvedVelocity(1, curve), 1);
+            QCOMPARE(curvedVelocity(127, curve), 127);
+        }
+        QCOMPARE(curvedVelocity(0, VelocityCurve::Light), 1);     // out of range: clamped, never silent
+        QCOMPARE(curvedVelocity(500, VelocityCurve::Normal), 127);
+    }
+
+    void eachInputKeepsItsTouch()
+    {
+        MidiSetup setup;
+        setup.configured = true;
+        setup.enabled = {u"Impact GXP61 0"_s};
+        setup.velocity[u"Impact GXP61 0"_s] = VelocityCurve::Heavy;
+        const auto ports = resolveMidiInputs(gxp61(), setup);
+        QCOMPARE(ports.at(0).velocity, VelocityCurve::Heavy);
+        QCOMPARE(ports.at(1).velocity, VelocityCurve::Normal); // not chosen: as played
+        // Older settings with the place numbers keep it too.
+        QCOMPARE(withoutPortPlaces(setup).velocity.at(u"Impact GXP61"_s), VelocityCurve::Heavy);
+    }
+
     void theSavedChoiceIsKept()
     {
         MidiSetup setup;

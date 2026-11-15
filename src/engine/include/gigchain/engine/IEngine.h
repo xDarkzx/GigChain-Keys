@@ -19,6 +19,8 @@
 
 namespace gigchain::engine {
 
+inline constexpr int kMaxGlobalTranspose = 24; // semitones either way (setGlobalTranspose)
+
 // Everything the UI may ask of the audio engine. Speaks only in core types
 // and plain values: no SDK types ever appear here. The UI thread calls all of
 // these; implementations own any thread hand-off to the audio callback.
@@ -68,6 +70,16 @@ public:
     [[nodiscard]] virtual std::vector<PluginInfo> availablePlugins() const = 0;
     // The folder the plugins were found in (empty when none was scanned).
     [[nodiscard]] virtual QString pluginFolder() const = 0;
+    // Every folder plugins are looked for in now: the system's standard ones
+    // that exist (VST3, then VST2), then the user's own that are used.
+    [[nodiscard]] virtual QStringList pluginFolders() const = 0;
+    // Looks for plugins again, as at start-up: the standard folders, then
+    // `userFolders` (each for VST3 and VST2 plugins). New and changed
+    // plugins are read, removed ones leave availablePlugins(); plugins
+    // loaded now keep playing. A user folder that is missing, or a whole
+    // drive, is left out (logged). Main thread; takes as long as reading the
+    // new plugins does.
+    virtual void rescanPlugins(const QStringList& userFolders) = 0;
     // Plugins that crashed the app while loading: not loaded again (a patch
     // using one says so) until unblocked ("Try again" in Settings).
     [[nodiscard]] virtual QStringList blockedPlugins() const = 0;
@@ -186,6 +198,22 @@ public:
     // press asked since the last call (transport::k* flags; MidiSetup says
     // which are on).
     virtual uint32_t takeTransportRequests() = 0;
+    // At a patch change the old patch's held notes and reverbs ring out
+    // (default), or with `silence` stop at once (MainStage's "Instantly
+    // silence previous patch"), from the next patch change on.
+    virtual void setSilencePreviousPatch(bool silence) = 0;
+    // Dropouts (clicks or gaps when the computer is late with the audio) are
+    // said through poll(), at most once a minute (on by default); off: only logged.
+    virtual void setDropoutWarnings(bool on) = 0;
+    // The app's own instruments' tuning (MainStage's Tuning preference): A4
+    // in Hz, 440 unless set; within 100 cents of 440 (else clamped). Notes
+    // played from now on sound at it; VST plugins keep their own tuning.
+    virtual void setTuning(double a4Hz) = 0;
+    // Every note the keyboards play moves this many semitones (-24..24; else
+    // clamped), on top of each channel's own transpose: the whole rig a
+    // tone down tonight. Held notes end where they started.
+    virtual void setGlobalTranspose(int semitones) = 0;
+    [[nodiscard]] virtual int globalTranspose() const = 0;
     // Stops every sound now: every plugin is reset (its voices and tails
     // cleared) and held notes are released. Instruments play again at once.
     virtual void panic() = 0;

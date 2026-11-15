@@ -267,6 +267,18 @@ struct ChannelLoop
 };
 
 // A MIDI input as Settings shows it.
+// How a keyboard's touch becomes loudness (MainStage's velocity scaling):
+// each note's velocity through a curve before anything hears it.
+enum class VelocityCurve
+{
+    Normal, // as played
+    Light,  // a light touch plays louder (a stiff or heavy keyboard, a soft player)
+    Heavy,  // it takes more to play loud (a light synth action, a hard player)
+    Fixed,  // every note as loud (organ, synth leads): kFixedVelocity
+};
+inline constexpr int kVelocityCurveCount = 4;
+inline constexpr int kFixedVelocity = 100;
+
 struct MidiPort
 {
     QString name;
@@ -274,6 +286,7 @@ struct MidiPort
     bool controlsOnly = false; // not played: its buttons and knobs only (transport, learned controls)
     int channel = 0;           // 0 = all channels, 1-16 = only that one
     KeyboardRig rig;           // its keyboard's controls as learned on another one (empty: as they are)
+    VelocityCurve velocity = VelocityCurve::Normal; // its notes' touch
 
     bool operator==(const MidiPort&) const = default;
 };

@@ -24,8 +24,7 @@ Item {
     readonly property bool assigning: panel.assigning
     readonly property int armedKind: panel.armed.kind
     readonly property int armedIndex: panel.armed.index
-    readonly property var noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-    function noteName(n) { return noteNames[n % 12] + (Math.floor(n / 12) - 1) }
+    function noteName(n) { return Theme.noteName(n) }
 
     readonly property int buttonWidth: 132
     readonly property int buttonHeight: 46

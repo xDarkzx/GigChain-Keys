@@ -1,6 +1,7 @@
 #include "PadsProEngines.h"
 
 #include "EngineLog.h"
+#include "Tuning.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -8,11 +9,13 @@
 #include <QFile>
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <map>
 #include <mutex>
 #include <numbers>
 #include <numeric>
+#include <utility>
 
 using namespace Qt::StringLiterals;
 
@@ -45,6 +48,10 @@ double sine(double cycles)
 
 double wrap(double p)
 {
+    // An oscillator's phase moves on by less than a cycle a sample: from
+    // 0..2 it is p or p - 1, exactly what p - floor(p) gives, without the
+    // library call (every oscillator, every sample, at 4x the rate).
+    if (p > 0.0 && p < 2.0) return p >= 1.0 ? p - 1.0 : p; // (0 itself: the library's, to keep -0's sign as it did)
     return p - std::floor(p);
 }
 
@@ -381,12 +388,15 @@ void EngineVoice::start(Engine engine, const EnginePatch& p, const EngineContext
         if (engine == Engine::PipeOrgan) m_svf.at(2).set(c.hz * 4.0, 1.2, c.rate); // the chiff's band
         break;
     case Engine::Fm:
+        m_fmModulators.fill(0);
         for (std::size_t i = 0; i < p.fm.ops.size(); ++i) {
             const FmOperator& op = p.fm.ops.at(i);
             m_env.at(i).set(op.attack, op.decay, op.sustain, op.release, c.rate);
             m_env.at(i).level = 0.0F;
             m_env.at(i).gateOn();
             m_phase.at(i) = 0.0;
+            // Who modulates whom, worked out once (render reads it every sample).
+            if (op.into >= 1 && std::cmp_less(op.into - 1, i)) m_fmModulators.at(static_cast<std::size_t>(op.into - 1)) |= 1U << i;
         }
         break;
     case Engine::Moog:
@@ -464,7 +474,7 @@ void EngineVoice::start(Engine engine, const EnginePatch& p, const EngineContext
         break;
     case Engine::Sampled:
         if (c.samples != nullptr && !c.samples->zones.empty()) {
-            m_zone = c.samples->pick(static_cast<int>(std::lround(12.0 * std::log2(c.hz / 440.0) + 69.0)));
+            m_zone = c.samples->pick(static_cast<int>(std::lround(12.0 * std::log2(c.hz / (440.0 * tuning::ratio())) + 69.0)));
             m_samplePos = 0.0;
         }
         break;
@@ -1103,9 +1113,10 @@ void EngineVoice::render(Engine engine, const EnginePatch& p, const EngineContex
                     m_opOut.at(k) = 0.0;
                     continue;
                 }
+                // The operators after it that play into it, in order (start() worked them out).
                 double mod = 0.0;
-                for (std::size_t j = k + 1; j < s.ops.size(); ++j) {
-                    if (s.ops.at(j).into == static_cast<int>(k) + 1) mod += m_opOut.at(j);
+                for (unsigned from = m_fmModulators.at(k); from != 0; from &= from - 1) {
+                    mod += m_opOut.at(static_cast<std::size_t>(std::countr_zero(from)));
                 }
                 const double fb = op.feedback * 0.5 * (m_opOut.at(k) + m_opPrev.at(k)) * 0.3;
                 const double level = op.into == 0 ? op.level : op.level * m_ctl.at(0);

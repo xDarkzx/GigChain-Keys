@@ -130,6 +130,7 @@ int runApp(int argc, char** argv)
     using Quip = ui::StageQuips::Step;
     startup.report(quips.line(Quip::Connecting)); // opening audio and MIDI
 
+    ui::SettingsController::countStart(settings);
     engine::RealEngineOptions engineOptions = ui::SettingsController::engineOptions(settings);
     engineOptions.pluginCacheFile =
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-cache.json"_s;
@@ -180,6 +181,9 @@ int runApp(int argc, char** argv)
     } else {
         session.document().restoreLastSession();
     }
+    // The last setlist reopened, and the player wants to start playing: Perform, once the window is up.
+    const bool performAtStart = given.isEmpty() && !session.document().filePath().isEmpty()
+                                && ui::SettingsController::startInPerform(settings);
 
     startup.report(quips.line(Quip::SoundGuy)); // opening the main window
     QQmlApplicationEngine qml;
@@ -211,8 +215,11 @@ int runApp(int argc, char** argv)
     };
 
     // Swap the splash for the main window, brought to the front.
-    const auto reveal = [&splash, mainWindow, &instance, &handedEarly, openHanded] {
+    const auto reveal = [&splash, mainWindow, &instance, &handedEarly, openHanded, performAtStart] {
         mainWindow->show();
+        if (performAtStart && !mainWindow->setProperty("performMode", true)) {
+            qCWarning(lcApp) << "Could not start in Perform: Main.performMode is missing";
+        }
         bringToFront(*mainWindow);
         splash.reset(); // after the main window is up: the app never loses the front
         QObject::disconnect(&instance, &ui::SingleInstance::opened, nullptr, nullptr);

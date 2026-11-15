@@ -15,6 +15,7 @@
 #include <QStringDecoder>
 
 #include <QClipboard>
+#include <QCryptographicHash>
 #include <QDateTime>
 #include <QElapsedTimer>
 #include <QFile>
@@ -26,12 +27,14 @@
 #include "gigchain/core/Sections.h"
 #include "gigchain/core/SetlistFile.h"
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/platform/PluginFolders.h"
 
 #include <QDir>
 #include <QFileInfo>
 #include <QLoggingCategory>
 #include <QScopedValueRollback>
 #include <QSettings>
+#include <QStandardPaths>
 
 #include <algorithm>
 #include <iterator>
@@ -67,6 +70,7 @@ DocumentController::DocumentController(engine::IEngine& engine, QSettings& setti
         connect(this, changed, this, &DocumentController::sharingChanged);
     }
     connect(this, &DocumentController::channelUpdated, this, &DocumentController::sharingChanged);
+    connect(&m_autosaveTimer, &QTimer::timeout, this, &DocumentController::autosave);
     resetSelectedChannel();
     applyCurrentPatchToEngine();
 }
@@ -2386,7 +2390,9 @@ bool DocumentController::save()
         qCInfo(lcUi).noquote() << "Kept the name" << old << "(" << renamed << "is another setlist )";
         return saveAs(old);
     }
+    const QString backups = backUp(old); // (the old file goes below: kept first)
     if (!saveAs(renamed)) return false;
+    pruneBackups(backups);
     forgetRecent(old);
     if (!QFile::remove(old)) {
         reportMessage(tr("Saved as %1, but the old file %2 could not be removed").arg(QFileInfo(renamed).fileName(), old),
@@ -2412,7 +2418,10 @@ bool DocumentController::saveAs(const QString& path)
     // played none of them).
     const std::vector<QString> media = copyMediaTo(QFileInfo(target).absoluteDir());
     problems.insert(problems.end(), media.begin(), media.end());
+    const QString backups = QFileInfo::exists(target) ? backUp(target) : QString();
     if (auto r = core::saveSetlistFile(m_setlist, target); !r) return report(r.error());
+    pruneBackups(backups); // (only once the new one is safely written)
+    m_autosaveFailedFor.clear(); // (saving works again: so does autosave)
     setFilePath(target);
     rememberRecent(target);
     m_settings.setValue(kLastFileKey, target);
@@ -2424,6 +2433,87 @@ bool DocumentController::saveAs(const QString& path)
                       Notifications::Warning);
     }
     return true;
+}
+
+QString DocumentController::backupFolder()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/backups"_s;
+}
+
+QString DocumentController::backUp(const QString& file)
+{
+    const QFileInfo info(file);
+    // A folder per setlist (its name, and its place: two setlists of the same
+    // name never share one; on a system where names differ by case, neither
+    // do those), each copy named by when it was replaced, to the millisecond.
+    const QString place = QDir::cleanPath(info.absoluteFilePath());
+    const QByteArray key = QCryptographicHash::hash(
+        (platform::fileNameCase() == Qt::CaseInsensitive ? place.toLower() : place).toUtf8(), QCryptographicHash::Sha1).toHex().left(8);
+    const QDir folder(backupFolder() + u'/' + info.completeBaseName() + u" ("_s + QString::fromLatin1(key) + u')');
+    const QString stamp = QDateTime::currentDateTime().toString(u"yyyy-MM-dd HH-mm-ss-zzz"_s);
+    QString copy = folder.filePath(u"%1 %2.%3"_s.arg(info.completeBaseName(), stamp, info.suffix()));
+    for (int n = 2; QFileInfo::exists(copy) && n < 100; ++n) { // (two saves in the same millisecond)
+        copy = folder.filePath(u"%1 %2 %3.%4"_s.arg(info.completeBaseName(), stamp).arg(n).arg(info.suffix()));
+    }
+    QString problem;
+    QFile source(file);
+    if (!folder.mkpath(u"."_s)) {
+        problem = tr("could not make the backup folder %1").arg(QDir::toNativeSeparators(folder.absolutePath()));
+    } else if (!source.copy(copy)) {
+        problem = tr("could not copy %1 to %2: %3").arg(info.fileName(), QDir::toNativeSeparators(copy), source.errorString());
+    }
+    if (!problem.isEmpty()) {
+        qCWarning(lcUi).noquote() << "Backup before saving:" << problem;
+        reportMessage(tr("No backup was kept of the last save: %1").arg(problem), Notifications::Warning);
+        return {};
+    }
+    return folder.absolutePath();
+}
+
+void DocumentController::pruneBackups(const QString& folderPath)
+{
+    if (folderPath.isEmpty()) return;
+    // The newest kBackupsKept stay (their names sort by time).
+    const QDir folder(folderPath);
+    const QStringList kept = folder.entryList(QDir::Files, QDir::Name | QDir::Reversed);
+    for (qsizetype i = kBackupsKept; i < kept.size(); ++i) {
+        if (QFile old(folder.filePath(kept.at(i))); !old.remove()) {
+            qCWarning(lcUi).noquote() << "Could not remove the old backup" << old.fileName() << ":" << old.errorString();
+        }
+    }
+}
+
+void DocumentController::setAutosaveMinutes(int minutes)
+{
+    m_autosaveMinutes = std::clamp(minutes, 0, 60);
+    if (m_autosaveMinutes == 0) {
+        m_autosaveTimer.stop();
+    } else {
+        m_autosaveTimer.start(m_autosaveMinutes * 60 * 1000);
+    }
+    qCInfo(lcUi) << "Autosave:" << (m_autosaveMinutes == 0 ? u"never"_s : u"every %1 min"_s.arg(m_autosaveMinutes));
+}
+
+void DocumentController::setPerforming(bool performing)
+{
+    if (performing == m_performing) return;
+    // Going on stage: what was edited is kept first (MainStage saves then too).
+    if (performing && m_autosaveMinutes > 0) autosave();
+    m_performing = performing;
+}
+
+void DocumentController::autosave()
+{
+    if (m_performing) return; // never mid-show
+    if (!m_dirty || m_filePath.isEmpty() || !m_hasSetlist) return;
+    // Failed before (a read-only folder, a full disk): said once, not every few
+    // minutes; autosave picks up again after a save that works.
+    if (m_autosaveFailedFor == m_filePath) return;
+    qCInfo(lcUi).noquote() << "Autosaving" << m_filePath;
+    if (!save()) { // (reported, banner and log, by save())
+        m_autosaveFailedFor = m_filePath;
+        qCWarning(lcUi).noquote() << "Autosave paused for" << m_filePath << "until it is saved by hand";
+    }
 }
 
 std::vector<QString> DocumentController::copyMediaTo(const QDir& folder) const

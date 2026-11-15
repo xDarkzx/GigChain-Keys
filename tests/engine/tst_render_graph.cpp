@@ -193,6 +193,21 @@ private slots:
         QVERIFY(!routeEvent(clock, RouteSettings{}).has_value());
     }
 
+    // The whole rig's transpose (stamped on the event) adds to the channel's,
+    // but a split is still the keys as played: the bass keys stay the bass.
+    void globalTransposeAddsAndKeepsTheSplit()
+    {
+        const RouteSettings bass{.keyLow = 0, .keyHigh = 59, .transpose = -12};
+        MidiEvent low = noteOn(59);
+        low.transpose = 2;
+        const auto routed = routeEvent(low, bass);
+        if (!routed) QFAIL("a bass key transposed up left the bass split");
+        QCOMPARE(int(routed->data1), 59 - 12 + 2);
+        MidiEvent high = noteOn(60);
+        high.transpose = -2; // (60 - 2 = 58 is in range, but key 60 was played above the split)
+        QVERIFY(!routeEvent(high, bass).has_value());
+    }
+
     void emptyGraphRendersSilence()
     {
         RenderGraph graph({}, 48000.0, kFrames);

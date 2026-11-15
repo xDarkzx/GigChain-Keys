@@ -27,25 +27,37 @@ namespace gigchain::ui {
 
 PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialArtwork& artwork, QSettings* settings,
                                  QObject* parent)
-    : QAbstractListModel(parent), m_all(engine.availablePlugins()), m_settings(settings)
+    : QAbstractListModel(parent), m_artwork(artwork), m_settings(settings)
 {
     if (m_settings != nullptr) {
         m_hidden = m_settings->value(u"plugins/hidden"_s).toStringList();
         m_favorites = m_settings->value(u"plugins/favorites"_s).toStringList();
         m_ratings = m_settings->value(u"plugins/ratings"_s).toMap();
     }
+    reload(engine);
+}
+
+void PluginListModel::reload(const engine::IEngine& engine)
+{
+    // The views are told before anything they read changes.
+    beginResetModel();
+    m_all = engine.availablePlugins();
     std::ranges::stable_sort(m_all, [](const engine::PluginInfo& a, const engine::PluginInfo& b) {
         if (a.kind != b.kind) return a.kind == engine::PluginKind::Instrument;
         return QString::compare(a.name, b.name, Qt::CaseInsensitive) < 0;
     });
+    m_images.clear();
+    m_icons.clear();
     m_images.reserve(m_all.size());
     m_icons.reserve(m_all.size());
     for (const auto& plugin : m_all) {
-        const PluginArtwork art = artwork.find(plugin); // reads installed files only
+        const PluginArtwork art = m_artwork.find(plugin); // reads installed files only
         m_images.push_back(art.banner.isEmpty() ? QString() : QUrl::fromLocalFile(art.banner).toString());
         m_icons.push_back(PluginIconProvider::url(art.icon));
     }
-    applyFilter();
+    rebuildVisible();
+    endResetModel();
+    emit menusChanged();
 }
 
 int PluginListModel::rowCount(const QModelIndex& parent) const
@@ -267,6 +279,12 @@ QVariantMap PluginListModel::findInstrument(const QString& text) const
 void PluginListModel::applyFilter()
 {
     beginResetModel();
+    rebuildVisible();
+    endResetModel();
+}
+
+void PluginListModel::rebuildVisible()
+{
     m_visible.clear();
     const QString needle = m_filterText.trimmed();
     for (std::size_t i = 0; i < m_all.size(); ++i) {
@@ -280,7 +298,6 @@ void PluginListModel::applyFilter()
     }
     // Favourites first, each group keeping its order.
     std::ranges::stable_partition(m_visible, [this](std::size_t i) { return m_favorites.contains(m_all.at(i).id); });
-    endResetModel();
 }
 
 } // namespace gigchain::ui

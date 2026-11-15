@@ -71,6 +71,9 @@ private slots:
     // next start finds, saying what the app was doing.
     void aCrashInAChildLeavesItsNote()
     {
+#ifdef __SANITIZE_ADDRESS__
+        QSKIP("AddressSanitizer takes the crash before the app's crash handler can write its report");
+#else
         QTemporaryDir dir;
         QProcess child;
         child.setProgram(QCoreApplication::applicationFilePath());
@@ -85,6 +88,7 @@ private slots:
         const QString text = readAll(CrashReports::noteOf(reports.front()));
         QVERIFY2(text.contains(u"Last action: about to crash"_s), qPrintable(text));
         QVERIFY2(text.contains(u"Reason: the app crashed"_s), qPrintable(text));
+#endif
     }
 };
 

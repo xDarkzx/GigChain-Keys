@@ -6,7 +6,11 @@
 #include "gigchain/core/Limits.h"
 #include "gigchain/engine/IEngine.h"
 #include "gigchain/platform/Audio.h"
+#include "gigchain/platform/PluginFolders.h"
 
+#include <QCoreApplication>
+#include <QDesktopServices>
+#include <QDir>
 #include <QFileInfo>
 #include <QLoggingCategory>
 #include <QPointer>
@@ -35,6 +39,7 @@ const QString kMidiEnabledKey = u"midi/enabled"_s;
 const QString kMidiControlsOnlyKey = u"midi/controlsOnly"_s; // inputs for their buttons and knobs only
 const QString kMidiOffKey = u"midi/off"_s;                   // inputs switched off
 const QString kMidiChannelsKey = u"midi/channels"_s;
+const QString kMidiVelocityKey = u"midi/velocity"_s; // per input: its VelocityCurve (Normal: not saved)
 // Keyboards taught ("Learn this keyboard"): per keyboard, "from:to" packed triggers in hex.
 const QString kMidiKeyboardsKey = u"midi/keyboards"_s;
 
@@ -92,6 +97,60 @@ constexpr double kSmallestChartSize = 1.0;
 constexpr double kLargestChartSize = 3.0;
 const QString kLimiterCeilingKey = u"master/limiterCeilingDb"_s;
 constexpr double kDefaultCeilingDb = -1.0;
+// General: the app's own instruments' A4, and the whole rig's transpose.
+const QString kTuningKey = u"general/tuningHz"_s;
+constexpr double kDefaultTuningHz = 440.0;
+constexpr double kLowestTuningHz = 415.3;  // 100 cents under 440
+constexpr double kHighestTuningHz = 466.2; // 100 cents over
+const QString kGlobalTransposeKey = u"general/transpose"_s;
+// Opening the last setlist: straight into Perform (MainStage's "Open Most Recent Concert in Perform Mode").
+const QString kStartInPerformKey = u"general/startInPerform"_s;
+// General: at a patch change, the old patch stops at once instead of ringing out.
+const QString kSilencePreviousKey = u"general/silencePreviousPatch"_s;
+// How many times the app has started, and whether a star was asked for (once, ever).
+const QString kStartsKey = u"session/starts"_s;
+const QString kStarAskedKey = u"session/starAsked"_s;
+constexpr int kStartsBeforeAsking = 5;
+// MIDI: middle C named C3 instead of C4 (display only).
+const QString kMiddleCKey = u"midi/middleCOctave"_s;
+// Audio: dropouts told to the player (MainStage's overload message), not only logged.
+const QString kDropoutWarningsKey = u"audio/dropoutWarnings"_s;
+// Autosave every N minutes (0: never); the choices offered.
+const QString kAutosaveKey = u"general/autosaveMinutes"_s;
+constexpr int kDefaultAutosave = 5;
+constexpr std::array kAutosaveChoices{0, 1, 2, 5, 10, 15};
+
+int savedAutosave(const QSettings& settings)
+{
+    const int minutes = settings.value(kAutosaveKey, kDefaultAutosave).toInt();
+    return std::ranges::find(kAutosaveChoices, minutes) != kAutosaveChoices.end() ? minutes : kDefaultAutosave;
+}
+
+double savedTuning(const QSettings& settings)
+{
+    bool ok = false;
+    const double hz = settings.value(kTuningKey, kDefaultTuningHz).toDouble(&ok);
+    return ok && std::isfinite(hz) ? std::clamp(hz, kLowestTuningHz, kHighestTuningHz) : kDefaultTuningHz;
+}
+
+int savedTranspose(const QSettings& settings)
+{
+    return std::clamp(settings.value(kGlobalTransposeKey, 0).toInt(), -engine::kMaxGlobalTranspose, engine::kMaxGlobalTranspose);
+}
+
+// The user's own plugin folders (Settings > Plugins), as chosen ("/" separators).
+const QString kPluginFoldersKey = u"plugins/folders"_s;
+
+QStringList savedPluginFolders(const QSettings& settings)
+{
+    return settings.value(kPluginFoldersKey).toStringList();
+}
+
+// The same folder, as this system names files (on Windows whatever the case).
+bool sameFolder(const QString& a, const QString& b)
+{
+    return QString::compare(QDir::cleanPath(a), QDir::cleanPath(b), platform::fileNameCase()) == 0;
+}
 
 engine::ControlTriggers savedControls(QSettings& settings)
 {
@@ -151,6 +210,12 @@ SettingsController::SettingsController(engine::IEngine& engine, DocumentControll
     // The limiter protects the sound desk from the first note.
     m_engine.setOutputLimiter(m_settings.value(kLimiterKey, true).toBool(), savedCeiling(m_settings));
     m_engine.setClickOutput(savedClickOutput(m_settings));
+    // In tune, and in the key, from the first note.
+    m_engine.setTuning(savedTuning(m_settings));
+    m_engine.setGlobalTranspose(savedTranspose(m_settings));
+    m_document.setAutosaveMinutes(savedAutosave(m_settings));
+    m_engine.setDropoutWarnings(m_settings.value(kDropoutWarningsKey, true).toBool());
+    m_engine.setSilencePreviousPatch(m_settings.value(kSilencePreviousKey, false).toBool());
 }
 
 engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
@@ -172,7 +237,13 @@ engine::RealEngineOptions SettingsController::engineOptions(QSettings& settings)
     options.midi.off = settings.value(kMidiOffKey).toStringList();
     const QVariantMap channels = settings.value(kMidiChannelsKey).toMap();
     for (auto it = channels.begin(); it != channels.end(); ++it) options.midi.channels[it.key()] = it.value().toInt();
+    const QVariantMap velocity = settings.value(kMidiVelocityKey).toMap();
+    for (auto it = velocity.begin(); it != velocity.end(); ++it) {
+        const int curve = it.value().toInt();
+        if (curve > 0 && curve < engine::kVelocityCurveCount) options.midi.velocity[it.key()] = static_cast<engine::VelocityCurve>(curve);
+    }
     options.midi.rigs = rigsFromSettings(settings.value(kMidiKeyboardsKey).toMap());
+    options.userPluginFolders = savedPluginFolders(settings);
     if (settings.value(kMidiNamesKey, 1).toInt() < kMidiNames) {
         // Saved with the place numbers: converted once, and saved converted.
         options.midi = engine::withoutPortPlaces(std::move(options.midi));
@@ -190,6 +261,11 @@ void SettingsController::saveMidi(QSettings& settings, const engine::MidiSetup& 
     settings.setValue(kMidiControlsOnlyKey, midi.controls);
     settings.setValue(kMidiOffKey, midi.off);
     settings.setValue(kMidiChannelsKey, channels);
+    QVariantMap velocity;
+    for (const auto& [name, curve] : midi.velocity) {
+        if (curve != engine::VelocityCurve::Normal) velocity.insert(name, static_cast<int>(curve));
+    }
+    settings.setValue(kMidiVelocityKey, velocity);
     settings.setValue(kMidiKeyboardsKey, rigsToSettings(midi.rigs));
     settings.setValue(kClockOutputKey, midi.clockOutput);
     settings.setValue(kFollowClockKey, midi.followClock);
@@ -208,6 +284,12 @@ void SettingsController::load()
     m_running = m_engine.statusText();
     m_error.clear();
     m_reopenLast = m_settings.value(DocumentController::reopenLastSetlistKey(), false).toBool();
+    m_startInPerform = m_settings.value(kStartInPerformKey, false).toBool();
+    m_tuningHz = savedTuning(m_settings);
+    m_globalTranspose = m_engine.globalTranspose();
+    m_autosaveMinutes = savedAutosave(m_settings);
+    m_dropoutWarnings = m_settings.value(kDropoutWarningsKey, true).toBool();
+    m_silencePrevious = m_settings.value(kSilencePreviousKey, false).toBool();
     m_limiterOn = m_settings.value(kLimiterKey, true).toBool();
     m_limiterCeilingDb = savedCeiling(m_settings);
     m_clickOutput = savedClickOutput(m_settings);
@@ -391,9 +473,193 @@ void SettingsController::unblockPlugin(const QString& path)
     emit changed();
 }
 
+QVariantList SettingsController::pluginFolders() const
+{
+    const QStringList own = savedPluginFolders(m_settings);
+    const QStringList used = m_engine.pluginFolders();
+    QVariantList list;
+    for (const QString& folder : used) {
+        if (std::ranges::any_of(own, [&folder](const QString& o) { return sameFolder(o, folder); })) continue;
+        list << QVariantMap{{u"path"_s, QDir::toNativeSeparators(folder)}, {u"own"_s, false}, {u"found"_s, true}};
+    }
+    for (const QString& folder : own) {
+        const bool found = std::ranges::any_of(used, [&folder](const QString& u) { return sameFolder(u, folder); });
+        list << QVariantMap{{u"path"_s, QDir::toNativeSeparators(folder)}, {u"own"_s, true}, {u"found"_s, found}};
+    }
+    return list;
+}
+
+int SettingsController::pluginCount() const
+{
+    const auto plugins = m_engine.availablePlugins();
+    return static_cast<int>(std::ranges::count_if(plugins, [](const engine::PluginInfo& p) {
+        return p.format != engine::PluginFormat::Builtin;
+    }));
+}
+
+QString SettingsController::addPluginFolder(const QUrl& folder)
+{
+    const QString path = QDir::cleanPath(folder.isLocalFile() ? folder.toLocalFile() : folder.toString());
+    QString problem;
+    if (path.isEmpty() || !QFileInfo(path).isDir()) {
+        problem = tr("%1 is not a folder").arg(QDir::toNativeSeparators(path));
+    } else if (QDir(path).isRoot()) {
+        problem = tr("Choose the folder your plugins are in, not a whole drive");
+    } else if (std::ranges::any_of(m_engine.pluginFolders() + savedPluginFolders(m_settings),
+                                   [&path](const QString& f) { return sameFolder(f, path); })) {
+        problem = tr("%1 is already in the list").arg(QDir::toNativeSeparators(path));
+    }
+    if (!problem.isEmpty()) {
+        qCWarning(lcUi).noquote() << "Plugin folder not added:" << problem;
+        return problem;
+    }
+    m_settings.setValue(kPluginFoldersKey, savedPluginFolders(m_settings) << path);
+    qCInfo(lcUi).noquote() << "Plugin folder added:" << QDir::toNativeSeparators(path);
+    rescanPlugins();
+    return keptOrWhyNot();
+}
+
+QString SettingsController::keptOrWhyNot()
+{
+    // Taken at once (not on OK): saved at once, and a failure said.
+    m_settings.sync();
+    if (m_settings.status() == QSettings::NoError) return {};
+    const QString problem = tr("The plugin folders could not be saved (%1): they apply until %2 closes")
+                                .arg(m_settings.fileName(), QCoreApplication::applicationName());
+    qCWarning(lcUi).noquote() << problem;
+    m_error = problem;
+    emit changed();
+    return problem;
+}
+
+void SettingsController::removePluginFolder(const QString& path)
+{
+    QStringList own = savedPluginFolders(m_settings);
+    const auto removed = own.removeIf([&path](const QString& f) { return sameFolder(f, QDir::fromNativeSeparators(path)); });
+    if (removed == 0) return;
+    if (own.isEmpty()) m_settings.remove(kPluginFoldersKey);
+    else m_settings.setValue(kPluginFoldersKey, own);
+    qCInfo(lcUi).noquote() << "Plugin folder removed:" << path;
+    rescanPlugins();
+    (void)keptOrWhyNot(); // (a failure is shown in the window's error line)
+}
+
+void SettingsController::rescanPlugins()
+{
+    m_engine.rescanPlugins(savedPluginFolders(m_settings));
+    emit pluginsChanged();
+    emit changed(); // (plugins switched off after a crash may have changed)
+}
+
 QVariantList SettingsController::limiterCeilings()
 {
     return {-0.1, -0.3, -0.5, -1.0, -2.0, -3.0, -6.0};
+}
+
+void SettingsController::countStart(QSettings& settings)
+{
+    const int starts = settings.value(kStartsKey, 0).toInt();
+    if (starts < kStartsBeforeAsking) settings.setValue(kStartsKey, starts + 1); // (counting stops where it matters)
+}
+
+bool SettingsController::starAskDue() const
+{
+    return m_settings.value(kStartsKey, 0).toInt() >= kStartsBeforeAsking && !m_settings.value(kStarAskedKey, false).toBool();
+}
+
+void SettingsController::starAsked()
+{
+    if (!starAskDue()) return;
+    m_settings.setValue(kStarAskedKey, true);
+    emit starAskChanged();
+}
+
+int SettingsController::middleCOctave() const
+{
+    return m_settings.value(kMiddleCKey, 4).toInt() == 3 ? 3 : 4;
+}
+
+void SettingsController::setMiddleCOctave(int octave)
+{
+    if ((octave != 3 && octave != 4) || octave == middleCOctave()) return;
+    if (octave == 4) {
+        m_settings.remove(kMiddleCKey);
+    } else {
+        m_settings.setValue(kMiddleCKey, octave);
+    }
+    emit middleCChanged();
+}
+
+void SettingsController::setSilencePreviousPatch(bool silence)
+{
+    if (m_silencePrevious == silence) return;
+    m_silencePrevious = silence;
+    emit changed();
+}
+
+void SettingsController::setDropoutWarnings(bool on)
+{
+    if (m_dropoutWarnings == on) return;
+    m_dropoutWarnings = on;
+    emit changed();
+}
+
+void SettingsController::setAutosaveMinutes(int minutes)
+{
+    if (std::ranges::find(kAutosaveChoices, minutes) == kAutosaveChoices.end() || minutes == m_autosaveMinutes) return;
+    m_autosaveMinutes = minutes;
+    emit changed();
+}
+
+QVariantList SettingsController::autosaveChoices()
+{
+    QVariantList list;
+    for (const int minutes : kAutosaveChoices) list << minutes;
+    return list;
+}
+
+void SettingsController::openBackupFolder()
+{
+    const QString folder = DocumentController::backupFolder();
+    if (!QDir().mkpath(folder) || !QDesktopServices::openUrl(QUrl::fromLocalFile(folder))) {
+        m_error = tr("Could not open the backup folder %1").arg(QDir::toNativeSeparators(folder));
+        qCWarning(lcUi).noquote() << m_error;
+        emit changed();
+    }
+}
+
+bool SettingsController::startInPerform(const QSettings& settings)
+{
+    return settings.value(kStartInPerformKey, false).toBool();
+}
+
+void SettingsController::setStartInPerformMode(bool perform)
+{
+    if (m_startInPerform == perform) return;
+    m_startInPerform = perform;
+    emit changed();
+}
+
+void SettingsController::setTuningHz(double hz)
+{
+    const double clamped = std::isfinite(hz) ? std::clamp(std::round(hz * 10.0) / 10.0, kLowestTuningHz, kHighestTuningHz)
+                                             : kDefaultTuningHz;
+    if (clamped == m_tuningHz) return;
+    m_tuningHz = clamped;
+    emit changed();
+}
+
+void SettingsController::setGlobalTranspose(int semitones)
+{
+    const int clamped = std::clamp(semitones, -engine::kMaxGlobalTranspose, engine::kMaxGlobalTranspose);
+    // Live, not on OK: it is also changed from the toolbar mid-song.
+    m_engine.setGlobalTranspose(clamped);
+    if (clamped == 0) m_settings.remove(kGlobalTransposeKey);
+    else m_settings.setValue(kGlobalTransposeKey, clamped);
+    if (clamped == m_globalTranspose) return;
+    m_globalTranspose = clamped;
+    emit changed();
+    emit globalTransposeChanged();
 }
 
 void SettingsController::setReopenLastSetlist(bool reopen)
@@ -526,6 +792,7 @@ QVariantList SettingsController::midiInputs() const
                             {u"enabled"_s, port.enabled},
                             {u"mode"_s, port.enabled ? 0 : port.controlsOnly ? 1 : 2},
                             {u"channel"_s, port.channel},
+                            {u"velocity"_s, static_cast<int>(port.velocity)},  // VelocityCurve
                             {u"taught"_s, static_cast<int>(port.rig.size())}}; // controls taught on its keyboard
     }
     return list;
@@ -563,6 +830,21 @@ void SettingsController::setMidiInputChannel(const QString& name, int channel)
     }
 }
 
+void SettingsController::setMidiInputVelocity(const QString& name, int curve)
+{
+    if (curve < 0 || curve >= engine::kVelocityCurveCount) {
+        qCWarning(lcUi) << "Ignored: no velocity curve" << curve;
+        return;
+    }
+    for (auto& port : m_midi) {
+        if (port.name == name && port.velocity != static_cast<engine::VelocityCurve>(curve)) {
+            port.velocity = static_cast<engine::VelocityCurve>(curve);
+            m_midiTouched = true;
+            emit changed();
+        }
+    }
+}
+
 void SettingsController::refreshMidi()
 {
     std::vector<engine::MidiPort> present = m_engine.midiInputs();
@@ -592,6 +874,8 @@ engine::MidiSetup SettingsController::pendingMidi() const
         (port.enabled ? setup.enabled : port.controlsOnly ? setup.controls : setup.off) << port.name;
         if (port.channel != 0) setup.channels[port.name] = port.channel;
         else setup.channels.erase(port.name);
+        if (port.velocity != engine::VelocityCurve::Normal) setup.velocity[port.name] = port.velocity;
+        else setup.velocity.erase(port.name);
     }
     // A keyboard being taught plays its controls as they are for now: its rig is still the one before.
     if (m_teaching) {
@@ -716,9 +1000,17 @@ void SettingsController::resetToDefaults()
         // ... and its keyboard's other ports give their buttons and knobs.
         port.controlsOnly = !port.enabled && engine::midiDeviceOf(port.name) == engine::midiDeviceOf(m_midi.front().name);
         port.channel = 0;
+        port.velocity = engine::VelocityCurve::Normal;
     }
     m_midiTouched = true;
     m_reopenLast = false;
+    m_startInPerform = false;
+    m_tuningHz = kDefaultTuningHz;
+    m_autosaveMinutes = kDefaultAutosave;
+    m_dropoutWarnings = true;
+    m_silencePrevious = false;
+    setMiddleCOctave(4);
+    setGlobalTranspose(0); // (live, as the transpose always is)
     m_limiterOn = true;
     m_limiterCeilingDb = kDefaultCeilingDb;
     m_clickOutput = 0;
@@ -792,6 +1084,16 @@ bool SettingsController::apply()
     }
 
     m_settings.setValue(DocumentController::reopenLastSetlistKey(), m_reopenLast);
+    m_settings.setValue(kStartInPerformKey, m_startInPerform);
+    m_engine.setTuning(m_tuningHz);
+    m_settings.setValue(kTuningKey, m_tuningHz);
+    m_document.setAutosaveMinutes(m_autosaveMinutes);
+    m_settings.setValue(kAutosaveKey, m_autosaveMinutes);
+    m_engine.setDropoutWarnings(m_dropoutWarnings);
+    m_settings.setValue(kDropoutWarningsKey, m_dropoutWarnings);
+    m_engine.setSilencePreviousPatch(m_silencePrevious);
+    m_settings.setValue(kSilencePreviousKey, m_silencePrevious);
+    setGlobalTranspose(m_globalTranspose); // (applied and kept at once anyway)
     m_engine.setOutputLimiter(m_limiterOn, m_limiterCeilingDb);
     m_engine.setClickOutput(m_clickOutput);
     m_settings.setValue(kClickOutputKey, m_clickOutput);

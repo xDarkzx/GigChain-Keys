@@ -82,6 +82,18 @@ StageDialog {
                 tip: Branding.website
                 onClicked: Qt.openUrlExternally(Branding.website)
             }
+            StageButton {
+                objectName: "aboutStar"
+                Layout.preferredHeight: Theme.touchTarget
+                text: qsTr("⭐ Star on GitHub")
+                tip: qsTr("Free forever: a star is how you say thanks, and how other players find it")
+                onClicked: {
+                    if (!Qt.openUrlExternally(Branding.website)) {
+                        console.warn("Could not open " + Branding.website + " in the browser")
+                        tip = qsTr("Could not open the browser: the page is %1").arg(Branding.website)
+                    }
+                }
+            }
             Item { Layout.fillWidth: true }
             StageButton {
                 objectName: "aboutClose"

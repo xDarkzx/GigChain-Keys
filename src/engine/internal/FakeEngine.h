@@ -42,6 +42,13 @@ public:
     [[nodiscard]] std::size_t loadedPluginCount() const override { return 0; }
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override;
     [[nodiscard]] QString pluginFolder() const override { return {}; } // its plugins are not on disk
+    [[nodiscard]] QStringList pluginFolders() const override { return {}; }
+    void rescanPlugins(const QStringList&) override {} // (nothing on disk to find)
+    void setTuning(double a4Hz) override; // (its built-in instruments are the real ones)
+    void setDropoutWarnings(bool) override {} // (no audio device: none)
+    void setSilencePreviousPatch(bool) override {} // (nothing rings out in the demo)
+    void setGlobalTranspose(int semitones) override { m_globalTranspose = std::clamp(semitones, -kMaxGlobalTranspose, kMaxGlobalTranspose); }
+    [[nodiscard]] int globalTranspose() const override { return m_globalTranspose; }
     [[nodiscard]] LevelReading channelLevel(const core::ChannelId& id) override;
     [[nodiscard]] LevelReading masterLevel() override;
     [[nodiscard]] float cpuLoad() const override;
@@ -319,6 +326,7 @@ public:
     }
 
 private:
+    int m_globalTranspose = 0;
     std::optional<std::pair<int, int>> m_moved; // the last controller injected (channel 1-16, number), not yet taken
     std::map<uint32_t, double> m_parameterValues; // set through setPluginParameter (any plugin; the built-ins' readings)
     std::map<QString, QString> m_instrumentFiles;  // set through setInstrumentFile, by channel id
