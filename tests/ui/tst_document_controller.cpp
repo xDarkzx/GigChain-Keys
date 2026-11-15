@@ -286,10 +286,15 @@ private slots:
         // Two saves within the same second each keep their own.
         QVERIFY(m_doc->addSong());
         QVERIFY(m_doc->save());
-        QCOMPARE(kept.entryList(QDir::Files).size(), 2);
-        // The backup is the setlist as it was: one song, not two.
-        QVERIFY(m_doc->open(kept.filePath(kept.entryList(QDir::Files, QDir::Name).first())));
-        QCOMPARE(m_doc->setlist().songs.size(), std::size_t{1});
+        // The backups are the setlist as it was before each save: one song,
+        // then two (whatever order their names sort in).
+        std::vector<std::size_t> songs;
+        for (const QString& name : kept.entryList(QDir::Files)) {
+            QVERIFY(m_doc->open(kept.filePath(name)));
+            songs.push_back(m_doc->setlist().songs.size());
+        }
+        std::ranges::sort(songs);
+        QCOMPARE(songs, (std::vector<std::size_t>{1, 2}));
         QDir(DocumentController::backupFolder()).removeRecursively();
     }
 

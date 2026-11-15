@@ -601,9 +601,10 @@ ToolBar {
                 onClicked: transposeMenu.popup(transposeBadge, 0, transposeBadge.height)
                 StageMenu {
                     id: transposeMenu
-                    StageMenuItem { text: qsTr("Up a semitone"); onTriggered: bar.settings.globalTranspose += 1 }
-                    StageMenuItem { text: qsTr("Down a semitone"); onTriggered: bar.settings.globalTranspose -= 1 }
-                    StageMenuItem { text: qsTr("Off"); onTriggered: bar.settings.globalTranspose = 0 }
+                    // (Finger-sized rows: a neighbouring row would change the key.)
+                    StageMenuItem { implicitHeight: Theme.touchTarget; text: qsTr("Up a semitone"); onTriggered: bar.settings.globalTranspose += 1 }
+                    StageMenuItem { implicitHeight: Theme.touchTarget; text: qsTr("Down a semitone"); onTriggered: bar.settings.globalTranspose -= 1 }
+                    StageMenuItem { implicitHeight: Theme.touchTarget; text: qsTr("Off"); onTriggered: bar.settings.globalTranspose = 0 }
                 }
             }
             StageButton {
@@ -928,8 +929,9 @@ ToolBar {
                 }
                 StageMenuItem {
                     objectName: "starItem"
+                    implicitHeight: Theme.touchTarget
                     text: qsTr("⭐ Star %1 on GitHub").arg(Branding.name)
-                    onTriggered: Qt.openUrlExternally(Branding.website)
+                    onTriggered: if (!Qt.openUrlExternally(Branding.website)) bar.doc.reportMessage(qsTr("Could not open the browser: the page is %1").arg(Branding.website))
                 }
                 StageMenuItem { text: qsTr("About %1").arg(Branding.name); onTriggered: bar.aboutRequested() }
             }

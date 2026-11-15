@@ -504,15 +504,20 @@ ApplicationWindow {
                 spacing: Theme.spacing
                 Item { Layout.fillWidth: true }
                 StageButton {
+                    Layout.preferredHeight: Theme.touchTarget
                     text: qsTr("Not now")
                     onClicked: starAsk.close()
                 }
                 StageButton {
                     objectName: "starAskYes"
+                    Layout.preferredHeight: Theme.touchTarget
                     text: qsTr("⭐ Star it on GitHub")
                     tone: "accent"
                     onClicked: {
-                        Qt.openUrlExternally(Branding.website)
+                        if (!Qt.openUrlExternally(Branding.website)) {
+                            console.warn("Could not open " + Branding.website + " in the browser")
+                            root.doc.reportMessage(qsTr("Could not open the browser: the page is %1").arg(Branding.website))
+                        }
                         starAsk.close()
                     }
                 }

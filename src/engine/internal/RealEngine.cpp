@@ -709,6 +709,10 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     GC_ONLY_MAIN_THREAD();
     QElapsedTimer timer;
     timer.start();
+    // Another patch, or this one again (an edit to it, a master or aux effect
+    // switched: a rebuild): "stop the previous sound at once" is for the first only.
+    const bool anotherPatch = &patch != &m_patch && (!(song == m_song) || !(patch.id == m_patch.id));
+    const bool silence = m_silencePrevious && anotherPatch;
     if (&patch != &m_patch) m_patch = patch;
     callUpExternalSounds(patch);
     m_song = song;
@@ -797,7 +801,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     // sound plays on without; a sound playing on glides from its level.
     // (Unless the player wants the old patch silenced at once: MainStage's
     // "Instantly silence previous patch".)
-    CarryOver carried = carryOver(m_exchange.currentShared().get(), specs, hardwareUsed, m_silencePrevious ? 0 : kMaxTails);
+    CarryOver carried = carryOver(m_exchange.currentShared().get(), specs, hardwareUsed, silence ? 0 : kMaxTails);
     std::vector<std::shared_ptr<ChannelStrip>>& tails = carried.tails;
     const std::set<const INode*>& ringing = carried.ringing;
     const std::set<const INode*>& releasing = carried.releasing;
@@ -817,7 +821,7 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     // Silencing the previous patch: every note it held stops, also on an
     // instrument the new patch plays too (only new notes sound).
     for (const auto& [key, node] : m_nodes) {
-        if (m_silencePrevious || (used.count(node.get()) == 0 && !ringing.contains(node.get())) || releasing.contains(node.get())) {
+        if (silence || (used.count(node.get()) == 0 && !ringing.contains(node.get())) || releasing.contains(node.get())) {
             node->releaseAllNotes();
         }
     }
