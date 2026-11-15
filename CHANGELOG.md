@@ -8,6 +8,12 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-16 (alpha)
+
+The settings a live keyboard player needs, MainStage's and more: your own
+plugin folders, each keyboard's touch, tuning, transpose everything,
+autosave with backups, and Linux downloads again.
+
 ### Added
 
 - **Your own plugin folders, and Rescan.** Settings > Plugins lists every
