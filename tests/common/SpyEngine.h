@@ -112,6 +112,24 @@ public:
         lastPatch = patch;
     }
     [[nodiscard]] QString pluginFolder() const override { return {}; } // its plugins are not on disk
+    bool silencePrevious = false;
+    void setSilencePreviousPatch(bool silence) override { silencePrevious = silence; }
+    bool dropoutWarnings = true;
+    void setDropoutWarnings(bool on) override { dropoutWarnings = on; }
+    double tuningHz = 440.0; // the last setTuning
+    int transpose = 0;       // setGlobalTranspose
+    void setTuning(double a4Hz) override { tuningHz = a4Hz; }
+    void setGlobalTranspose(int semitones) override { transpose = semitones; }
+    [[nodiscard]] int globalTranspose() const override { return transpose; }
+    QStringList standardFolders;   // what pluginFolders() gives before the user's own
+    QStringList userFolders;       // the last rescanPlugins' folders
+    int rescans = 0;
+    [[nodiscard]] QStringList pluginFolders() const override { return standardFolders + userFolders; }
+    void rescanPlugins(const QStringList& folders) override
+    {
+        ++rescans;
+        userFolders = folders;
+    }
     [[nodiscard]] std::vector<engine::PluginInfo> availablePlugins() const override
     {
         return {

@@ -65,6 +65,10 @@ public:
     [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 
+    // Reads the engine's plugins again (after a rescan); hidden, favourite
+    // and rated plugins stay as they were.
+    void reload(const engine::IEngine& engine);
+
     [[nodiscard]] QString filterText() const { return m_filterText; }
     void setFilterText(const QString& text);
     [[nodiscard]] bool instrumentsOnly() const { return m_instrumentsOnly; }
@@ -104,6 +108,7 @@ signals:
 private:
     void applyFilter();
 
+    const OfficialArtwork& m_artwork; // not owned (the Session's)
     std::vector<engine::PluginInfo> m_all;
     std::vector<QString> m_images; // parallel to m_all: file URL of the plugin's banner, or empty
     std::vector<QString> m_icons;  // parallel to m_all: image URL of the plugin's own icon, or empty

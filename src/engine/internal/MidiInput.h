@@ -8,6 +8,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -134,6 +135,9 @@ private:
         double tickSeconds = 0.0;
         SustainTaps sustain; // (this port's thread)
         KeyboardRig rig;     // its keyboard's taught controls (translateControl)
+        // Its touch (MidiPort::velocity): each note-on velocity's new value,
+        // worked out when it opens (fixed while open: its thread reads it).
+        std::array<uint8_t, 128> velocity{};
     };
 
     static void callback(double timeStamp, std::vector<unsigned char>* message, void* user);

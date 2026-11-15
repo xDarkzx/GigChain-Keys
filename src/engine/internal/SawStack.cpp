@@ -1,5 +1,7 @@
 #include "SawStack.h"
 
+#include "Tuning.h"
+
 using namespace Qt::StringLiterals;
 
 namespace gigchain::engine::sawstack {
@@ -315,7 +317,7 @@ void Synth::setEnvelopes(LayerVoice& lv, const LayerSetup& setup) const noexcept
 
 double Synth::noteHz(int note, const LayerSetup& setup) const noexcept
 {
-    return 440.0 * std::pow(2.0, (note - 69 + 12 * setup.octave + setup.semitones + m_bend) / 12.0);
+    return 440.0 * tuning::ratio() * std::pow(2.0, (note - 69 + 12 * setup.octave + setup.semitones + m_bend) / 12.0);
 }
 
 void Synth::process(std::span<const MidiEvent> events, const AudioBlock& io, const TimeInfo& time) noexcept

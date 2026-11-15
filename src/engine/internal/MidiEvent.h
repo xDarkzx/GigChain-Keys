@@ -15,6 +15,10 @@ struct MidiEvent
     // From an input opened for its buttons and knobs only (a keyboard's DAW
     // port): learned controls and Learn see it, the instruments never do.
     bool controlsOnly = false;
+    // Semitones the whole rig moves it (IEngine::setGlobalTranspose), on top
+    // of each channel's own: stamped as it reaches the audio thread, a
+    // note's release with the shift its press had (no hanging notes).
+    int8_t transpose = 0;
 };
 
 // Most events a single audio block will carry; extra events are dropped.

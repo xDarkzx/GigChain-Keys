@@ -71,13 +71,17 @@ public:
 public slots:
     // Reads the engine's meters for every row (the UI calls this ~30 Hz).
     void refreshLevels();
+    // Reads the engine's plugins again (after a rescan): the strips' icons follow.
+    void reloadPlugins();
 
 private:
     void reset();
+    void readPlugins();
     [[nodiscard]] const core::Channel* channelAt(int row) const;
 
     const DocumentController& m_document;
     engine::IEngine& m_engine;
+    const OfficialArtwork& m_artwork; // not owned (the Session's)
     int m_rowCount = 0;
     std::vector<engine::LevelReading> m_levels;
     QHash<QString, engine::PluginInfo> m_plugins; // by plugin id, for icons

@@ -31,6 +31,10 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_loops, &LoopController::poll);
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_panel, &PanelController::poll);
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_sustainPads, &SustainPadsController::poll);
+    // Plugins looked for again (Settings > Plugins): the lists follow.
+    QObject::connect(&m_settingsController, &SettingsController::pluginsChanged, &m_pluginModel,
+                     [this, &engine] { m_pluginModel.reload(engine); });
+    QObject::connect(&m_settingsController, &SettingsController::pluginsChanged, &m_channelModel, &ChannelModel::reloadPlugins);
     // Panic: every sound means the pad too (switched off here, silenced at once by the engine).
     QObject::connect(&m_engineStatus, &EngineStatus::panicking, &m_sustainPads, [this] { m_sustainPads.setActive(false); });
     // The rig's master effects load with the app (behind the splash).

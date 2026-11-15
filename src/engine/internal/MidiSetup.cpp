@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 using namespace Qt::StringLiterals;
 
@@ -49,6 +50,9 @@ MidiSetup withoutPortPlaces(MidiSetup saved)
     std::map<QString, int> channels;
     for (const auto& [name, channel] : saved.channels) channels.try_emplace(withoutPlace(name), channel);
     saved.channels = std::move(channels);
+    std::map<QString, VelocityCurve> velocity;
+    for (const auto& [name, curve] : saved.velocity) velocity.try_emplace(withoutPlace(name), curve);
+    saved.velocity = std::move(velocity);
     saved.clockOutput = withoutPlace(saved.clockOutput);
     return saved;
 }
@@ -74,6 +78,22 @@ QString midiDeviceOf(const QString& port)
     return bare(name.trimmed()).toLower();
 }
 
+int curvedVelocity(int velocity, VelocityCurve curve)
+{
+    const int v = std::clamp(velocity, 1, 127);
+    const auto bend = [v](double power) {
+        const double x = static_cast<double>(v - 1) / 126.0;
+        return 1 + static_cast<int>(std::lround(std::pow(x, power) * 126.0));
+    };
+    switch (curve) {
+    case VelocityCurve::Normal: return v;
+    case VelocityCurve::Light: return bend(0.6);
+    case VelocityCurve::Heavy: return bend(1.6);
+    case VelocityCurve::Fixed: return kFixedVelocity;
+    }
+    return v;
+}
+
 std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSetup& setup)
 {
     std::vector<MidiPort> ports;
@@ -81,11 +101,13 @@ std::vector<MidiPort> resolveMidiInputs(const QStringList& present, const MidiSe
     for (const QString& name : present) {
         const auto channel = setup.channels.find(name);
         const auto rig = setup.rigs.find(midiDeviceOf(name)); // the keyboard's, whichever of its ports
+        const auto velocity = setup.velocity.find(name);
         ports.push_back(MidiPort{.name = name,
                                  .enabled = setup.configured && setup.enabled.contains(name),
                                  .controlsOnly = setup.configured && setup.controls.contains(name) && !setup.enabled.contains(name),
                                  .channel = channel != setup.channels.end() ? std::clamp(channel->second, 0, 16) : 0,
-                                 .rig = rig != setup.rigs.end() ? rig->second : KeyboardRig{}});
+                                 .rig = rig != setup.rigs.end() ? rig->second : KeyboardRig{},
+                                 .velocity = velocity != setup.velocity.end() ? velocity->second : VelocityCurve::Normal});
     }
     const bool anyOn = std::ranges::any_of(ports, [](const MidiPort& p) { return p.enabled; });
     if (!anyOn && !ports.empty()) {

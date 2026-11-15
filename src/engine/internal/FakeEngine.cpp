@@ -8,6 +8,7 @@
 #include "SoundFontNode.h"
 #include "PianoProNode.h"
 #include "SawStackNode.h"
+#include "Tuning.h"
 
 #include "gigchain/core/Branding.h"
 
@@ -177,6 +178,11 @@ LevelReading FakeEngine::masterLevel()
         if (level.peak > loudest.peak) loudest = level;
     }
     return loudest;
+}
+
+void FakeEngine::setTuning(double a4Hz)
+{
+    tuning::setCents(tuning::centsFor(a4Hz));
 }
 
 std::vector<PluginInfo> FakeEngine::availablePlugins() const

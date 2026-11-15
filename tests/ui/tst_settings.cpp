@@ -6,8 +6,10 @@
 #include "gigchain/core/Branding.h"
 #include "SpyEngine.h"
 
+#include <QDir>
 #include <QFile>
 #include <QSettings>
+#include <QUrl>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -272,6 +274,83 @@ private slots:
         next.resetToDefaults();
         QVERIFY(next.limiterEnabled());
         QCOMPARE(next.limiterCeilingDb(), -1.0);
+    }
+
+    // A keyboard's touch: chosen per input, applied on OK, kept for next start.
+    void aKeyboardsTouchAppliesAndIsRemembered()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        settings.setMidiInputVelocity(u"Spy Keys 0"_s, static_cast<int>(engine::VelocityCurve::Light));
+        settings.setMidiInputVelocity(u"Spy Keys 0"_s, 99); // not a curve: ignored
+        QCOMPARE(settings.midiInputs().at(0).toMap().value(u"velocity"_s).toInt(), 1);
+        QCOMPARE(m_engine->midiChanges, 0); // nothing before OK
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->midi.velocity.at(u"Spy Keys 0"_s), engine::VelocityCurve::Light);
+        const auto options = SettingsController::engineOptions(*m_settings); // next start
+        QCOMPARE(options.midi.velocity.at(u"Spy Keys 0"_s), engine::VelocityCurve::Light);
+    }
+
+    // Tuning on OK and kept; the transpose at once (it is also the toolbar's), kept, and reset.
+    void tuningAndTransposeApplyAndAreRemembered()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        QCOMPARE(m_engine->tuningHz, 440.0); // in tune from the start
+        settings.load();
+        settings.setTuningHz(442.04);
+        settings.setTuningHz(1000.0); // out of range: clamped to 100 cents over
+        QCOMPARE(settings.tuningHz(), 466.2);
+        settings.setTuningHz(442.0);
+        QCOMPARE(m_engine->tuningHz, 440.0); // nothing before OK
+        settings.setGlobalTranspose(30);     // clamped
+        QCOMPARE(m_engine->transpose, 24);   // at once
+        settings.setGlobalTranspose(-2);
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->tuningHz, 442.0);
+
+        SettingsController next(*m_engine, *m_doc, *m_settings); // next start
+        QCOMPARE(m_engine->tuningHz, 442.0);
+        QCOMPARE(m_engine->transpose, -2);
+        next.load();
+        next.resetToDefaults();
+        QCOMPARE(m_engine->transpose, 0); // (live)
+        QCOMPARE(next.tuningHz(), 440.0);
+    }
+
+    // The plugin folders: the standard ones, then the player's own; one is
+    // added (and looked in at once), a drive or a missing one is refused, and
+    // one removed is no longer looked in.
+    void pluginFoldersAreAddedRescannedAndRemoved()
+    {
+        m_engine->standardFolders = {u"C:/Program Files/Common Files/VST3"_s};
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QSignalSpy rescanned(&settings, &SettingsController::pluginsChanged);
+        QCOMPARE(settings.pluginFolders().size(), 1);
+        QVERIFY(!settings.pluginFolders().at(0).toMap().value(u"own"_s).toBool());
+
+        const QString mine = m_dir->filePath(u"My Plugins"_s);
+        QVERIFY(QDir().mkpath(mine));
+        QVERIFY(settings.addPluginFolder(QUrl::fromLocalFile(mine)).isEmpty());
+        QCOMPARE(m_engine->rescans, 1);
+        QCOMPARE(m_engine->userFolders, (QStringList{QDir::cleanPath(mine)}));
+        QCOMPARE(rescanned.count(), 1);
+        QCOMPARE(settings.pluginFolders().size(), 2);
+        QVERIFY(settings.pluginFolders().at(1).toMap().value(u"own"_s).toBool());
+        QVERIFY(settings.pluginFolders().at(1).toMap().value(u"found"_s).toBool());
+
+        QVERIFY(!settings.addPluginFolder(QUrl::fromLocalFile(mine)).isEmpty());                       // listed already
+        QVERIFY(!settings.addPluginFolder(QUrl::fromLocalFile(m_dir->filePath(u"none"_s))).isEmpty()); // not there
+        QVERIFY(!settings.addPluginFolder(QUrl::fromLocalFile(QDir::rootPath())).isEmpty());          // a whole drive
+        QCOMPARE(m_engine->rescans, 1);
+        QCOMPARE(SettingsController::engineOptions(*m_settings).userPluginFolders, (QStringList{QDir::cleanPath(mine)}));
+
+        settings.rescanPlugins();
+        QCOMPARE(m_engine->rescans, 2);
+        settings.removePluginFolder(QDir::toNativeSeparators(mine));
+        QCOMPARE(m_engine->rescans, 3);
+        QVERIFY(m_engine->userFolders.isEmpty());
+        QVERIFY(SettingsController::engineOptions(*m_settings).userPluginFolders.isEmpty());
     }
 
     void pluginsThatCrashedCanBeTriedAgain()

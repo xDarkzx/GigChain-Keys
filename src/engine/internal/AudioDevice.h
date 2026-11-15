@@ -105,6 +105,9 @@ public:
     // Main thread: the computer's audio devices changed (one plugged in or
     // out, another default); the next poll() looks again.
     void devicesChanged() { m_devicesChanged = true; }
+    // Dropouts (the computer late with the audio: a click or gap) are told
+    // to the player by poll(), at most once a minute; off: only logged.
+    void setDropoutWarnings(bool on) { m_tellDropouts = on; }
     // Playing through another device than the one asked for (it is missing).
     [[nodiscard]] bool standingIn() const { return m_standingIn; }
     // What was asked for (std::nullopt = the system default), its rate (0 =
@@ -184,6 +187,10 @@ private:
     std::atomic<bool> m_deviceLost{false};
     std::atomic<bool> m_disconnectReported{false}; // (for close: JACK is closing the stream itself)
     std::atomic<uint64_t> m_underflows{0};
+    // Main thread (poll): dropouts not told yet, and when they last were.
+    bool m_tellDropouts = true;
+    uint64_t m_untoldDropouts = 0;
+    std::optional<std::chrono::steady_clock::time_point> m_droppedToldAt;
     std::mutex m_errorMutex;           // guards m_errors (RtAudio may report from its own threads)
     std::vector<QString> m_errors;     // errors reported by RtAudio since the last poll
 };

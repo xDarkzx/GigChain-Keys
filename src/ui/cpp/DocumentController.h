@@ -12,6 +12,7 @@
 #include <QObject>
 #include <QVariantList>
 #include <QString>
+#include <QTimer>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
@@ -412,6 +413,20 @@ public:
     // The Settings choice restoreLastSession() follows (bool, default false).
     [[nodiscard]] static QString reopenLastSetlistKey();
 
+    // Autosave (Settings > General, MainStage's): every `minutes` (0: never)
+    // a setlist that has a file and unsaved changes is saved, but never while
+    // performing; going into Perform saves it first. A failed save is said
+    // and logged, and tried again next time.
+    void setAutosaveMinutes(int minutes);
+    [[nodiscard]] int autosaveMinutes() const { return m_autosaveMinutes; }
+    // Perform mode on or off (Main.qml): no autosave while on.
+    Q_INVOKABLE void setPerforming(bool performing);
+    // Every save first keeps the file it replaces here (a folder per
+    // setlist), the newest kBackupsKept: a crash or a bad edit is never the
+    // end of a setlist.
+    [[nodiscard]] static QString backupFolder();
+    static constexpr int kBackupsKept = 10;
+
     // A plugin's own settings changed (in its window): unsaved changes.
     void markPluginSettingsChanged();
 
@@ -536,6 +551,14 @@ private:
     core::Cursor m_cursor;
     int m_selectedChannel = -1;
     bool m_dirty = false;
+    QTimer m_autosaveTimer;
+    int m_autosaveMinutes = 0;
+    bool m_performing = false;
+    QString m_autosaveFailedFor; // the file an autosave failed on (paused for it until a save works)
+    void autosave();
+    // A copy of `file` (about to be replaced) into backupFolder(), the oldest
+    // beyond kBackupsKept removed. A problem is logged and said (the save goes on).
+    void backUp(const QString& file);
     // Undo history: each step is the setlist and position before an edit.
     std::vector<UndoStep> m_undo;
     std::vector<UndoStep> m_redo;

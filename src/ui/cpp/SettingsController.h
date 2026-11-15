@@ -10,6 +10,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QUrl>
 #include <QVariantList>
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
@@ -56,6 +57,25 @@ class SettingsController : public QObject
     Q_PROPERTY(QString error READ error NOTIFY changed)
     // General: open the last setlist on start instead of the start screen.
     Q_PROPERTY(bool reopenLastSetlist READ reopenLastSetlist WRITE setReopenLastSetlist NOTIFY changed)
+    // ... and go straight into Perform with it (MainStage's "in Perform mode").
+    Q_PROPERTY(bool startInPerformMode READ startInPerformMode WRITE setStartInPerformMode NOTIFY changed)
+    // General: A4 for the app's own instruments, 415.3-466.2 Hz (440: standard).
+    Q_PROPERTY(double tuningHz READ tuningHz WRITE setTuningHz NOTIFY changed)
+    // The whole rig's transpose, -24..24 semitones on top of each channel's
+    // own. Live (not on OK) and kept: the toolbar shows it while it is not 0.
+    Q_PROPERTY(int globalTranspose READ globalTranspose WRITE setGlobalTranspose NOTIFY globalTransposeChanged)
+    // General: autosave every N minutes (0: never; never while performing),
+    // one of autosaveChoices. Every save keeps a backup of the file before.
+    Q_PROPERTY(int autosaveMinutes READ autosaveMinutes WRITE setAutosaveMinutes NOTIFY changed)
+    Q_PROPERTY(QVariantList autosaveChoices READ autosaveChoices CONSTANT)
+    // General: at a patch change the old patch stops at once (else its held
+    // notes and reverb ring out, the default).
+    Q_PROPERTY(bool silencePreviousPatch READ silencePreviousPatch WRITE setSilencePreviousPatch NOTIFY changed)
+    // MIDI: what middle C (note 60) is called, C4 or C3 (Yamaha's, MainStage's
+    // option). Display only, taken at once.
+    Q_PROPERTY(int middleCOctave READ middleCOctave WRITE setMiddleCOctave NOTIFY middleCChanged)
+    // Audio: dropouts told on screen (once a minute at most), not only logged.
+    Q_PROPERTY(bool dropoutWarnings READ dropoutWarnings WRITE setDropoutWarnings NOTIFY changed)
     // The Perform view's chart size (A−/A+): kept at once (not with Apply),
     // 1.0 to 3.0 times the edit view's.
     Q_PROPERTY(double chartTextSize READ chartTextSize WRITE setChartTextSize NOTIFY chartTextSizeChanged)
@@ -70,6 +90,12 @@ class SettingsController : public QObject
     Q_PROPERTY(QStringList outputChoices READ outputChoices NOTIFY changed)
     // Plugins: those that crashed the app while loading, switched off: [{path, name}].
     Q_PROPERTY(QVariantList blockedPlugins READ blockedPlugins NOTIFY changed)
+    // Plugins: every folder looked in, the system's standard ones first, then
+    // the user's own: [{path, own (the user's: can be removed), found (false:
+    // missing, left out)}]. Changes take effect at once (not on OK).
+    Q_PROPERTY(QVariantList pluginFolders READ pluginFolders NOTIFY pluginsChanged)
+    // The plugins found in them (VST3 and VST2; not the built-in instruments).
+    Q_PROPERTY(int pluginCount READ pluginCount NOTIFY pluginsChanged)
     // MIDI: pedals/pads that switch songs: [{action, label, trigger ("" = not set)}].
     Q_PROPERTY(QVariantList controls READ controls NOTIFY changed)
     // The control waiting for a press ("Learn"), -1 when none.
@@ -116,6 +142,25 @@ public:
     [[nodiscard]] double chartTextSize() const;
     void setChartTextSize(double size);
     void setReopenLastSetlist(bool reopen);
+    [[nodiscard]] bool startInPerformMode() const { return m_startInPerform; }
+    void setStartInPerformMode(bool perform);
+    // Saved: the last setlist opens straight into Perform (main.cpp asks at start).
+    [[nodiscard]] static bool startInPerform(const QSettings& settings);
+    [[nodiscard]] double tuningHz() const { return m_tuningHz; }
+    void setTuningHz(double hz);
+    [[nodiscard]] int globalTranspose() const { return m_globalTranspose; }
+    void setGlobalTranspose(int semitones);
+    [[nodiscard]] bool silencePreviousPatch() const { return m_silencePrevious; }
+    void setSilencePreviousPatch(bool silence);
+    [[nodiscard]] int middleCOctave() const;
+    void setMiddleCOctave(int octave);
+    [[nodiscard]] bool dropoutWarnings() const { return m_dropoutWarnings; }
+    void setDropoutWarnings(bool on);
+    [[nodiscard]] int autosaveMinutes() const { return m_autosaveMinutes; }
+    void setAutosaveMinutes(int minutes);
+    [[nodiscard]] static QVariantList autosaveChoices();
+    // Opens the folder the setlists' backups are kept in (a problem: `error`).
+    Q_INVOKABLE void openBackupFolder();
     [[nodiscard]] bool limiterEnabled() const { return m_limiterOn; }
     void setLimiterEnabled(bool on);
     [[nodiscard]] double limiterCeilingDb() const { return m_limiterCeilingDb; }
@@ -134,6 +179,17 @@ public:
     void pollLearning();
     // "Try again": the plugin may load next time it is used (straight away, not on OK).
     Q_INVOKABLE void unblockPlugin(const QString& path);
+    [[nodiscard]] QVariantList pluginFolders() const;
+    [[nodiscard]] int pluginCount() const;
+    // Adds a folder of the user's own and looks for plugins again. Returns
+    // why it was not added (not a folder, a whole drive, already listed;
+    // also logged), or an empty string.
+    Q_INVOKABLE QString addPluginFolder(const QUrl& folder);
+    // Takes a folder of the user's own out of the list and looks again.
+    Q_INVOKABLE void removePluginFolder(const QString& path);
+    // Looks for plugins again in every folder (new ones installed, old ones
+    // removed); the plugin lists follow (pluginsChanged).
+    Q_INVOKABLE void rescanPlugins();
     [[nodiscard]] QString inputDevice() const { return m_pending.inputDevice; }
     void setInputDevice(const QString& name);
     [[nodiscard]] QStringList inputDevices() const;
@@ -155,6 +211,8 @@ public:
     Q_INVOKABLE void setMidiInputMode(const QString& name, int mode);
     // 0 = all channels, 1-16 = only that one.
     Q_INVOKABLE void setMidiInputChannel(const QString& name, int channel);
+    // Its touch: engine::VelocityCurve (0 normal, 1 light, 2 heavy, 3 fixed).
+    Q_INVOKABLE void setMidiInputVelocity(const QString& name, int curve);
     // While the window is open: picks up keyboards plugged in or pulled out,
     // keeping the choices already made on this page.
     Q_INVOKABLE void refreshMidi();
@@ -188,6 +246,10 @@ public:
 signals:
     void changed();
     void chartTextSizeChanged();
+    // The plugins were looked for again: the plugin lists read them again.
+    void pluginsChanged();
+    void globalTransposeChanged();
+    void middleCChanged();
 
 private:
     [[nodiscard]] const engine::AudioOutput* chosenOutput() const;
@@ -204,6 +266,12 @@ private:
     std::vector<engine::MidiPort> m_midi; // as shown, with this page's changes
     bool m_midiTouched = false;           // changed on this page since load()
     bool m_reopenLast = false;
+    bool m_startInPerform = false;
+    double m_tuningHz = 440.0;
+    int m_globalTranspose = 0;
+    int m_autosaveMinutes = 5;
+    bool m_dropoutWarnings = true;
+    bool m_silencePrevious = false;
     engine::ControlTriggers m_controls{};
     int m_learning = -1;
     // "Learn this keyboard" in progress: the keyboard (midiDeviceOf), its

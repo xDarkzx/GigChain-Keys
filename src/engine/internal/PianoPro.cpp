@@ -1,6 +1,7 @@
 #include "PianoPro.h"
 
 #include "SawStack.h"
+#include "Tuning.h"
 
 #include "gigchain/engine/SidechainCurves.h"
 
@@ -415,7 +416,7 @@ void Synth::startRecorded(Voice& v, const SampleSet& set, int note, int playedVe
     const float vt = set.velocityTrack;
     v.gain = v.zone->gain * ((1.0F - vt) + (vt * struck * struck)) * sourceGain(m_source);
     v.position = 0.0;
-    v.step = std::exp2((pitchNote - v.zone->keyCenter + v.zone->tuneCents / 100.0) / 12.0) * set.sampleRate / m_rate;
+    v.step = std::exp2((pitchNote - v.zone->keyCenter + v.zone->tuneCents / 100.0) / 12.0) * tuning::ratio() * set.sampleRate / m_rate;
     // Undamped top strings ring on (the map gives them a long release).
     const double release = v.zone->release >= 2.0 ? v.zone->release : m_d.release;
     v.amp.set(std::max(v.zone->attack, m_d.attack), 0.0, 1.0, release, m_rate);
@@ -431,7 +432,7 @@ void Synth::startPoly(Voice& v, int pitchNote, float velocity) noexcept
     const PolyDesign& p = m_poly;
     v.zone = nullptr;
     v.poly = true;
-    v.freq = 440.0 * std::exp2((pitchNote - 69) / 12.0);
+    v.freq = 440.0 * tuning::ratio() * std::exp2((pitchNote - 69) / 12.0);
     v.phase = m_random.unit(); // (free-running, as the oscillators of a real one are)
     v.subPhase = static_cast<float>(v.phase) * 0.5F;
     v.lfoPhase = m_random.unit();
@@ -451,7 +452,7 @@ void Synth::startFm(Voice& v, int pitchNote, float velocity) noexcept
 {
     const bool dx = m_source == Source::Dx;
     v.zone = nullptr;
-    v.freq = 440.0 * std::exp2((pitchNote - 69) / 12.0);
+    v.freq = 440.0 * tuning::ratio() * std::exp2((pitchNote - 69) / 12.0);
     v.phase = v.modPhase = v.tinePhase = v.tineModPhase = 0.0;
     // The body: a sine bent by another at the same pitch (index under 1:
     // warm, never buzzy); harder notes bend it more (brighter).
@@ -499,7 +500,7 @@ void Synth::noteOn(int note, int velocity) noexcept
         v.order = ++m_order;
         v.velocity = struck;
         if (layer == Layer::Strings) {
-            v.freq = 440.0 * std::exp2((pitchNote - 69) / 12.0);
+            v.freq = 440.0 * tuning::ratio() * std::exp2((pitchNote - 69) / 12.0);
             std::ranges::generate(v.unisonPhase, [this] { return m_random.unit(); });
             v.lowL.set(2500.0, 0.7071, m_rate);
             v.lowR.set(2500.0, 0.7071, m_rate);
@@ -543,7 +544,7 @@ void Synth::letGo(Voice& v) noexcept
     r.order = ++m_order;
     r.zone = zone;
     r.gain = gain;
-    r.step = std::exp2((note - zone->keyCenter + zone->tuneCents / 100.0) / 12.0) * set->sampleRate / m_rate;
+    r.step = std::exp2((note - zone->keyCenter + zone->tuneCents / 100.0) / 12.0) * tuning::ratio() * set->sampleRate / m_rate;
     r.amp.set(zone->attack, 0.0, 1.0, zone->release, m_rate);
     r.amp.gateOn();
 }
@@ -606,7 +607,7 @@ void Synth::updateSub() noexcept
     s.note = lowest;
     s.layer = static_cast<int>(Layer::Sub);
     s.order = ++m_order;
-    s.freq = 440.0 * std::exp2((lowest - 12 - 69) / 12.0);
+    s.freq = 440.0 * tuning::ratio() * std::exp2((lowest - 12 - 69) / 12.0);
     s.gain = 1.0F;
     s.amp.set(0.005, 0.0, 1.0, 0.15, m_rate);
     s.amp.gateOn();

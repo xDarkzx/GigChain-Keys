@@ -194,6 +194,9 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
         port->channel = wanted->channel;
         port->controlsOnly = !wanted->enabled;
         port->rig = wanted->rig; // (fixed while it is open: its thread reads it)
+        for (std::size_t v = 0; v < port->velocity.size(); ++v) {
+            port->velocity.at(v) = static_cast<uint8_t>(v == 0 ? 0 : curvedVelocity(static_cast<int>(v), wanted->velocity));
+        }
         try {
             port->in = std::make_unique<RtMidiIn>();
             port->in->setErrorCallback(
@@ -299,6 +302,7 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
         owner.m_transportRequests.fetch_or(transport::kToggle, std::memory_order_acq_rel);
     }
     if ((event->status & 0xF0) == 0x90 && event->data2 > 0) {
+        event->data2 = port->velocity.at(event->data2 & 0x7F); // the keyboard's touch (Settings > MIDI)
         port->owner->m_activity.store(true, std::memory_order_relaxed);
         owner.recordPress(event->data1, event->data2); // (RtMidi's thread, not the audio thread)
     }

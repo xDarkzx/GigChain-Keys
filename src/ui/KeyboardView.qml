@@ -196,7 +196,7 @@ StagePanel {
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: 3
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: "C" + (Math.floor(white.modelData / 12) - 1)
+                        text: "C" + Theme.octaveOf(white.modelData)
                         color: white.velocity > 0 ? "white" : "#5b6068"
                     }
                     MouseArea {

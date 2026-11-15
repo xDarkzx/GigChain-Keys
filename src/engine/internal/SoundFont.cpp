@@ -1,6 +1,7 @@
 #include "SoundFont.h"
 
 #include "EngineLog.h"
+#include "Tuning.h"
 
 #include <QCoreApplication>
 #include <QFileInfo>
@@ -500,6 +501,12 @@ void Synth::handle(const MidiEvent& e)
     switch (type) {
     case 0x90:
         if (d2 > 0) {
+            // The app's tuning (Settings > General), when it changed: on the
+            // channel, so held notes move with it as new ones play at it.
+            if (const double cents = tuning::cents(); cents != m_tuningCents) {
+                m_tuningCents = cents;
+                fluid_synth_set_gen(m_synth, 0, GEN_FINETUNE, static_cast<float>(cents));
+            }
             fluid_synth_noteon(m_synth, 0, d1, d2);
             overrideVoices(true);
             break;

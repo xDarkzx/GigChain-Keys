@@ -307,6 +307,18 @@ std::vector<Notice> AudioDevice::poll()
     }
     if (const uint64_t dropouts = m_underflows.exchange(0); dropouts > 0) {
         qCWarning(lcEngine).noquote() << "Audio dropped out" << dropouts << "time(s) on" << m_choice.name;
+        m_untoldDropouts += dropouts;
+    }
+    // Told to the player too (MainStage's overload message), once a minute at most.
+    const auto polledAt = std::chrono::steady_clock::now();
+    if (m_tellDropouts && m_untoldDropouts > 0 && (!m_droppedToldAt || polledAt - *m_droppedToldAt >= std::chrono::minutes(1))) {
+        notices.push_back(Notice::warning(
+            u"The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings > Audio "
+            u"usually stops it; so does closing other programs"_s.arg(m_untoldDropouts)));
+        m_untoldDropouts = 0;
+        m_droppedToldAt = polledAt;
+    } else if (!m_tellDropouts) {
+        m_untoldDropouts = 0;
     }
 
     // Stopped working: the driver said so (a disconnect), or the stream

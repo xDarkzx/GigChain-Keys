@@ -8,6 +8,7 @@
 #include "PadsPro.h"
 #include "PadsProNode.h"
 #include "PluginNode.h"
+#include "Tuning.h"
 #include "VideoSounds.h"
 
 #include <QDir>
@@ -431,28 +432,64 @@ private slots:
         QVERIFY2(range < 3.0, qPrintable(u"pitch differs by %1 cents"_s.arg(range)));
     }
 
-    // Light enough to play live: sixteen notes of each pad take under a
-    // quarter of one core (an optimised build; a debug build only reports).
+    // Settings > General's tuning: A4 at 442 Hz plays at 442 (and back at 440 after).
+    void theAppsTuningMovesThePitch()
+    {
+        const auto measure = [&] {
+            auto synth = padOf(0); // Juno Warmth
+            synth->setParam(paramId(Param::Reverb), 0.0);
+            synth->setParam(paramId(Param::Delay), 0.0);
+            const Take t = play(*synth, {69}, 4.0, 3.0);
+            return pitchCents(t, 442.0, 1.0, 3.0); // cents from 442
+        };
+        tuning::setCents(tuning::centsFor(442.0));
+        const double at442 = measure();
+        tuning::setCents(0.0);
+        const double at440 = measure();
+        qInfo() << "A4 at 442:" << at442 << "cents off; at 440:" << at440 << "cents from 442";
+        QVERIFY2(std::abs(at442) < 3.0, qPrintable(u"tuned to 442, it played %1 cents off"_s.arg(at442)));
+        QVERIFY2(std::abs(at440 - tuning::centsFor(440.0) + tuning::centsFor(442.0)) < 3.0, "back at 440 it should be ~7.8 cents under 442");
+    }
+
+    // Light enough to play live, on any computer: sixteen notes of each pad
+    // take under 40 % of one core even on a slow, shared one (a build
+    // server runs this about twice as slowly as a player's PC, where the
+    // heaviest is ~16 %), and no pad is ever more than 6 times the lightest
+    // on the same computer (a pad made accidentally heavy is caught wherever
+    // it runs). An optimised build; a debug build only reports.
     void sixteenNotesAreLiveSafe()
     {
         std::vector<int> keys(16);
         std::ranges::generate(keys, [k = 43]() mutable { return std::exchange(k, k + 2); });
         double worst = 0.0;
+        double lightest = 1.0e9;
         QString worstName;
         for (int i = 0; i < padTypeCount(); ++i) {
-            auto synth = padOf(i);
-            QElapsedTimer timer;
-            timer.start();
-            (void)play(*synth, keys, 4.0);
-            const double share = static_cast<double>(timer.nsecsElapsed()) / 4.0e9;
+            // Each pad's share: sixteen notes, and one (the rest of its
+            // share is its effects, the same whatever is played).
+            const auto shareOf = [i](const std::vector<int>& notes) {
+                auto synth = padOf(i);
+                QElapsedTimer timer;
+                timer.start();
+                (void)play(*synth, notes, 4.0);
+                return static_cast<double>(timer.nsecsElapsed()) / 4.0e9;
+            };
+            const double share = shareOf(keys);
+            const double one = shareOf({60});
+            qInfo().noquote() << u"%1: %2 % of a core for 16 notes (%3 % for one)"_s.arg(nameOf(i))
+                                     .arg(share * 100.0, 0, 'f', 1).arg(one * 100.0, 0, 'f', 1);
+            lightest = std::min(lightest, share);
             if (share > worst) {
                 worst = share;
                 worstName = nameOf(i);
             }
         }
-        qInfo().noquote() << u"heaviest: %1, %2 % of a core for 16 notes"_s.arg(worstName).arg(worst * 100.0, 0, 'f', 1);
-#ifdef NDEBUG
-        QVERIFY2(worst < 0.25, qPrintable(u"%1 takes %2 % of a core"_s.arg(worstName).arg(worst * 100.0, 0, 'f', 1)));
+        const double times = worst / std::max(lightest, 1.0e-6);
+        qInfo().noquote() << u"heaviest: %1, %2 % of a core for 16 notes, %3 times the lightest"_s.arg(worstName)
+                                 .arg(worst * 100.0, 0, 'f', 1).arg(times, 0, 'f', 1);
+#if defined(NDEBUG) && !defined(__SANITIZE_ADDRESS__) // (AddressSanitizer runs several times slower: only reports)
+        QVERIFY2(worst < 0.40, qPrintable(u"%1 takes %2 % of a core"_s.arg(worstName).arg(worst * 100.0, 0, 'f', 1)));
+        QVERIFY2(times < 6.0, qPrintable(u"%1 takes %2 times the lightest pad"_s.arg(worstName).arg(times, 0, 'f', 1)));
 #endif
     }
 

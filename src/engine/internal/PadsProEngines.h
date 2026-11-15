@@ -389,6 +389,8 @@ private:
     std::array<double, 12> m_step{};
     std::array<double, 6> m_opOut{}, m_opPrev{};
     std::array<sawstack::Envelope, 6> m_env{};
+    // FM: per operator, the later operators that play into it (bit j: operator j).
+    std::array<unsigned, 6> m_fmModulators{};
     std::array<FilterCoeffs, 3> m_coeffs{};
     std::array<LadderFilter, 3> m_ladder{};
     std::array<Svf, 8> m_svf{};

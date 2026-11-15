@@ -12,6 +12,7 @@
 
 #include <QClipboard>
 #include <QElapsedTimer>
+#include <QStandardPaths>
 #include <QRegularExpression>
 #include <QFile>
 #include <QGuiApplication>
@@ -519,6 +520,7 @@ class TestQmlSmoke : public QObject
 private slots:
     void initTestCase()
     {
+        QStandardPaths::setTestModeEnabled(true); // (a save's backup goes to a test folder, never the player's)
         QQuickStyle::setStyle(u"Basic"_s);
         m_finger = QTest::createTouchDevice();
     }

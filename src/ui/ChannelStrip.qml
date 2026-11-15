@@ -59,8 +59,7 @@ Rectangle {
         nameField.selectAll()
     }
 
-    readonly property var noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-    function noteName(n) { return noteNames[n % 12] + (Math.floor(n / 12) - 1) }
+    function noteName(n) { return Theme.noteName(n) }
     // What the strip plays when it is not the whole keyboard: "C2–B3 +12 · vel 1–64".
     readonly property string zoneText: {
         const parts = []

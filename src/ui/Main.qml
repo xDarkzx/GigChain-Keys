@@ -101,7 +101,13 @@ ApplicationWindow {
         link: Theme.accent
     }
 
-    onPerformModeChanged: visibility = performMode ? Window.FullScreen : Window.Windowed
+    // What middle C is called everywhere (Settings > MIDI).
+    Binding { target: Theme; property: "middleCOctave"; value: root.settings.middleCOctave }
+
+    onPerformModeChanged: {
+        visibility = performMode ? Window.FullScreen : Window.Windowed
+        doc.setPerforming(performMode) // (autosave: saved going on stage, never during)
+    }
 
     // Edit / Perform / Practice.
     function editMode() {
@@ -318,6 +324,7 @@ ApplicationWindow {
         mixerOpen: root.mixerOpen
         mixerLayout: root.mixerLayout
         sustainPads: root.sustainPads
+        settings: root.settings
         keyboardOpen: root.keyboardOpen
         loops: root.loops
         onToggleKeyboard: {

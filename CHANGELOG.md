@@ -8,6 +8,37 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **Your own plugin folders, and Rescan.** Settings > Plugins lists every
+  folder plugins are found in; add your own (another drive, a folder of
+  your own) and remove them again, and click **Rescan plugins** after
+  installing one: no restart. Asked for on GitHub (#42).
+- **Touch per keyboard** (Settings > MIDI): Normal, Light touch, Heavy
+  touch or Fixed, for every note that keyboard plays.
+- **Tuning** (Settings > General): A4 from 415.3 to 466.2 Hz for the app's
+  own instruments, to play with a piano or a recording that isn't at 440.
+- **Transpose everything** (Settings > General): every keyboard moves
+  together, even mid-song; a badge in the toolbar shows it while it is on
+  (click it to turn it off).
+- **Autosave and backups** (Settings > General): a changed setlist is saved
+  by itself every few minutes, never while you perform (going into Perform
+  saves it first), and every save keeps the version before it (the last 10).
+- **Start in Perform**: with "Open the last setlist I used", go straight
+  into Perform.
+- **Stop the previous sound at once** (Settings > General), for clean cuts
+  between songs; by default it still rings out.
+- **Dropout warnings** (Settings > Audio): when the audio clicks or drops
+  out you are told, with what usually fixes it.
+- **Middle C as C3 or C4** (Settings > MIDI).
+
+### Changed
+
+- The plugin page shows the folders really looked in (it showed the Windows
+  folder on every computer).
+- Pads Pro takes less of the computer: FM Crystal Bells a quarter less,
+  and every pad a little less, sounding exactly as before.
+
 ## [0.10.0] - 2026-11-14 (alpha)
 
 The sound update: real pianos in Piano Pro, every Pads Pro knob on every

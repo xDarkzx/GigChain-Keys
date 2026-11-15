@@ -199,6 +199,7 @@ private:
     std::shared_ptr<Font> m_font;
     double m_rate = 48000.0;
     bool m_velocityCutoff = true;
+    double m_tuningCents = 0.0; // the app's tuning set on the channel (Tuning.h)
     _fluid_hashtable_t* m_settings = nullptr;
     _fluid_synth_t* m_synth = nullptr;
     std::array<double, kParamCount> m_values{};

@@ -15,6 +15,7 @@
 #include <QFileInfo>
 #include <QSettings>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -57,6 +58,11 @@ class TestDocumentController : public QObject
     }
 
 private slots:
+    void initTestCase()
+    {
+        QStandardPaths::setTestModeEnabled(true); // (backups go to a test folder, never the player's)
+    }
+
     void init()
     {
         m_dir = std::make_unique<QTemporaryDir>();
@@ -259,6 +265,44 @@ private slots:
         QVERIFY(!m_doc->isDirty());
         QCOMPARE(m_doc->displayName(), u"gig.gigchain"_s);
         QVERIFY(QFile::exists(path(u"gig.gigchain"_s)));
+    }
+
+    // Every save keeps the file it replaces (the newest ten), in a folder of
+    // the setlist's own; a setlist of the same name elsewhere has its own.
+    void eachSaveKeepsABackupOfTheOneBefore()
+    {
+        QDir(DocumentController::backupFolder()).removeRecursively();
+        QVERIFY(m_doc->saveAs(path(u"gig.gigchain"_s))); // new: nothing to keep
+        QVERIFY(QDir(DocumentController::backupFolder()).isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot));
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->save());
+        const QStringList folders = QDir(DocumentController::backupFolder()).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        QCOMPARE(folders.size(), 1);
+        QVERIFY(folders.first().startsWith(u"gig ("_s));
+        const QDir kept(DocumentController::backupFolder() + u'/' + folders.first());
+        QCOMPARE(kept.entryList(QDir::Files).size(), 1);
+        // The backup is the setlist as it was: one song, not two.
+        QVERIFY(m_doc->open(kept.filePath(kept.entryList(QDir::Files).first())));
+        QCOMPARE(m_doc->setlist().songs.size(), std::size_t{1});
+        QDir(DocumentController::backupFolder()).removeRecursively();
+    }
+
+    // Autosave: a changed setlist with a file is saved by itself, never while
+    // performing; going into Perform saves it first; off, nothing.
+    void autosaveKeepsChangesButNeverMidShow()
+    {
+        QVERIFY(m_doc->saveAs(path(u"gig.gigchain"_s)));
+        m_doc->setAutosaveMinutes(5);
+        QVERIFY(m_doc->addSong());
+        m_doc->setPerforming(true); // going on stage: saved first
+        QVERIFY(!m_doc->isDirty());
+        QVERIFY(m_doc->addSong()); // (an edit mid-show)
+        m_doc->setPerforming(false);
+        QVERIFY(m_doc->isDirty()); // nothing saved mid-show
+        m_doc->setAutosaveMinutes(0);
+        m_doc->setPerforming(true);
+        QVERIFY(m_doc->isDirty()); // autosave off: going on stage saves nothing
+        QDir(DocumentController::backupFolder()).removeRecursively();
     }
 
     // A setlist from before the .gigchain file type: saving it moves it to

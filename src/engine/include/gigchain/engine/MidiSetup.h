@@ -18,6 +18,7 @@ struct MidiSetup
     QStringList controls;              // inputs for their buttons and knobs only (never played)
     QStringList off;                   // inputs switched off (not even their buttons)
     std::map<QString, int> channels;   // per input: 0 = all channels, 1-16 = only that one
+    std::map<QString, VelocityCurve> velocity; // per input: its touch (not listed: Normal)
     bool configured = false;           // false: never chosen, use the default
     // MIDI clock: the output it is sent to (empty = not sent), and whether
     // the tempo follows a clock coming in (a drum machine or DAW leads).
@@ -60,6 +61,11 @@ struct MidiSetup
 // names them ("Impact GXP61", "MIDIIN2 (Impact GXP61)" on Windows; "... MIDI
 // In" / "... DAW In" on the Mac; "Dev:Dev MIDI 2 24:1" on Linux), lower case.
 [[nodiscard]] QString midiDeviceOf(const QString& port);
+
+// A note-on velocity (1-127) through `curve`: 1-127 again (a note played
+// never becomes silent). Light and Heavy bend it (x^0.6, x^1.6), keeping 1
+// and 127 where they are.
+[[nodiscard]] int curvedVelocity(int velocity, VelocityCurve curve);
 
 // Whether a channel message with this status byte passes an input's channel
 // filter (0 = all channels). Real-time safe.

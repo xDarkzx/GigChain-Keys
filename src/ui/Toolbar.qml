@@ -17,6 +17,7 @@ ToolBar {
     required property bool mixerOpen
     property MixerLayout mixerLayout: null // where the mixer goes (its button's menu)
     property SustainPadsController sustainPads: null // Sustain Pads (its button's menu)
+    property SettingsController settings: null // the whole rig's transpose (its badge)
     required property bool keyboardOpen
     required property LoopController loops
 
@@ -587,6 +588,27 @@ ToolBar {
                 }
                 ToolTip.visible: tempoHover.hovered && !tempoInput.visible
                 ToolTip.text: qsTr("Tempo for arpeggiators, delays and the click: click to type one. Songs can have their own (right-click a song).")
+            }
+            // The whole rig transposed (Settings > General): never forgotten on.
+            // Click: back to 0. Right-click: a semitone up or down.
+            StageButton {
+                id: transposeBadge
+                objectName: "transposeBadge"
+                visible: bar.settings !== null && bar.settings.globalTranspose !== 0
+                text: bar.settings ? qsTr("Transpose %1%2").arg(bar.settings.globalTranspose > 0 ? "+" : "").arg(bar.settings.globalTranspose) : ""
+                tone: "accent"
+                tip: qsTr("Every keyboard is transposed. Click to turn it off; right-click to move it a semitone.")
+                onClicked: bar.settings.globalTranspose = 0
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: transposeMenu.popup(transposeBadge, 0, transposeBadge.height)
+                }
+                StageMenu {
+                    id: transposeMenu
+                    StageMenuItem { text: qsTr("Up a semitone"); onTriggered: bar.settings.globalTranspose += 1 }
+                    StageMenuItem { text: qsTr("Down a semitone"); onTriggered: bar.settings.globalTranspose -= 1 }
+                    StageMenuItem { text: qsTr("Off"); onTriggered: bar.settings.globalTranspose = 0 }
+                }
             }
             StageButton {
                 id: tapButton

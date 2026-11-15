@@ -28,6 +28,10 @@ struct RealEngineOptions
     // plugin also installed in pluginFolder (same name and maker) is taken
     // from there. Empty: none.
     QString bundledPluginFolder;
+    // The user's own plugin folders (Settings > Plugins), looked in for VST3
+    // and VST2 plugins after the standard ones. One that is missing, or a
+    // whole drive, is left out (logged).
+    QStringList userPluginFolders;
     QString pluginCacheFile;   // what the plugin scan learned; empty: open every plugin
     QString pluginGuardFolder; // remembers plugins that crashed the app while loading; empty: off
     // The plugin scanner program: new plugins are read in a process of their
