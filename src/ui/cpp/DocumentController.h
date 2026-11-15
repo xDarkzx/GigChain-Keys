@@ -556,9 +556,12 @@ private:
     bool m_performing = false;
     QString m_autosaveFailedFor; // the file an autosave failed on (paused for it until a save works)
     void autosave();
-    // A copy of `file` (about to be replaced) into backupFolder(), the oldest
-    // beyond kBackupsKept removed. A problem is logged and said (the save goes on).
-    void backUp(const QString& file);
+    // A copy of `file` (about to be replaced) into its folder in
+    // backupFolder(); returns that folder (empty when it could not be kept:
+    // the problem, with its cause, logged and said; the save goes on).
+    QString backUp(const QString& file);
+    // The oldest backups in `folder` beyond kBackupsKept removed (after a save succeeded).
+    static void pruneBackups(const QString& folder);
     // Undo history: each step is the setlist and position before an edit.
     std::vector<UndoStep> m_undo;
     std::vector<UndoStep> m_redo;

@@ -74,6 +74,8 @@ class SettingsController : public QObject
     // MIDI: what middle C (note 60) is called, C4 or C3 (Yamaha's, MainStage's
     // option). Display only, taken at once.
     Q_PROPERTY(int middleCOctave READ middleCOctave WRITE setMiddleCOctave NOTIFY middleCChanged)
+    // Asking once for a GitHub star: due from the 5th start on, until asked.
+    Q_PROPERTY(bool starAskDue READ starAskDue NOTIFY starAskChanged)
     // Audio: dropouts told on screen (once a minute at most), not only logged.
     Q_PROPERTY(bool dropoutWarnings READ dropoutWarnings WRITE setDropoutWarnings NOTIFY changed)
     // The Perform view's chart size (A−/A+): kept at once (not with Apply),
@@ -150,6 +152,11 @@ public:
     void setTuningHz(double hz);
     [[nodiscard]] int globalTranspose() const { return m_globalTranspose; }
     void setGlobalTranspose(int semitones);
+    // One more start (main.cpp, once a run).
+    static void countStart(QSettings& settings);
+    [[nodiscard]] bool starAskDue() const;
+    // The star was asked for: never again.
+    Q_INVOKABLE void starAsked();
     [[nodiscard]] bool silencePreviousPatch() const { return m_silencePrevious; }
     void setSilencePreviousPatch(bool silence);
     [[nodiscard]] int middleCOctave() const;
@@ -250,9 +257,12 @@ signals:
     void pluginsChanged();
     void globalTransposeChanged();
     void middleCChanged();
+    void starAskChanged();
 
 private:
     [[nodiscard]] const engine::AudioOutput* chosenOutput() const;
+    // Saves the settings now; empty, or why they could not be (logged, and in `error`).
+    QString keptOrWhyNot();
     void keepRateValid();
     [[nodiscard]] engine::MidiSetup pendingMidi() const;
     static void saveMidi(QSettings& settings, const engine::MidiSetup& midi);

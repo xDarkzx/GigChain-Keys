@@ -590,19 +590,15 @@ ToolBar {
                 ToolTip.text: qsTr("Tempo for arpeggiators, delays and the click: click to type one. Songs can have their own (right-click a song).")
             }
             // The whole rig transposed (Settings > General): never forgotten on.
-            // Click: back to 0. Right-click: a semitone up or down.
+            // A click opens its menu (a stray click mid-song never changes key).
             StageButton {
                 id: transposeBadge
                 objectName: "transposeBadge"
                 visible: bar.settings !== null && bar.settings.globalTranspose !== 0
                 text: bar.settings ? qsTr("Transpose %1%2").arg(bar.settings.globalTranspose > 0 ? "+" : "").arg(bar.settings.globalTranspose) : ""
                 tone: "accent"
-                tip: qsTr("Every keyboard is transposed. Click to turn it off; right-click to move it a semitone.")
-                onClicked: bar.settings.globalTranspose = 0
-                TapHandler {
-                    acceptedButtons: Qt.RightButton
-                    onTapped: transposeMenu.popup(transposeBadge, 0, transposeBadge.height)
-                }
+                tip: qsTr("Every keyboard is transposed. Click to change it or turn it off.")
+                onClicked: transposeMenu.popup(transposeBadge, 0, transposeBadge.height)
                 StageMenu {
                     id: transposeMenu
                     StageMenuItem { text: qsTr("Up a semitone"); onTriggered: bar.settings.globalTranspose += 1 }
@@ -929,6 +925,11 @@ ToolBar {
                     objectName: "freeInstrumentsItem"
                     text: qsTr("Get free instruments…")
                     onTriggered: bar.freeInstrumentsRequested()
+                }
+                StageMenuItem {
+                    objectName: "starItem"
+                    text: qsTr("⭐ Star %1 on GitHub").arg(Branding.name)
+                    onTriggered: Qt.openUrlExternally(Branding.website)
                 }
                 StageMenuItem { text: qsTr("About %1").arg(Branding.name); onTriggered: bar.aboutRequested() }
             }

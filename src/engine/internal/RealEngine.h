@@ -356,7 +356,7 @@ private:
     std::array<MidiEvent, kMaxEventsPerBlock> m_events{};
     std::atomic<int> m_globalTranspose{0};   // main thread -> audio thread (setGlobalTranspose)
     bool m_silencePrevious = false;          // main thread: no tails at a patch change
-    std::array<int8_t, 128> m_heldTranspose{}; // audio thread: the shift each key was pressed with
+    std::array<std::array<int8_t, 128>, 16> m_heldTranspose{}; // audio thread: the shift each key (per MIDI channel) was pressed with
 
     std::atomic<float> m_masterGain{1.0F};
     // What left the app (after the master fader): peak since masterLevel()

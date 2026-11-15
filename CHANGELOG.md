@@ -20,7 +20,7 @@ Downloads for every version are on the
   own instruments, to play with a piano or a recording that isn't at 440.
 - **Transpose everything** (Settings > General): every keyboard moves
   together, even mid-song; a badge in the toolbar shows it while it is on
-  (click it to turn it off).
+  (click it to change it or turn it off).
 - **Autosave and backups** (Settings > General): a changed setlist is saved
   by itself every few minutes, never while you perform (going into Perform
   saves it first), and every save keeps the version before it (the last 10).
@@ -31,6 +31,8 @@ Downloads for every version are on the
 - **Dropout warnings** (Settings > Audio): when the audio clicks or drops
   out you are told, with what usually fixes it.
 - **Middle C as C3 or C4** (Settings > MIDI).
+- **⭐ Star on GitHub** in Help and About, and one friendly ask, once ever
+  (never while you perform).
 
 ### Changed
 

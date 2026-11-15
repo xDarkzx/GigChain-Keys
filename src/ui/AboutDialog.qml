@@ -82,6 +82,12 @@ StageDialog {
                 tip: Branding.website
                 onClicked: Qt.openUrlExternally(Branding.website)
             }
+            StageButton {
+                objectName: "aboutStar"
+                text: qsTr("⭐ Star on GitHub")
+                tip: qsTr("Free forever: a star is how you say thanks, and how other players find it")
+                onClicked: Qt.openUrlExternally(Branding.website)
+            }
             Item { Layout.fillWidth: true }
             StageButton {
                 objectName: "aboutClose"

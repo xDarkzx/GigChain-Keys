@@ -47,7 +47,9 @@ QStringList usableUserFolders(const QStringList& folders)
             qCWarning(lcEngine).noquote() << "Plugin folder not found, left out:" << QDir::toNativeSeparators(folder);
             continue;
         }
-        if (QDir(clean).isRoot()) {
+        // Where it really is (a link or junction to a drive is that drive).
+        const QString real = QFileInfo(clean).canonicalFilePath();
+        if (QDir(clean).isRoot() || real.isEmpty() || QDir(real).isRoot()) {
             qCWarning(lcEngine).noquote() << "A whole drive is not looked in for plugins, left out:" << QDir::toNativeSeparators(clean);
             continue;
         }
@@ -812,8 +814,12 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
 
     // Instruments leaving the sound (and not ringing out) release their
     // notes, so they do not hang when the patch comes back.
+    // Silencing the previous patch: every note it held stops, also on an
+    // instrument the new patch plays too (only new notes sound).
     for (const auto& [key, node] : m_nodes) {
-        if ((used.count(node.get()) == 0 && !ringing.contains(node.get())) || releasing.contains(node.get())) node->releaseAllNotes();
+        if (m_silencePrevious || (used.count(node.get()) == 0 && !ringing.contains(node.get())) || releasing.contains(node.get())) {
+            node->releaseAllNotes();
+        }
     }
     auto next = std::make_shared<RenderGraph>(std::move(specs), m_audio.sampleRate(), m_audio.maxBlock(), busNodes(m_master),
                                               std::move(tails), busNodes(m_aux));
@@ -2268,7 +2274,7 @@ void RealEngine::render(AudioBlock out, const AudioInputs& inputs) noexcept
     const auto shift = static_cast<int8_t>(m_globalTranspose.load(std::memory_order_relaxed));
     for (MidiEvent& e : std::span<MidiEvent>(m_events.data(), count)) {
         const int type = e.status & 0xF0;
-        int8_t& held = m_heldTranspose.at(e.data1 & 0x7F);
+        int8_t& held = m_heldTranspose.at(e.status & 0x0F).at(e.data1 & 0x7F); // (per MIDI channel and key)
         if (type == 0x90 && e.data2 > 0) {
             held = shift;
             e.transpose = shift;

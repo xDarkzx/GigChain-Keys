@@ -469,6 +469,57 @@ ApplicationWindow {
     }
     FreeInstrumentsDialog { id: freeInstrumentsDialog }
 
+    // Asking for a GitHub star, once ever: from the 5th start, a minute in,
+    // never while performing or practising (it waits until they are done).
+    Timer {
+        interval: 60000
+        repeat: true
+        running: root.settings.starAskDue && root.visible
+        onTriggered: {
+            if (root.performMode || root.practiceMode || aboutDialog.visible) return
+            root.settings.starAsked()
+            starAsk.open()
+        }
+    }
+    StageDialog {
+        id: starAsk
+        objectName: "starAsk"
+        title: qsTr("Enjoying %1?").arg(Branding.name)
+        width: 460
+        ColumnLayout {
+            width: starAsk.width
+            spacing: Theme.spacing
+            Label {
+                Layout.fillWidth: true
+                Layout.margins: Theme.spacingLarge
+                wrapMode: Text.Wrap
+                text: qsTr("%1 is free and always will be: no ads, no account. If it helps your gigs, a ⭐ star on "
+                           + "GitHub is how you say thanks, and it is what helps other keyboard players find it.\n\n"
+                           + "We won't ask again.").arg(Branding.name)
+                color: Theme.text
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.margins: Theme.spacingLarge
+                spacing: Theme.spacing
+                Item { Layout.fillWidth: true }
+                StageButton {
+                    text: qsTr("Not now")
+                    onClicked: starAsk.close()
+                }
+                StageButton {
+                    objectName: "starAskYes"
+                    text: qsTr("⭐ Star it on GitHub")
+                    tone: "accent"
+                    onClicked: {
+                        Qt.openUrlExternally(Branding.website)
+                        starAsk.close()
+                    }
+                }
+            }
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -524,7 +575,7 @@ ApplicationWindow {
                         onOpenRecentRequested: (path) => root.openRecent(path)
                         // Plugin windows sit above Qt content: hide them while a dialog is up.
                         suspended: settingsDialog.visible || unsavedDialog.visible || zoneDialog.visible || knobDialog.visible
-                                   || loopControlsDialog.visible || aboutDialog.visible || freeInstrumentsDialog.visible
+                                   || loopControlsDialog.visible || aboutDialog.visible || freeInstrumentsDialog.visible || starAsk.visible
                     }
                     PanelBar {
                         id: editPanelBar

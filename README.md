@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://github.com/xDarkzx/GigChain-Keys/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/xDarkzx/GigChain-Keys?include_prereleases&label=download&color=4a8fe7"></a>
   <a href="https://github.com/xDarkzx/GigChain-Keys/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/xDarkzx/GigChain-Keys/total?color=3fb950"></a>
+  <a href="https://github.com/xDarkzx/GigChain-Keys/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/xDarkzx/GigChain-Keys?style=flat&logo=github&label=%E2%AD%90%20star&color=e3b341"></a>
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4">
   <img alt="macOS" src="https://img.shields.io/badge/macOS-Apple%20Silicon-555">
   <img alt="Linux" src="https://img.shields.io/badge/Linux-AppImage%20%7C%20.deb-f0a30a">
@@ -25,6 +26,10 @@
   <a href="https://discord.gg/BGn8Ujh37m"><b>Discord</b></a> ·
   <a href="https://github.com/sponsors/xDarkzx"><b>♥ Sponsor</b></a>
 </p>
+
+> **Free forever, no ads, no account.** If GigChain Keys helps your gigs, a
+> ⭐ **star** (top right of this page) is how you say thanks: it's what helps
+> other keyboard players find it.
 
 ---
 

@@ -106,7 +106,8 @@ signals:
     void menusChanged();
 
 private:
-    void applyFilter();
+    void applyFilter();    // m_visible again, the views reset around it
+    void rebuildVisible(); // m_visible from m_all and the filters (the caller resets the views)
 
     const OfficialArtwork& m_artwork; // not owned (the Session's)
     std::vector<engine::PluginInfo> m_all;

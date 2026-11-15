@@ -174,7 +174,7 @@ StageDialog {
                                 editable: true
                                 value: Math.round(dialog.settings.tuningHz * 10)
                                 textFromValue: (v) => qsTr("%1 Hz").arg((v / 10).toFixed(1))
-                                valueFromText: (text) => Math.round(parseFloat(text) * 10)
+                                valueFromText: (text) => Math.round(parseFloat(text.replace(",", ".")) * 10) // ("442,5": a decimal comma)
                                 validator: RegularExpressionValidator { regularExpression: /\d{3}([.,]\d)?( ?Hz)?/ }
                                 onValueModified: dialog.settings.tuningHz = value / 10
                             }
@@ -673,7 +673,7 @@ StageDialog {
                                         required property int index
                                         objectName: "pluginFolder" + index
                                         width: folderColumn.width
-                                        height: 34
+                                        height: 44 // (Remove: a target a finger hits on a touch screen)
                                         color: folderHover.hovered ? Theme.listRowHover
                                              : (index % 2 === 0 ? Theme.listRowEven : Theme.listRowOdd)
                                         HoverHandler { id: folderHover }

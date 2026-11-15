@@ -19,6 +19,8 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
+#include <algorithm>
+
 #include <memory>
 
 using namespace gigchain;
@@ -281,9 +283,28 @@ private slots:
         QVERIFY(folders.first().startsWith(u"gig ("_s));
         const QDir kept(DocumentController::backupFolder() + u'/' + folders.first());
         QCOMPARE(kept.entryList(QDir::Files).size(), 1);
+        // Two saves within the same second each keep their own.
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->save());
+        QCOMPARE(kept.entryList(QDir::Files).size(), 2);
         // The backup is the setlist as it was: one song, not two.
-        QVERIFY(m_doc->open(kept.filePath(kept.entryList(QDir::Files).first())));
+        QVERIFY(m_doc->open(kept.filePath(kept.entryList(QDir::Files, QDir::Name).first())));
         QCOMPARE(m_doc->setlist().songs.size(), std::size_t{1});
+        QDir(DocumentController::backupFolder()).removeRecursively();
+    }
+
+    // A setlist from before the .gigchain type is moved to the new name on
+    // save (the old file goes): it is backed up first.
+    void anOlderSetlistIsBackedUpBeforeItGoes()
+    {
+        QDir(DocumentController::backupFolder()).removeRecursively();
+        QVERIFY(m_doc->saveAs(path(u"old.gigchain.json"_s)));
+        QVERIFY(m_doc->addSong());
+        QVERIFY(m_doc->save());
+        QVERIFY(!QFile::exists(path(u"old.gigchain.json"_s)));
+        const QStringList folders = QDir(DocumentController::backupFolder()).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        QVERIFY2(std::ranges::any_of(folders, [](const QString& f) { return f.startsWith(u"old.gigchain ("_s); }),
+                 qPrintable(folders.join(u", "_s)));
         QDir(DocumentController::backupFolder()).removeRecursively();
     }
 

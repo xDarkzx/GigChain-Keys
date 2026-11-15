@@ -467,12 +467,26 @@ private slots:
         for (int i = 0; i < padTypeCount(); ++i) {
             // Each pad's share: sixteen notes, and one (the rest of its
             // share is its effects, the same whatever is played).
+            // The best of three timings where the limits are checked: the
+            // others include whatever else the computer was doing (a shared
+            // build machine is never quiet). One where it only reports (a
+            // debug or AddressSanitizer build is many times slower: three
+            // would pass the test's time limit).
+#if defined(NDEBUG) && !defined(__SANITIZE_ADDRESS__)
+            constexpr int kRuns = 3;
+#else
+            constexpr int kRuns = 1;
+#endif
             const auto shareOf = [i](const std::vector<int>& notes) {
-                auto synth = padOf(i);
-                QElapsedTimer timer;
-                timer.start();
-                (void)play(*synth, notes, 4.0);
-                return static_cast<double>(timer.nsecsElapsed()) / 4.0e9;
+                double best = 1.0e9;
+                for (int run = 0; run < kRuns; ++run) {
+                    auto synth = padOf(i);
+                    QElapsedTimer timer;
+                    timer.start();
+                    (void)play(*synth, notes, 4.0);
+                    best = std::min(best, static_cast<double>(timer.nsecsElapsed()) / 4.0e9);
+                }
+                return best;
             };
             const double share = shareOf(keys);
             const double one = shareOf({60});

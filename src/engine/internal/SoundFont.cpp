@@ -501,9 +501,10 @@ void Synth::handle(const MidiEvent& e)
     switch (type) {
     case 0x90:
         if (d2 > 0) {
-            // The app's tuning (Settings > General), when it changed: on the
-            // channel, so held notes move with it as new ones play at it.
-            if (const double cents = tuning::cents(); cents != m_tuningCents) {
+            // The app's tuning (Settings > General), on the channel before
+            // every note: a controller reset or a new preset (which clear the
+            // channel's settings) never leaves a note out of tune.
+            if (const double cents = tuning::cents(); cents != 0.0 || m_tuningCents != 0.0) {
                 m_tuningCents = cents;
                 fluid_synth_set_gen(m_synth, 0, GEN_FINETUNE, static_cast<float>(cents));
             }

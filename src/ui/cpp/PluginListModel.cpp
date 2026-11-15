@@ -39,6 +39,8 @@ PluginListModel::PluginListModel(const engine::IEngine& engine, const OfficialAr
 
 void PluginListModel::reload(const engine::IEngine& engine)
 {
+    // The views are told before anything they read changes.
+    beginResetModel();
     m_all = engine.availablePlugins();
     std::ranges::stable_sort(m_all, [](const engine::PluginInfo& a, const engine::PluginInfo& b) {
         if (a.kind != b.kind) return a.kind == engine::PluginKind::Instrument;
@@ -53,7 +55,8 @@ void PluginListModel::reload(const engine::IEngine& engine)
         m_images.push_back(art.banner.isEmpty() ? QString() : QUrl::fromLocalFile(art.banner).toString());
         m_icons.push_back(PluginIconProvider::url(art.icon));
     }
-    applyFilter();
+    rebuildVisible();
+    endResetModel();
     emit menusChanged();
 }
 
@@ -276,6 +279,12 @@ QVariantMap PluginListModel::findInstrument(const QString& text) const
 void PluginListModel::applyFilter()
 {
     beginResetModel();
+    rebuildVisible();
+    endResetModel();
+}
+
+void PluginListModel::rebuildVisible()
+{
     m_visible.clear();
     const QString needle = m_filterText.trimmed();
     for (std::size_t i = 0; i < m_all.size(); ++i) {
@@ -289,7 +298,6 @@ void PluginListModel::applyFilter()
     }
     // Favourites first, each group keeping its order.
     std::ranges::stable_partition(m_visible, [this](std::size_t i) { return m_favorites.contains(m_all.at(i).id); });
-    endResetModel();
 }
 
 } // namespace gigchain::ui
