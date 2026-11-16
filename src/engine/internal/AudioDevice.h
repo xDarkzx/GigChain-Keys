@@ -188,7 +188,10 @@ private:
     std::atomic<bool> m_disconnectReported{false}; // (for close: JACK is closing the stream itself)
     std::atomic<uint64_t> m_underflows{0};
     // Main thread (poll): dropouts not told yet, and when they last were.
-    bool m_tellDropouts = true;
+    // Off until the app's settings say (on by default there): an engine run
+    // without them (tests, on build machines whose virtual audio drops out)
+    // only logs dropouts, as before.
+    bool m_tellDropouts = false;
     uint64_t m_untoldDropouts = 0;
     std::optional<std::chrono::steady_clock::time_point> m_droppedToldAt;
     std::mutex m_errorMutex;           // guards m_errors (RtAudio may report from its own threads)
