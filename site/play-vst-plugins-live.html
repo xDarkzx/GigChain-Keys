@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to Play VST Plugins Live Without a DAW (Free) | GigChain Keys</title>
+<meta name="description" content="Play Kontakt, Arturia, Spitfire LABS, Surge XT, Vital and any VST3 or VST2 plugin live on stage from your MIDI keyboard, without a DAW: low latency, sounds per song, one press to change. Free.">
+<link rel="canonical" href="https://xdarkzx.github.io/GigChain-Keys/play-vst-plugins-live.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How to play VST plugins live without a DAW">
+<meta property="og:description" content="Your plugins on stage from your MIDI keyboard: low latency, sounds per song, one press to change. Free.">
+<meta property="og:url" content="https://xdarkzx.github.io/GigChain-Keys/play-vst-plugins-live.html">
+<meta property="og:image" content="https://xdarkzx.github.io/GigChain-Keys/images/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="images/app-icon.png">
+<link rel="stylesheet" href="guide.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "HowTo",
+      "name": "How to play VST plugins live without a DAW",
+      "image": "https://xdarkzx.github.io/GigChain-Keys/images/perform.png",
+      "tool": [{ "@type": "HowToTool", "name": "A MIDI keyboard" }, { "@type": "HowToTool", "name": "GigChain Keys (free)" }],
+      "step": [
+        { "@type": "HowToStep", "name": "Install a live VST host", "text": "Download and install GigChain Keys for Windows, Mac or Linux." },
+        { "@type": "HowToStep", "name": "Choose low-latency audio", "text": "Pick your audio interface's ASIO driver on Windows (or Core Audio on Mac, JACK or PipeWire on Linux) and a buffer of 128 or 256 samples." },
+        { "@type": "HowToStep", "name": "Scan your plugins", "text": "Let it scan your VST3 and VST2 folders, or add your own folders in Settings." },
+        { "@type": "HowToStep", "name": "Make a song and add sounds", "text": "Add a song, add your plugins to it as sounds, and layer or split them across the keyboard." },
+        { "@type": "HowToStep", "name": "Play in Perform mode", "text": "Switch to Perform mode and change sounds with one press of a pad, footswitch or key." }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "GigChain Keys", "item": "https://xdarkzx.github.io/GigChain-Keys/" },
+        { "@type": "ListItem", "position": 2, "name": "Play VST plugins live" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="./"><img src="images/app-icon.png" alt="" width="28" height="28">GigChain Keys</a>
+    <nav>
+      <a href="./#features" class="hide-small">Features</a>
+      <a href="./#download">Download</a>
+      <a href="https://github.com/xDarkzx/GigChain-Keys">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+<article>
+  <p class="crumb"><a href="./">GigChain Keys</a> › Guides</p>
+  <h1>How to play VST plugins live without a DAW</h1>
+  <p class="lead">A DAW is built for recording: timelines, tracks, arm buttons. On stage you just want to press a key and hear your sound, then press one button and hear the next song's. A live VST host does exactly that, with less to go wrong.</p>
+
+  <h2>Why not just use your DAW on stage?</h2>
+  <ul>
+    <li><strong>Changing sounds is slow</strong>: selecting tracks and arming them mid-song is fiddly with one hand.</li>
+    <li><strong>Every sound is always loaded and running</strong>, so the computer works harder and latency goes up.</li>
+    <li><strong>One wrong click</strong> (record, a moved region, a closed window) can stop the sound in the middle of a song.</li>
+  </ul>
+  <p>A live host loads each song's sounds, switches between them with no gap, and shows a big, simple screen you can read from a stand.</p>
+
+  <h2>Step by step</h2>
+  <h3>1. Install a live VST host</h3>
+  <p>This guide uses <a href="./">GigChain Keys</a>: free and open source, on Windows, Mac and Linux. Get it from the <a href="./#download">download page</a>.</p>
+
+  <h3>2. Choose low-latency audio</h3>
+  <p>Latency is the delay between pressing a key and hearing it. Under about 10 ms feels instant.</p>
+  <ul>
+    <li><strong>Windows:</strong> use your audio interface's <strong>ASIO</strong> driver if you have one. Without an interface, the normal Windows output works for practice.</li>
+    <li><strong>Mac:</strong> Core Audio works well out of the box.</li>
+    <li><strong>Linux:</strong> JACK or PipeWire.</li>
+    <li><strong>Buffer size:</strong> start at 256 samples; try 128 if your computer copes without crackles.</li>
+  </ul>
+
+  <h3>3. Scan your plugins</h3>
+  <p>GigChain Keys finds VST3 and VST2 plugins in the usual folders, and you can add your own folders and rescan in Settings. Popular choices that work well live:</p>
+  <ul>
+    <li><strong>Free:</strong> Spitfire LABS, Surge XT, Vital, Dexed, Decent Sampler (and Pianobook instruments), Arturia's free Analog Lab Intro.</li>
+    <li><strong>Paid:</strong> Kontakt, Arturia V Collection and Analog Lab, Keyscape, Omnisphere, Pianoteq.</li>
+  </ul>
+  <p>No plugins at all? GigChain Keys comes with its own grand and electric pianos, a supersaw synth, pads and a SoundFont player.</p>
+
+  <h3>4. Make a song and add its sounds</h3>
+  <p>Add a song, then add sounds to it. Put two on together to <strong>layer</strong> them (piano plus pad), or give each a key range to <strong>split</strong> the keyboard (bass on the left, piano on the right). Each song keeps its own sounds, volumes and effects.</p>
+
+  <h3>5. Play in Perform mode</h3>
+  <img src="images/perform.png" alt="GigChain Keys Perform mode: the song's sounds and chord chart, large for the stage" width="800" height="800" loading="lazy">
+  <p>Perform mode shows the song, its sounds and its chord chart large enough to read on stage. Move to the next sound or song with a pad, footswitch, key, or a tap on the screen. The sound you're holding keeps ringing while the next one comes in.</p>
+
+  <div class="cta">
+    <p>Your plugins on stage, free. Windows, Mac and Linux.</p>
+    <a class="btn" href="./#download">Download GigChain Keys</a>
+  </div>
+
+  <h2>Tips for the gig</h2>
+  <ul>
+    <li><strong>Turn off Wi-Fi and updates</strong> during the show, and plug the laptop in.</li>
+    <li><strong>Use the Windows "High performance" power plan</strong> so the CPU doesn't slow down mid-song.</li>
+    <li><strong>Heavy sample libraries</strong> (big Kontakt pianos) load faster from an SSD.</li>
+    <li><strong>Rehearse the changes</strong>: run the setlist in Perform mode once before the gig.</li>
+  </ul>
+
+  <h2>More guides</h2>
+  <div class="related">
+    <a href="mainstage-for-windows.html">MainStage for Windows?<span>What Windows players use instead</span></a>
+    <a href="free-mainstage-alternatives.html">Free MainStage alternatives<span>Every free option, compared</span></a>
+  </div>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>GigChain Keys is free software under the GNU GPL, version 3 or later.</p>
+    <p>MainStage is a trademark of Apple Inc. VST is a registered trademark of Steinberg Media Technologies GmbH. Other names belong to their owners. GigChain Keys is not affiliated with them.</p>
+  </div>
+</footer>
+</body>
+</html>
