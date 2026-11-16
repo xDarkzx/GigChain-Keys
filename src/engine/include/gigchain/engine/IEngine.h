@@ -203,7 +203,8 @@ public:
     // silence previous patch"), from the next patch change on.
     virtual void setSilencePreviousPatch(bool silence) = 0;
     // Dropouts (clicks or gaps when the computer is late with the audio) are
-    // said through poll(), at most once a minute (on by default); off: only logged.
+    // said through poll(), at most once a minute; off (until set: the app's
+    // Settings turn it on, by default): only logged.
     virtual void setDropoutWarnings(bool on) = 0;
     // The app's own instruments' tuning (MainStage's Tuning preference): A4
     // in Hz, 440 unless set; within 100 cents of 440 (else clamped). Notes
