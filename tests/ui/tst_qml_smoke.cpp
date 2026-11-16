@@ -529,6 +529,10 @@ private slots:
     {
         m_dir = std::make_unique<QTemporaryDir>();
         m_settings = std::make_unique<QSettings>(m_dir->filePath(u"s.ini"_s), QSettings::IniFormat);
+        // As a player who has seen the welcome and this version's news: no window
+        // pops up in the middle of a test (tst_community checks when they are due).
+        m_settings->setValue(u"community/welcomed"_s, true);
+        m_settings->setValue(u"community/lastVersion"_s, branding::version());
         m_engine = engine::createFakeEngine();
         m_session = std::make_unique<ui::Session>(*m_engine, *m_settings);
         m_session->document().newSetlist();

@@ -107,10 +107,6 @@ const QString kGlobalTransposeKey = u"general/transpose"_s;
 const QString kStartInPerformKey = u"general/startInPerform"_s;
 // General: at a patch change, the old patch stops at once instead of ringing out.
 const QString kSilencePreviousKey = u"general/silencePreviousPatch"_s;
-// How many times the app has started, and whether a star was asked for (once, ever).
-const QString kStartsKey = u"session/starts"_s;
-const QString kStarAskedKey = u"session/starAsked"_s;
-constexpr int kStartsBeforeAsking = 5;
 // MIDI: middle C named C3 instead of C4 (display only).
 const QString kMiddleCKey = u"midi/middleCOctave"_s;
 // Audio: dropouts told to the player (MainStage's overload message), not only logged.
@@ -554,24 +550,6 @@ void SettingsController::rescanPlugins()
 QVariantList SettingsController::limiterCeilings()
 {
     return {-0.1, -0.3, -0.5, -1.0, -2.0, -3.0, -6.0};
-}
-
-void SettingsController::countStart(QSettings& settings)
-{
-    const int starts = settings.value(kStartsKey, 0).toInt();
-    if (starts < kStartsBeforeAsking) settings.setValue(kStartsKey, starts + 1); // (counting stops where it matters)
-}
-
-bool SettingsController::starAskDue() const
-{
-    return m_settings.value(kStartsKey, 0).toInt() >= kStartsBeforeAsking && !m_settings.value(kStarAskedKey, false).toBool();
-}
-
-void SettingsController::starAsked()
-{
-    if (!starAskDue()) return;
-    m_settings.setValue(kStarAskedKey, true);
-    emit starAskChanged();
 }
 
 int SettingsController::middleCOctave() const

@@ -9,6 +9,7 @@ StageDialog {
     objectName: "aboutDialog"
 
     signal guideRequested()
+    signal supportRequested()
 
     title: qsTr("About %1").arg(Branding.name)
     width: 600
@@ -83,15 +84,13 @@ StageDialog {
                 onClicked: Qt.openUrlExternally(Branding.website)
             }
             StageButton {
-                objectName: "aboutStar"
+                objectName: "aboutSupport"
                 Layout.preferredHeight: Theme.touchTarget
-                text: qsTr("⭐ Star on GitHub")
-                tip: qsTr("Free forever: a star is how you say thanks, and how other players find it")
+                text: qsTr("♥ Support…")
+                tip: qsTr("Star it, join the Discord, sponsor it: every way to help")
                 onClicked: {
-                    if (!Qt.openUrlExternally(Branding.website)) {
-                        console.warn("Could not open " + Branding.website + " in the browser")
-                        tip = qsTr("Could not open the browser: the page is %1").arg(Branding.website)
-                    }
+                    about.close()
+                    about.supportRequested()
                 }
             }
             Item { Layout.fillWidth: true }
