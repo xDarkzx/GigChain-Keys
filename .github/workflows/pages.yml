@@ -31,7 +31,7 @@ jobs:
       - name: Put the page together
         run: |
           mkdir -p _site/images
-          cp site/*.html site/*.css site/sitemap.xml site/robots.txt _site/
+          cp site/*.html site/*.css site/*.txt site/sitemap.xml _site/
           cp site/images/* _site/images/
           cp docs/images/edit.png docs/images/perform.png docs/images/practice.png _site/images/
           cp branding/app-icon.png _site/images/
