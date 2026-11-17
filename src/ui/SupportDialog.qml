@@ -33,58 +33,77 @@ StageDialog {
     }
 
     ColumnLayout {
+        // No taller than the window (less the title bar and a margin): the
+        // ways to help scroll, the buttons at the bottom always show.
         width: support.width
-        spacing: Theme.spacing
+        height: Math.min(implicitHeight, (support.parent ? support.parent.height : 720) - 44 - 32)
+        spacing: 0
 
-        Label {
+        ScrollView {
+            objectName: "supportScroll"
             Layout.fillWidth: true
-            Layout.margins: Theme.spacingLarge
-            Layout.bottomMargin: 0
-            wrapMode: Text.Wrap
-            color: Theme.text
-            text: support.mode === "perform"
-                  ? qsTr("%1 is free, with no ads and no account, and it's made by one keyboard player. If it helped you on stage, here's how you can help it grow:").arg(Branding.name)
-                  : support.mode === "month"
-                    ? qsTr("You've been playing %1 for a month. It's free, with no ads and no account, and it's made by one keyboard player. If it's earned a place in your rig, here's how you can help:").arg(Branding.name)
-                    : qsTr("%1 is free and always will be: no ads, no account, no subscription. It's made by one keyboard player, and every bit of help keeps it going:").arg(Branding.name)
-        }
-        Repeater {
-            model: [
-                { icon: "⭐", name: qsTr("Star it on GitHub"), why: qsTr("Takes a second, and helps other players find it."), url: Branding.website },
-                { icon: "💬", name: qsTr("Join the Discord"), why: qsTr("Show your rig, ask anything, suggest what's next."), url: support.community.discordUrl },
-                { icon: "▶", name: qsTr("Subscribe on YouTube"), why: qsTr("New features, and how to get the most from them."), url: support.community.videosUrl },
-                { icon: "♥", name: qsTr("Sponsor"), why: qsTr("Any amount helps keep it free for everyone."), url: support.community.sponsorUrl },
-                { icon: "💡", name: qsTr("Report a bug or an idea"), why: qsTr("What breaks and what's missing decides what comes next."), url: support.community.issuesUrl }
-            ]
-            delegate: RowLayout {
-                id: way
-                required property var modelData
-                Layout.fillWidth: true
-                Layout.leftMargin: Theme.spacingLarge
-                Layout.rightMargin: Theme.spacingLarge
-                spacing: 12
-                StageButton {
-                    Layout.preferredWidth: 210
-                    Layout.preferredHeight: Theme.touchTarget
-                    focusPolicy: Qt.TabFocus
-                    text: way.modelData.icon + "  " + way.modelData.name
-                    onClicked: support.openLink(way.modelData.url)
+            Layout.fillHeight: true
+            Layout.minimumHeight: 0
+            Layout.preferredHeight: ways.implicitHeight
+            contentWidth: availableWidth
+            clip: true
+
+            ColumnLayout {
+                id: ways
+                width: parent.width
+                spacing: Theme.spacing
+
+                Label {
+                    Layout.fillWidth: true
+                    Layout.margins: Theme.spacingLarge
+                    Layout.bottomMargin: 0
+                    wrapMode: Text.Wrap
+                    color: Theme.text
+                    text: support.mode === "perform"
+                          ? qsTr("%1 is free, with no ads and no account, and it's made by one keyboard player. If it helped you on stage, here's how you can help it grow:").arg(Branding.name)
+                          : support.mode === "month"
+                            ? qsTr("You've been playing %1 for a month. It's free, with no ads and no account, and it's made by one keyboard player. If it's earned a place in your rig, here's how you can help:").arg(Branding.name)
+                            : qsTr("%1 is free and always will be: no ads, no account, no subscription. It's made by one keyboard player, and every bit of help keeps it going:").arg(Branding.name)
+                }
+                Repeater {
+                    model: [
+                        { icon: "⭐", name: qsTr("Star it on GitHub"), why: qsTr("Takes a second, and helps other players find it."), url: Branding.website },
+                        { icon: "💬", name: qsTr("Join the Discord"), why: qsTr("Show your rig, ask anything, suggest what's next."), url: support.community.discordUrl },
+                        { icon: "▶", name: qsTr("Subscribe on YouTube"), why: qsTr("New features, and how to get the most from them."), url: support.community.videosUrl },
+                        { icon: "♥", name: qsTr("Sponsor"), why: qsTr("Any amount helps keep it free for everyone."), url: support.community.sponsorUrl },
+                        { icon: "💡", name: qsTr("Report a bug or an idea"), why: qsTr("What breaks and what's missing decides what comes next."), url: support.community.issuesUrl }
+                    ]
+                    delegate: RowLayout {
+                        id: way
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Theme.spacingLarge
+                        Layout.rightMargin: Theme.spacingLarge
+                        spacing: 12
+                        StageButton {
+                            Layout.preferredWidth: 210
+                            Layout.preferredHeight: Theme.touchTarget
+                            focusPolicy: Qt.TabFocus
+                            text: way.modelData.icon + "  " + way.modelData.name
+                            onClicked: support.openLink(way.modelData.url)
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            text: way.modelData.why
+                            color: Theme.textDim
+                        }
+                    }
                 }
                 Label {
                     Layout.fillWidth: true
+                    Layout.leftMargin: Theme.spacingLarge
+                    Layout.rightMargin: Theme.spacingLarge
                     wrapMode: Text.Wrap
-                    text: way.modelData.why
+                    text: qsTr("And tell another keys player about it: that's how most people find it.")
                     color: Theme.textDim
                 }
             }
-        }
-        Label {
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacingLarge
-            Layout.rightMargin: Theme.spacingLarge
-            wrapMode: Text.Wrap
-            text: qsTr("And tell another keys player about it: that's how most people find it.")
-            color: Theme.textDim
         }
         RowLayout {
             Layout.fillWidth: true
@@ -97,7 +116,8 @@ StageDialog {
                 focusPolicy: Qt.TabFocus
                 text: qsTr("Don't ask again")
                 onClicked: {
-                    support.community.neverAskAgain()
+                    const problem = support.community.neverAskAgain()
+                    if (problem !== "") support.doc.reportMessage(problem)
                     support.close()
                 }
             }

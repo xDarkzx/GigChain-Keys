@@ -129,16 +129,27 @@ QString CommunityController::issuesUrl()
     return branding::website() + u"/issues/new/choose"_s; // (the product's name only in branding.cmake)
 }
 
+core::Result<void> CommunityController::persist(const QString& what)
+{
+    m_settings.sync(); // (before status(): a delayed write's error shows)
+    if (m_settings.status() == QSettings::NoError) return {};
+    const QString problem = tr("%1 could not be saved (%2): it may come back after a restart").arg(what, m_settings.fileName());
+    qCWarning(lcUi).noquote() << "Community:" << problem;
+    return core::fail(core::ErrorCode::FileWriteFailed, problem);
+}
+
 void CommunityController::welcomeSeen()
 {
     m_settings.setValue(kWelcomedKey, true);
     m_settings.setValue(kLastVersionKey, m_version);
+    (void)persist(tr("The welcome being seen")); // (logged there; nothing for the player to do)
     if (std::exchange(m_welcomeDue, false)) emit changed();
 }
 
 void CommunityController::whatsNewSeen()
 {
     m_settings.setValue(kLastVersionKey, m_version);
+    (void)persist(tr("What's new being seen")); // (logged there)
     if (std::exchange(m_whatsNewDue, false)) emit changed();
 }
 
@@ -151,15 +162,17 @@ void CommunityController::supportAsked(const QString& reason)
     QStringList asked = m_settings.value(kAskedKey).toStringList();
     if (asked.contains(reason)) return;
     m_settings.setValue(kAskedKey, asked << reason);
-    qCInfo(lcUi).noquote() << "Community: asked for support (" << reason << ")";
+    if (persist(tr("The support ask being shown"))) qCInfo(lcUi).noquote() << "Community: asked for support (" << reason << ")";
     emit changed();
 }
 
-void CommunityController::neverAskAgain()
+QString CommunityController::neverAskAgain()
 {
     m_settings.setValue(kNeverAskKey, true);
-    qCInfo(lcUi) << "Community: never asked for support again";
-    emit changed();
+    const core::Result<void> saved = persist(tr("Don't ask again"));
+    if (saved) qCInfo(lcUi) << "Community: never asked for support again";
+    emit changed(); // (no more asks this run, saved or not)
+    return saved ? QString() : saved.error().message;
 }
 
 void CommunityController::performing(bool on)
@@ -178,6 +191,7 @@ void CommunityController::addPerformTime(qint64 milliseconds)
     if (milliseconds <= 0) return;
     const QString before = supportAskDue();
     m_settings.setValue(kPerformTimeKey, m_settings.value(kPerformTimeKey, 0).toLongLong() + milliseconds);
+    (void)persist(tr("The time spent performing")); // (logged there)
     if (supportAskDue() != before) emit changed();
 }
 

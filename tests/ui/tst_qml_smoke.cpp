@@ -586,6 +586,28 @@ private slots:
         QVERIFY(!dialog->property("visible").toBool());
     }
 
+    // In a short window the support ask's ways to help scroll, and its
+    // buttons stay on screen (a touch screen has no other way to them).
+    void theSupportAskFitsAShortWindow()
+    {
+        QQuickWindow* w = window();
+        w->resize(900, 400);
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        auto* dialog = w->findChild<QObject*>(u"supportDialog"_s);
+        QVERIFY(dialog != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "openAs", Q_ARG(QVariant, u"month"_s)));
+        settle();
+        for (const QString& name : {u"supportNever"_s, u"supportClose"_s}) {
+            QQuickItem* button = item(name);
+            QVERIFY2(button != nullptr && button->isVisible(), qPrintable(name));
+            const QRectF onScreen = button->mapRectToScene(QRectF(0, 0, button->width(), button->height()));
+            QVERIFY2(onScreen.top() >= 0 && onScreen.bottom() <= w->height(),
+                     qPrintable(u"%1 at %2-%3 in a %4 px window"_s.arg(name).arg(onScreen.top()).arg(onScreen.bottom()).arg(w->height())));
+        }
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        settle();
+    }
+
     void performModeToggles()
     {
         QObject* root = m_qml->rootObjects().value(0);

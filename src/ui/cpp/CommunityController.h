@@ -75,8 +75,9 @@ public:
     Q_INVOKABLE void whatsNewSeen();
     // The ask for `reason` was shown (never again for it).
     Q_INVOKABLE void supportAsked(const QString& reason);
-    // "Don't ask again": no more asks, ever.
-    Q_INVOKABLE void neverAskAgain();
+    // "Don't ask again": no more asks, ever. Returns why it could not be
+    // saved ("" when it was), for the window to say.
+    Q_INVOKABLE QString neverAskAgain();
     // Perform mode on or off (Main.qml): its minutes add up.
     Q_INVOKABLE void performing(bool on);
     // Time spent performing, added up to the millisecond (short visits count too).
@@ -92,6 +93,9 @@ signals:
     void changed();
 
 private:
+    // Writes the settings out now: `what` was saved, or why not (logged).
+    [[nodiscard]] core::Result<void> persist(const QString& what);
+
     QSettings& m_settings;
     QString m_version;
     QStringList m_whatsNew;

@@ -2,6 +2,7 @@
 // update, at most two support asks in the app's life.
 #include "CommunityController.h"
 
+#include <QFile>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -202,9 +203,25 @@ private slots:
         auto community = start();
         QVERIFY(!community->asksOff());
         QSignalSpy changed(community.get(), &CommunityController::changed);
-        community->neverAskAgain();
+        QCOMPARE(community->neverAskAgain(), QString()); // (saved)
         QVERIFY(community->asksOff());
         QCOMPARE(changed.size(), 1);
+    }
+
+    // Settings that can't be written: "Don't ask again" says why, and still
+    // holds for this run.
+    void dontAskAgainSaysWhenItCannotBeSaved()
+    {
+        auto community = start();
+        m_settings->sync();
+        const QString file = m_settings->fileName();
+        QVERIFY(QFile::exists(file));
+        const QFileDevice::Permissions was = QFile::permissions(file);
+        QVERIFY(QFile::setPermissions(file, QFileDevice::ReadOwner | QFileDevice::ReadUser)); // read-only
+        const QString problem = community->neverAskAgain();
+        QVERIFY(QFile::setPermissions(file, was));
+        QVERIFY2(problem.contains(file), qPrintable(problem));
+        QVERIFY(community->asksOff());
     }
 };
 
