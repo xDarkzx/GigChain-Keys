@@ -2,7 +2,7 @@
 // update, at most two support asks in the app's life.
 #include "CommunityController.h"
 
-#include <QFile>
+#include <QDir>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -212,16 +212,16 @@ private slots:
     // holds for this run.
     void dontAskAgainSaysWhenItCannotBeSaved()
     {
-        auto community = start();
-        m_settings->sync();
-        const QString file = m_settings->fileName();
-        QVERIFY(QFile::exists(file));
-        const QFileDevice::Permissions was = QFile::permissions(file);
-        QVERIFY(QFile::setPermissions(file, QFileDevice::ReadOwner | QFileDevice::ReadUser)); // read-only
-        const QString problem = community->neverAskAgain();
-        QVERIFY(QFile::setPermissions(file, was));
+        // (A folder where the settings file should be: it can never be
+        // opened as a file, whatever the permissions or the user.)
+        const QString file = m_dir->filePath(u"folder.ini"_s);
+        QVERIFY(QDir().mkpath(file));
+        QSettings unwritable(file, QSettings::IniFormat);
+        CommunityController community(unwritable, u"0.12.0"_s, kChangelog);
+        community.noteStart(QDate(2026, 12, 10));
+        const QString problem = community.neverAskAgain();
         QVERIFY2(problem.contains(file), qPrintable(problem));
-        QVERIFY(community->asksOff());
+        QVERIFY(community.asksOff());
     }
 };
 
