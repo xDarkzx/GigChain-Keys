@@ -33,8 +33,9 @@
 
 ---
 
-**GigChain Keys** is a live-performance host for keyboard players, in the
-spirit of MainStage and Gig Performer. It plays the VST3 and VST2 instruments
+**GigChain Keys** is a free **MainStage alternative for Windows, Mac and
+Linux**: a live-performance host for keyboard players, in the spirit of
+MainStage and Gig Performer. It plays the VST3 and VST2 instruments
 and effects already on your computer, keeps every song of the night in a
 **setlist** with its own sounds, shows each song's **chords and lyrics**
 big enough to read from the keys, and turns those chords into notes falling

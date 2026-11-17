@@ -3,14 +3,50 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GigChain Keys: a free live rig for keyboard players</title>
-<meta name="description" content="Free, open-source live rig for keyboard players: your VST sounds, setlists and chord charts, a stage-ready Perform mode and practice. A free MainStage alternative for Windows, macOS and Linux.">
+<title>Free MainStage Alternative for Windows, Mac &amp; Linux | GigChain Keys</title>
+<meta name="description" content="MainStage is Mac only. GigChain Keys is a free, open-source MainStage alternative for Windows, Mac and Linux: your VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads, and a stage-ready Perform mode.">
+<link rel="canonical" href="https://xdarkzx.github.io/GigChain-Keys/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="GigChain Keys: a free live rig for keyboard players">
+<meta property="og:title" content="GigChain Keys: a free MainStage alternative for Windows, Mac & Linux">
 <meta property="og:description" content="Your sounds, setlist, chord charts and practice in one free app. Windows, macOS and Linux.">
 <meta property="og:url" content="https://xdarkzx.github.io/GigChain-Keys/">
-<meta property="og:image" content="https://xdarkzx.github.io/GigChain-Keys/images/edit.png">
+<meta property="og:image" content="https://xdarkzx.github.io/GigChain-Keys/images/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "GigChain Keys",
+      "applicationCategory": "MultimediaApplication",
+      "applicationSubCategory": "Live performance VST host for keyboard players",
+      "operatingSystem": "Windows 10, Windows 11, macOS 13+, Linux",
+      "description": "A free, open-source MainStage alternative for Windows, Mac and Linux: VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads.",
+      "url": "https://xdarkzx.github.io/GigChain-Keys/",
+      "downloadUrl": "https://github.com/xDarkzx/GigChain-Keys/releases/latest",
+      "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "screenshot": "https://xdarkzx.github.io/GigChain-Keys/images/edit.png"
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Is there MainStage for Windows?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux): it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches sounds instantly on stage. It's free." } },
+        { "@type": "Question", "name": "Is GigChain Keys free?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL." } },
+        { "@type": "Question", "name": "Which plugins work in GigChain Keys?",
+          "acceptedAnswer": { "@type": "Answer", "text": "VST3 and VST2 instruments and effects, such as Kontakt, Arturia, Spitfire, Surge XT and Vital." } },
+        { "@type": "Question", "name": "Does GigChain Keys run on Linux?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes: an AppImage for most distributions and a .deb for Ubuntu, Debian and Mint, with JACK, PipeWire and ALSA." } }
+      ]
+    }
+  ]
+}
+</script>
 <link rel="icon" type="image/png" href="images/app-icon.png">
 <style>
   :root {
@@ -105,6 +141,11 @@
   code { background: #0d0d0e; border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-size: 13px; }
   .note { text-align: center; color: var(--dim); font-size: 14px; margin-top: 24px; }
 
+  .faq { max-width: 760px; margin: 0 auto; }
+  .faq details { border: 1px solid var(--border); background: var(--panel); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; }
+  .faq summary { cursor: pointer; font-weight: 600; color: var(--text); }
+  .faq p { color: var(--dim); margin: 10px 0 2px; line-height: 1.55; }
+
   .community { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
   .community a { text-decoration: none; font-weight: 600; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 10px; padding: 12px 20px; }
   .community a:hover { border-color: var(--accent); }
@@ -134,9 +175,9 @@
 
 <main id="top">
   <div class="wrap hero">
-    <h1>Your whole keyboard rig on stage</h1>
-    <p class="lead">Your sounds, setlist, chord charts and practice in one free app.
-      A free alternative to MainStage, for Windows, Mac and Linux.</p>
+    <h1>A free MainStage alternative for Windows, Mac and Linux</h1>
+    <p class="lead">Your whole keyboard rig on stage: your sounds, setlist, chord charts and practice
+      in one free app.</p>
     <ul class="tags">
       <li>Free</li><li>No ads</li><li>No licence keys</li><li>Open source (GPLv3)</li><li>Plays your VST plugins</li>
     </ul>
@@ -170,6 +211,9 @@
         <li><a href="https://youtu.be/Wopcyn-vZmU">Sounds on your pads</a></li>
         <li><a href="https://youtu.be/Jzs7xDTOtDw">Saw Stack Pro</a></li>
         <li><a href="https://youtu.be/adO6-4LwoiI">Piano Pro</a></li>
+        <li><a href="https://youtu.be/BTiaUMiEjHo">Pads Pro and Sustain Pads</a></li>
+        <li><a href="https://youtu.be/laZV1BDlWCk">The SoundFont Player</a></li>
+        <li><a href="https://youtu.be/8drCLZTLFHI">The sound update (0.10)</a></li>
       </ul>
     </div>
   </section>
@@ -184,7 +228,8 @@
         <div class="card"><h3>Chord charts</h3><p>Paste a song from any chord website and each chord lands on its word. Big enough to read from the keys.</p></div>
         <div class="card"><h3>Splits and layers</h3><p>Key zones, transpose and velocity layers. Each part of the song (verse, chorus, solo) can switch which sounds play.</p></div>
         <div class="card"><h3>Perform mode</h3><p>Full screen for the stage and touch screens: the chart, big Play, Next part and Loop part buttons that land on the bar line.</p></div>
-        <div class="card"><h3>Its own instruments</h3><p>Saw Stack Pro (EDM supersaws) and Piano Pro (a real recorded grand and upright), with sidechain pumping built in. No plugin to buy.</p></div>
+        <div class="card"><h3>Its own instruments</h3><p>Piano Pro (recorded grand, upright, Rhodes, Wurlitzer and more), Saw Stack Pro (EDM supersaws), Pads Pro (ambient pads under the band) and a SoundFont player for any .sf2. Plus Squash, Enhance and Sidechain effects. No plugin to buy.</p></div>
+        <div class="card"><h3>Set up like a pro rig</h3><p>Each keyboard's touch, tuning (A4 415–466 Hz), transpose the whole rig in one tap, your own plugin folders, autosave with backups, and a warning if the audio ever drops out.</p></div>
         <div class="card"><h3>Practice and warm-ups</h3><p>The song's chords fall onto a keyboard, YouTube-piano style. Daily warm-ups at your level, every run scored.</p></div>
         <div class="card"><h3>Loop station</h3><p>Record a loop of any instrument in time with the song and layer on top, street-performer style.</p></div>
         <div class="card"><h3>Built not to fail</h3><p>Plugins are scanned in a separate process, a crashing plugin is switched off, and an unplugged keyboard comes back by itself.</p></div>
@@ -233,10 +278,46 @@
             <p>Make it executable, then run it: <code>chmod +x GigChainKeys-*.AppImage</code>. If it says FUSE is missing, install <code>libfuse2</code>.</p></details>
         </div>
       </div>
-      <p class="note">You'll also want a MIDI keyboard. Two instruments come built in, and
+      <p class="note">You'll also want a MIDI keyboard. Pianos, synths and pads come built in, and
         <a href="https://github.com/xDarkzx/GigChain-Keys#what-you-need">free ones</a> cover pianos, synths and pads.
         Every release lists checksums and notes on the
         <a href="https://github.com/xDarkzx/GigChain-Keys/releases">releases page</a>.</p>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <div class="faq">
+        <details><summary>Is there MainStage for Windows?</summary>
+          <p>No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux too):
+            it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches
+            sounds instantly on stage. It's free.</p></details>
+        <details><summary>Is it really free?</summary>
+          <p>Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL, paid for by donations.</p></details>
+        <details><summary>Which plugins work?</summary>
+          <p>VST3 and VST2 instruments and effects: Kontakt, Arturia, Spitfire, u-he, Surge XT, Vital and the free ones.
+            Plugins on another drive? Add the folder in Settings and click Rescan.</p></details>
+        <details><summary>Does it work with my MIDI keyboard?</summary>
+          <p>Any USB or MIDI keyboard. Its knobs, faders, pads and pedals can change songs, sounds and parts, and you can set
+            how hard you have to play for full volume.</p></details>
+        <details><summary>How is it different from Gig Performer or Cantabile?</summary>
+          <p>They're excellent paid hosts. GigChain Keys is free and open source, adds chord charts, practice and its own
+            instruments, and runs on Linux too. It's newer (a public alpha), so try it at home before a gig.</p></details>
+        <details><summary>Does it run on Linux?</summary>
+          <p>Yes: an AppImage for most distributions and a .deb for Ubuntu, Debian and Mint, with JACK, PipeWire and ALSA.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section id="guides">
+    <div class="wrap">
+      <h2>Guides</h2>
+      <div class="community">
+        <a href="free-mainstage-alternatives.html">Free MainStage alternatives, compared</a>
+        <a href="mainstage-for-windows.html">MainStage for Windows? What to use instead</a>
+        <a href="play-vst-plugins-live.html">How to play VST plugins live without a DAW</a>
+      </div>
     </div>
   </section>
 
