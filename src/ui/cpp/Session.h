@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ChannelModel.h"
+#include "CommunityController.h"
 #include "OfficialArtwork.h"
 #include "DocumentController.h"
 #include "EditorService.h"
@@ -70,6 +71,7 @@ private:
     MixerLayout m_mixerLayout; // where the mixer is: bottom, a side, or a window of its own
     SustainPadsController m_sustainPads; // the pad held under the song, and where its panel is
     SettingsController m_settingsController;
+    CommunityController m_community; // the welcome, What's new and the support asks
     StartupProgress m_loading; // the loading overlay (after start-up)
     PracticeController m_practice; // the Practice tab (after the document it reads)
     WarmupController m_warmup;     // its warm-ups (after the player they load)

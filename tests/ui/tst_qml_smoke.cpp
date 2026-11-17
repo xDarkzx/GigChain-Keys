@@ -529,6 +529,10 @@ private slots:
     {
         m_dir = std::make_unique<QTemporaryDir>();
         m_settings = std::make_unique<QSettings>(m_dir->filePath(u"s.ini"_s), QSettings::IniFormat);
+        // As a player who has seen the welcome and this version's news: no window
+        // pops up in the middle of a test (tst_community checks when they are due).
+        m_settings->setValue(u"community/welcomed"_s, true);
+        m_settings->setValue(u"community/lastVersion"_s, branding::version());
         m_engine = engine::createFakeEngine();
         m_session = std::make_unique<ui::Session>(*m_engine, *m_settings);
         m_session->document().newSetlist();
@@ -555,6 +559,52 @@ private slots:
     void loadsWithoutWarnings()
     {
         QCOMPARE(m_qml->rootObjects().size(), 1);
+        settle();
+    }
+
+    // The support ask works from the keyboard: Tab reaches "Don't ask again"
+    // and Space chooses it.
+    void theSupportAskOptOutWorksFromTheKeyboard()
+    {
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        auto* dialog = w->findChild<QObject*>(u"supportDialog"_s);
+        QVERIFY(dialog != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "openAs", Q_ARG(QVariant, u"month"_s)));
+        settle();
+        QVERIFY(dialog->property("visible").toBool());
+        bool reached = false;
+        for (int i = 0; i < 12 && !reached; ++i) {
+            QTest::keyClick(w, Qt::Key_Tab);
+            reached = w->activeFocusItem() != nullptr && w->activeFocusItem()->objectName() == u"supportNever"_s;
+        }
+        QVERIFY2(reached, "Tab never reached Don't ask again");
+        QTest::keyClick(w, Qt::Key_Space);
+        settle();
+        QVERIFY(m_settings->value(u"community/neverAsk"_s, false).toBool());
+        QVERIFY(!dialog->property("visible").toBool());
+    }
+
+    // In a short window the support ask's ways to help scroll, and its
+    // buttons stay on screen (a touch screen has no other way to them).
+    void theSupportAskFitsAShortWindow()
+    {
+        QQuickWindow* w = window();
+        w->resize(900, 400);
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        auto* dialog = w->findChild<QObject*>(u"supportDialog"_s);
+        QVERIFY(dialog != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "openAs", Q_ARG(QVariant, u"month"_s)));
+        settle();
+        for (const QString& name : {u"supportNever"_s, u"supportClose"_s}) {
+            QQuickItem* button = item(name);
+            QVERIFY2(button != nullptr && button->isVisible(), qPrintable(name));
+            const QRectF onScreen = button->mapRectToScene(QRectF(0, 0, button->width(), button->height()));
+            QVERIFY2(onScreen.top() >= 0 && onScreen.bottom() <= w->height(),
+                     qPrintable(u"%1 at %2-%3 in a %4 px window"_s.arg(name).arg(onScreen.top()).arg(onScreen.bottom()).arg(w->height())));
+        }
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
         settle();
     }
 

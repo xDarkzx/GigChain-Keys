@@ -276,22 +276,6 @@ private slots:
         QCOMPARE(next.limiterCeilingDb(), -1.0);
     }
 
-    // A star is asked for once ever: not before the 5th start, then never again.
-    void aStarIsAskedForOnceFromTheFifthStart()
-    {
-        SettingsController settings(*m_engine, *m_doc, *m_settings);
-        QSignalSpy changed(&settings, &SettingsController::starAskChanged);
-        for (int start = 1; start <= 4; ++start) SettingsController::countStart(*m_settings);
-        QVERIFY(!settings.starAskDue());
-        SettingsController::countStart(*m_settings);
-        QVERIFY(settings.starAskDue());
-        settings.starAsked();
-        QVERIFY(!settings.starAskDue());
-        QCOMPARE(changed.count(), 1);
-        for (int start = 0; start < 20; ++start) SettingsController::countStart(*m_settings);
-        QVERIFY(!settings.starAskDue()); // never again
-    }
-
     // A keyboard's touch: chosen per input, applied on OK, kept for next start.
     void aKeyboardsTouchAppliesAndIsRemembered()
     {

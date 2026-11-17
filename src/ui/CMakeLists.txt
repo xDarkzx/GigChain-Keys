@@ -14,6 +14,7 @@ qt_add_qml_module(gigchain_ui
         cpp/LoopController.h cpp/LoopController.cpp
         cpp/Notifications.h cpp/Notifications.cpp
         cpp/SettingsController.h cpp/SettingsController.cpp
+        cpp/CommunityController.h cpp/CommunityController.cpp
         cpp/KeyboardTeaching.h cpp/KeyboardTeaching.cpp
         cpp/PanelController.h cpp/PanelController.cpp
         cpp/InputPermission.h cpp/InputPermission.cpp
@@ -112,6 +113,9 @@ qt_add_qml_module(gigchain_ui
         FreeInstrumentsDialog.qml
         HelpWindow.qml
         AboutDialog.qml
+        WelcomeDialog.qml
+        WhatsNewDialog.qml
+        SupportDialog.qml
         LooperCell.qml
         LoopsPill.qml
         LoopControlsDialog.qml
@@ -261,6 +265,9 @@ gigchain_target_defaults(gigchain_ui)
 # Branding pictures (branding.cmake), always at qrc:/branding/...
 set_source_files_properties(${PRODUCT_SPLASH_IMAGE} PROPERTIES QT_RESOURCE_ALIAS splash.png)
 qt_add_resources(gigchain_ui "branding" PREFIX "/branding" FILES ${PRODUCT_SPLASH_IMAGE})
+
+# The changelog (What's new after an update, CommunityController), at :/changelog/CHANGELOG.md.
+qt_add_resources(gigchain_ui "changelog" PREFIX "/changelog" BASE "${PROJECT_SOURCE_DIR}" FILES "${PROJECT_SOURCE_DIR}/CHANGELOG.md")
 
 # The user guide (Help > User guide, HelpLibrary), at :/help/<page>.md.
 file(GLOB _gigchain_help_pages CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/docs/help/*.md")

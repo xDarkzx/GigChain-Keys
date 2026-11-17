@@ -27,6 +27,7 @@ ApplicationWindow {
     property MasterBus auxBus: null // the shared effects the channels' Send knobs feed
     property MasterBus padsBus: null // Sustain Pads' strip's effects
     required property SettingsController settings
+    required property CommunityController community
     required property PracticeController practice
     required property WarmupController warmup
     required property StartupProgress loading
@@ -107,6 +108,7 @@ ApplicationWindow {
     onPerformModeChanged: {
         visibility = performMode ? Window.FullScreen : Window.Windowed
         doc.setPerforming(performMode) // (autosave: saved going on stage, never during)
+        community.performing(performMode) // (its minutes count towards "after a real use of Perform")
     }
 
     // Edit / Perform / Practice.
@@ -179,6 +181,8 @@ ApplicationWindow {
             guarded("close")
             return
         }
+        // Closing from Perform: its time so far counts too.
+        if (performMode) community.performing(false)
         // Closing the main window ends the app even if a plugin left a
         // window of its own open (otherwise the process would linger unseen).
         Qt.callLater(Qt.quit)
@@ -353,6 +357,7 @@ ApplicationWindow {
         onSettingsRequested: settingsDialog.open()
         onHelpRequested: (topic) => root.openHelp(topic)
         onAboutRequested: root.openAbout()
+        onSupportRequested: root.openSupport()
         onFreeInstrumentsRequested: freeInstrumentsDialog.open()
     }
 
@@ -466,64 +471,56 @@ ApplicationWindow {
     AboutDialog {
         id: aboutDialog
         onGuideRequested: root.openHelp("")
+        onSupportRequested: root.openSupport()
     }
     FreeInstrumentsDialog { id: freeInstrumentsDialog }
 
-    // Asking for a GitHub star, once ever: from the 5th start, a minute in,
-    // never while performing or practising (it waits until they are done).
+    // Inviting players in, never nagging (CommunityController): the welcome on
+    // the first start, What's new after an update, and at most two asks for
+    // support in the app's life. None while performing or practising, or over
+    // another window; they wait until the player is free.
+    readonly property bool communityFree: visible && !performMode && !practiceMode && keysFree
     Timer {
+        // Shortly after the window appears: the welcome, else What's new.
+        interval: 2500
+        running: root.communityFree && (root.community.welcomeDue || root.community.whatsNewDue)
+        onTriggered: {
+            if (!root.communityFree) return
+            if (root.community.welcomeDue) welcomeDialog.open()
+            else if (root.community.whatsNewDue) whatsNewDialog.open()
+        }
+    }
+    Timer {
+        // A support ask, when one is due: checked once a minute (read fresh
+        // each time: the month's comes due while the app stays open).
         interval: 60000
         repeat: true
-        running: root.settings.starAskDue && root.visible
+        running: root.visible
         onTriggered: {
-            if (root.performMode || root.practiceMode || aboutDialog.visible) return
-            root.settings.starAsked()
-            starAsk.open()
+            if (!root.communityFree || welcomeDialog.visible || whatsNewDialog.visible || supportDialog.visible) return
+            const reason = root.community.supportAskDue
+            if (reason === "") return
+            root.community.supportAsked(reason)
+            supportDialog.openAs(reason)
         }
     }
-    StageDialog {
-        id: starAsk
-        objectName: "starAsk"
-        title: qsTr("Enjoying %1?").arg(Branding.name)
-        width: 460
-        ColumnLayout {
-            width: starAsk.width
-            spacing: Theme.spacing
-            Label {
-                Layout.fillWidth: true
-                Layout.margins: Theme.spacingLarge
-                wrapMode: Text.Wrap
-                text: qsTr("%1 is free and always will be: no ads, no account. If it helps your gigs, a ⭐ star on "
-                           + "GitHub is how you say thanks, and it is what helps other keyboard players find it.\n\n"
-                           + "We won't ask again.").arg(Branding.name)
-                color: Theme.text
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.margins: Theme.spacingLarge
-                spacing: Theme.spacing
-                Item { Layout.fillWidth: true }
-                StageButton {
-                    Layout.preferredHeight: Theme.touchTarget
-                    text: qsTr("Not now")
-                    onClicked: starAsk.close()
-                }
-                StageButton {
-                    objectName: "starAskYes"
-                    Layout.preferredHeight: Theme.touchTarget
-                    text: qsTr("⭐ Star it on GitHub")
-                    tone: "accent"
-                    onClicked: {
-                        if (!Qt.openUrlExternally(Branding.website)) {
-                            console.warn("Could not open " + Branding.website + " in the browser")
-                            root.doc.reportMessage(qsTr("Could not open the browser: the page is %1").arg(Branding.website))
-                        }
-                        starAsk.close()
-                    }
-                }
-            }
-        }
+    WelcomeDialog {
+        id: welcomeDialog
+        community: root.community
+        doc: root.doc
+        onGuideRequested: root.openHelp("getting-started")
     }
+    WhatsNewDialog {
+        id: whatsNewDialog
+        community: root.community
+        doc: root.doc
+    }
+    SupportDialog {
+        id: supportDialog
+        community: root.community
+        doc: root.doc
+    }
+    function openSupport() { supportDialog.openAs("page") }
 
     ColumnLayout {
         anchors.fill: parent
@@ -580,7 +577,8 @@ ApplicationWindow {
                         onOpenRecentRequested: (path) => root.openRecent(path)
                         // Plugin windows sit above Qt content: hide them while a dialog is up.
                         suspended: settingsDialog.visible || unsavedDialog.visible || zoneDialog.visible || knobDialog.visible
-                                   || loopControlsDialog.visible || aboutDialog.visible || freeInstrumentsDialog.visible || starAsk.visible
+                                   || loopControlsDialog.visible || aboutDialog.visible || freeInstrumentsDialog.visible
+                                   || welcomeDialog.visible || whatsNewDialog.visible || supportDialog.visible
                     }
                     PanelBar {
                         id: editPanelBar

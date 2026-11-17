@@ -38,6 +38,7 @@ ToolBar {
     signal settingsRequested()
     signal helpRequested(string topic) // "": the page for what is on screen
     signal aboutRequested()
+    signal supportRequested()
     signal freeInstrumentsRequested()
 
     implicitHeight: 48
@@ -928,10 +929,10 @@ ToolBar {
                     onTriggered: bar.freeInstrumentsRequested()
                 }
                 StageMenuItem {
-                    objectName: "starItem"
+                    objectName: "supportItem"
                     implicitHeight: Theme.touchTarget
-                    text: qsTr("⭐ Star %1 on GitHub").arg(Branding.name)
-                    onTriggered: if (!Qt.openUrlExternally(Branding.website)) bar.doc.reportMessage(qsTr("Could not open the browser: the page is %1").arg(Branding.website))
+                    text: qsTr("♥ Support %1…").arg(Branding.name)
+                    onTriggered: bar.supportRequested()
                 }
                 StageMenuItem { text: qsTr("About %1").arg(Branding.name); onTriggered: bar.aboutRequested() }
             }

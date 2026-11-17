@@ -1,5 +1,7 @@
 #include "Session.h"
 
+#include "gigchain/core/Branding.h"
+
 using namespace Qt::StringLiterals;
 
 namespace gigchain::ui {
@@ -23,6 +25,7 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_mixerLayout(settings),
       m_sustainPads(engine, m_document, settings, m_effectWindows),
       m_settingsController(engine, m_document, settings),
+      m_community(settings, branding::version()),
       m_practice(engine, m_document),
       m_warmup(engine, m_practice, settings)
 {
@@ -48,6 +51,7 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
     });
     // An audio input from the last session: may the app hear it (the Mac asks)?
     m_settingsController.checkInputPermission();
+    m_community.noteStart();
 }
 
 QVariantMap Session::initialProperties()
@@ -70,6 +74,7 @@ QVariantMap Session::initialProperties()
         {u"mixerLayout"_s, QVariant::fromValue(&m_mixerLayout)},
         {u"sustainPads"_s, QVariant::fromValue(&m_sustainPads)},
         {u"settings"_s, QVariant::fromValue(&m_settingsController)},
+        {u"community"_s, QVariant::fromValue(&m_community)},
         {u"loading"_s, QVariant::fromValue(&m_loading)},
         {u"practice"_s, QVariant::fromValue(&m_practice)},
         {u"warmup"_s, QVariant::fromValue(&m_warmup)},

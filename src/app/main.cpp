@@ -130,7 +130,6 @@ int runApp(int argc, char** argv)
     using Quip = ui::StageQuips::Step;
     startup.report(quips.line(Quip::Connecting)); // opening audio and MIDI
 
-    ui::SettingsController::countStart(settings);
     engine::RealEngineOptions engineOptions = ui::SettingsController::engineOptions(settings);
     engineOptions.pluginCacheFile =
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-cache.json"_s;
