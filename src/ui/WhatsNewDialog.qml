@@ -49,6 +49,8 @@ StageDialog {
             }
         }
         Label {
+            objectName: "whatsNewInvite"
+            visible: !news.community.asksOff // ("Don't ask again": no invitations)
             Layout.fillWidth: true
             Layout.leftMargin: Theme.spacingLarge
             Layout.rightMargin: Theme.spacingLarge
@@ -62,16 +64,21 @@ StageDialog {
             spacing: Theme.spacing
             StageButton {
                 Layout.preferredHeight: Theme.touchTarget
+                focusPolicy: Qt.TabFocus
                 text: qsTr("▶ Watch the videos")
                 onClicked: news.openLink(news.community.videosUrl)
             }
             StageButton {
+                objectName: "whatsNewStar"
+                visible: !news.community.asksOff
                 Layout.preferredHeight: Theme.touchTarget
+                focusPolicy: Qt.TabFocus
                 text: qsTr("⭐ Star on GitHub")
                 onClicked: news.openLink(Branding.website)
             }
             StageButton {
                 Layout.preferredHeight: Theme.touchTarget
+                focusPolicy: Qt.TabFocus
                 text: qsTr("💬 Discord")
                 onClicked: news.openLink(news.community.discordUrl)
             }
@@ -79,6 +86,7 @@ StageDialog {
             StageButton {
                 objectName: "whatsNewClose"
                 Layout.preferredHeight: Theme.touchTarget
+                focusPolicy: Qt.TabFocus
                 implicitWidth: 100
                 text: qsTr("Got it")
                 tone: "accent"

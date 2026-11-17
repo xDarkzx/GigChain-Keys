@@ -19,22 +19,12 @@ namespace {
 const QString kLastVersionKey = u"community/lastVersion"_s;
 const QString kWelcomedKey = u"community/welcomed"_s;
 const QString kFirstStartKey = u"community/firstStart"_s; // ISO date
-const QString kPerformMinutesKey = u"community/performMinutes"_s;
+const QString kPerformTimeKey = u"community/performMs"_s; // milliseconds in all
 const QString kAskedKey = u"community/asked"_s;       // the asks shown: "perform", "month"
 const QString kNeverAskKey = u"community/neverAsk"_s;
 const QString kOldStarAskedKey = u"session/starAsked"_s; // 0.11's one star ask: counts as an ask
 const QString kChangelogResource = u":/changelog/CHANGELOG.md"_s;
 constexpr qsizetype kMaxChanges = 12;
-
-QString readChangelog()
-{
-    QFile file(kChangelogResource);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qCWarning(lcUi).noquote() << "What's new: the changelog could not be read (" << kChangelogResource << ":" << file.errorString() << ")";
-        return {};
-    }
-    return QString::fromUtf8(file.readAll());
-}
 
 // One bullet as plain text: "**Bold**" and "[text](link)" read as their words.
 QString plain(QString line)
@@ -48,16 +38,33 @@ QString plain(QString line)
 
 } // namespace
 
-CommunityController::CommunityController(QSettings& settings, QString version, const QString& changelog, QObject* parent)
+core::Result<QString> CommunityController::bundledChangelog()
+{
+    QFile file(kChangelogResource);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return core::fail(core::ErrorCode::FileReadFailed,
+                          u"The changelog could not be read (%1: %2)"_s.arg(kChangelogResource, file.errorString()));
+    }
+    return QString::fromUtf8(file.readAll());
+}
+
+CommunityController::CommunityController(QSettings& settings, QString version, const core::Result<QString>& changelog,
+                                         QObject* parent)
     : QObject(parent), m_settings(settings), m_version(std::move(version))
 {
-    m_whatsNew = changesFor(changelog.isEmpty() ? readChangelog() : changelog, m_version);
+    if (changelog) {
+        m_whatsNew = changesFor(*changelog, m_version);
+    } else {
+        m_changelogError = changelog.error().message;
+        qCWarning(lcUi).noquote() << "What's new:" << m_changelogError << "| shown on a later start";
+    }
 }
 
 void CommunityController::noteStart(const QDate& today)
 {
     m_today = today;
-    if (!m_settings.contains(kFirstStartKey)) m_settings.setValue(kFirstStartKey, today.toString(Qt::ISODate));
+    const QDate date = today.isValid() ? today : QDate::currentDate();
+    if (!m_settings.contains(kFirstStartKey)) m_settings.setValue(kFirstStartKey, date.toString(Qt::ISODate));
     // 0.11's star ask was one of the two.
     if (m_settings.value(kOldStarAskedKey, false).toBool()) {
         QStringList asked = m_settings.value(kAskedKey).toStringList();
@@ -77,7 +84,8 @@ void CommunityController::noteStart(const QDate& today)
         m_welcomeDue = false;
         m_whatsNewDue = last != m_version && !m_whatsNew.isEmpty();
     }
-    if (!m_welcomeDue && !m_whatsNewDue) m_settings.setValue(kLastVersionKey, m_version);
+    // (Not when the changelog could not be read: this version's news is still owed.)
+    if (!m_welcomeDue && !m_whatsNewDue && m_changelogError.isEmpty()) m_settings.setValue(kLastVersionKey, m_version);
     qCInfo(lcUi).noquote() << "Community: welcome" << m_welcomeDue << "| what's new" << m_whatsNewDue << "| support ask"
                            << (supportAskDue().isEmpty() ? u"none"_s : supportAskDue());
     emit changed();
@@ -85,14 +93,20 @@ void CommunityController::noteStart(const QDate& today)
 
 QString CommunityController::supportAskDue() const
 {
-    if (m_settings.value(kNeverAskKey, false).toBool()) return {};
+    if (asksOff()) return {};
     const QStringList asked = m_settings.value(kAskedKey).toStringList();
     if (asked.size() >= 2) return {};
-    if (!asked.contains(u"perform"_s) && m_settings.value(kPerformMinutesKey, 0).toInt() >= kPerformMinutes) return u"perform"_s;
+    if (!asked.contains(u"perform"_s) && m_settings.value(kPerformTimeKey, 0).toLongLong() >= qint64{kPerformMinutes} * 60000)
+        return u"perform"_s;
     const QDate first = QDate::fromString(m_settings.value(kFirstStartKey).toString(), Qt::ISODate);
     const QDate today = m_today.isValid() ? m_today : QDate::currentDate();
     if (!asked.contains(u"month"_s) && first.isValid() && first.daysTo(today) >= kMonthDays) return u"month"_s;
     return {};
+}
+
+bool CommunityController::asksOff() const
+{
+    return m_settings.value(kNeverAskKey, false).toBool();
 }
 
 QString CommunityController::discordUrl()
@@ -155,15 +169,15 @@ void CommunityController::performing(bool on)
         return;
     }
     if (!m_performing.isValid()) return;
-    addPerformMinutes(static_cast<int>(m_performing.elapsed() / 60000));
+    addPerformTime(m_performing.elapsed());
     m_performing.invalidate();
 }
 
-void CommunityController::addPerformMinutes(int minutes)
+void CommunityController::addPerformTime(qint64 milliseconds)
 {
-    if (minutes <= 0) return;
+    if (milliseconds <= 0) return;
     const QString before = supportAskDue();
-    m_settings.setValue(kPerformMinutesKey, m_settings.value(kPerformMinutesKey, 0).toInt() + minutes);
+    m_settings.setValue(kPerformTimeKey, m_settings.value(kPerformTimeKey, 0).toLongLong() + milliseconds);
     if (supportAskDue() != before) emit changed();
 }
 

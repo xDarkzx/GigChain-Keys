@@ -181,6 +181,8 @@ ApplicationWindow {
             guarded("close")
             return
         }
+        // Closing from Perform: its time so far counts too.
+        if (performMode) community.performing(false)
         // Closing the main window ends the app even if a plugin left a
         // window of its own open (otherwise the process would linger unseen).
         Qt.callLater(Qt.quit)
@@ -489,13 +491,15 @@ ApplicationWindow {
         }
     }
     Timer {
-        // A support ask, when one is due: checked once a minute.
+        // A support ask, when one is due: checked once a minute (read fresh
+        // each time: the month's comes due while the app stays open).
         interval: 60000
         repeat: true
-        running: root.community.supportAskDue !== "" && root.visible
+        running: root.visible
         onTriggered: {
-            if (!root.communityFree || welcomeDialog.visible || whatsNewDialog.visible) return
+            if (!root.communityFree || welcomeDialog.visible || whatsNewDialog.visible || supportDialog.visible) return
             const reason = root.community.supportAskDue
+            if (reason === "") return
             root.community.supportAsked(reason)
             supportDialog.openAs(reason)
         }

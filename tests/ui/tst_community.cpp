@@ -155,9 +155,56 @@ private slots:
     {
         auto community = start();
         community->performing(false); // (off, never on: nothing)
+        QVERIFY(!m_settings->contains(u"community/performMs"_s));
         community->performing(true);
-        community->performing(false); // (under a minute)
-        QCOMPARE(m_settings->value(u"community/performMinutes"_s, 0).toInt(), 0);
+        QTest::qWait(30);
+        community->performing(false);
+        const qint64 spent = m_settings->value(u"community/performMs"_s, 0).toLongLong();
+        QVERIFY2(spent >= 20 && spent < 60000, qPrintable(QString::number(spent))); // (kept to the millisecond)
+    }
+
+    // Short visits to Perform add up: forty half-minutes are the twenty minutes.
+    void shortPerformVisitsAddUp()
+    {
+        auto community = start();
+        for (int i = 0; i < 39; ++i) community->addPerformTime(30000);
+        QCOMPARE(community->supportAskDue(), QString());
+        community->addPerformTime(30000);
+        QCOMPARE(community->supportAskDue(), u"perform"_s);
+    }
+
+    // A changelog that can't be read: the cause kept, and the update's news
+    // still owed (shown on a later start, once it can be read).
+    void anUnreadableChangelogKeepsTheNewsOwed()
+    {
+        m_settings->setValue(u"community/lastVersion"_s, u"0.11.0"_s);
+        CommunityController broken(*m_settings, u"0.12.0"_s, gigchain::core::fail(gigchain::core::ErrorCode::FileReadFailed, u"no such file"_s));
+        broken.noteStart(QDate(2026, 12, 10));
+        QVERIFY(broken.changelogError().contains(u"no such file"_s));
+        QVERIFY(!broken.whatsNewDue());
+        QCOMPARE(m_settings->value(u"community/lastVersion"_s).toString(), u"0.11.0"_s);
+        QVERIFY(start()->whatsNewDue());
+    }
+
+    // Without a test date every check reads the clock: a month after the
+    // first start the ask is due, however long ago the app was opened.
+    void theMonthAskReadsTheClock()
+    {
+        m_settings->setValue(u"community/firstStart"_s, QDate::currentDate().addDays(-CommunityController::kMonthDays).toString(Qt::ISODate));
+        CommunityController community(*m_settings, u"0.12.0"_s, kChangelog);
+        community.noteStart();
+        QCOMPARE(community.supportAskDue(), u"month"_s);
+    }
+
+    // "Don't ask again" turns every invitation off (What's new hides its own).
+    void dontAskAgainTurnsInvitationsOff()
+    {
+        auto community = start();
+        QVERIFY(!community->asksOff());
+        QSignalSpy changed(community.get(), &CommunityController::changed);
+        community->neverAskAgain();
+        QVERIFY(community->asksOff());
+        QCOMPARE(changed.size(), 1);
     }
 };
 

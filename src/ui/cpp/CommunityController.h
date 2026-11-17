@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gigchain/core/Error.h"
+
 #include <QDate>
 #include <QElapsedTimer>
 #include <QObject>
@@ -33,6 +35,8 @@ class CommunityController : public QObject
     Q_PROPERTY(QStringList whatsNew READ whatsNew CONSTANT)
     // "perform" or "month" when a support ask is due now, else "".
     Q_PROPERTY(QString supportAskDue READ supportAskDue NOTIFY changed)
+    // "Don't ask again" was chosen: no support invitations anywhere (What's new too).
+    Q_PROPERTY(bool asksOff READ asksOff NOTIFY changed)
     Q_PROPERTY(QString discordUrl READ discordUrl CONSTANT)
     Q_PROPERTY(QString sponsorUrl READ sponsorUrl CONSTANT)
     Q_PROPERTY(QString videosUrl READ videosUrl CONSTANT)
@@ -42,17 +46,26 @@ public:
     static constexpr int kPerformMinutes = 20; // "a real use": a rehearsal, a gig
     static constexpr int kMonthDays = 30;
 
-    // `changelog`: the CHANGELOG's text (empty: read from the app's resources).
-    CommunityController(QSettings& settings, QString version, const QString& changelog = {}, QObject* parent = nullptr);
+    // `changelog`: the CHANGELOG's text, or why it could not be read (then
+    // this version is not marked as seen, so What's new comes on a later start).
+    CommunityController(QSettings& settings, QString version, const core::Result<QString>& changelog = bundledChangelog(),
+                        QObject* parent = nullptr);
 
-    // Once a run, at start: works out what is due (`today` for tests).
-    void noteStart(const QDate& today = QDate::currentDate());
+    // The CHANGELOG built into the app, or why it could not be read.
+    [[nodiscard]] static core::Result<QString> bundledChangelog();
+
+    // Once a run, at start: works out what is due. `today` is for tests: left
+    // out, every check reads the clock, so the month ask comes due in a long run.
+    void noteStart(const QDate& today = {});
 
     [[nodiscard]] bool welcomeDue() const { return m_welcomeDue; }
     [[nodiscard]] bool whatsNewDue() const { return m_whatsNewDue; }
     [[nodiscard]] QString version() const { return m_version; }
     [[nodiscard]] QStringList whatsNew() const { return m_whatsNew; }
     [[nodiscard]] QString supportAskDue() const;
+    [[nodiscard]] bool asksOff() const;
+    // Why the changelog could not be read ("" when it was).
+    [[nodiscard]] QString changelogError() const { return m_changelogError; }
     [[nodiscard]] static QString discordUrl();
     [[nodiscard]] static QString sponsorUrl();
     [[nodiscard]] static QString videosUrl();
@@ -66,8 +79,10 @@ public:
     Q_INVOKABLE void neverAskAgain();
     // Perform mode on or off (Main.qml): its minutes add up.
     Q_INVOKABLE void performing(bool on);
+    // Time spent performing, added up to the millisecond (short visits count too).
+    void addPerformTime(qint64 milliseconds);
     // (Tests: as if `minutes` more were spent performing.)
-    void addPerformMinutes(int minutes);
+    void addPerformMinutes(int minutes) { addPerformTime(qint64{minutes} * 60000); }
 
     // A version's changes from a CHANGELOG (Keep a Changelog format): its
     // bullets as plain text, links and bold taken out. Empty if not there.
@@ -80,7 +95,8 @@ private:
     QSettings& m_settings;
     QString m_version;
     QStringList m_whatsNew;
-    QDate m_today;
+    QString m_changelogError;
+    QDate m_today; // (tests only; invalid: the clock)
     bool m_welcomeDue = false;
     bool m_whatsNewDue = false;
     QElapsedTimer m_performing; // valid while Perform is on

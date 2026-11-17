@@ -66,6 +66,7 @@ StageDialog {
                 StageButton {
                     Layout.preferredWidth: 210
                     Layout.preferredHeight: Theme.touchTarget
+                    focusPolicy: Qt.TabFocus
                     text: way.modelData.icon + "  " + way.modelData.name
                     onClicked: support.openLink(way.modelData.url)
                 }
@@ -93,6 +94,7 @@ StageDialog {
                 objectName: "supportNever"
                 visible: support.asking
                 Layout.preferredHeight: Theme.touchTarget
+                focusPolicy: Qt.TabFocus
                 text: qsTr("Don't ask again")
                 onClicked: {
                     support.community.neverAskAgain()
@@ -103,6 +105,7 @@ StageDialog {
             StageButton {
                 objectName: "supportClose"
                 Layout.preferredHeight: Theme.touchTarget
+                focusPolicy: Qt.TabFocus
                 implicitWidth: 110
                 text: support.asking ? qsTr("Not now") : qsTr("Close")
                 tone: "accent"

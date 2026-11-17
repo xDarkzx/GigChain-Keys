@@ -562,6 +562,30 @@ private slots:
         settle();
     }
 
+    // The support ask works from the keyboard: Tab reaches "Don't ask again"
+    // and Space chooses it.
+    void theSupportAskOptOutWorksFromTheKeyboard()
+    {
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        auto* dialog = w->findChild<QObject*>(u"supportDialog"_s);
+        QVERIFY(dialog != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "openAs", Q_ARG(QVariant, u"month"_s)));
+        settle();
+        QVERIFY(dialog->property("visible").toBool());
+        bool reached = false;
+        for (int i = 0; i < 12 && !reached; ++i) {
+            QTest::keyClick(w, Qt::Key_Tab);
+            reached = w->activeFocusItem() != nullptr && w->activeFocusItem()->objectName() == u"supportNever"_s;
+        }
+        QVERIFY2(reached, "Tab never reached Don't ask again");
+        QTest::keyClick(w, Qt::Key_Space);
+        settle();
+        QVERIFY(m_settings->value(u"community/neverAsk"_s, false).toBool());
+        QVERIFY(!dialog->property("visible").toBool());
+    }
+
     void performModeToggles()
     {
         QObject* root = m_qml->rootObjects().value(0);

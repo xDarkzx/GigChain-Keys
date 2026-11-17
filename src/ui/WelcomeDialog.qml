@@ -88,6 +88,7 @@ StageDialog {
                 StageButton {
                     objectName: "welcomeDiscord"
                     Layout.preferredHeight: Theme.touchTarget
+                    focusPolicy: Qt.TabFocus
                     text: qsTr("💬 Join the Discord")
                     onClicked: welcome.openLink(welcome.community.discordUrl)
                 }
@@ -100,6 +101,7 @@ StageDialog {
             spacing: Theme.spacing
             StageButton {
                 Layout.preferredHeight: Theme.touchTarget
+                focusPolicy: Qt.TabFocus
                 text: qsTr("Getting started guide")
                 onClicked: {
                     welcome.close()
@@ -110,6 +112,7 @@ StageDialog {
             StageButton {
                 objectName: "welcomeClose"
                 Layout.preferredHeight: Theme.touchTarget
+                focusPolicy: Qt.TabFocus
                 implicitWidth: 120
                 text: qsTr("Let's go")
                 tone: "accent"
