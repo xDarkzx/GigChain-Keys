@@ -64,7 +64,7 @@ std::size_t MidiEffects::process(std::span<const MidiEvent> in, std::span<MidiEv
     const auto send = [&out, &written](const MidiEvent& e) {
         if (written < out.size()) out.subspan(written++, 1).front() = e;
     };
-    const core::ChordIntervals chord = core::chordIntervals(m_settings.chord);
+    const core::ChordIntervals fixedChord = core::chordIntervals(m_settings.chord);
     const double perSample = time.sampleRate > 0.0 ? time.tempo / 60.0 / time.sampleRate : 0.0;
     // No tempo to step on (no device yet): the chord alone.
     const bool arp = m_settings.arpeggio != 0 && perSample > 0.0;
@@ -117,6 +117,12 @@ std::size_t MidiEffects::process(std::span<const MidiEvent> in, std::span<MidiEv
             continue;
         }
         m_status = static_cast<uint8_t>(0x90 | (e.status & 0x0F));
+        // A key-chord depends on the key pressed (its press and release alike: the same notes). The
+        // note arrives moved by the whole rig's transpose: so is the key (settings.keyRoot has the channel's own).
+        const int keyRoot = m_settings.keyRoot < 0 ? -1 : (((m_settings.keyRoot + e.transpose) % 12) + 12) % 12;
+        const core::ChordIntervals chord = m_settings.chord == static_cast<int>(core::ChordTrigger::InKey)
+                                               ? core::keyChordIntervals(e.data1, keyRoot, m_settings.keyMinor)
+                                               : fixedChord;
         for (std::size_t k = 0; k < chord.count; ++k) {
             const int key = e.data1 + chord.steps.at(k);
             if (key < 0 || key > 127) continue;

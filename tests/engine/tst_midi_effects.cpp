@@ -74,6 +74,49 @@ private slots:
         for (std::size_t i = 3; i < 6; ++i) QVERIFY(!played.at(i).on && played.at(i).at == 3000);
     }
 
+    // Chords in the song's key (issue #50, Sunday Keys' Easy Chord): in D,
+    // each key of the scale plays its chord, D major, E minor, G major...;
+    // low keys open and warm, higher ones close; a key outside the scale,
+    // or a song with no key, plays its octave. Released as pressed. The
+    // whole rig moved up a tone plays the same chords a tone up.
+    void aKeyPlaysTheChordOfTheSongsKey()
+    {
+        const auto notesOf = [](const std::vector<Played>& played) {
+            std::vector<int> notes;
+            for (const Played& p : played) {
+                if (p.on) notes.push_back(p.note);
+            }
+            return notes;
+        };
+        const int inKey = static_cast<int>(core::ChordTrigger::InKey);
+        MidiEffects d(MidiEffectSettings{.chord = inKey, .keyRoot = 2, .keyMinor = false}); // D major
+        QCOMPARE(notesOf(run(d, {{0, key(62, 90, 0)}, {10, key(62, 0, 0)}}, 1)), (std::vector<int>{62, 66, 69}));   // D: D F# A
+        QCOMPARE(notesOf(run(d, {{0, key(64, 90, 0)}, {10, key(64, 0, 0)}}, 1)), (std::vector<int>{64, 67, 71}));   // E minor
+        QCOMPARE(notesOf(run(d, {{0, key(67, 90, 0)}, {10, key(67, 0, 0)}}, 1)), (std::vector<int>{67, 71, 74}));   // G major
+        QCOMPARE(notesOf(run(d, {{0, key(61, 90, 0)}, {10, key(61, 0, 0)}}, 1)), (std::vector<int>{61, 64, 67}));   // C# diminished
+        QCOMPARE(notesOf(run(d, {{0, key(43, 90, 0)}, {10, key(43, 0, 0)}}, 1)), (std::vector<int>{43, 50, 59}));   // low G: G D B (open)
+        QCOMPARE(notesOf(run(d, {{0, key(65, 90, 0)}, {10, key(65, 0, 0)}}, 1)), (std::vector<int>{65, 77}));       // F: not in D, its octave
+
+        MidiEffects aMinor(MidiEffectSettings{.chord = inKey, .keyRoot = 9, .keyMinor = true});
+        QCOMPARE(notesOf(run(aMinor, {{0, key(60, 90, 0)}, {10, key(60, 0, 0)}}, 1)), (std::vector<int>{60, 64, 67})); // C major in A minor
+        QCOMPARE(notesOf(run(aMinor, {{0, key(62, 90, 0)}, {10, key(62, 0, 0)}}, 1)), (std::vector<int>{62, 65, 69})); // D minor
+
+        MidiEffects noKey(MidiEffectSettings{.chord = inKey});
+        QCOMPARE(notesOf(run(noKey, {{0, key(62, 90, 0)}, {10, key(62, 0, 0)}}, 1)), (std::vector<int>{62, 74}));
+
+        // Every note it starts, it ends.
+        const auto played = run(d, {{100, key(64, 90, 0)}, {3000, key(64, 0, 0)}}, 1);
+        QCOMPARE(played.size(), std::size_t{6});
+        for (std::size_t i = 0; i < 3; ++i) QCOMPARE(played.at(i + 3).note, played.at(i).note);
+
+        // The whole rig up a tone: the E key arrives as F#, and plays F# minor (E minor a tone up).
+        MidiEvent moved = key(66, 90, 0);
+        moved.transpose = 2;
+        MidiEvent movedUp = key(66, 0, 0);
+        movedUp.transpose = 2;
+        QCOMPARE(notesOf(run(d, {{0, moved}, {10, movedUp}}, 1)), (std::vector<int>{66, 69, 73}));
+    }
+
     // Up, eighths, two keys: the low key at once, then the high one on the
     // next eighth of the song's grid, and so on, each let go half way; when
     // the keys are up, it stops (its note let go at once).

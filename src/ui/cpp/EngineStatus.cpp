@@ -515,6 +515,13 @@ void EngineStatus::poll()
             break;
         case engine::ControlAction::PreviousPart: m_document.previousPart(); break;
         case engine::ControlAction::ToggleClick: setClickOn(!m_clickOn); break;
+        case engine::ControlAction::ToggleKeyChords: {
+            const bool on = !m_engine.keyChordsOn();
+            m_engine.setKeyChordsOn(on);
+            m_document.reportMessage(on ? tr("Chords in the song's key: on") : tr("Chords in the song's key: off (single keys)"),
+                                     Notifications::Info);
+            break;
+        }
         }
     }
     // The keyboard's transport buttons and the sustain pedal's double press.

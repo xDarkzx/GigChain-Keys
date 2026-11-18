@@ -86,6 +86,19 @@ In a channel's **Keyboard Zone**, under **MIDI effects**:
 - **One key plays:** a major, minor, power (fifth and octave), sus2, sus4 or
   seventh chord, or octaves, built on the key you press. Big stabs and
   pads from one finger.
+- **One key plays: Chords in the song's key:** each key plays the chord the
+  song's key has on it. In D: D plays D major, E plays E minor, G plays G
+  major, A plays A major, B plays B minor. Keys below C3 play an open, warm
+  voicing (root, fifth and the third above); higher ones a close chord. Add
+  the octave above with your thumb and its chord sounds an octave higher,
+  over the first. A key outside the song's key, or a song with no key, plays
+  itself and its octave. The key is the song's (the `{key: …}` line of its
+  chart, or *Key:* in a pasted one), and moves with **Transpose everything**.
+  Give the pad a zone on the left hand (see above) and your right hand is
+  free for the piano part, while the pad plays the chords.
+  A pedal or pad learned to **Chords in the song's key: on / off**
+  (**Settings > MIDI > Pedals and pads**) switches those channels between
+  the chords and single keys.
 - **Arpeggiator:** hold keys and they play one after another, **Up**,
   **Down**, **Up and down** or **As played**, every **1/4**, **1/8**,
   **1/8 triplet** or **1/16** at the song's tempo, over **1 to 3 octaves**.

@@ -2321,6 +2321,9 @@ void DocumentController::applyCurrentSongToEngine()
     const core::Song* song = currentSong();
     if (song != nullptr && song->tempo > 0.0) m_engine.setTempo(song->tempo); // a song without one keeps the tempo playing
     if (song != nullptr) m_engine.setTimeSignature(song->timeNumerator, song->timeDenominator);
+    // Its key ("D", "F#m", "Bb"), for channels that play the key's chords: none when unset or unreadable.
+    const auto key = song != nullptr ? core::parseChordName(song->key) : std::nullopt;
+    m_engine.setSongKey(key ? key->root : -1, key && key->third == 3);
     m_engine.setLoopSync(song == nullptr || song->loopSync);
     m_engine.setLoopBars(song != nullptr ? song->loopBars : 4);
     applyLoopControlsToEngine(); // the setlist's (a newly opened one too)

@@ -754,10 +754,14 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
             spec.hardware = out;
             hardwareUsed.insert(out.get());
         }
-        spec.midiEffects = MidiEffectSettings{.chord = channel.chord,
+        const bool keyChordsOff = !m_keyChordsOn && channel.chord == static_cast<int>(core::ChordTrigger::InKey);
+        spec.midiEffects = MidiEffectSettings{.chord = keyChordsOff ? 0 : channel.chord,
                                               .arpeggio = channel.arpeggio,
                                               .arpRate = channel.arpRate,
-                                              .arpOctaves = channel.arpOctaves};
+                                              .arpOctaves = channel.arpOctaves,
+                                              // (the notes reach it moved by the channel's transpose: so is the key)
+                                              .keyRoot = m_songKeyRoot < 0 ? -1 : (((m_songKeyRoot + channel.transpose) % 12) + 12) % 12,
+                                              .keyMinor = m_songKeyMinor};
         std::map<int, int> effectAt; // the channel's effect position -> its place in the strip (switched-off ones are left out)
         for (const PlannedSlot& planned : plan) {
             if (std::cmp_not_equal(planned.channel, c)) continue;
@@ -1566,6 +1570,35 @@ void RealEngine::setTempo(double bpm)
         return;
     }
     m_tempo.store(bpm, std::memory_order_relaxed);
+}
+
+void RealEngine::setSongKey(int root, bool minor)
+{
+    GC_ONLY_MAIN_THREAD();
+    const int key = root >= 0 && root <= 11 ? root : -1;
+    if (root != key) qCWarning(lcEngine) << "Song key" << root << "is not a pitch class (0-11): no key";
+    if (key == m_songKeyRoot && (key < 0 || minor == m_songKeyMinor)) return;
+    m_songKeyRoot = key;
+    m_songKeyMinor = key >= 0 && minor;
+    qCInfo(lcEngine) << "Song key:" << (key < 0 ? u"none"_s : u"%1%2"_s.arg(key).arg(m_songKeyMinor ? u" minor"_s : QString()));
+    // Channels playing the key's chords take the new key (the same patch: nothing is loaded).
+    const bool keyChords = std::ranges::any_of(m_patch.channels, [](const core::Channel& c) {
+        return c.chord == static_cast<int>(core::ChordTrigger::InKey);
+    });
+    if (keyChords) applyPatch(m_song, m_patch);
+}
+
+void RealEngine::setKeyChordsOn(bool on)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (on == m_keyChordsOn) return;
+    m_keyChordsOn = on;
+    qCInfo(lcEngine) << "Chords in the song's key:" << (on ? "on" : "off");
+    // The same patch again (nothing loaded); the chords' held notes let go.
+    const bool keyChords = std::ranges::any_of(m_patch.channels, [](const core::Channel& c) {
+        return c.chord == static_cast<int>(core::ChordTrigger::InKey);
+    });
+    if (keyChords) applyPatch(m_song, m_patch);
 }
 
 void RealEngine::setTimeSignature(int numerator, int denominator)

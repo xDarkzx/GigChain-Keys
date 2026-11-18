@@ -262,6 +262,15 @@ public:
     // signature is ignored (logged).
     virtual void setTimeSignature(int numerator, int denominator) = 0;
 
+    // The song's key, for "One key plays: chords in the song's key": its
+    // root's pitch class (C = 0), or -1 for none; `minor` for a minor key.
+    // Channels set to it play the new key's chords from the next note.
+    virtual void setSongKey(int root, bool minor) = 0;
+    // Those channels' chords on (as set) or off (each key plays itself), from
+    // a pedal; on when the app starts.
+    virtual void setKeyChordsOn(bool on) = 0;
+    [[nodiscard]] virtual bool keyChordsOn() const = 0;
+
     // ---- Song sections (the chart's Intro, Verse, Chorus...)
     // The current song's sections, in order. Each channel of the patch takes
     // new notes only in the sections it plays in (it rings on in the others);

@@ -182,6 +182,10 @@ public:
 
     // The demo does not count bars: Play shows the first bar of the section.
     void setTimeSignature(int, int) override {}
+    void setSongKey(int, bool) override {} // (the demo plays no MIDI effects)
+    void setKeyChordsOn(bool on) override { m_keyChordsOn = on; }
+    [[nodiscard]] bool keyChordsOn() const override { return m_keyChordsOn; }
+    bool m_keyChordsOn = true;
     void setSongSections(const SongSections& sections) override
     {
         m_sections = sections;

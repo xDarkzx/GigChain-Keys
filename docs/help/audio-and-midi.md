@@ -103,7 +103,7 @@ controllers 66-69 and 98-100; a nanoKONTROL 41-46). Learn those once, below.
 Under **Pedals and pads** you can teach the app any button, pad or pedal:
 click **Learn** beside an action (**Play the song**, **Stop the song**,
 **Next part**, **Previous part**, **Hold this part**, **Click on / off**,
-next song, previous song, panic, tap tempo…), then press it. Done. What you
+**Chords in the song's key: on / off**, next song, previous song, panic, tap tempo…), then press it. Done. What you
 learn is never heard by the instruments. See [Perform mode](perform.md).
 
 ### Faders and knobs for the mixer

@@ -18,6 +18,10 @@ struct MidiEffectSettings
     int arpeggio = 0;   // core::ArpPattern
     int arpRate = 1;    // core::ArpRate
     int arpOctaves = 1; // 1..core::kMaxArpOctaves
+    // The song's key, for core::ChordTrigger::InKey: its pitch class (C = 0)
+    // moved by the channel's transpose, -1 none; and whether it is minor.
+    int keyRoot = -1;
+    bool keyMinor = false;
 
     [[nodiscard]] bool any() const noexcept { return chord != 0 || arpeggio != 0; }
 };

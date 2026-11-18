@@ -191,7 +191,8 @@ StageDialog {
                 objectName: "chordBox"
                 implicitWidth: 200
                 model: [qsTr("Just the key"), qsTr("A major chord"), qsTr("A minor chord"), qsTr("A power chord (5th + octave)"),
-                        qsTr("Octaves"), qsTr("A sus2 chord"), qsTr("A sus4 chord"), qsTr("A seventh chord")]
+                        qsTr("Octaves"), qsTr("A sus2 chord"), qsTr("A sus4 chord"), qsTr("A seventh chord"),
+                        qsTr("Chords in the song's key")]
                 currentIndex: dialog.channel.chord
                 onActivated: (i) => dialog.doc.setChannelMidiEffect(dialog.channel.index, "chord", i)
             }

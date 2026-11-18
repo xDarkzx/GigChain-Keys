@@ -137,6 +137,9 @@ public:
     void setTempo(double bpm) override;
     [[nodiscard]] double tempo() const override;
     void setTimeSignature(int numerator, int denominator) override;
+    void setSongKey(int root, bool minor) override;
+    void setKeyChordsOn(bool on) override;
+    [[nodiscard]] bool keyChordsOn() const override { return m_keyChordsOn; }
     void setSongSections(const SongSections& sections) override;
     void playSong(int fromSection, bool countIn) override;
     void stopSong() override { m_transport.stop(); }
@@ -313,6 +316,9 @@ private:
     void collectEdits();
     std::vector<Notice> m_pendingNotices;
     core::Patch m_patch;         // the sounding patch, rebuilt after a device change
+    int m_songKeyRoot = -1;      // the song's key (setSongKey), for key-chords: C = 0, -1 none
+    bool m_songKeyMinor = false;
+    bool m_keyChordsOn = true;   // off (a pedal): key-chord channels play single keys
     core::SongId m_song;         // the song it belongs to
     double m_preparedRate = 0.0; // what the plugins are prepared for
     int m_preparedBlock = 0;
