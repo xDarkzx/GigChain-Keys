@@ -34,6 +34,18 @@ public:
     // Clock and system messages never go. A full queue drops (counted).
     void push(std::span<const MidiEvent> events, bool newNotes) noexcept
     {
+        // Asked to let go (releaseHeld): every note it holds ends first.
+        if (m_releaseHeld.exchange(false, std::memory_order_relaxed)) {
+            for (std::size_t note = 0; note < m_held.size(); ++note) {
+                if (!m_held.test(note)) continue;
+                const MidiEvent off{.status = static_cast<uint8_t>(0x80 | m_channel), .data1 = static_cast<uint8_t>(note)};
+                if (m_queue.push(off)) {
+                    m_held.reset(note);
+                } else {
+                    m_dropped.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+        }
         for (const MidiEvent& event : events) {
             const uint8_t kind = event.status & 0xF0;
             if (kind < 0x80 || kind == 0xF0) continue;
@@ -54,6 +66,12 @@ public:
         m_holding.store(m_held.any(), std::memory_order_relaxed);
     }
 
+    // Any thread: every note it holds ends at its next block. For a strip
+    // whose MIDI effects change how keys map to notes (the song's key, key
+    // chords on or off): notes sent under the old mapping would never get
+    // their note-off from the new one.
+    void releaseHeld() noexcept { m_releaseHeld.store(true, std::memory_order_relaxed); }
+
     // Whether a note it sent is still held on the synth (its strip rings on as a tail until let go).
     [[nodiscard]] bool holdsNotes() const noexcept { return m_holding.load(std::memory_order_relaxed); }
 
@@ -68,6 +86,7 @@ private:
     MidiQueue m_queue;
     std::bitset<128> m_held; // audio thread
     std::atomic<bool> m_holding{false};
+    std::atomic<bool> m_releaseHeld{false};
     std::atomic<uint64_t> m_dropped{0};
 };
 

@@ -52,6 +52,7 @@ private:
     MidiEffectSettings m_settings;
     std::array<int, kMaxHeld> m_held{}; // keys down, in the order played
     std::size_t m_heldCount = 0;
+    std::array<uint8_t, 128> m_owners{}; // for each held note, how many keys down play it (chords sharing notes)
     int m_velocity = 100;      // the last key's
     int m_playing = -1;        // the arpeggiated note sounding (-1: none)
     double m_offAt = 0.0;      // when it ends (quarters)

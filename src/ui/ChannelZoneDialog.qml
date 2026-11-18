@@ -21,9 +21,15 @@ StageDialog {
     // The keyboards it can listen to: those that play (Settings > MIDI), and
     // the one it listens to now even when it is not plugged in.
     readonly property var keyboards: {
-        const names = settings !== null ? settings.midiInputs.filter((p) => p.mode === 0).map((p) => p.name) : []
+        const inputs = settings !== null ? settings.midiInputs : []
+        const names = inputs.filter((p) => p.mode === 0).map((p) => p.name)
         const chosen = channel.keyboard
-        return { names: names, chosen: chosen, missing: chosen !== "" && names.indexOf(chosen) < 0 }
+        // Not one that plays: unplugged, or plugged in but set to its buttons and knobs only, or off.
+        const missing = chosen !== "" && names.indexOf(chosen) < 0
+        const present = inputs.some((p) => p.name === chosen)
+        return { names: names, chosen: chosen, missing: missing,
+                 why: !missing ? "" : present ? qsTr("%1 (not playing: see Settings > MIDI)").arg(chosen)
+                                              : qsTr("%1 (not connected)").arg(chosen) }
     }
 
     function noteName(n) { return Theme.noteName(n) }
@@ -139,7 +145,7 @@ StageDialog {
                 readonly property var choices: [""].concat(dialog.keyboards.names, dialog.keyboards.missing ? [dialog.keyboards.chosen] : [])
                 model: choices.map((name) => name === "" ? qsTr("Every keyboard")
                                                          : name === dialog.keyboards.chosen && dialog.keyboards.missing
-                                                           ? qsTr("%1 (not connected)").arg(name) : name)
+                                                           ? dialog.keyboards.why : name)
                 currentIndex: Math.max(0, choices.indexOf(dialog.keyboards.chosen))
                 onActivated: (i) => dialog.doc.setChannelKeyboard(dialog.channel.index, choices[i])
             }

@@ -3,6 +3,7 @@
 #include <QtTest>
 
 #include <array>
+#include <set>
 #include <vector>
 
 using namespace gigchain;
@@ -115,6 +116,22 @@ private slots:
         MidiEvent movedUp = key(66, 0, 0);
         movedUp.transpose = 2;
         QCOMPARE(notesOf(run(d, {{0, moved}, {10, movedUp}}, 1)), (std::vector<int>{66, 69, 73}));
+    }
+
+    // Two keys whose chords share notes, arpeggiated: letting one go keeps
+    // the notes the other's chord still has (in C: C major and E minor
+    // share E and G; C let go, the arpeggio plays E, G and B on).
+    void sharedChordNotesStayWhileAnotherKeyHoldsThem()
+    {
+        MidiEffects effects(MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::InKey), .arpeggio = 1, .arpRate = 1,
+                                               .keyRoot = 0});
+        const long long letGo = 30000;
+        const auto played = run(effects, {{0, key(60, 90, 0)}, {0, key(64, 90, 0)}, {letGo, key(60, 0, 0)}}, 20);
+        std::set<int> after;
+        for (const Played& p : played) {
+            if (p.on && p.at > letGo) after.insert(p.note);
+        }
+        QCOMPARE(after, (std::set<int>{64, 67, 71}));
     }
 
     // Up, eighths, two keys: the low key at once, then the high one on the

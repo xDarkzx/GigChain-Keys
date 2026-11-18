@@ -19,12 +19,23 @@ void MidiEffects::hold(int note, int velocity) noexcept
 {
     m_velocity = velocity;
     const auto held = std::span(m_held).first(m_heldCount);
-    if (std::ranges::find(held, note) != held.end() || m_heldCount == m_held.size()) return;
+    if (std::ranges::find(held, note) != held.end()) {
+        ++m_owners.at(static_cast<std::size_t>(note)); // another key's chord has it too
+        return;
+    }
+    if (m_heldCount == m_held.size()) return;
+    m_owners.at(static_cast<std::size_t>(note)) = 1;
     m_held.at(m_heldCount++) = note;
 }
 
 void MidiEffects::release(int note) noexcept
 {
+    // Still in another held key's chord (two keys' chords sharing a note): it stays.
+    if (uint8_t& owners = m_owners.at(static_cast<std::size_t>(note)); owners > 1) {
+        --owners;
+        return;
+    }
+    m_owners.at(static_cast<std::size_t>(note)) = 0;
     const auto held = std::span(m_held).first(m_heldCount);
     const auto it = std::ranges::find(held, note);
     if (it == held.end()) return;

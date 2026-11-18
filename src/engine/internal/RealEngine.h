@@ -140,6 +140,8 @@ public:
     void setSongKey(int root, bool minor) override;
     void setKeyChordsOn(bool on) override;
     [[nodiscard]] bool keyChordsOn() const override { return m_keyChordsOn; }
+    // The channels playing chords in the song's key take a new key or on/off.
+    void rebuildKeyChords();
     void setSongSections(const SongSections& sections) override;
     void playSong(int fromSection, bool countIn) override;
     void stopSong() override { m_transport.stop(); }

@@ -390,6 +390,33 @@ private slots:
         QVERIFY(!synth->holdsNotes());
     }
 
+    // Asked to let go (the song's key changed under a key-chord channel, #50):
+    // every note the synth holds ends at the next block, with no key let go.
+    void aHardwareSynthLetsGoOfItsNotesWhenAsked()
+    {
+        const auto synth = std::make_shared<HardwareOut>(u"Synth"_s, 1);
+        StripSpec spec = strip(nullptr);
+        spec.hardware = synth;
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+        graph.render(std::array{noteOn(60), noteOn(64)}, out.block(), 1.0F);
+        MidiEvent e;
+        while (synth->pop(e)) {}
+        QVERIFY(synth->holdsNotes());
+
+        synth->releaseHeld();
+        graph.render(std::span<const MidiEvent>{}, out.block(), 1.0F);
+        std::vector<int> ended;
+        while (synth->pop(e)) {
+            QCOMPARE(int(e.status), 0x80);
+            ended.push_back(e.data1);
+        }
+        QCOMPARE(ended, (std::vector<int>{60, 64}));
+        QVERIFY(!synth->holdsNotes());
+    }
+
     void splitsReceiveOnlyTheirNotes()
     {
         auto low = std::make_shared<HeldNoteNode>(0.1F);
@@ -503,6 +530,33 @@ private slots:
         // Only the unmapped mod wheel reached the instrument as MIDI.
         QCOMPARE(synth->received.size(), std::size_t{2});
         QCOMPARE(int(synth->received.at(1).data1), 1);
+    }
+
+    // A strip set to one keyboard (#51): the other keyboard's knob moves
+    // none of its parameters; its own keyboard's does, and so does the app's.
+    void aMappedKnobOnAnotherKeyboardMovesNothing()
+    {
+        auto synth = std::make_shared<HeldNoteNode>(0.1F);
+        StripSpec spec = strip(synth);
+        const uint16_t upper = keyboardSource(u"Upper keys"_s);
+        const uint16_t lower = keyboardSource(u"Lower keys"_s);
+        spec.route.source = upper;
+        spec.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 74, .target = -1, .parameter = 42,
+                                                 .minimum = 0.0, .maximum = 1.0, .pickup = false});
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+        MidiEvent fromLower = cc(0xB0, 74, 127);
+        fromLower.source = lower;
+        graph.render(std::array{fromLower}, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{0});
+        MidiEvent fromUpper = cc(0xB0, 74, 127);
+        fromUpper.source = upper;
+        graph.render(std::array{fromUpper}, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{1});
+        graph.render(std::array{cc(0xB0, 74, 0)}, out.block(), 1.0F); // the app's own (source 0)
+        QCOMPARE(synth->parameterCount, std::size_t{2});
     }
 
     // Pickup: a knob far from where the parameter is (0.8) moves nothing

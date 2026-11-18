@@ -1581,11 +1581,7 @@ void RealEngine::setSongKey(int root, bool minor)
     m_songKeyRoot = key;
     m_songKeyMinor = key >= 0 && minor;
     qCInfo(lcEngine) << "Song key:" << (key < 0 ? u"none"_s : u"%1%2"_s.arg(key).arg(m_songKeyMinor ? u" minor"_s : QString()));
-    // Channels playing the key's chords take the new key (the same patch: nothing is loaded).
-    const bool keyChords = std::ranges::any_of(m_patch.channels, [](const core::Channel& c) {
-        return c.chord == static_cast<int>(core::ChordTrigger::InKey);
-    });
-    if (keyChords) applyPatch(m_song, m_patch);
+    rebuildKeyChords();
 }
 
 void RealEngine::setKeyChordsOn(bool on)
@@ -1594,11 +1590,23 @@ void RealEngine::setKeyChordsOn(bool on)
     if (on == m_keyChordsOn) return;
     m_keyChordsOn = on;
     qCInfo(lcEngine) << "Chords in the song's key:" << (on ? "on" : "off");
-    // The same patch again (nothing loaded); the chords' held notes let go.
-    const bool keyChords = std::ranges::any_of(m_patch.channels, [](const core::Channel& c) {
-        return c.chord == static_cast<int>(core::ChordTrigger::InKey);
-    });
-    if (keyChords) applyPatch(m_song, m_patch);
+    rebuildKeyChords();
+}
+
+void RealEngine::rebuildKeyChords()
+{
+    // Channels playing the key's chords take the change: the same patch again
+    // (nothing is loaded; their plugins' held chord notes let go). A hardware
+    // synth's notes are let go here: the new mapping would never end the old one's.
+    bool any = false;
+    for (const core::Channel& c : m_patch.channels) {
+        if (c.chord != static_cast<int>(core::ChordTrigger::InKey)) continue;
+        any = true;
+        if (c.midiOutPort.isEmpty()) continue;
+        const auto out = m_hardwareOuts.find(u"%1|%2|%3"_s.arg(c.id.value(), c.midiOutPort).arg(c.midiOutChannel));
+        if (out != m_hardwareOuts.end() && out->second) out->second->releaseHeld();
+    }
+    if (any) applyPatch(m_song, m_patch);
 }
 
 void RealEngine::setTimeSignature(int numerator, int denominator)

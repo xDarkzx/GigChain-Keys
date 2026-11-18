@@ -330,6 +330,8 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
     for (const MidiEvent& event : events) {
         const bool newNote = (event.status & 0xF0) == 0x90 && event.data2 > 0;
         if (newNote && !plays(event.sampleOffset)) continue;
+        // Another keyboard than this strip's: neither its notes nor its knobs (the app's own reach it).
+        if (m_route.source != 0 && event.source != 0 && event.source != m_route.source) continue;
         // A controller mapped to a parameter moves it, and nothing else hears it.
         bool mapped = false;
         if ((event.status & 0xF0) == 0xB0) {
