@@ -117,11 +117,25 @@ std::size_t MidiEffects::process(std::span<const MidiEvent> in, std::span<MidiEv
             continue;
         }
         m_status = static_cast<uint8_t>(0x90 | (e.status & 0x0F));
-        // The keys down: a key already down plays nothing more (its chord sounds), and a key let go
-        // that never came down (a velocity layer kept its press out) ends nothing.
-        const std::size_t pressed = e.data1 & 0x7F;
-        if (on == m_keysDown.test(pressed)) continue;
-        m_keysDown.set(pressed, on);
+        // Who holds this key down (each keyboard, and MIDI channel, on its own): pressed again while
+        // down, or by a second keyboard while the first holds it, its chord already sounds; let go,
+        // it ends only when no one holds it; a key-up that never came down here (a velocity layer
+        // kept its press out) ends nothing.
+        auto& holders = m_holders.at(e.data1 & 0x7F);
+        const uint32_t who = ((uint32_t{e.source} << 4U) | (e.status & 0x0FU)) + 1U;
+        const auto mine = std::ranges::find(holders, who);
+        const bool othersHold = std::ranges::any_of(holders, [who](uint32_t h) { return h != 0 && h != who; });
+        if (on) {
+            if (mine != holders.end()) continue;
+            const auto room = std::ranges::find(holders, 0U);
+            if (room == holders.end()) continue; // (more hands on one key than it keeps: ignored)
+            *room = who;
+            if (othersHold) continue;
+        } else {
+            if (mine == holders.end()) continue;
+            *mine = 0;
+            if (othersHold) continue;
+        }
         // A key-chord depends on the key pressed (its press and release alike: the same notes). The
         // note arrives moved by the whole rig's transpose: so is the key (settings.keyRoot has the channel's own).
         const int keyRoot = m_settings.keyRoot < 0 ? -1 : (((m_settings.keyRoot + e.transpose) % 12) + 12) % 12;

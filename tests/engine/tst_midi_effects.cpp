@@ -160,6 +160,29 @@ private slots:
         QCOMPARE(at(50, false), (std::set<int>{64, 67, 71}));
     }
 
+    // Two keyboards on one channel press the same key (#51): the second adds
+    // nothing, and the chord ends only when both have let go.
+    void aChordHeldFromTwoKeyboardsEndsWhenBothLetGo()
+    {
+        MidiEffects effects(MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::Major)});
+        const auto from = [](MidiEvent e, uint16_t source) {
+            e.source = source;
+            return e;
+        };
+        const auto played = run(effects,
+                                {{0, from(key(60, 90, 0), 1)}, {10, from(key(60, 90, 0), 2)}, {20, from(key(60, 0, 0), 1)},
+                                 {30, from(key(60, 0, 0), 2)}},
+                                1);
+        std::vector<long long> offsAt;
+        int ons = 0;
+        for (const Played& p : played) {
+            if (p.on) ++ons;
+            else offsAt.push_back(p.at);
+        }
+        QCOMPARE(ons, 3);                                        // one C major chord
+        QCOMPARE(offsAt, (std::vector<long long>{30, 30, 30})); // ended by the second keyboard's key-up
+    }
+
     // Up, eighths, two keys: the low key at once, then the high one on the
     // next eighth of the song's grid, and so on, each let go half way; when
     // the keys are up, it stops (its note let go at once).

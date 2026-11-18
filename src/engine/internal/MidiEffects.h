@@ -6,8 +6,8 @@
 #include "gigchain/core/MidiEffects.h"
 
 #include <array>
-#include <bitset>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 
 namespace gigchain::engine {
@@ -54,7 +54,9 @@ private:
     std::array<int, kMaxHeld> m_held{}; // keys down, in the order played
     std::size_t m_heldCount = 0;
     std::array<uint8_t, 128> m_owners{}; // for each note it plays, how many keys down play it (chords sharing notes)
-    std::bitset<128> m_keysDown;         // the keys it was given that are down
+    // Who holds each key it was given down: (keyboard << 4 | MIDI channel) + 1, 0 empty.
+    static constexpr std::size_t kHolders = 4;
+    std::array<std::array<uint32_t, kHolders>, 128> m_holders{};
     int m_velocity = 100;      // the last key's
     int m_playing = -1;        // the arpeggiated note sounding (-1: none)
     double m_offAt = 0.0;      // when it ends (quarters)

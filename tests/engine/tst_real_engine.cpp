@@ -1220,10 +1220,15 @@ private slots:
         engine.setChannelMute(id, true); // muted on stage
         engine.setSongKey(2, false);     // D: the channel is rebuilt
         engine.setKeyChordsOn(false);    // and again
+        (void)engine.channelLevel(id);
         engine.injectNote(1, 62, 110);
-        pump(engine, 400);
+        float heard = 0.0F; // its meter all the time the key is held
+        for (int i = 0; i < 16; ++i) {
+            pump(engine, 50);
+            heard = std::max(heard, level());
+        }
         engine.injectNote(1, 62, 0);
-        QVERIFY2(quietWithin(engine, level, 0.0F), "the muted channel played after the rebuild");
+        QVERIFY2(heard == 0.0F, qPrintable(u"the muted channel played after the rebuild (peak %1)"_s.arg(heard)));
 
         engine.setChannelMute(id, false);
         engine.setKeyChordsOn(true);

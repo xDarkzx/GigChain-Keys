@@ -450,6 +450,37 @@ private slots:
         QVERIFY(!synth->holdsNotes());
     }
 
+    // A chord channel playing a hardware synth, rebuilt (the song's key, key
+    // chords on or off): the new strip knows nothing of the chord the old one
+    // sent, so the synth lets go of it.
+    void aChordChannelRebuiltLetsItsSynthGo()
+    {
+        const auto synth = std::make_shared<HardwareOut>(u"Synth"_s, 1);
+        const auto specs = [&synth] {
+            std::vector<StripSpec> all;
+            StripSpec spec = strip(nullptr);
+            spec.hardware = synth;
+            spec.midiEffects = MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::Major)};
+            all.push_back(std::move(spec));
+            return all;
+        };
+        RenderGraph before(specs(), 48000.0, kFrames);
+        Output out;
+        before.render(std::array{noteOn(60)}, out.block(), 1.0F);
+        MidiEvent e;
+        while (synth->pop(e)) {}
+        QVERIFY(synth->holdsNotes());
+
+        auto again = specs();
+        (void)carryOver(&before, again, {synth.get()}, 4);
+        RenderGraph after(std::move(again), 48000.0, kFrames);
+        after.render(std::span<const MidiEvent>{}, out.block(), 1.0F);
+        int offs = 0;
+        while (synth->pop(e)) offs += (e.status & 0xF0) == 0x80 ? 1 : 0;
+        QCOMPARE(offs, 3);
+        QVERIFY(!synth->holdsNotes());
+    }
+
     // Asked to let go (the song's key changed under a key-chord channel, #50):
     // every note the synth holds ends at the next block, with no key let go.
     void aHardwareSynthLetsGoOfItsNotesWhenAsked()
