@@ -737,7 +737,8 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
                                               | (channel.takesExpression ? 0U : midi_filter::kExpression)
                                               | (channel.takesModWheel ? 0U : midi_filter::kModWheel)
                                               | (channel.takesPitchBend ? 0U : midi_filter::kPitchBend)
-                                              | (channel.takesAftertouch ? 0U : midi_filter::kAftertouch)};
+                                              | (channel.takesAftertouch ? 0U : midi_filter::kAftertouch),
+                                   .source = channel.keyboard.isEmpty() ? uint16_t{0} : keyboardSource(channel.keyboard)};
         spec.volumeDb = channel.volumeDb;
         spec.pan = channel.pan;
         spec.mute = channel.mute;

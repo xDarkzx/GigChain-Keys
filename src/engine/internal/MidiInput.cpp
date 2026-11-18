@@ -1,6 +1,7 @@
 #include "MidiInput.h"
 
 #include "EngineLog.h"
+#include "MidiRouter.h"
 
 #include <algorithm>
 
@@ -191,6 +192,7 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
         auto port = std::make_unique<Port>();
         port->owner = this;
         port->name = name;
+        port->source = keyboardSource(name);
         port->channel = wanted->channel;
         port->controlsOnly = !wanted->enabled;
         port->rig = wanted->rig; // (fixed while it is open: its thread reads it)
@@ -278,6 +280,7 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
     }
     auto event = parseMidi(*message);
     if (!event || !passesChannelFilter(event->status, port->channel)) return;
+    event->source = port->source; // (a channel may listen to this keyboard only)
     // A taught keyboard: its controls arrive as the ones learned on another keyboard.
     if (!translateControl(*event, port->rig)) return;
     // A keyboard's DAW port: Mackie Control's buttons, and the rest for

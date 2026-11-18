@@ -240,6 +240,7 @@ ApplicationWindow {
         doc: root.doc
         channel: root.selectedChannel
         panel: root.panel
+        settings: root.settings
     }
     LoopControlsDialog {
         id: loopControlsDialog

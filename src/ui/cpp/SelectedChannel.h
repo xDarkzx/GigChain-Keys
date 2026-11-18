@@ -26,6 +26,7 @@ class SelectedChannel : public QObject
     Q_PROPERTY(int keyHigh READ keyHigh NOTIFY changed)
     Q_PROPERTY(int transpose READ transpose NOTIFY changed)
     Q_PROPERTY(int midiChannel READ midiChannel NOTIFY changed)
+    Q_PROPERTY(QString keyboard READ keyboard NOTIFY changed) // "" every keyboard
     Q_PROPERTY(double volumeDb READ volumeDb NOTIFY changed)
     Q_PROPERTY(int velocityLow READ velocityLow NOTIFY changed)
     Q_PROPERTY(int velocityHigh READ velocityHigh NOTIFY changed)
@@ -56,6 +57,7 @@ public:
     [[nodiscard]] int keyHigh() const;
     [[nodiscard]] int transpose() const;
     [[nodiscard]] int midiChannel() const;
+    [[nodiscard]] QString keyboard() const;
     [[nodiscard]] double volumeDb() const;
     [[nodiscard]] int velocityLow() const;
     [[nodiscard]] int velocityHigh() const;

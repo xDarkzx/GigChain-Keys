@@ -36,6 +36,7 @@ Setlist richSetlist()
     piano.velocityHigh = 90;
     piano.takesExpression = false;
     piano.takesAftertouch = false;
+    piano.keyboard = QStringLiteral("Keystation 61 MK3");
     piano.mappings.push_back(ControlMapping{.midiChannel = 1, .controller = 74, .target = -1, .parameter = 4000000000U,
                                             .parameterName = QStringLiteral("Brightness"), .minimum = 0.25, .maximum = 0.8,
                                             .curve = 1, .pickup = false});
@@ -151,6 +152,25 @@ private slots:
         const auto wrong = fromJson(withFirstChannelField(u"ignores"_s, QJsonArray{u"sustian"_s}));
         QVERIFY(!wrong.has_value());
         QVERIFY2(wrong.error().message.contains(u"ignores[0]"_s), qPrintable(wrong.error().message));
+    }
+
+    // The keyboard a channel listens to is kept by name; none is written
+    // for every keyboard, and a file without it (older ones) listens to all.
+    void aChannelKeepsItsKeyboard()
+    {
+        const auto parsed = fromJson(toJson(richSetlist()));
+        QVERIFY2(parsed.has_value(), parsed ? "" : qPrintable(parsed.error().message));
+        QCOMPARE(parsed->songs.at(0).patches.at(0).channels.at(0).keyboard, u"Keystation 61 MK3"_s);
+        QVERIFY(parsed->songs.at(0).patches.at(0).channels.at(1).keyboard.isEmpty());
+
+        Setlist plain;
+        plain.songs.push_back(makeSong(u"Plain"_s));
+        plain.songs.front().patches.front().channels.push_back(makeChannel(u"Piano"_s));
+        QVERIFY(!toJson(plain).contains("\"keyboard\"")); // every keyboard: nothing written
+
+        const auto tooLong = fromJson(withFirstChannelField(u"keyboard"_s, QString(10000, u'k')));
+        QVERIFY(!tooLong.has_value());
+        QVERIFY2(tooLong.error().message.contains(u"keyboard"_s), qPrintable(tooLong.error().message));
     }
 
     void pluginSettingsAreOptional()

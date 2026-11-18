@@ -8,6 +8,16 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **A keyboard for each channel.** Two keyboards, two sounds: in a channel's
+  **Keyboard Zone**, choose the **Keyboard** it plays from (organ on the top
+  keyboard, piano on the bottom one), as in MainStage. It is kept by the
+  keyboard's name, so unplug it and plug it back in, in any USB port, and it
+  plays its sound again; one that is not plugged in says so. **Every
+  keyboard**, as before, is the default, and the on-screen keyboard plays
+  every channel. Asked for on GitHub (#51).
+
 ## [0.11.0] - 2026-11-16 (alpha)
 
 The settings a live keyboard player needs, MainStage's and more: your own

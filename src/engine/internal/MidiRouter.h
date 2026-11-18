@@ -2,6 +2,8 @@
 
 #include "MidiEvent.h"
 
+#include <QString>
+
 #include <cstdint>
 #include <optional>
 
@@ -27,7 +29,16 @@ struct RouteSettings
     int velocityLow = 1;
     int velocityHigh = 127;
     uint32_t ignores = 0; // midi_filter bits
+    // Only this keyboard (keyboardSource): 0 = every keyboard. The app's own
+    // notes (MidiEvent::source 0) reach it either way.
+    uint16_t source = 0;
 };
+
+// A keyboard's number for MidiEvent::source and RouteSettings::source, from
+// its MIDI input's name: the same name always gets the same number (1 and up)
+// for as long as the app runs, so a keyboard unplugged and plugged back in
+// is known again. Any thread but the audio thread (it locks).
+[[nodiscard]] uint16_t keyboardSource(const QString& name);
 
 // The event as this channel should receive it, or nullopt when the channel
 // ignores it. Notes outside the key range, note-ons outside the velocity

@@ -13,8 +13,18 @@ StageDialog {
     required property DocumentController doc
     required property SelectedChannel channel
     property PanelController panel: null // "Set by playing"
+    property SettingsController settings: null // the keyboards plugged in
     readonly property var learning: panel !== null ? panel.zoneLearning : ({ active: false })
     onAboutToHide: if (panel !== null) panel.cancelZoneLearning()
+    onAboutToShow: if (settings !== null) settings.refreshMidi()
+
+    // The keyboards it can listen to: those that play (Settings > MIDI), and
+    // the one it listens to now even when it is not plugged in.
+    readonly property var keyboards: {
+        const names = settings !== null ? settings.midiInputs.filter((p) => p.mode === 0).map((p) => p.name) : []
+        const chosen = channel.keyboard
+        return { names: names, chosen: chosen, missing: chosen !== "" && names.indexOf(chosen) < 0 }
+    }
 
     function noteName(n) { return Theme.noteName(n) }
 
@@ -121,6 +131,19 @@ StageDialog {
 
         StageDivider { Layout.fillWidth: true; Layout.leftMargin: 20; Layout.rightMargin: 20 }
         SettingsSection { title: qsTr("MIDI") }
+        // Two keyboards, two sounds: this channel plays from one keyboard only.
+        SettingsRow {
+            label: qsTr("Keyboard")
+            StageComboBox {
+                objectName: "keyboardBox"
+                readonly property var choices: [""].concat(dialog.keyboards.names, dialog.keyboards.missing ? [dialog.keyboards.chosen] : [])
+                model: choices.map((name) => name === "" ? qsTr("Every keyboard")
+                                                         : name === dialog.keyboards.chosen && dialog.keyboards.missing
+                                                           ? qsTr("%1 (not connected)").arg(name) : name)
+                currentIndex: Math.max(0, choices.indexOf(dialog.keyboards.chosen))
+                onActivated: (i) => dialog.doc.setChannelKeyboard(dialog.channel.index, choices[i])
+            }
+        }
         SettingsRow {
             label: qsTr("Listens to")
             StageComboBox {

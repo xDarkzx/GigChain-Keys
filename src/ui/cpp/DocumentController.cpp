@@ -1151,6 +1151,16 @@ bool DocumentController::setChannelMidiChannel(int channel, int midiChannel)
     return true;
 }
 
+bool DocumentController::setChannelKeyboard(int channel, const QString& keyboard)
+{
+    if (auto r = core::updateChannel(m_setlist, m_cursor, channel, [&keyboard](core::Channel& c) { c.keyboard = keyboard; }); !r) {
+        return report(r.error());
+    }
+    qCInfo(lcUi).noquote() << "Channel" << channel << "listens to" << (keyboard.isEmpty() ? u"every keyboard"_s : keyboard);
+    commitChannelField(channel, true);
+    return true;
+}
+
 bool DocumentController::setChannelTakes(int channel, const QString& what, bool takes)
 {
     bool core::Channel::* field = what == "sustain"_L1      ? &core::Channel::takesSustain

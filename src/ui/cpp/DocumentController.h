@@ -266,6 +266,8 @@ public:
     Q_INVOKABLE bool setChannelKeyRange(int channel, int low, int high);
     Q_INVOKABLE bool setChannelTranspose(int channel, int semitones);
     Q_INVOKABLE bool setChannelMidiChannel(int channel, int midiChannel);
+    // The keyboard the channel listens to, by its MIDI input's name ("": every keyboard).
+    Q_INVOKABLE bool setChannelKeyboard(int channel, const QString& keyboard);
     // Whether the channel takes "sustain", "expression", "modWheel",
     // "pitchBend" or "aftertouch" from the keyboard (a pad that ignores the
     // sustain pedal while the piano holds).

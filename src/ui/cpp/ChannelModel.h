@@ -58,6 +58,7 @@ public:
         AuxSendDbRole,    // how much goes to the aux effects (kMinVolumeDb = none)
         MidiOutPortRole,  // the hardware synth it plays ("" none)
         MidiOutChannelRole, // ... on this MIDI channel (1-16)
+        KeyboardRole,       // the keyboard it listens to, by its MIDI input's name ("" every keyboard)
     };
     Q_ENUM(Role)
 

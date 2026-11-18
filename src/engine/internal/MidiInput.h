@@ -125,7 +125,8 @@ private:
         MidiQueue queue;
         MidiInput* owner = nullptr;
         QString name;
-        int channel = 0; // 0 = all channels
+        uint16_t source = 0; // keyboardSource(name): stamped on all it sends
+        int channel = 0;     // 0 = all channels
         // Not played: its buttons and knobs only (a keyboard's DAW port).
         bool controlsOnly = false;
         bool shift = false; // its Mackie Control Shift is held (this port's thread)

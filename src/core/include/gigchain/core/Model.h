@@ -102,6 +102,11 @@ struct Channel
     // synth by giving the channel its audio input too.
     QString midiOutPort;
     int midiOutChannel = 1;
+    // The keyboard it listens to, by its MIDI input's name (MainStage's
+    // per-strip MIDI input): two keyboards playing two sounds. Empty: every
+    // keyboard. Kept by name, so the keyboard is known again when it is
+    // plugged back in, in any USB port.
+    QString keyboard;
 
     friend bool operator==(const Channel&, const Channel&) = default;
 };

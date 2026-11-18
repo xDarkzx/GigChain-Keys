@@ -68,6 +68,11 @@ Right-click a channel strip and choose **Keyboard Zone…**.
   keys** leaves the pads to this part alone.
 - **Transpose:** shift it up or down in semitones (+12 is an octave up). Handy
   to play a bass line an octave higher than it sounds.
+- **MIDI: Keyboard:** *Every keyboard*, or one of your keyboards only. With
+  two keyboards, give the organ the top one and the piano the bottom one.
+  It is kept by the keyboard's name: unplug it and plug it back in (any USB
+  port) and it plays its sound again. One that is not plugged in shows
+  *(not connected)*. The on-screen keyboard plays every channel.
 - **MIDI: Listens to:** *All channels*, or one channel only when your
   keyboard sends its zones on different channels.
 - **Whole keyboard** resets it.

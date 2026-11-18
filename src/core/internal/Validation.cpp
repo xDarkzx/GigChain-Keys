@@ -138,6 +138,7 @@ Result<void> validateChannel(const Channel& channel, const QString& path)
         return fail(ErrorCode::OutOfRange, u"%1.auxSendDb must be between %2 and %3 dB"_s.arg(path).arg(limits::kMinVolumeDb).arg(limits::kMaxVolumeDb));
     }
     if (auto r = validateLength(channel.midiOutPort, limits::kMaxNameLength, path + ".midiOutPort"_L1); !r) return r;
+    if (auto r = validateLength(channel.keyboard, limits::kMaxNameLength, path + ".keyboard"_L1); !r) return r;
     if (auto r = checkRange(channel.midiOutChannel, 1, 16, path + ".midiOutChannel"_L1); !r) return r;
     if (channel.inputLeft == 0 && channel.inputRight != 0) {
         return fail(ErrorCode::InvalidData, u"%1.inputRight needs inputLeft"_s.arg(path));

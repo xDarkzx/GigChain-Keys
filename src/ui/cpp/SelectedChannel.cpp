@@ -71,6 +71,12 @@ int SelectedChannel::midiChannel() const
     return c != nullptr ? c->midiChannel : 0;
 }
 
+QString SelectedChannel::keyboard() const
+{
+    const core::Channel* c = channel();
+    return c != nullptr ? c->keyboard : QString();
+}
+
 double SelectedChannel::volumeDb() const
 {
     const core::Channel* c = channel();

@@ -168,6 +168,32 @@ private slots:
         for (const MidiEvent& e : {sustain, expression, modWheel, bend, pressure, keyPressure}) QVERIFY(routeEvent(e, piano).has_value());
     }
 
+    // Two keyboards, two sounds (issue #51): a channel set to one keyboard
+    // hears only that one, its notes and its pedals; a channel set to none
+    // hears both; the app's own notes (the on-screen keyboard) reach all.
+    // A keyboard keeps its number by name, so it is known again when it
+    // comes back.
+    void aChannelHearsOnlyItsKeyboard()
+    {
+        const uint16_t lower = keyboardSource(u"Keystation 61 MK3"_s);
+        const uint16_t upper = keyboardSource(u"Nord Stage 3 MIDI"_s);
+        QVERIFY(lower != 0 && upper != 0 && lower != upper);
+        QCOMPARE(keyboardSource(u"Keystation 61 MK3"_s), lower); // plugged back in: the same
+
+        const auto from = [](MidiEvent e, uint16_t source) {
+            e.source = source;
+            return e;
+        };
+        const RouteSettings organ{.source = upper};
+        const RouteSettings any;
+        QVERIFY(routeEvent(from(noteOn(60), upper), organ).has_value());
+        QVERIFY(!routeEvent(from(noteOn(60), lower), organ).has_value());
+        QVERIFY(!routeEvent(from(cc(0xB0, 64, 127), lower), organ).has_value()); // the other's sustain pedal too
+        QVERIFY(routeEvent(from(noteOn(60), 0), organ).has_value());             // the on-screen keyboard
+        QVERIFY(routeEvent(from(noteOn(60), lower), any).has_value());
+        QVERIFY(routeEvent(from(noteOn(60), upper), any).has_value());
+    }
+
     void routerFiltersAndTransposes()
     {
         const RouteSettings split{48, 59, 12, 0};
