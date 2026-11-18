@@ -1538,7 +1538,7 @@ private slots:
         QVERIFY(doc.setChannelKeyboard(0, u"Keystation 61 MK3"_s));
         settle();
         QCOMPARE(doc.currentPatch()->channels.at(0).keyboard, u"Keystation 61 MK3"_s);
-        QTRY_COMPARE(keyboard->property("displayText").toString(), u"Keystation 61 MK3 (not connected)"_s);
+        QTRY_COMPARE(keyboard->property("displayText").toString(), u"Keystation 61 MK3 (not connected: plays from every keyboard)"_s);
         shoot(u"zone-dialog"_s);
         QVERIFY(QMetaObject::invokeMethod(zone, "close"));
         settle();

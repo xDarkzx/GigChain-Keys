@@ -3,6 +3,7 @@
 #include "MidiEvent.h"
 
 #include <QString>
+#include <QStringList>
 
 #include <cstdint>
 #include <optional>
@@ -39,6 +40,11 @@ struct RouteSettings
 // for as long as the app runs, so a keyboard unplugged and plugged back in
 // is known again. Any thread but the audio thread (it locks).
 [[nodiscard]] uint16_t keyboardSource(const QString& name);
+
+// What a channel set to `keyboard` ("" every keyboard) listens to, with the
+// MIDI inputs that play now: that keyboard while it plays, else every
+// keyboard (0): one swapped in on stage plays it, never silence.
+[[nodiscard]] uint16_t routeSourceFor(const QString& keyboard, const QStringList& playing);
 
 // The event as this channel should receive it, or nullopt when the channel
 // ignores it. Notes outside the key range, note-ons outside the velocity

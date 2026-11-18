@@ -14,9 +14,10 @@ Downloads for every version are on the
   **Keyboard Zone**, choose the **Keyboard** it plays from (organ on the top
   keyboard, piano on the bottom one), as in MainStage. It is kept by the
   keyboard's name, so unplug it and plug it back in, in any USB port, and it
-  plays its sound again; one that is not plugged in says so. **Every
-  keyboard**, as before, is the default, and the on-screen keyboard plays
-  every channel. Asked for on GitHub (#51).
+  plays its sound again. While it is not plugged in, the channel plays from
+  every keyboard, so another keyboard swapped in on stage plays it: never
+  silence. **Every keyboard**, as before, is the default, and the on-screen
+  keyboard plays every channel. Asked for on GitHub (#51).
 - **Chords in the song's key** (like Sunday Keys' Easy Chord). In a
   channel's **Keyboard Zone**, **One key plays: Chords in the song's key**:
   each key plays the chord the song's key has on it (in D: E plays E minor,

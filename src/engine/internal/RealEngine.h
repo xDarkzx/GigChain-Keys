@@ -142,6 +142,10 @@ public:
     [[nodiscard]] bool keyChordsOn() const override { return m_keyChordsOn; }
     // The channels playing chords in the song's key take a new key or on/off.
     void rebuildKeyChords();
+    // Channels set to one keyboard: routed again after the MIDI inputs change.
+    void routeKeyboardsAgain();
+    // The sounding patch's channel `id` (live changes are kept in it), or null.
+    core::Channel* soundingChannel(const core::ChannelId& id);
     void setSongSections(const SongSections& sections) override;
     void playSong(int fromSection, bool countIn) override;
     void stopSong() override { m_transport.stop(); }

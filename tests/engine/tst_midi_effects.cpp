@@ -134,6 +134,32 @@ private slots:
         QCOMPARE(after, (std::set<int>{64, 67, 71}));
     }
 
+    // The same without the arpeggiator: two held keys' chords share E and G
+    // (C major, E minor in C); letting C go ends only C, and E's key-up ends
+    // the rest. A key-up whose key-down never came (a velocity layer kept it
+    // out) ends nothing; a key pressed again while down adds nothing.
+    void sharedChordNotesStayWithoutTheArpeggiator()
+    {
+        MidiEffects effects(MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::InKey), .keyRoot = 0});
+        const auto played = run(effects,
+                                {{0, key(60, 90, 0)}, {10, key(64, 90, 0)}, {20, key(64, 90, 0)}, {30, key(67, 0, 0)},
+                                 {40, key(60, 0, 0)}, {50, key(64, 0, 0)}},
+                                1);
+        const auto at = [&played](long long when, bool on) {
+            std::set<int> notes;
+            for (const Played& p : played) {
+                if (p.at == when && p.on == on) notes.insert(p.note);
+            }
+            return notes;
+        };
+        QCOMPARE(at(0, true), (std::set<int>{60, 64, 67}));
+        QCOMPARE(at(10, true), (std::set<int>{71}));      // E and G already sound
+        QVERIFY(at(20, true).empty());                     // E again while down: nothing
+        QVERIFY(at(30, false).empty());                    // G's key-up, never pressed: nothing
+        QCOMPARE(at(40, false), (std::set<int>{60}));      // C let go: E and G stay for the E key
+        QCOMPARE(at(50, false), (std::set<int>{64, 67, 71}));
+    }
+
     // Up, eighths, two keys: the low key at once, then the high one on the
     // next eighth of the song's grid, and so on, each let go half way; when
     // the keys are up, it stops (its note let go at once).

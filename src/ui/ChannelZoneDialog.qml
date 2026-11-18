@@ -28,8 +28,9 @@ StageDialog {
         const missing = chosen !== "" && names.indexOf(chosen) < 0
         const present = inputs.some((p) => p.name === chosen)
         return { names: names, chosen: chosen, missing: missing,
-                 why: !missing ? "" : present ? qsTr("%1 (not playing: see Settings > MIDI)").arg(chosen)
-                                              : qsTr("%1 (not connected)").arg(chosen) }
+                 // (Without it the channel plays from every keyboard: never silent on stage.)
+                 why: !missing ? "" : present ? qsTr("%1 (set to buttons and knobs: plays from every keyboard)").arg(chosen)
+                                              : qsTr("%1 (not connected: plays from every keyboard)").arg(chosen) }
     }
 
     function noteName(n) { return Theme.noteName(n) }

@@ -19,23 +19,12 @@ void MidiEffects::hold(int note, int velocity) noexcept
 {
     m_velocity = velocity;
     const auto held = std::span(m_held).first(m_heldCount);
-    if (std::ranges::find(held, note) != held.end()) {
-        ++m_owners.at(static_cast<std::size_t>(note)); // another key's chord has it too
-        return;
-    }
-    if (m_heldCount == m_held.size()) return;
-    m_owners.at(static_cast<std::size_t>(note)) = 1;
+    if (std::ranges::find(held, note) != held.end() || m_heldCount == m_held.size()) return;
     m_held.at(m_heldCount++) = note;
 }
 
 void MidiEffects::release(int note) noexcept
 {
-    // Still in another held key's chord (two keys' chords sharing a note): it stays.
-    if (uint8_t& owners = m_owners.at(static_cast<std::size_t>(note)); owners > 1) {
-        --owners;
-        return;
-    }
-    m_owners.at(static_cast<std::size_t>(note)) = 0;
     const auto held = std::span(m_held).first(m_heldCount);
     const auto it = std::ranges::find(held, note);
     if (it == held.end()) return;
@@ -128,15 +117,32 @@ std::size_t MidiEffects::process(std::span<const MidiEvent> in, std::span<MidiEv
             continue;
         }
         m_status = static_cast<uint8_t>(0x90 | (e.status & 0x0F));
+        // The keys down: a key already down plays nothing more (its chord sounds), and a key let go
+        // that never came down (a velocity layer kept its press out) ends nothing.
+        const std::size_t pressed = e.data1 & 0x7F;
+        if (on == m_keysDown.test(pressed)) continue;
+        m_keysDown.set(pressed, on);
         // A key-chord depends on the key pressed (its press and release alike: the same notes). The
         // note arrives moved by the whole rig's transpose: so is the key (settings.keyRoot has the channel's own).
         const int keyRoot = m_settings.keyRoot < 0 ? -1 : (((m_settings.keyRoot + e.transpose) % 12) + 12) % 12;
         const core::ChordIntervals chord = m_settings.chord == static_cast<int>(core::ChordTrigger::InKey)
                                                ? core::keyChordIntervals(e.data1, keyRoot, m_settings.keyMinor)
                                                : fixedChord;
+        if (on) m_velocity = e.data2;
         for (std::size_t k = 0; k < chord.count; ++k) {
             const int key = e.data1 + chord.steps.at(k);
             if (key < 0 || key > 127) continue;
+            // Two keys' chords sharing a note: it starts with the first and ends with the last let go.
+            uint8_t& owners = m_owners.at(static_cast<std::size_t>(key)); // (at most a count of the keys down)
+            if (on) {
+                const bool sounding = owners > 0;
+                ++owners;
+                if (sounding) continue;
+            } else {
+                if (owners == 0) continue; // (not this effect's note)
+                --owners;
+                if (owners > 0) continue;
+            }
             if (!arp) {
                 MidiEvent played = e;
                 played.data1 = static_cast<uint8_t>(key);

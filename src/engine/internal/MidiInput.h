@@ -81,6 +81,8 @@ public:
     std::vector<QString> openAll(const std::vector<MidiPort>& ports);
     void close();
     [[nodiscard]] QStringList openPortNames() const;
+    // The open ones that play (not a keyboard's buttons and knobs only).
+    [[nodiscard]] QStringList playingPortNames() const;
 
     // Audio thread: moves pending events into `out`, returns how many.
     std::size_t drain(std::span<MidiEvent> out) noexcept;

@@ -246,6 +246,15 @@ QStringList MidiInput::openPortNames() const
     return names;
 }
 
+QStringList MidiInput::playingPortNames() const
+{
+    QStringList names;
+    for (const auto& port : m_ports) {
+        if (!port->controlsOnly) names << port->name;
+    }
+    return names;
+}
+
 std::size_t MidiInput::drain(std::span<MidiEvent> out) noexcept
 {
     auto next = out.begin();

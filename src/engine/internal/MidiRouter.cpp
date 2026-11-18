@@ -20,6 +20,11 @@ uint16_t keyboardSource(const QString& name)
     return number;
 }
 
+uint16_t routeSourceFor(const QString& keyboard, const QStringList& playing)
+{
+    return keyboard.isEmpty() || !playing.contains(keyboard) ? uint16_t{0} : keyboardSource(keyboard);
+}
+
 std::optional<MidiEvent> routeEvent(const MidiEvent& event, const RouteSettings& route) noexcept
 {
     const int type = event.status & 0xF0;
