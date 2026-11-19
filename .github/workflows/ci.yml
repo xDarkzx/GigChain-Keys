@@ -14,7 +14,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: [debug, release]
+        # dev: the live test control's build (docs/testing/live-test-control.md),
+        # built and tested so it cannot rot; never packaged or released.
+        preset: [debug, release, dev]
 
     env:
       VCPKG_ROOT: ${{ github.workspace }}\..\vcpkg

@@ -148,28 +148,54 @@ if ($configure.Code -ne 0) {
     }
 }
 
+# The dev build: the live test control is compiled only there
+# (docs/testing/live-test-control.md), so it is built and checked here too.
+Get-Process | Where-Object { $_.Path -and $_.Path.StartsWith((Join-Path $root 'build\dev\'), [StringComparison]::OrdinalIgnoreCase) } |
+    Stop-Process -Force
+$devConfigure = Invoke-Logged 'configure-dev' 'cmake' @('--preset', 'dev')
+$devBuilt = $false
+if ($devConfigure.Code -ne 0) {
+    Add-Check 'dev build (live test control)' $false ("cmake --preset dev failed:`n" + (Get-Tail $devConfigure.File 15))
+} else {
+    $devBuild = Invoke-Logged 'build-dev' 'cmake' @('--build', '--preset', 'dev')
+    $devBuilt = $devBuild.Code -eq 0
+    if ($devBuilt) { Add-Check 'dev build (live test control)' $true 'no errors, no warnings' }
+    else {
+        $errors = @(Get-Content $devBuild.File | Where-Object { $_ -match ': (fatal )?error |: warning C\d+|error LNK' } | Select-Object -First 20)
+        Add-Check 'dev build (live test control)' $false ("build failed:`n" + $(if ($errors) { $errors -join "`n" } else { Get-Tail $devBuild.File 20 }))
+    }
+}
+
 # ------------------------------------------------------------ 2-3. C++ lint
-$compileDb = Join-Path $root 'build\debug\compile_commands.json'
-$compiled = if (Test-Path $compileDb) { Get-Content $compileDb -Raw } else { '' }
-$cppFiles = New-Object System.Collections.Generic.List[string]
-foreach ($file in $sources) {
-    $candidates = @()
-    if ($file -match '\.cpp$') { $candidates = @($file) }
-    elseif ($file -match '\.h$') { $candidates = @(($file -replace '\.h$', '.cpp')) }
-    foreach ($c in $candidates) {
-        if ((Test-Path $c) -and $compiled.Contains((Join-Path $root $c).Replace('\', '/')) -and -not $cppFiles.Contains($c)) {
-            $cppFiles.Add($c)
+# The changed C++ files a build compiles (its compile database), less `skip`.
+function Get-CompiledFiles([string]$buildDir, $skip) {
+    $db = Join-Path $root "$buildDir\compile_commands.json"
+    $compiled = if (Test-Path $db) { Get-Content $db -Raw } else { '' }
+    $files = New-Object System.Collections.Generic.List[string]
+    foreach ($file in $sources) {
+        $candidates = @()
+        if ($file -match '\.cpp$') { $candidates = @($file) }
+        elseif ($file -match '\.h$') { $candidates = @(($file -replace '\.h$', '.cpp')) }
+        foreach ($c in $candidates) {
+            if ((Test-Path $c) -and $compiled.Contains((Join-Path $root $c).Replace('\', '/')) -and -not $files.Contains($c) -and -not $skip.Contains($c)) {
+                $files.Add($c)
+            }
         }
     }
+    return , $files
 }
 $finding = '^(?<file>(?:[A-Za-z]:)?[^:]+):(?<line>\d+):(?<col>\d+): (?<sev>[a-z]+): (?<msg>.*)$'
 
+# clang-tidy and cppcheck on `cppFiles`, with `buildDir`'s compile database;
+# checks named with `suffix` (" (dev)": the files only the dev build has).
+function Invoke-CppLint([string]$buildDir, $cppFiles, [string]$suffix) {
+$compileDb = Join-Path $root "$buildDir\compile_commands.json"
 if ($cppFiles.Count -eq 0) {
-    Add-Check 'clang-tidy' $true 'no changed C++ files'
-    Add-Check 'cppcheck' $true 'no changed C++ files'
+    Add-Check "clang-tidy$suffix" $true 'no changed C++ files'
+    Add-Check "cppcheck$suffix" $true 'no changed C++ files'
 } else {
     $tidyExe = Join-Path $vs 'VC\Tools\Llvm\x64\bin\clang-tidy.exe'
-    $tidy = Invoke-Logged 'clang-tidy' $tidyExe (@('-p', 'build\debug', '--quiet') + $cppFiles)
+    $tidy = Invoke-Logged "clang-tidy$($suffix -replace '\W', '')" $tidyExe (@('-p', $buildDir, '--quiet') + $cppFiles)
     $new = @(); $old = 0; $broken = @()
     foreach ($line in (Get-Content $tidy.File)) {
         if ($line -notmatch $finding) { continue }
@@ -183,12 +209,12 @@ if ($cppFiles.Count -eq 0) {
         if (Test-ChangedLine $file $at) { $new += $line } else { $old++ }
     }
     $ok = $new.Count -eq 0 -and $broken.Count -eq 0
-    Add-Check 'clang-tidy' $ok ("{0} file(s); {1} finding(s) on changed lines, {2} error(s), {3} old finding(s) elsewhere{4}" -f
+    Add-Check "clang-tidy$suffix" $ok ("{0} file(s); {1} finding(s) on changed lines, {2} error(s), {3} old finding(s) elsewhere{4}" -f
         $cppFiles.Count, $new.Count, $broken.Count, $old, $(if ($ok) { '' } else { "`n" + (@($broken + $new) | Select-Object -First 25) -join "`n" }))
 
     $cppcheckExe = 'C:\Program Files\Cppcheck\cppcheck.exe'
     if (-not (Test-Path $cppcheckExe)) {
-        Add-Check 'cppcheck' $false "cppcheck is not installed ($cppcheckExe)"
+        Add-Check "cppcheck$suffix" $false "cppcheck is not installed ($cppcheckExe)"
     } else {
         $arguments = @("--project=$compileDb", '--enable=warning,style,performance,portability', '--inline-suppr',
             '--library=qt', '--library=windows', "--library=$root\tools\cppcheck\vst3.cfg",
@@ -201,7 +227,7 @@ if ($cppFiles.Count -eq 0) {
             '--suppress=functionStatic:*/tests/*',
             '--template={file}:{line}:{column}: {severity}: {message} [{id}]')
         foreach ($c in $cppFiles) { $arguments += "--file-filter=*$c" }
-        $check = Invoke-Logged 'cppcheck' $cppcheckExe $arguments
+        $check = Invoke-Logged "cppcheck$($suffix -replace '\W', '')" $cppcheckExe $arguments
         $new = @(); $old = 0; $broken = @()
         foreach ($line in (Get-Content $check.File)) {
             if ($line -notmatch $finding) { continue }
@@ -213,10 +239,16 @@ if ($cppFiles.Count -eq 0) {
             if (Test-ChangedLine $file $at) { $new += $line } else { $old++ }
         }
         $ok = $check.Code -eq 0 -and $new.Count -eq 0 -and $broken.Count -eq 0
-        Add-Check 'cppcheck' $ok ("{0} file(s); {1} finding(s) on changed lines, {2} unanalysable, {3} old finding(s) elsewhere, exit {4}{5}" -f
+        Add-Check "cppcheck$suffix" $ok ("{0} file(s); {1} finding(s) on changed lines, {2} unanalysable, {3} old finding(s) elsewhere, exit {4}{5}" -f
             $cppFiles.Count, $new.Count, $broken.Count, $old, $check.Code, $(if ($ok) { '' } else { "`n" + (@($broken + $new) | Select-Object -First 25) -join "`n" }))
     }
 }
+}
+
+$cppFiles = Get-CompiledFiles 'build\debug' @()
+Invoke-CppLint 'build\debug' $cppFiles ''
+# Files only the dev build compiles (the live test control): with its database.
+Invoke-CppLint 'build\dev' (Get-CompiledFiles 'build\dev' $cppFiles) ' (dev)'
 
 # ------------------------------------------------------------ 4. QML lint
 $qmlFiles = @($sources | Where-Object { $_ -match '\.qml$' })
@@ -255,6 +287,17 @@ if (-not $built) {
     if ($skips.Count) { $detail += "`nskipped: " + (($skips | ForEach-Object { $_.Trim() }) -join '; ') }
     if (-not $ok -and $tests.Code -ne 0 -and -not $failed.Count) { $detail += "`n" + (Get-Tail $tests.File 20) }
     Add-Check 'tests (ctest, every test)' $ok $detail
+}
+
+# The live test control's own tests (the dev build only).
+if (-not $devBuilt) {
+    Add-Check 'tests (dev: live test control)' $false 'not run: the dev build failed'
+} else {
+    $devTests = Invoke-Logged 'ctest-dev' 'ctest' @('--preset', 'dev', '-R', '^(tst_dev_|tst_gck_ctl)', '-V')
+    $devFailed = @(Get-Content $devTests.File | Where-Object { $_ -match '^\s*\d+ - .*\((Failed|SEGFAULT|Timeout|Exception|Not Run|Subprocess aborted)' })
+    $devTotal = (Get-Content $devTests.File | Where-Object { $_ -match 'tests passed, \d+ tests failed out of \d+' } | Select-Object -Last 1)
+    $devOk = $devTests.Code -eq 0 -and $devFailed.Count -eq 0 -and $devTotal
+    Add-Check 'tests (dev: live test control)' $devOk ("$devTotal" + $(if ($devFailed.Count) { "`n" + ($devFailed -join "`n") } else { '' }))
 }
 
 Save-Result $false
