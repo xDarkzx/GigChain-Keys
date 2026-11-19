@@ -4,6 +4,7 @@
 
 #include "gigchain/core/Error.h"
 
+#include <QElapsedTimer>
 #include <QJsonObject>
 #include <QLocalServer>
 #include <QObject>
@@ -41,6 +42,7 @@ private:
         QPointer<QLocalSocket> socket;
         QString cmd;
         bool done = false;
+        QElapsedTimer took; // every answer says how long it took ("ms")
     };
     std::shared_ptr<State> m_state;
 };
@@ -97,6 +99,8 @@ private:
 // Groups of commands (each in its own file).
 void addAppCommands(DevControl& control);
 void addUiCommands(DevControl& control);
+void addMidiCommands(DevControl& control);
+void addMeasureCommands(DevControl& control);
 
 // main(): a control listening on defaultSocketName() when `arguments` has
 // --dev-control (with every command group added); nullptr otherwise.

@@ -12,14 +12,19 @@ namespace gigchain::devcontrol {
 
 Q_LOGGING_CATEGORY(lcDev, "gigchain.devcontrol")
 
-Reply::Reply(QLocalSocket* socket, QString cmd) : m_state(std::make_shared<State>(State{socket, std::move(cmd), false})) {}
+Reply::Reply(QLocalSocket* socket, QString cmd) : m_state(std::make_shared<State>(State{socket, std::move(cmd), false, {}}))
+{
+    m_state->took.start();
+}
 
 void Reply::ok(const QJsonObject& fields) const
 {
     if (m_state->done) return;
     m_state->done = true;
     if (!m_state->socket) return; // (its client went away)
-    m_state->socket->write(okLine(fields));
+    QJsonObject answer = fields;
+    answer.insert(u"ms"_s, m_state->took.elapsed());
+    m_state->socket->write(okLine(answer));
     m_state->socket->flush();
 }
 
@@ -134,6 +139,8 @@ std::unique_ptr<DevControl> startIfAsked(const QStringList& arguments, DevContro
     auto control = std::make_unique<DevControl>(std::move(context));
     addAppCommands(*control);
     addUiCommands(*control);
+    addMidiCommands(*control);
+    addMeasureCommands(*control);
     if (auto listening = control->listen(); !listening) {
         qCWarning(lcDev).noquote() << listening.error().message; // (the app goes on without it)
         return nullptr;

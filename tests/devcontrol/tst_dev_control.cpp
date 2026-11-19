@@ -7,6 +7,7 @@
 #include "Session.h"
 
 #include "gigchain/core/Branding.h"
+#include "gigchain/core/FileLog.h"
 #include "gigchain/engine/FakeEngineFactory.h"
 
 #include <QQmlApplicationEngine>
@@ -58,6 +59,7 @@ private slots:
     void init()
     {
         m_dir = std::make_unique<QTemporaryDir>();
+        QVERIFY(core::FileLog::install(m_dir->filePath(u"app.log"_s)).has_value()); // (log and wait read it)
         m_settings = std::make_unique<QSettings>(m_dir->filePath(u"s.ini"_s), QSettings::IniFormat);
         m_settings->setValue(u"community/welcomed"_s, true);
         m_settings->setValue(u"community/lastVersion"_s, branding::version());
@@ -74,6 +76,8 @@ private slots:
         m_control = std::make_unique<DevControl>(context(m_name));
         addAppCommands(*m_control);
         addUiCommands(*m_control);
+        addMidiCommands(*m_control);
+        addMeasureCommands(*m_control);
         const auto listening = m_control->listen();
         QVERIFY2(listening.has_value(), listening ? "" : qPrintable(listening.error().message));
     }
@@ -85,6 +89,7 @@ private slots:
         m_session.reset();
         m_engine.reset();
         m_settings.reset();
+        core::FileLog::uninstall();
         m_dir.reset();
     }
 
@@ -255,6 +260,78 @@ private slots:
             return std::ranges::count_if(tree, [&longName](const QJsonValue& v) { return v.toObject().value(u"text"_s) == longName; }) >= 2;
         };
         QTRY_VERIFY_WITH_TIMEOUT(shown(), 3000); // the name, and its tooltip
+    }
+
+    // ---- MIDI, measuring, what the app said ----
+
+    void aNoteReachesTheEngineAsFromAKeyboard()
+    {
+        DevClient client(m_name);
+        QVERIFY(client.ask(u"note"_s, {60, 100}).value(u"ok"_s).toBool());
+        QTRY_VERIFY(client.ask(u"keys"_s).value(u"down"_s).toArray().contains(QJsonObject{{u"key"_s, 60}, {u"velocity"_s, 100}}));
+        QVERIFY(client.ask(u"note"_s, {60, 0}).value(u"ok"_s).toBool());
+        QTRY_VERIFY(client.ask(u"keys"_s).value(u"down"_s).toArray().isEmpty());
+        QVERIFY(client.ask(u"cc"_s, {64, 127}).value(u"ok"_s).toBool());
+        QVERIFY(client.ask(u"midi"_s, {u"B0 40 00"_s}).value(u"ok"_s).toBool());
+        const QJsonObject bad = client.ask(u"midi"_s, {u"GG"_s});
+        QVERIFY(!bad.value(u"ok"_s).toBool());
+        QVERIFY(!client.ask(u"note"_s, {200, 100}).value(u"ok"_s).toBool());
+    }
+
+    void aPlayScriptKeepsItsTiming()
+    {
+        DevClient client(m_name);
+        const QJsonObject played = client.ask(u"play"_s, {u"on 64 90; wait 150; off 64"_s});
+        QVERIFY2(played.value(u"ok"_s).toBool(), qPrintable(played.value(u"error"_s).toString()));
+        QVERIFY2(played.value(u"ms"_s).toInt() >= 150, qPrintable(QString::number(played.value(u"ms"_s).toInt())));
+        QTRY_VERIFY(client.ask(u"keys"_s).value(u"down"_s).toArray().isEmpty());
+        QVERIFY(!client.ask(u"play"_s, {u"on 64 90; jump"_s}).value(u"ok"_s).toBool());
+    }
+
+    void levelsAreMeasuredOverTime()
+    {
+        DevClient client(m_name);
+        const QJsonObject level = client.ask(u"level"_s, {200});
+        QVERIFY2(level.value(u"ok"_s).toBool(), qPrintable(level.value(u"error"_s).toString()));
+        QVERIFY(level.contains(u"peak"_s) && level.contains(u"rms"_s) && level.contains(u"peakDb"_s));
+        QVERIFY(level.value(u"ms"_s).toInt() >= 200);
+        QVERIFY(client.ask(u"cpu"_s, {100}).contains(u"highest"_s));
+        QVERIFY(client.ask(u"process"_s).value(u"memoryMb"_s).toDouble() > 1.0);
+        QVERIFY(!client.ask(u"level"_s, {200, u"no-such-channel"_s}).value(u"ok"_s).toBool());
+    }
+
+    void waitFindsALineOrSaysItNeverCame()
+    {
+        DevClient client(m_name);
+        const QString mark = client.ask(u"mark"_s).value(u"mark"_s).toString();
+        QVERIFY(!mark.isEmpty());
+        QVERIFY(client.ask(u"midi"_s, {u"90 3C 64"_s, u"Backup Keys"_s}).value(u"ok"_s).toBool()); // the demo engine logs it
+        const QJsonObject found = client.ask(u"wait"_s, {u"Played in Backup Keys"_s, 3000, mark});
+        QVERIFY2(found.value(u"ok"_s).toBool(), qPrintable(found.value(u"error"_s).toString()));
+        QVERIFY(found.value(u"line"_s).toString().contains(u"Backup Keys"_s));
+        QVERIFY(client.ask(u"log"_s, {mark, u"Played in"_s}).value(u"lines"_s).toArray().size() >= 1);
+        const QJsonObject never = client.ask(u"wait"_s, {u"nothing like this at all"_s, 200, mark});
+        QVERIFY(!never.value(u"ok"_s).toBool());
+        QVERIFY(never.value(u"error"_s).toString().contains(u"200 ms"_s));
+    }
+
+    void noticesShowWhatThePlayerSaw()
+    {
+        DevClient client(m_name);
+        const QString mark = client.ask(u"mark"_s).value(u"mark"_s).toString();
+        m_session->document().reportMessage(u"Something the player should see"_s);
+        const QJsonArray notices = client.ask(u"notices"_s, {mark}).value(u"notices"_s).toArray();
+        QVERIFY(std::ranges::any_of(notices, [](const QJsonValue& v) { return v.toObject().value(u"text"_s).toString().contains(u"Something the player"_s); }));
+        QVERIFY(client.ask(u"wait"_s, {u"Something the player"_s, 1000, mark}).value(u"ok"_s).toBool());
+    }
+
+    void recordingSaysWhyItCannot()
+    {
+        DevClient client(m_name);
+        const QJsonObject recorded = client.ask(u"record"_s, {1, m_dir->filePath(u"take.wav"_s)});
+        QVERIFY(!recorded.value(u"ok"_s).toBool()); // the demo engine has no audio to record
+        QVERIFY(!recorded.value(u"error"_s).toString().isEmpty());
+        QVERIFY(!client.ask(u"record"_s, {500, m_dir->filePath(u"long.wav"_s)}).value(u"ok"_s).toBool()); // at most 120 s
     }
 
     void guardBlockSwitchesAPluginOff()

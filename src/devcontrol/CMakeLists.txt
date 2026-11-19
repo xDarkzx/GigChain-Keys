@@ -7,6 +7,8 @@ add_library(gigchain_devcontrol STATIC
     Reflection.h Reflection.cpp
     AppCommands.cpp
     UiCommands.cpp
+    MidiCommands.cpp
+    MeasureCommands.cpp
 )
 set_target_properties(gigchain_devcontrol PROPERTIES AUTOMOC ON)
 target_include_directories(gigchain_devcontrol PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
