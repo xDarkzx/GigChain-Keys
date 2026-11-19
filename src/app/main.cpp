@@ -17,6 +17,7 @@
 #include "gigchain/engine/RealEngineFactory.h"
 
 #ifdef GIGCHAIN_DEV_CONTROL
+#include "DevControl.h"
 #include "DevMarker.h"
 #endif
 
@@ -95,7 +96,10 @@ int runApp(int argc, char** argv)
 #endif
 
     // Already running (a setlist double-clicked): the running app opens it.
-    const QStringList arguments = QGuiApplication::arguments();
+    QStringList arguments = QGuiApplication::arguments();
+#ifdef GIGCHAIN_DEV_CONTROL
+    arguments.removeAll(u"--dev-control"_s); // (the live test control's switch, not a setlist)
+#endif
     const QString given = arguments.size() > 1 ? QFileInfo(arguments.at(1)).absoluteFilePath() : QString();
     ui::SingleInstance instance(ui::SingleInstance::appName());
     if (!instance.first()) {
@@ -210,6 +214,17 @@ int runApp(int argc, char** argv)
     engine->setProgressHandler([&session](engine::LoadStage, const QString& what, int done, int total) {
         session.loading().loading(QGuiApplication::tr("Loading sounds…"), what, done, total);
     });
+#ifdef GIGCHAIN_DEV_CONTROL
+    // The live test control: only when started with --dev-control (docs/testing/live-test-control.md).
+    const auto devControl = devcontrol::startIfAsked(
+        QGuiApplication::arguments(),
+        devcontrol::DevControl::Context{.engine = engine.get(),
+                                        .objects = session.initialProperties(),
+                                        .window = mainWindow,
+                                        .logFile = logPath,
+                                        .dataFolder = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation),
+                                        .socketName = {}});
+#endif
 
     // A later start's setlist opens as a recent one does (asking first about
     // unsaved changes), and the window comes to the front.
