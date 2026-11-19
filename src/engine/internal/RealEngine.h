@@ -427,6 +427,9 @@ private:
     // the audio thread not in it), played after the patch.
     SustainPads m_sustainPads;
     std::shared_ptr<PluginNode> m_sustainPadsNode; // its VST instrument (null: Pads Pro)
+    // An instrument chosen for it while switched off (the plugin guard), with its
+    // settings: it loads when switched back on (unblockPlugin).
+    std::optional<std::pair<QString, QByteArray>> m_sustainPadsWanted;
     bool m_sustainPadsEdited = false;              // its settings changed in its window (to keep)
     // The song's sections: as set (main thread), as a timeline (to the audio
     // thread), and the play/stop/jump counting through them.

@@ -51,7 +51,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
         write(folder->filePath(u"guard/blocked.json"_s), bytes);
         PluginLoadGuard guard(folder->filePath(u"guard"_s));
         (void)guard.isBlocked(u"C:/Program Files/Common Files/VST3/Some Plugin.vst3"_s);
-        (void)guard.takeCrashed();
+        (void)guard.takeCrashed(true);
     }
     return 0;
 }

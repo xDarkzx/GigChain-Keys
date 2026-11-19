@@ -47,6 +47,8 @@ public:
     QStringList takeCrashed(bool lastRunCrashed);
 
     [[nodiscard]] bool isBlocked(const QString& pluginPath) const;
+    // Whether two paths name one plugin, as the system compares them (Windows: whatever the case and slashes).
+    [[nodiscard]] static bool samePlugin(const QString& a, const QString& b);
     [[nodiscard]] QStringList blocked() const { return m_blocked; }
     void unblock(const QString& pluginPath);
 

@@ -126,6 +126,11 @@ QStringList PluginLoadGuard::takeCrashed(bool lastRunCrashed)
     return crashed;
 }
 
+bool PluginLoadGuard::samePlugin(const QString& a, const QString& b)
+{
+    return normalised(a) == normalised(b);
+}
+
 bool PluginLoadGuard::isBlocked(const QString& pluginPath) const
 {
     const QString wanted = normalised(pluginPath);

@@ -159,7 +159,8 @@ struct Vst3Node::Impl
     IPtr<Vst::IEditController> controller;
     ComponentHandler componentHandler;
     Vst::HostProcessData data;
-    Vst::EventList events{kMaxStripEventsPerBlock};
+    // (Room for a Note Off before each Note On too: a key pressed again while held, process().)
+    Vst::EventList events{2 * kMaxStripEventsPerBlock};
     Vst::ParameterChanges parameterChanges;
     Vst::ProcessContext context{};
     QString name;
