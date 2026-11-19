@@ -4,6 +4,7 @@
 
 #include "BuiltinEffects.h"
 #include "EngineLog.h"
+#include "MidiInput.h"
 #include "PadsProNode.h"
 #include "SoundFontNode.h"
 #include "PianoProNode.h"
@@ -289,6 +290,22 @@ void FakeEngine::injectController(int midiChannel, int controller, int value)
     for (std::size_t i = 0; i < m_appKnobs.size(); ++i) {
         if (m_appKnobs.at(i) == knob) m_appKnobValues.at(i) = value;
     }
+}
+
+core::Result<void> FakeEngine::injectMidi(const QString& keyboard, const QByteArray& bytes)
+{
+    const auto* data = reinterpret_cast<const unsigned char*>(bytes.constData()); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): bytes as MIDI
+    const auto event = parseMidi(std::span(data, static_cast<std::size_t>(bytes.size())));
+    if (!event) {
+        return core::fail(core::ErrorCode::InvalidData, u"Not a MIDI channel message: %1"_s.arg(QString::fromLatin1(bytes.toHex(' '))));
+    }
+    qCInfo(lcEngine).noquote() << "Played in" << (keyboard.isEmpty() ? u"(no particular keyboard)"_s : keyboard)
+                               << QString::fromLatin1(bytes.toHex(' '));
+    const int type = event->status & 0xF0;
+    const int channel = (event->status & 0x0F) + 1;
+    if (type == 0x90 || type == 0x80) injectNote(channel, event->data1, type == 0x90 ? event->data2 : 0);
+    if (type == 0xB0) injectController(channel, event->data1, event->data2);
+    return {};
 }
 
 std::vector<Notice> FakeEngine::poll()

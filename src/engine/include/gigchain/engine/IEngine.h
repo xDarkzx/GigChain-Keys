@@ -132,6 +132,12 @@ public:
     virtual void injectNote(int midiChannel, int note, int velocity) = 0;
     // A controller (a knob, fader or pedal) as if from the keyboard; out-of-range values are ignored (logged).
     virtual void injectController(int midiChannel, int controller, int value) = 0;
+    // Any one MIDI message (`bytes`: "90 3C 64", a pitch bend, a program
+    // change, a transport button) as the open input named `keyboard` would
+    // pass it on: its channel filter, its tag, its taught controls and touch
+    // (empty name: from no particular keyboard). For the live test control.
+    // Errors: no open input of that name; not one message; a clock tick.
+    virtual core::Result<void> injectMidi(const QString& keyboard, const QByteArray& bytes) = 0;
     // A note played as injectNote, but on its sample at `quarter` of the beat
     // clock (beatClock(): Practice plays the song's chords in time with the
     // click). One already past plays at once. Out-of-range values are ignored (logged).

@@ -265,6 +265,33 @@ private slots:
         QVERIFY(engine.cpuLoad() > 0.0F && engine.cpuLoad() < 1.0F);
     }
 
+    // A MIDI message played in as a keyboard sends it (the live test control):
+    // from no particular keyboard it plays; a keyboard that is not plugged in
+    // is said, not silently ignored; a message that is not one is refused.
+    void aMessagePlayedInAsAKeyboardIsHeard()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-90.0);
+        const core::Patch patch = pianoPatch();
+        engine.applyPatch(patch);
+        QVERIFY(engine.poll().empty());
+
+        QVERIFY(engine.injectMidi({}, QByteArray::fromHex("903c6e")).has_value());
+        const float peak = loudestUntilAbove(engine, [&] { return engine.channelLevel(patch.channels.at(0).id).peak; }, 0.001F);
+        QVERIFY2(peak > 0.001F, "the message played in stayed silent");
+        QVERIFY(engine.injectMidi({}, QByteArray::fromHex("803c00")).has_value());
+
+        const auto unplugged = engine.injectMidi(u"No Such Keyboard"_s, QByteArray::fromHex("903c6e"));
+        QVERIFY(!unplugged.has_value());
+        QVERIFY2(unplugged.error().message.contains(u"No Such Keyboard"_s), qPrintable(unplugged.error().message));
+        QVERIFY(!engine.injectMidi({}, QByteArray::fromHex("3c6e")).has_value()); // no status byte
+        QVERIFY(!engine.injectMidi({}, QByteArray::fromHex("f8")).has_value());   // a clock tick: not played in
+    }
+
     void changingTheSampleRateKeepsPlaying()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");

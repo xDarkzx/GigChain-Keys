@@ -118,6 +118,7 @@ public:
     [[nodiscard]] double masterVolume() const override { return m_masterDb; }
     void injectNote(int midiChannel, int note, int velocity) override;
     void injectController(int midiChannel, int controller, int value) override;
+    core::Result<void> injectMidi(const QString& keyboard, const QByteArray& bytes) override;
     void scheduleNote(int midiChannel, int note, int velocity, double quarter) override;
     void clearScheduledNotes() override;
     [[nodiscard]] BeatClock beatClock() const override;

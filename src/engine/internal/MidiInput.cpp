@@ -141,6 +141,21 @@ bool translateControl(MidiEvent& event, std::span<const RigEntry> rig) noexcept
     return true;
 }
 
+std::optional<MidiEvent> shapeAsKeyboard(const KeyboardShape& keyboard, std::span<const unsigned char> bytes) noexcept
+{
+    auto event = parseMidi(bytes);
+    if (!event || !passesChannelFilter(event->status, keyboard.channel)) return std::nullopt;
+    event->source = keyboard.source; // (a channel may listen to this keyboard only)
+    // A taught keyboard: its controls arrive as the ones learned on another keyboard.
+    if (!translateControl(*event, keyboard.rig)) return std::nullopt;
+    if (keyboard.controlsOnly) {
+        event->controlsOnly = true; // its buttons and knobs: never played
+    } else if ((event->status & 0xF0) == 0x90 && event->data2 > 0 && keyboard.velocity != nullptr) {
+        event->data2 = keyboard.velocity->at(event->data2 & 0x7F); // the keyboard's touch (Settings > MIDI)
+    }
+    return event;
+}
+
 MidiInput::MidiInput() = default;
 
 MidiInput::~MidiInput()
@@ -287,11 +302,9 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
         default: break;
         }
     }
-    auto event = parseMidi(*message);
-    if (!event || !passesChannelFilter(event->status, port->channel)) return;
-    event->source = port->source; // (a channel may listen to this keyboard only)
-    // A taught keyboard: its controls arrive as the ones learned on another keyboard.
-    if (!translateControl(*event, port->rig)) return;
+    // Its channel filter, its tag, its taught controls and its touch (shapeAsKeyboard).
+    auto event = shapeAsKeyboard(port->shape(), *message);
+    if (!event) return;
     // A keyboard's DAW port: Mackie Control's buttons, and the rest for
     // learned controls only (it never plays).
     if (port->controlsOnly) {
@@ -304,7 +317,6 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
             }
             if (request != 0 || event->data1 == kShift) return;
         }
-        event->controlsOnly = true;
         if (!port->queue.push(*event)) owner.m_dropped.fetch_add(1, std::memory_order_relaxed);
         return;
     }
@@ -314,7 +326,6 @@ void MidiInput::callback(double, std::vector<unsigned char>* message, void* user
         owner.m_transportRequests.fetch_or(transport::kToggle, std::memory_order_acq_rel);
     }
     if ((event->status & 0xF0) == 0x90 && event->data2 > 0) {
-        event->data2 = port->velocity.at(event->data2 & 0x7F); // the keyboard's touch (Settings > MIDI)
         port->owner->m_activity.store(true, std::memory_order_relaxed);
         owner.recordPress(event->data1, event->data2); // (RtMidi's thread, not the audio thread)
     }
@@ -334,6 +345,41 @@ std::vector<KeyPress> MidiInput::takePresses()
 {
     const std::scoped_lock lock(m_pressesLock);
     return std::exchange(m_presses, {});
+}
+
+core::Result<std::optional<MidiEvent>> MidiInput::shapeAs(const QString& portName, std::span<const unsigned char> bytes)
+{
+    const QString hex = QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(bytes.data()), static_cast<qsizetype>(bytes.size())).toHex(' ')); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): MIDI bytes as text
+    if (bytes.empty() || bytes.front() < 0x80) {
+        return core::fail(core::ErrorCode::InvalidData, u"Not a MIDI message (it starts with a status byte, 80-FF): \"%1\""_s.arg(hex));
+    }
+    if (bytes.front() == 0xF8) {
+        return core::fail(core::ErrorCode::InvalidData, u"A MIDI clock tick cannot be played in: only a real clock keeps time"_s);
+    }
+    KeyboardShape keyboard; // (no name: from no particular keyboard)
+    if (!portName.isEmpty()) {
+        const auto port = std::ranges::find_if(m_ports, [&portName](const auto& p) { return p->name == portName; });
+        if (port == m_ports.end()) {
+            return core::fail(core::ErrorCode::DeviceUnavailable, u"%1 is not an open MIDI input (open: %2)"_s.arg(
+                portName, openPortNames().isEmpty() ? u"none"_s : openPortNames().join(u", "_s)));
+        }
+        keyboard = (*port)->shape();
+    }
+    // A transport button: where a keyboard's goes (when they start the song).
+    const std::vector<unsigned char> message(bytes.begin(), bytes.end());
+    if (const uint32_t request = transportRequestOf(message); request != 0) {
+        if (bytes.front() == 0xFA) m_clockStart.store(true, std::memory_order_relaxed);
+        if (m_transportButtons.load(std::memory_order_relaxed)) m_transportRequests.fetch_or(request, std::memory_order_acq_rel);
+        return std::optional<MidiEvent>{};
+    }
+    if (bytes.front() == 0xF0) return std::optional<MidiEvent>{}; // other sysex: not for us
+    if (!parseMidi(bytes)) return core::fail(core::ErrorCode::InvalidData, u"Not a whole MIDI channel message: \"%1\""_s.arg(hex));
+    auto event = shapeAsKeyboard(keyboard, bytes);
+    if (event && !event->controlsOnly && (event->status & 0xF0) == 0x90 && event->data2 > 0) {
+        m_activity.store(true, std::memory_order_relaxed);
+        recordPress(event->data1, event->data2); // (timed as a keyboard's key)
+    }
+    return event;
 }
 
 void MidiInput::onClockTick(Port& port)

@@ -3,6 +3,7 @@
 #include "MidiEvent.h"
 #include "MidiQueue.h"
 
+#include "gigchain/core/Error.h"
 #include "gigchain/engine/EngineTypes.h"
 
 #include <QString>
@@ -34,6 +35,23 @@ std::optional<MidiEvent> parseMidi(std::span<const unsigned char> bytes) noexcep
 // False: drop it (letting go of a button standing for a program change).
 // Real-time safe.
 [[nodiscard]] bool translateControl(MidiEvent& event, std::span<const RigEntry> rig) noexcept;
+
+// A keyboard's settings, fixed while its input is open, applied to all it sends.
+struct KeyboardShape
+{
+    uint16_t source = 0;       // keyboardSource(its name): 0 = from no particular keyboard
+    int channel = 0;           // its channel filter: 0 = all channels
+    bool controlsOnly = false; // its buttons and knobs only (a keyboard's DAW port): never played
+    std::span<const RigEntry> rig;                      // its taught controls
+    const std::array<uint8_t, 128>* velocity = nullptr; // its touch: each note-on velocity's new value (null: as played)
+};
+// What a keyboard passes on from `bytes` (a channel message): parsed, through
+// its channel filter, tagged with its source, its taught controls translated,
+// and its touch applied to a key's velocity (a control's keeps its own). Nullopt:
+// nothing to pass on (not a channel message, another channel, a dropped
+// control). The same for a real key and one played in as that keyboard.
+// Real-time safe.
+[[nodiscard]] std::optional<MidiEvent> shapeAsKeyboard(const KeyboardShape& keyboard, std::span<const unsigned char> bytes) noexcept;
 
 // The sustain pedal's presses, for "a quick double press starts or stops the
 // song": press() says whether this press came within kDoubleTapNs of the last
@@ -120,6 +138,16 @@ public:
     // port): its transport::k* flag, else 0. `shift`: Shift is held.
     [[nodiscard]] static uint32_t mackieRequestOf(uint8_t status, uint8_t note, uint8_t velocity, bool shift) noexcept;
 
+    // Main thread: one message (`bytes`) as the open input `portName` passes
+    // it on (empty: from no particular keyboard), for the live test control.
+    // A transport request goes where a keyboard's does; a key pressed is seen
+    // and timed as a keyboard's. Nullopt: nothing to play (another channel, a
+    // dropped control, a transport request, sysex). Errors: no open input of
+    // that name, not a MIDI message, a clock tick (only a real clock times).
+    // Never touches the input's own queue or its thread's state (its Mackie
+    // Shift, its sustain double tap, its clock).
+    core::Result<std::optional<MidiEvent>> shapeAs(const QString& portName, std::span<const unsigned char> bytes);
+
 private:
     struct Port
     {
@@ -141,6 +169,12 @@ private:
         // Its touch (MidiPort::velocity): each note-on velocity's new value,
         // worked out when it opens (fixed while open: its thread reads it).
         std::array<uint8_t, 128> velocity{};
+
+        // Its fixed settings, as shapeAsKeyboard takes them.
+        [[nodiscard]] KeyboardShape shape() const
+        {
+            return KeyboardShape{.source = source, .channel = channel, .controlsOnly = controlsOnly, .rig = rig, .velocity = &velocity};
+        }
     };
 
     static void callback(double timeStamp, std::vector<unsigned char>* message, void* user);

@@ -952,6 +952,19 @@ void RealEngine::injectController(int midiChannel, int controller, int value)
     }
 }
 
+core::Result<void> RealEngine::injectMidi(const QString& keyboard, const QByteArray& bytes)
+{
+    GC_ONLY_MAIN_THREAD(); // (the injected queue's one producer)
+    const auto* data = reinterpret_cast<const unsigned char*>(bytes.constData()); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): bytes as MIDI
+    auto shaped = m_midi.shapeAs(keyboard, std::span(data, static_cast<std::size_t>(bytes.size())));
+    if (!shaped) {
+        qCWarning(lcEngine).noquote() << "Not played in:" << shaped.error().message;
+        return tl::unexpected(shaped.error());
+    }
+    if (*shaped && !m_injected.push(**shaped)) m_droppedInjected.fetch_add(1, std::memory_order_relaxed);
+    return {};
+}
+
 void RealEngine::scheduleNote(int midiChannel, int note, int velocity, double quarter)
 {
     if (midiChannel < 1 || midiChannel > 16 || note < 0 || note > 127 || velocity < 0 || velocity > 127 || !std::isfinite(quarter)) {

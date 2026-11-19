@@ -207,6 +207,7 @@ public:
     [[nodiscard]] bool masterMuted() const override { return muted; }
     void injectNote(int channel, int note, int velocity) override { notes.push_back({channel, note, velocity}); }
     void injectController(int, int, int) override {}
+    core::Result<void> injectMidi(const QString&, const QByteArray&) override { return {}; }
     struct TimedNote
     {
         int channel = 0;
