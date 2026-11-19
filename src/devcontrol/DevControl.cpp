@@ -133,6 +133,7 @@ std::unique_ptr<DevControl> startIfAsked(const QStringList& arguments, DevContro
     if (!arguments.contains(u"--dev-control"_s)) return nullptr;
     auto control = std::make_unique<DevControl>(std::move(context));
     addAppCommands(*control);
+    addUiCommands(*control);
     if (auto listening = control->listen(); !listening) {
         qCWarning(lcDev).noquote() << listening.error().message; // (the app goes on without it)
         return nullptr;

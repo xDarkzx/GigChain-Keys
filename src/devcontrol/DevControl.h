@@ -90,8 +90,13 @@ private:
     std::map<QString, std::pair<QString, Handler>> m_commands;
 };
 
+// "document" or "document.notifications": a screen controller by name (or the
+// spec's alias for it), then QObject properties of it. Null: `error` says why.
+[[nodiscard]] QObject* resolve(const DevControl& control, const QString& path, QString& error);
+
 // Groups of commands (each in its own file).
 void addAppCommands(DevControl& control);
+void addUiCommands(DevControl& control);
 
 // main(): a control listening on defaultSocketName() when `arguments` has
 // --dev-control (with every command group added); nullptr otherwise.

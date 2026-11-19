@@ -27,6 +27,9 @@ struct DevRequest
 // `{"cmd":"note","args":[60,100]}`; `args` may be left out. Each problem says what is wrong.
 [[nodiscard]] core::Result<DevRequest> parseRequest(QByteArrayView line);
 
+// A request's argument `at` as text (a number as its digits); empty when there is none.
+[[nodiscard]] QString argText(const DevRequest& request, qsizetype at);
+
 // The answers: `{"ok":true,...fields}` / `{"ok":false,"error":why}`, one line each, ending in '\n'.
 [[nodiscard]] QByteArray okLine(const QJsonObject& fields = {});
 [[nodiscard]] QByteArray errorLine(const QString& why);

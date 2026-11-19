@@ -73,6 +73,7 @@ private slots:
         m_name = u"gck-test-"_s + QUuid::createUuid().toString(QUuid::Id128).left(12);
         m_control = std::make_unique<DevControl>(context(m_name));
         addAppCommands(*m_control);
+        addUiCommands(*m_control);
         const auto listening = m_control->listen();
         QVERIFY2(listening.has_value(), listening ? "" : qPrintable(listening.error().message));
     }
@@ -180,6 +181,80 @@ private slots:
         const QJsonObject status = client.ask(u"status"_s);
         QCOMPARE(status.value(u"sound"_s).toString(), u"Strings"_s);
         QVERIFY(status.contains(u"channels"_s) && status.contains(u"blockedPlugins"_s) && status.contains(u"audio"_s));
+    }
+
+    // ---- the screen ----
+
+    void theSettingsDialogIsDrivenFromOutside()
+    {
+        engine::MidiSetup setup;
+        setup.enabled = {u"KeyLab mkII 88 MIDI 40:0"_s};
+        setup.configured = true;
+        QVERIFY(m_engine->setMidiSetup(setup).has_value());
+        DevClient client(m_name);
+        QVERIFY(client.ask(u"ui-call"_s, {u"settingsDialog"_s, u"open"_s}).value(u"ok"_s).toBool());
+        QVERIFY(client.ask(u"ui-set"_s, {u"settingsDialog"_s, u"page"_s, 2}).value(u"ok"_s).toBool());
+        QTest::qWait(300);
+        const QJsonArray tree = client.ask(u"ui-tree"_s, {u"settingsDialog"_s}).value(u"items"_s).toArray();
+        const auto name = std::ranges::find_if(tree, [](const QJsonValue& v) { return v.toObject().value(u"name"_s) == u"midiName0"_s; });
+        QVERIFY2(name != tree.end(), "the MIDI page's first input is not in the tree");
+        QCOMPARE(name->toObject().value(u"text"_s).toString(), u"KeyLab mkII 88 MIDI 40:0"_s);
+        const QString picture = m_dir->filePath(u"settings.png"_s);
+        QVERIFY(client.ask(u"shot"_s, {picture}).value(u"ok"_s).toBool());
+        QVERIFY(QFileInfo(picture).size() > 1000);
+        const QString part = m_dir->filePath(u"name.png"_s);
+        QVERIFY(client.ask(u"shot"_s, {part, u"midiName0"_s}).value(u"ok"_s).toBool());
+        QVERIFY(QImage(part).width() < QImage(picture).width()); // just the item
+        QVERIFY(client.ask(u"ui-call"_s, {u"settingsDialog"_s, u"close"_s}).value(u"ok"_s).toBool());
+    }
+
+    void aClickPressesTheControl()
+    {
+        window()->resize(1440, 1000);
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        DevClient client(m_name);
+        const QJsonObject clicked = client.ask(u"ui-click"_s, {u"settingsButton"_s});
+        QVERIFY2(clicked.value(u"ok"_s).toBool(), qPrintable(clicked.value(u"error"_s).toString()));
+        QTRY_VERIFY(client.ask(u"ui-get"_s, {u"settingsDialog"_s, u"opened"_s}).value(u"value"_s).toBool());
+        QVERIFY(!client.ask(u"ui-click"_s, {u"noSuchThing"_s}).value(u"ok"_s).toBool());
+    }
+
+    // Review focus 5: a control behind an open dialog is said to be covered, not pressed.
+    void aCoveredOrHiddenItemIsSaid()
+    {
+        window()->resize(1440, 1000);
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        DevClient client(m_name);
+        QVERIFY(client.ask(u"ui-call"_s, {u"settingsDialog"_s, u"open"_s}).value(u"ok"_s).toBool());
+        QTRY_VERIFY(client.ask(u"ui-get"_s, {u"settingsDialog"_s, u"opened"_s}).value(u"value"_s).toBool());
+        const QJsonObject covered = client.ask(u"ui-click"_s, {u"undoButton"_s});
+        QVERIFY(!covered.value(u"ok"_s).toBool());
+        QVERIFY2(covered.value(u"error"_s).toString().contains(u"covered"_s), qPrintable(covered.value(u"error"_s).toString()));
+        QVERIFY(client.ask(u"key"_s, {u"Escape"_s}).value(u"ok"_s).toBool()); // closes it
+        QTRY_VERIFY(!client.ask(u"ui-get"_s, {u"settingsDialog"_s, u"opened"_s}).value(u"value"_s).toBool());
+    }
+
+    void hoverShowsATooltip()
+    {
+        const QString longName = u"A MIDI input whose name is far too long to fit on one line of the Settings window, "
+                                 u"even on a line of its own, so it shows in full when pointed at 40:0"_s;
+        engine::MidiSetup setup;
+        setup.enabled = {longName};
+        setup.configured = true;
+        QVERIFY(m_engine->setMidiSetup(setup).has_value());
+        DevClient client(m_name);
+        QVERIFY(client.ask(u"resize"_s, {880, 640}).value(u"ok"_s).toBool());
+        QVERIFY(QTest::qWaitForWindowExposed(window()));
+        QVERIFY(client.ask(u"ui-call"_s, {u"settingsDialog"_s, u"open"_s}).value(u"ok"_s).toBool());
+        QVERIFY(client.ask(u"ui-set"_s, {u"settingsDialog"_s, u"page"_s, 2}).value(u"ok"_s).toBool());
+        QTest::qWait(300);
+        const QJsonObject hovered = client.ask(u"ui-hover"_s, {u"midiName0"_s});
+        QVERIFY2(hovered.value(u"ok"_s).toBool(), qPrintable(hovered.value(u"error"_s).toString()));
+        const auto shown = [&client, &longName] {
+            const QJsonArray tree = client.ask(u"ui-tree"_s, {}).value(u"items"_s).toArray();
+            return std::ranges::count_if(tree, [&longName](const QJsonValue& v) { return v.toObject().value(u"text"_s) == longName; }) >= 2;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(shown(), 3000); // the name, and its tooltip
     }
 
     void guardBlockSwitchesAPluginOff()

@@ -3,6 +3,7 @@
 #include "DevControl.h"
 #include "DevLog.h"
 #include "PluginLoadGuard.h"
+#include "Reflection.h"
 
 #include "gigchain/engine/IEngine.h"
 
@@ -17,8 +18,6 @@
 #include <QThread>
 #include <QTimer>
 
-#include <array>
-
 using namespace Qt::StringLiterals;
 
 namespace gigchain::devcontrol {
@@ -32,7 +31,8 @@ const std::map<QString, QString>& aliases()
     return names;
 }
 
-// "document" or "document.notifications": a controller, then QObject properties of it.
+} // namespace
+
 QObject* resolve(const DevControl& control, const QString& path, QString& error)
 {
     const QStringList parts = path.split(u'.');
@@ -54,39 +54,7 @@ QObject* resolve(const DevControl& control, const QString& path, QString& error)
     return object;
 }
 
-QJsonValue toJson(const QVariant& value)
-{
-    if (!value.isValid() || value.isNull()) return QJsonValue::Null;
-    if (QObject* object = value.value<QObject*>(); object != nullptr) {
-        return QJsonObject{{u"object"_s, QString::fromLatin1(object->metaObject()->className())}, {u"objectName"_s, object->objectName()}};
-    }
-    const QJsonValue json = QJsonValue::fromVariant(value);
-    if (!json.isNull()) return json;
-    if (value.canConvert<QString>()) return value.toString();
-    return u"(%1)"_s.arg(QString::fromLatin1(value.typeName()));
-}
-
-QString signature(const QMetaMethod& method)
-{
-    QStringList params;
-    const QList<QByteArray> names = method.parameterNames();
-    for (int i = 0; i < method.parameterCount(); ++i) {
-        params << (QString::fromLatin1(method.parameterTypeName(i)) + u' ' + QString::fromLatin1(names.value(i))).trimmed();
-    }
-    return u"%1 %2(%3)"_s.arg(QString::fromLatin1(method.typeName()), QString::fromLatin1(method.name()), params.join(u", "_s));
-}
-
-// The methods a controller offers (its own and its classes', not QObject's).
-std::vector<QMetaMethod> callable(const QObject& object)
-{
-    std::vector<QMetaMethod> methods;
-    const QMetaObject* meta = object.metaObject();
-    for (int i = QObject::staticMetaObject.methodCount(); i < meta->methodCount(); ++i) {
-        const QMetaMethod method = meta->method(i);
-        if (method.access() == QMetaMethod::Public && method.methodType() != QMetaMethod::Signal) methods.push_back(method);
-    }
-    return methods;
-}
+namespace {
 
 QJsonArray modelRows(const QAbstractItemModel& model)
 {
@@ -100,12 +68,6 @@ QJsonArray modelRows(const QAbstractItemModel& model)
         rows.append(fields);
     }
     return rows;
-}
-
-QString argText(const DevRequest& request, qsizetype at)
-{
-    const QJsonValue value = request.args.at(at);
-    return value.isString() ? value.toString() : value.toVariant().toString();
 }
 
 void addObjectCommands(DevControl& control)
@@ -152,65 +114,30 @@ void addObjectCommands(DevControl& control)
         QString error;
         QObject* object = resolve(control, argText(request, 0), error);
         if (object == nullptr) return reply.fail(error);
-        const QByteArray name = argText(request, 1).toUtf8();
-        const auto count = static_cast<int>(request.args.size() - 2);
-        QStringList named;
-        std::optional<QMetaMethod> found;
-        for (const QMetaMethod& method : callable(*object)) {
-            if (method.name() != name) continue;
-            named << signature(method);
-            if (method.parameterCount() == count) found = method;
-        }
-        if (!found) {
-            return reply.fail(named.isEmpty() ? u"%1 has no method %2 (methods lists them)"_s.arg(argText(request, 0), QString::fromLatin1(name))
-                                              : u"%1 takes: %2"_s.arg(QString::fromLatin1(name), named.join(u" or "_s)));
-        }
-        constexpr int kMaxArgs = 10;
-        if (count > kMaxArgs) return reply.fail(u"At most %1 arguments"_s.arg(kMaxArgs));
-        std::vector<QVariant> values;
-        values.reserve(static_cast<std::size_t>(count));
-        for (int i = 0; i < count; ++i) {
-            QVariant value = request.args.at(i + 2).toVariant();
-            if (!value.convert(found->parameterMetaType(i))) {
-                return reply.fail(u"Argument %1 of %2 cannot be a %3"_s.arg(i + 1).arg(signature(*found), QString::fromLatin1(found->parameterTypeName(i))));
-            }
-            values.push_back(std::move(value));
-        }
-        QVariant result = found->returnMetaType().id() == QMetaType::Void ? QVariant() : QVariant(found->returnMetaType(), nullptr);
-        std::array<void*, kMaxArgs + 1> argv{};
-        argv.at(0) = result.isValid() ? result.data() : nullptr;
-        for (std::size_t i = 0; i < values.size(); ++i) argv.at(i + 1) = values.at(i).data();
-        if (QMetaObject::metacall(object, QMetaObject::InvokeMetaMethod, found->methodIndex(), argv.data()) >= 0) {
-            return reply.fail(u"%1 could not be called"_s.arg(signature(*found)));
-        }
-        if (result.metaType() == QMetaType::fromType<QVariant>()) result = result.value<QVariant>(); // (a method returning a QVariant)
-        reply.ok({{u"result"_s, toJson(result)}});
+        QJsonArray args = request.args;
+        args.removeFirst(); // (the object)
+        args.removeFirst(); // (the method)
+        const auto result = callMethod(*object, argText(request, 1).toUtf8(), args);
+        if (!result) return reply.fail(result.error().message);
+        reply.ok({{u"result"_s, *result}});
     });
     control.add(u"get"_s, u"get <object> <property>: a property's value"_s, [&control](const DevRequest& request, const Reply& reply) {
         if (request.args.size() != 2) return reply.fail(u"get <object> <property>"_s);
         QString error;
         QObject* object = resolve(control, argText(request, 0), error);
         if (object == nullptr) return reply.fail(error);
-        const QByteArray name = argText(request, 1).toUtf8();
-        if (object->metaObject()->indexOfProperty(name.constData()) < 0 && !object->dynamicPropertyNames().contains(name)) {
-            return reply.fail(u"%1 has no property %2 (props lists them)"_s.arg(argText(request, 0), QString::fromLatin1(name)));
-        }
-        reply.ok({{u"value"_s, toJson(object->property(name.constData()))}});
+        const auto value = readProperty(*object, argText(request, 1).toUtf8());
+        if (!value) return reply.fail(value.error().message);
+        reply.ok({{u"value"_s, *value}});
     });
     control.add(u"set"_s, u"set <object> <property> <value>: changes a property"_s, [&control](const DevRequest& request, const Reply& reply) {
         if (request.args.size() != 3) return reply.fail(u"set <object> <property> <value>"_s);
         QString error;
         QObject* object = resolve(control, argText(request, 0), error);
         if (object == nullptr) return reply.fail(error);
-        const QByteArray name = argText(request, 1).toUtf8();
-        const int index = object->metaObject()->indexOfProperty(name.constData());
-        if (index < 0) return reply.fail(u"%1 has no property %2 (props lists them)"_s.arg(argText(request, 0), QString::fromLatin1(name)));
-        const QMetaProperty property = object->metaObject()->property(index);
-        QVariant value = request.args.at(2).toVariant();
-        if (!property.isWritable() || !value.convert(property.metaType()) || !property.write(object, value)) {
-            return reply.fail(u"%1 could not be set to %2"_s.arg(QString::fromLatin1(name), argText(request, 2)));
-        }
-        reply.ok({{u"value"_s, toJson(property.read(object))}});
+        const auto value = writeProperty(*object, argText(request, 1).toUtf8(), request.args.at(2));
+        if (!value) return reply.fail(value.error().message);
+        reply.ok({{u"value"_s, *value}});
     });
     control.add(u"model"_s, u"model <object>: a list's rows (setlistModel, channelModel, pluginModel...)"_s,
                 [&control](const DevRequest& request, const Reply& reply) {

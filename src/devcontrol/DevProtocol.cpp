@@ -56,6 +56,13 @@ core::Result<DevRequest> parseRequest(QByteArrayView line)
     return DevRequest{.cmd = object.value(u"cmd"_s).toString(), .args = args.toArray(), .line = QString::fromUtf8(line.toByteArray())};
 }
 
+QString argText(const DevRequest& request, qsizetype at)
+{
+    if (at < 0 || at >= request.args.size()) return {};
+    const QJsonValue value = request.args.at(at);
+    return value.isString() ? value.toString() : value.toVariant().toString();
+}
+
 QByteArray okLine(const QJsonObject& fields)
 {
     QJsonObject answer = fields;
