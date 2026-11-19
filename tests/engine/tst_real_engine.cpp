@@ -1288,7 +1288,11 @@ private slots:
             heard = std::max(heard, level());
         }
         engine.injectNote(1, 62, 0);
-        QVERIFY2(heard == 0.0F, qPrintable(u"the muted channel played after the rebuild (peak %1)"_s.arg(heard)));
+        // (A mute glides to silence over a few milliseconds, never a click, and a rebuilt strip starts where
+        // the old one's gains were: rebuilt within those milliseconds, the end of the glide can let through a
+        // trace, around -95 dB. A muted channel that plays is around 0.3: far above -80 dB.)
+        constexpr float kInaudible = 1e-4F; // -80 dB
+        QVERIFY2(heard < kInaudible, qPrintable(u"the muted channel played after the rebuild (peak %1)"_s.arg(heard)));
 
         engine.setChannelMute(id, false);
         engine.setKeyChordsOn(true);
