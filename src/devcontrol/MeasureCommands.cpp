@@ -192,8 +192,13 @@ void addMeasureCommands(DevControl& control)
             sum->first += load;
             ++sum->second;
         }, [reply, sum, highest, logFile, from] {
-            const auto dropouts = std::ranges::count_if(logSince(logFile, from), [](const QString& l) { return l.contains(u"dropout"_s, Qt::CaseInsensitive); });
-            reply.ok({{u"highest"_s, *highest}, {u"average"_s, sum->second > 0 ? sum->first / sum->second : 0.0}, {u"dropoutLines"_s, static_cast<qint64>(dropouts)}});
+            // The engine says "Audio dropped out <n> time(s) on <device>" (AudioDevice::poll).
+            static const QRegularExpression dropped(u"Audio dropped out (\\d+) time"_s);
+            qint64 dropouts = 0;
+            for (const QString& line : logSince(logFile, from)) {
+                if (const auto found = dropped.match(line); found.hasMatch()) dropouts += found.captured(1).toLongLong();
+            }
+            reply.ok({{u"highest"_s, *highest}, {u"average"_s, sum->second > 0 ? sum->first / sum->second : 0.0}, {u"dropouts"_s, dropouts}});
         });
     });
     control.add(u"keys"_s, u"keys: the keys, pedal and wheels the instruments hear now (a stuck note shows here)"_s,

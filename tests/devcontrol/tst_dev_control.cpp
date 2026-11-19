@@ -300,6 +300,16 @@ private slots:
         QVERIFY(!client.ask(u"level"_s, {200, u"no-such-channel"_s}).value(u"ok"_s).toBool());
     }
 
+    // The dropouts the engine logs in the time measured are counted (as it words them).
+    void cpuCountsTheDropoutsLogged()
+    {
+        DevClient client(m_name);
+        QTimer::singleShot(100, this, [] { qWarning("Audio dropped out 3 time(s) on Test Speakers"); });
+        const QJsonObject cpu = client.ask(u"cpu"_s, {400});
+        QVERIFY2(cpu.value(u"ok"_s).toBool(), qPrintable(cpu.value(u"error"_s).toString()));
+        QCOMPARE(cpu.value(u"dropouts"_s).toInt(), 3);
+    }
+
     void waitFindsALineOrSaysItNeverCame()
     {
         DevClient client(m_name);
