@@ -645,20 +645,18 @@ private slots:
         QVERIFY(engine.poll().empty());
     }
 
-    // A plugin switched back on returns to Sustain Pads too, as its instrument
-    // or among its effects, without choosing it again (#57).
+    // A plugin switched back on returns among Sustain Pads' effects too, without
+    // choosing it again (#57). (Its instrument: SustainPadsController chooses it again.)
     void aPluginSwitchedBackOnReturnsToSustainPads()
     {
-        if (!QFileInfo::exists(kSmall) || !QFileInfo::exists(kPiano)) QSKIP("The test plugins are not installed");
+        if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");
         QTemporaryDir guardFolder;
         RealEngineOptions options;
         options.pluginGuardFolder = guardFolder.path();
         options.lastRunCrashed = true;
         {
-            PluginLoadGuard lastRun(guardFolder.path()); // the last run died loading both
-            const auto piano = lastRun.loading(kPiano);
+            PluginLoadGuard lastRun(guardFolder.path()); // the last run died loading it
             const auto effect = lastRun.loading(kSmall);
-            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"crashed the app while loading last time"_s));
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"crashed the app while loading last time"_s));
             auto created = createRealEngine(options);
             if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
@@ -667,17 +665,13 @@ private slots:
             engine.setMasterVolume(core::limits::kMinVolumeDb);
             (void)engine.poll();
 
-            QVERIFY(!engine.setSustainPadsInstrument(kPiano, {}).has_value()); // switched off
             std::vector<core::PluginSlot> effects{slot(kSmall, u"Kotelnikov"_s)};
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov is switched off"_s));
             engine.setSustainPadsEffects(effects);
             (void)engine.storeSustainPadsEffectStates(effects);
             QVERIFY(effects.front().state.isEmpty()); // (no instance to store from)
-            QVERIFY(engine.sustainPadsInstrumentState().value_or(QByteArray()).isEmpty());
 
-            engine.unblockPlugin(kPiano);
             engine.unblockPlugin(kSmall);
-            QVERIFY2(!engine.sustainPadsInstrumentState().value_or(QByteArray()).isEmpty(), "the instrument did not come back");
             (void)engine.storeSustainPadsEffectStates(effects);
             QVERIFY2(!effects.front().state.isEmpty(), "the effect did not come back");
         }

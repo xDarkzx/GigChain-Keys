@@ -1147,10 +1147,7 @@ void RealEngine::unblockPlugin(const QString& pluginId)
         }
     }
     if (padsEffects) m_sustainPads.setEffects(busNodes(m_padsFx)); // (Sustain Pads play them, not the graph)
-    if (m_sustainPadsWanted && PluginLoadGuard::samePlugin(m_sustainPadsWanted->first, pluginId)) {
-        const auto [wanted, state] = *m_sustainPadsWanted;
-        if (auto set = setSustainPadsInstrument(wanted, state); !set) m_pendingNotices.push_back(Notice::warning(set.error().message));
-    }
+    // (Sustain Pads' own instrument: its controller chooses it again, so the screen names what plays.)
     applyPatch(m_song, m_patch); // (loads the song's missing instances, and plays the buses' new ones)
 }
 
@@ -1207,7 +1204,6 @@ bool RealEngine::takeBusEdits(EffectsBus& bus)
 core::Result<void> RealEngine::setSustainPadsInstrument(const QString& pluginId, const QByteArray& state)
 {
     GC_ONLY_MAIN_THREAD();
-    m_sustainPadsWanted.reset();
     if (pluginId.isEmpty()) {
         m_sustainPads.setInstrument(nullptr);
         m_sustainPadsNode.reset();
@@ -1216,7 +1212,6 @@ core::Result<void> RealEngine::setSustainPadsInstrument(const QString& pluginId,
     }
     const QString name = QFileInfo(pluginId).completeBaseName();
     if (m_guard.isBlocked(pluginId)) {
-        m_sustainPadsWanted = std::pair{pluginId, state}; // (it loads when switched back on: unblockPlugin)
         return core::fail(core::ErrorCode::InvalidData, u"%1 crashed the app while loading before, so it is switched off"_s.arg(name));
     }
     if (auto installed = checkInstalled(pluginId, name); !installed) return tl::unexpected(installed.error());
