@@ -1518,6 +1518,12 @@ private slots:
         const bool toggled = !status.clickOn();
         learned(engine::ControlAction::ToggleClick);
         QCOMPARE(status.clickOn(), toggled);
+        // Chords in the song's key off and on again from a pedal (issue #50).
+        QVERIFY(m_engine->keyChords);
+        learned(engine::ControlAction::ToggleKeyChords);
+        QVERIFY(!m_engine->keyChords);
+        learned(engine::ControlAction::ToggleKeyChords);
+        QVERIFY(m_engine->keyChords);
     }
 
     // Right-click > Learn on a fader, a pan knob or the master: the next
@@ -1627,6 +1633,16 @@ private slots:
         QCOMPARE(m_doc->timelineStep(0, 12.5), 3); // the 4th bar: F
         m_doc->playSong();
         QCOMPARE(m_engine->played.value_or(std::pair{9, true}).first, 0);
+    }
+
+    // The song's key reaches the engine (for chords in the song's key,
+    // issue #50): taken from the chart, as Sustain Pads take it.
+    void theSongsKeyReachesTheEngine()
+    {
+        QCOMPARE(m_engine->songKey, (std::pair{-1, false})); // no key yet
+        QVERIFY(m_doc->pasteChart(0, u"Key: F#m\n[Verse]\nF#m D\nla la\n"_s));
+        QCOMPARE(m_doc->setlist().songs.at(0).key, u"F#m"_s);
+        QCOMPARE(m_engine->songKey, (std::pair{6, true}));
     }
 
     void pastingTakesTheTempoAndTimeAndSaysSo()

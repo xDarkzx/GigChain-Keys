@@ -13,8 +13,25 @@ StageDialog {
     required property DocumentController doc
     required property SelectedChannel channel
     property PanelController panel: null // "Set by playing"
+    property SettingsController settings: null // the keyboards plugged in
     readonly property var learning: panel !== null ? panel.zoneLearning : ({ active: false })
     onAboutToHide: if (panel !== null) panel.cancelZoneLearning()
+    onAboutToShow: if (settings !== null) settings.refreshMidi()
+
+    // The keyboards it can listen to: those that play (Settings > MIDI), and
+    // the one it listens to now even when it is not plugged in.
+    readonly property var keyboards: {
+        const inputs = settings !== null ? settings.midiInputs : []
+        const names = inputs.filter((p) => p.mode === 0).map((p) => p.name)
+        const chosen = channel.keyboard
+        // Not one that plays: unplugged, or plugged in but set to its buttons and knobs only, or off.
+        const missing = chosen !== "" && names.indexOf(chosen) < 0
+        const present = inputs.some((p) => p.name === chosen)
+        return { names: names, chosen: chosen, missing: missing,
+                 // (Without it the channel plays from every keyboard: never silent on stage.)
+                 why: !missing ? "" : present ? qsTr("%1 (set to buttons and knobs: plays from every keyboard)").arg(chosen)
+                                              : qsTr("%1 (not connected: plays from every keyboard)").arg(chosen) }
+    }
 
     function noteName(n) { return Theme.noteName(n) }
 
@@ -121,6 +138,19 @@ StageDialog {
 
         StageDivider { Layout.fillWidth: true; Layout.leftMargin: 20; Layout.rightMargin: 20 }
         SettingsSection { title: qsTr("MIDI") }
+        // Two keyboards, two sounds: this channel plays from one keyboard only.
+        SettingsRow {
+            label: qsTr("Keyboard")
+            StageComboBox {
+                objectName: "keyboardBox"
+                readonly property var choices: [""].concat(dialog.keyboards.names, dialog.keyboards.missing ? [dialog.keyboards.chosen] : [])
+                model: choices.map((name) => name === "" ? qsTr("Every keyboard")
+                                                         : name === dialog.keyboards.chosen && dialog.keyboards.missing
+                                                           ? dialog.keyboards.why : name)
+                currentIndex: Math.max(0, choices.indexOf(dialog.keyboards.chosen))
+                onActivated: (i) => dialog.doc.setChannelKeyboard(dialog.channel.index, choices[i])
+            }
+        }
         SettingsRow {
             label: qsTr("Listens to")
             StageComboBox {
@@ -168,7 +198,8 @@ StageDialog {
                 objectName: "chordBox"
                 implicitWidth: 200
                 model: [qsTr("Just the key"), qsTr("A major chord"), qsTr("A minor chord"), qsTr("A power chord (5th + octave)"),
-                        qsTr("Octaves"), qsTr("A sus2 chord"), qsTr("A sus4 chord"), qsTr("A seventh chord")]
+                        qsTr("Octaves"), qsTr("A sus2 chord"), qsTr("A sus4 chord"), qsTr("A seventh chord"),
+                        qsTr("Chords in the song's key")]
                 currentIndex: dialog.channel.chord
                 onActivated: (i) => dialog.doc.setChannelMidiEffect(dialog.channel.index, "chord", i)
             }

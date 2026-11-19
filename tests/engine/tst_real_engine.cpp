@@ -1199,6 +1199,45 @@ private slots:
         QVERIFY2(quietWithin(engine, master, 0.0F), "the let-go chord still sounded");
     }
 
+    // A channel playing chords in the song's key (#50) is rebuilt when the
+    // key changes or the chords are switched off: what the player set live
+    // (a mute) stays as it was, and it plays on after.
+    void aKeyChordChannelKeepsItsLiveMuteAcrossAKeyChange()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-90.0); // inaudible, measurable
+        core::Patch patch = pianoPatch();
+        patch.channels.at(0).chord = static_cast<int>(core::ChordTrigger::InKey);
+        const core::ChannelId id = patch.channels.at(0).id;
+        engine.applyPatch(core::SongId::generate(), patch);
+        QVERIFY(engine.poll().empty());
+        const auto level = [&engine, &id] { return engine.channelLevel(id).peak; };
+
+        engine.setChannelMute(id, true); // muted on stage
+        engine.setSongKey(2, false);     // D: the channel is rebuilt
+        engine.setKeyChordsOn(false);    // and again
+        (void)engine.channelLevel(id);
+        engine.injectNote(1, 62, 110);
+        float heard = 0.0F; // its meter all the time the key is held
+        for (int i = 0; i < 16; ++i) {
+            pump(engine, 50);
+            heard = std::max(heard, level());
+        }
+        engine.injectNote(1, 62, 0);
+        QVERIFY2(heard == 0.0F, qPrintable(u"the muted channel played after the rebuild (peak %1)"_s.arg(heard)));
+
+        engine.setChannelMute(id, false);
+        engine.setKeyChordsOn(true);
+        (void)engine.channelLevel(id);
+        engine.injectNote(1, 62, 110);
+        QVERIFY2(loudestUntilAbove(engine, level, 0.001F) > 0.001F, "the channel stayed silent");
+        engine.injectNote(1, 62, 0);
+    }
+
     // Song sections: each channel takes notes only in its sections; the
     // count moves through them at the tempo.
     void songSectionsSendNotesToTheirChannels()

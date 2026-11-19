@@ -433,6 +433,11 @@ public:
     int sectionsCount = 0;
     std::pair<int, int> timeSignature{4, 4};
     void setTimeSignature(int numerator, int denominator) override { timeSignature = {numerator, denominator}; }
+    std::pair<int, bool> songKey{-1, false};
+    void setSongKey(int root, bool minor) override { songKey = {root, minor}; }
+    bool keyChords = true;
+    void setKeyChordsOn(bool on) override { keyChords = on; }
+    [[nodiscard]] bool keyChordsOn() const override { return keyChords; }
     void setSongSections(const engine::SongSections& chosen) override
     {
         ++sectionsCount;

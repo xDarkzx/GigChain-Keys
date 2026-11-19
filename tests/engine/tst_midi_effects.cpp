@@ -3,6 +3,7 @@
 #include <QtTest>
 
 #include <array>
+#include <set>
 #include <vector>
 
 using namespace gigchain;
@@ -72,6 +73,141 @@ private slots:
         QCOMPARE(played.at(2).note, 64);
         for (std::size_t i = 0; i < 3; ++i) QVERIFY(played.at(i).on && played.at(i).at == 100);
         for (std::size_t i = 3; i < 6; ++i) QVERIFY(!played.at(i).on && played.at(i).at == 3000);
+    }
+
+    // Chords in the song's key (issue #50, Sunday Keys' Easy Chord): in D,
+    // each key of the scale plays its chord, D major, E minor, G major...;
+    // low keys open and warm, higher ones close; a key outside the scale,
+    // or a song with no key, plays its octave. Released as pressed. The
+    // whole rig moved up a tone plays the same chords a tone up.
+    void aKeyPlaysTheChordOfTheSongsKey()
+    {
+        const auto notesOf = [](const std::vector<Played>& played) {
+            std::vector<int> notes;
+            for (const Played& p : played) {
+                if (p.on) notes.push_back(p.note);
+            }
+            return notes;
+        };
+        const int inKey = static_cast<int>(core::ChordTrigger::InKey);
+        MidiEffects d(MidiEffectSettings{.chord = inKey, .keyRoot = 2, .keyMinor = false}); // D major
+        QCOMPARE(notesOf(run(d, {{0, key(62, 90, 0)}, {10, key(62, 0, 0)}}, 1)), (std::vector<int>{62, 66, 69}));   // D: D F# A
+        QCOMPARE(notesOf(run(d, {{0, key(64, 90, 0)}, {10, key(64, 0, 0)}}, 1)), (std::vector<int>{64, 67, 71}));   // E minor
+        QCOMPARE(notesOf(run(d, {{0, key(67, 90, 0)}, {10, key(67, 0, 0)}}, 1)), (std::vector<int>{67, 71, 74}));   // G major
+        QCOMPARE(notesOf(run(d, {{0, key(61, 90, 0)}, {10, key(61, 0, 0)}}, 1)), (std::vector<int>{61, 64, 67}));   // C# diminished
+        QCOMPARE(notesOf(run(d, {{0, key(43, 90, 0)}, {10, key(43, 0, 0)}}, 1)), (std::vector<int>{43, 50, 59}));   // low G: G D B (open)
+        QCOMPARE(notesOf(run(d, {{0, key(65, 90, 0)}, {10, key(65, 0, 0)}}, 1)), (std::vector<int>{65, 77}));       // F: not in D, its octave
+
+        MidiEffects aMinor(MidiEffectSettings{.chord = inKey, .keyRoot = 9, .keyMinor = true});
+        QCOMPARE(notesOf(run(aMinor, {{0, key(60, 90, 0)}, {10, key(60, 0, 0)}}, 1)), (std::vector<int>{60, 64, 67})); // C major in A minor
+        QCOMPARE(notesOf(run(aMinor, {{0, key(62, 90, 0)}, {10, key(62, 0, 0)}}, 1)), (std::vector<int>{62, 65, 69})); // D minor
+
+        MidiEffects noKey(MidiEffectSettings{.chord = inKey});
+        QCOMPARE(notesOf(run(noKey, {{0, key(62, 90, 0)}, {10, key(62, 0, 0)}}, 1)), (std::vector<int>{62, 74}));
+
+        // Every note it starts, it ends.
+        const auto played = run(d, {{100, key(64, 90, 0)}, {3000, key(64, 0, 0)}}, 1);
+        QCOMPARE(played.size(), std::size_t{6});
+        for (std::size_t i = 0; i < 3; ++i) QCOMPARE(played.at(i + 3).note, played.at(i).note);
+
+        // The whole rig up a tone: the E key arrives as F#, and plays F# minor (E minor a tone up).
+        MidiEvent moved = key(66, 90, 0);
+        moved.transpose = 2;
+        MidiEvent movedUp = key(66, 0, 0);
+        movedUp.transpose = 2;
+        QCOMPARE(notesOf(run(d, {{0, moved}, {10, movedUp}}, 1)), (std::vector<int>{66, 69, 73}));
+    }
+
+    // Two keys whose chords share notes, arpeggiated: letting one go keeps
+    // the notes the other's chord still has (in C: C major and E minor
+    // share E and G; C let go, the arpeggio plays E, G and B on).
+    void sharedChordNotesStayWhileAnotherKeyHoldsThem()
+    {
+        MidiEffects effects(MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::InKey), .arpeggio = 1, .arpRate = 1,
+                                               .keyRoot = 0});
+        const long long letGo = 30000;
+        const auto played = run(effects, {{0, key(60, 90, 0)}, {0, key(64, 90, 0)}, {letGo, key(60, 0, 0)}}, 20);
+        std::set<int> after;
+        for (const Played& p : played) {
+            if (p.on && p.at > letGo) after.insert(p.note);
+        }
+        QCOMPARE(after, (std::set<int>{64, 67, 71}));
+    }
+
+    // The same without the arpeggiator: two held keys' chords share E and G
+    // (C major, E minor in C); letting C go ends only C, and E's key-up ends
+    // the rest. A key-up whose key-down never came (a velocity layer kept it
+    // out) ends nothing; a key pressed again while down adds nothing.
+    void sharedChordNotesStayWithoutTheArpeggiator()
+    {
+        MidiEffects effects(MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::InKey), .keyRoot = 0});
+        const auto played = run(effects,
+                                {{0, key(60, 90, 0)}, {10, key(64, 90, 0)}, {20, key(64, 90, 0)}, {30, key(67, 0, 0)},
+                                 {40, key(60, 0, 0)}, {50, key(64, 0, 0)}},
+                                1);
+        const auto at = [&played](long long when, bool on) {
+            std::set<int> notes;
+            for (const Played& p : played) {
+                if (p.at == when && p.on == on) notes.insert(p.note);
+            }
+            return notes;
+        };
+        QCOMPARE(at(0, true), (std::set<int>{60, 64, 67}));
+        QCOMPARE(at(10, true), (std::set<int>{71}));      // E and G already sound
+        QVERIFY(at(20, true).empty());                     // E again while down: nothing
+        QVERIFY(at(30, false).empty());                    // G's key-up, never pressed: nothing
+        QCOMPARE(at(40, false), (std::set<int>{60}));      // C let go: E and G stay for the E key
+        QCOMPARE(at(50, false), (std::set<int>{64, 67, 71}));
+    }
+
+    // Two keyboards on one channel press the same key (#51): the second adds
+    // nothing, and the chord ends only when both have let go.
+    void aChordHeldFromTwoKeyboardsEndsWhenBothLetGo()
+    {
+        MidiEffects effects(MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::Major)});
+        const auto from = [](MidiEvent e, uint16_t source) {
+            e.source = source;
+            return e;
+        };
+        const auto played = run(effects,
+                                {{0, from(key(60, 90, 0), 1)}, {10, from(key(60, 90, 0), 2)}, {20, from(key(60, 0, 0), 1)},
+                                 {30, from(key(60, 0, 0), 2)}},
+                                1);
+        std::vector<long long> offsAt;
+        int ons = 0;
+        for (const Played& p : played) {
+            if (p.on) ++ons;
+            else offsAt.push_back(p.at);
+        }
+        QCOMPARE(ons, 3);                                        // one C major chord
+        QCOMPARE(offsAt, (std::vector<long long>{30, 30, 30})); // ended by the second keyboard's key-up
+    }
+
+    // The same key on two MIDI channels (a channel that hears all of them):
+    // each channel's chord starts and ends on its own channel, so an
+    // instrument that keeps channels apart never keeps one ringing.
+    void aChordOnEachMidiChannelEndsOnItsOwnChannel()
+    {
+        MidiEffects effects(MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::Major)});
+        const auto on = [](int channel, int velocity) {
+            return MidiEvent{.status = static_cast<uint8_t>(0x90 | channel), .data1 = 60, .data2 = static_cast<uint8_t>(velocity)};
+        };
+        std::array<MidiEvent, 64> out{};
+        const TimeInfo time{.tempo = kTempo, .sampleRate = kRate};
+        const std::array in{on(0, 90), on(1, 90), on(0, 0), on(1, 0)};
+        const std::size_t n = effects.process(in, out, kFrames, time);
+        int onsPerChannel[2] = {0, 0};
+        int offsPerChannel[2] = {0, 0};
+        for (std::size_t i = 0; i < n; ++i) {
+            const MidiEvent& e = out.at(i);
+            const int channel = e.status & 0x0F;
+            if ((e.status & 0xF0) == 0x90 && e.data2 > 0) ++onsPerChannel[channel];
+            else ++offsPerChannel[channel];
+        }
+        QCOMPARE(onsPerChannel[0], 3);
+        QCOMPARE(onsPerChannel[1], 3);
+        QCOMPARE(offsPerChannel[0], 3);
+        QCOMPARE(offsPerChannel[1], 3);
     }
 
     // Up, eighths, two keys: the low key at once, then the high one on the

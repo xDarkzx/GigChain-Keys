@@ -34,6 +34,7 @@ Rectangle {
     required property double auxSendDb // to the aux effects; -96 = none
     required property string midiOutPort // the hardware synth it plays ("" none)
     required property int midiOutChannel
+    required property string keyboard // the keyboard it listens to ("" every keyboard)
     required property int mappingCount
     required property DocumentController doc
     required property PluginListModel pluginModel
@@ -63,6 +64,7 @@ Rectangle {
     // What the strip plays when it is not the whole keyboard: "C2–B3 +12 · vel 1–64".
     readonly property string zoneText: {
         const parts = []
+        if (keyboard !== "") parts.push(keyboard)
         if (inputLeft > 0) parts.push(inputRight > 0 ? qsTr("In %1+%2").arg(inputLeft).arg(inputRight) : qsTr("In %1").arg(inputLeft))
         if (keyLow > 0 || keyHigh < 127) parts.push(noteName(keyLow) + "–" + noteName(keyHigh))
         if (transpose !== 0) parts.push((transpose > 0 ? "+" : "") + transpose)

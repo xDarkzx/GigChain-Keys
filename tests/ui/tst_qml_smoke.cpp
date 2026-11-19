@@ -1531,11 +1531,20 @@ private slots:
         QTest::keyClick(window(), Qt::Key_Down); // one step down: a velocity layer of 1-126
         settle();
         QCOMPARE(doc.currentPatch()->channels.at(0).velocityHigh, 126);
+        // Its keyboard (issue #51): every keyboard at first; one not plugged in is said.
+        auto* keyboard = window()->findChild<QQuickItem*>(u"keyboardBox"_s);
+        QVERIFY(keyboard != nullptr);
+        QCOMPARE(keyboard->property("displayText").toString(), u"Every keyboard"_s);
+        QVERIFY(doc.setChannelKeyboard(0, u"Keystation 61 MK3"_s));
+        settle();
+        QCOMPARE(doc.currentPatch()->channels.at(0).keyboard, u"Keystation 61 MK3"_s);
+        QTRY_COMPARE(keyboard->property("displayText").toString(), u"Keystation 61 MK3 (not connected: plays from every keyboard)"_s);
         shoot(u"zone-dialog"_s);
         QVERIFY(QMetaObject::invokeMethod(zone, "close"));
         settle();
         QTRY_VERIFY(stripChild(u"zoneText"_s)->isVisible());
         QVERIFY(stripChild(u"zoneText"_s)->property("text").toString().contains(u"vel 1–126"_s));
+        QVERIFY(stripChild(u"zoneText"_s)->property("text").toString().contains(u"Keystation 61 MK3"_s));
 
         doc.editChannel(0, u"knobs"_s);
         settle();

@@ -19,6 +19,10 @@ struct MidiEvent
     // of each channel's own: stamped as it reaches the audio thread, a
     // note's release with the shift its press had (no hanging notes).
     int8_t transpose = 0;
+    // The keyboard it came from (keyboardSource of its MIDI input's name);
+    // 0: from the app itself (the on-screen keyboard, a song's notes), which
+    // every channel hears.
+    uint16_t source = 0;
 };
 
 // Most events a single audio block will carry; extra events are dropped.

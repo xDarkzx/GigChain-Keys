@@ -649,6 +649,7 @@ core::Result<void> RealEngine::setMidiSetup(const MidiSetup& setup)
     GC_ONLY_MAIN_THREAD();
     m_midiSetup = setup;
     std::vector<QString> problems = openMidi();
+    routeKeyboardsAgain(); // (a keyboard switched off or on)
     std::ranges::move(applyClockSetup(), std::back_inserter(problems));
     if (!problems.empty()) {
         QStringList text;
@@ -702,6 +703,15 @@ void RealEngine::watchMidiPorts(std::vector<Notice>& notices)
     for (const QString& change : changes) qCInfo(lcEngine).noquote() << change;
     std::ranges::transform(changes, std::back_inserter(notices), &Notice::info); // news, not a problem
     std::ranges::transform(openMidi(), std::back_inserter(notices), &Notice::warning);
+    routeKeyboardsAgain();
+}
+
+void RealEngine::routeKeyboardsAgain()
+{
+    // Channels set to one keyboard follow it being plugged in or out (applyPatch: theirs while
+    // it plays, every keyboard without it); the same patch again, nothing loaded.
+    const bool keyboards = std::ranges::any_of(m_patch.channels, [](const core::Channel& c) { return !c.keyboard.isEmpty(); });
+    if (keyboards) applyPatch(m_song, m_patch);
 }
 
 void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
@@ -723,6 +733,9 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
     std::vector<StripSpec> specs;
     specs.reserve(patch.channels.size());
     std::set<const HardwareOut*> hardwareUsed; // the synths the new patch's channels play
+    // A channel set to one keyboard (#51) listens to it while it is plugged in and plays; without
+    // it, to every keyboard (another keyboard swapped in on stage plays it, never silence).
+    const QStringList playing = m_midi.playingPortNames();
     for (std::size_t c = 0; c < patch.channels.size(); ++c) {
         const core::Channel& channel = patch.channels.at(c);
         StripSpec spec;
@@ -737,7 +750,8 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
                                               | (channel.takesExpression ? 0U : midi_filter::kExpression)
                                               | (channel.takesModWheel ? 0U : midi_filter::kModWheel)
                                               | (channel.takesPitchBend ? 0U : midi_filter::kPitchBend)
-                                              | (channel.takesAftertouch ? 0U : midi_filter::kAftertouch)};
+                                              | (channel.takesAftertouch ? 0U : midi_filter::kAftertouch),
+                                   .source = routeSourceFor(channel.keyboard, playing)};
         spec.volumeDb = channel.volumeDb;
         spec.pan = channel.pan;
         spec.mute = channel.mute;
@@ -753,10 +767,14 @@ void RealEngine::applyPatch(const core::SongId& song, const core::Patch& patch)
             spec.hardware = out;
             hardwareUsed.insert(out.get());
         }
-        spec.midiEffects = MidiEffectSettings{.chord = channel.chord,
+        const bool keyChordsOff = !m_keyChordsOn && channel.chord == static_cast<int>(core::ChordTrigger::InKey);
+        spec.midiEffects = MidiEffectSettings{.chord = keyChordsOff ? 0 : channel.chord,
                                               .arpeggio = channel.arpeggio,
                                               .arpRate = channel.arpRate,
-                                              .arpOctaves = channel.arpOctaves};
+                                              .arpOctaves = channel.arpOctaves,
+                                              // (the notes reach it moved by the channel's transpose: so is the key)
+                                              .keyRoot = m_songKeyRoot < 0 ? -1 : (((m_songKeyRoot + channel.transpose) % 12) + 12) % 12,
+                                              .keyMinor = m_songKeyMinor};
         std::map<int, int> effectAt; // the channel's effect position -> its place in the strip (switched-off ones are left out)
         for (const PlannedSlot& planned : plan) {
             if (std::cmp_not_equal(planned.channel, c)) continue;
@@ -848,11 +866,21 @@ LevelReading RealEngine::masterLevel()
                         .rms = m_masterRms.load(std::memory_order_relaxed)};
 }
 
+core::Channel* RealEngine::soundingChannel(const core::ChannelId& id)
+{
+    const auto it = std::ranges::find_if(m_patch.channels, [&id](const core::Channel& c) { return c.id == id; });
+    return it == m_patch.channels.end() ? nullptr : &*it;
+}
+
+// The live settings below change the sounding strip at once and the sounding
+// patch too, so a rebuild of the same patch (a new block size, the song's
+// key) keeps what the player set.
 void RealEngine::setChannelVolume(const core::ChannelId& id, double volumeDb)
 {
     if (RenderGraph* graph = m_exchange.current()) {
         if (ChannelStrip* strip = graph->findStrip(id)) strip->setVolumeDb(volumeDb);
     }
+    if (core::Channel* c = soundingChannel(id)) c->volumeDb = volumeDb;
 }
 
 void RealEngine::setChannelPan(const core::ChannelId& id, double pan)
@@ -860,6 +888,7 @@ void RealEngine::setChannelPan(const core::ChannelId& id, double pan)
     if (RenderGraph* graph = m_exchange.current()) {
         if (ChannelStrip* strip = graph->findStrip(id)) strip->setPan(pan);
     }
+    if (core::Channel* c = soundingChannel(id)) c->pan = pan;
 }
 
 void RealEngine::setChannelMute(const core::ChannelId& id, bool mute)
@@ -867,6 +896,7 @@ void RealEngine::setChannelMute(const core::ChannelId& id, bool mute)
     if (RenderGraph* graph = m_exchange.current()) {
         if (ChannelStrip* strip = graph->findStrip(id)) strip->setMute(mute);
     }
+    if (core::Channel* c = soundingChannel(id)) c->mute = mute;
 }
 
 void RealEngine::setChannelSolo(const core::ChannelId& id, bool solo)
@@ -874,6 +904,7 @@ void RealEngine::setChannelSolo(const core::ChannelId& id, bool solo)
     if (RenderGraph* graph = m_exchange.current()) {
         if (ChannelStrip* strip = graph->findStrip(id)) strip->setSolo(solo);
     }
+    if (core::Channel* c = soundingChannel(id)) c->solo = solo;
 }
 
 void RealEngine::setMasterVolume(double volumeDb)
@@ -1226,6 +1257,7 @@ void RealEngine::setChannelSend(const core::ChannelId& id, double sendDb)
     if (RenderGraph* graph = m_exchange.current()) {
         if (ChannelStrip* strip = graph->findStrip(id)) strip->setSendDb(sendDb);
     }
+    if (core::Channel* c = soundingChannel(id)) c->auxSendDb = sendDb;
 }
 
 void RealEngine::setOutputLimiter(bool enabled, double ceilingDb)
@@ -1565,6 +1597,43 @@ void RealEngine::setTempo(double bpm)
         return;
     }
     m_tempo.store(bpm, std::memory_order_relaxed);
+}
+
+void RealEngine::setSongKey(int root, bool minor)
+{
+    GC_ONLY_MAIN_THREAD();
+    const int key = root >= 0 && root <= 11 ? root : -1;
+    if (root != key) qCWarning(lcEngine) << "Song key" << root << "is not a pitch class (0-11): no key";
+    if (key == m_songKeyRoot && (key < 0 || minor == m_songKeyMinor)) return;
+    m_songKeyRoot = key;
+    m_songKeyMinor = key >= 0 && minor;
+    qCInfo(lcEngine) << "Song key:" << (key < 0 ? u"none"_s : u"%1%2"_s.arg(key).arg(m_songKeyMinor ? u" minor"_s : QString()));
+    rebuildKeyChords();
+}
+
+void RealEngine::setKeyChordsOn(bool on)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (on == m_keyChordsOn) return;
+    m_keyChordsOn = on;
+    qCInfo(lcEngine) << "Chords in the song's key:" << (on ? "on" : "off");
+    rebuildKeyChords();
+}
+
+void RealEngine::rebuildKeyChords()
+{
+    // Channels playing the key's chords take the change: the same patch again
+    // (nothing is loaded; their plugins' held chord notes let go). A hardware
+    // synth's notes are let go here: the new mapping would never end the old one's.
+    bool any = false;
+    for (const core::Channel& c : m_patch.channels) {
+        if (c.chord != static_cast<int>(core::ChordTrigger::InKey)) continue;
+        any = true;
+        if (c.midiOutPort.isEmpty()) continue;
+        const auto out = m_hardwareOuts.find(u"%1|%2|%3"_s.arg(c.id.value(), c.midiOutPort).arg(c.midiOutChannel));
+        if (out != m_hardwareOuts.end() && out->second) out->second->releaseHeld();
+    }
+    if (any) applyPatch(m_song, m_patch);
 }
 
 void RealEngine::setTimeSignature(int numerator, int denominator)

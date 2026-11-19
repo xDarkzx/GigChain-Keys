@@ -68,6 +68,13 @@ Right-click a channel strip and choose **Keyboard Zone…**.
   keys** leaves the pads to this part alone.
 - **Transpose:** shift it up or down in semitones (+12 is an octave up). Handy
   to play a bass line an octave higher than it sounds.
+- **MIDI: Keyboard:** *Every keyboard*, or one of your keyboards only. With
+  two keyboards, give the organ the top one and the piano the bottom one.
+  It is kept by the keyboard's name: unplug it and plug it back in (any USB
+  port) and it plays its sound again. While it is not plugged in (or is set
+  to buttons and knobs only), the channel plays from every keyboard, so a
+  keyboard swapped in on stage plays it and it is never silent; the box
+  says so. The on-screen keyboard plays every channel.
 - **MIDI: Listens to:** *All channels*, or one channel only when your
   keyboard sends its zones on different channels.
 - **Whole keyboard** resets it.
@@ -81,6 +88,19 @@ In a channel's **Keyboard Zone**, under **MIDI effects**:
 - **One key plays:** a major, minor, power (fifth and octave), sus2, sus4 or
   seventh chord, or octaves, built on the key you press. Big stabs and
   pads from one finger.
+- **One key plays: Chords in the song's key:** each key plays the chord the
+  song's key has on it. In D: D plays D major, E plays E minor, G plays G
+  major, A plays A major, B plays B minor. Keys below C3 play an open, warm
+  voicing (root, fifth and the third above); higher ones a close chord. Add
+  the octave above with your thumb and its chord sounds an octave higher,
+  over the first. A key outside the song's key, or a song with no key, plays
+  itself and its octave. The key is the song's (the `{key: …}` line of its
+  chart, or *Key:* in a pasted one), and moves with **Transpose everything**.
+  Give the pad a zone on the left hand (see above) and your right hand is
+  free for the piano part, while the pad plays the chords.
+  A pedal or pad learned to **Chords in the song's key: on / off**
+  (**Settings > MIDI > Pedals and pads**) switches those channels between
+  the chords and single keys.
 - **Arpeggiator:** hold keys and they play one after another, **Up**,
   **Down**, **Up and down** or **As played**, every **1/4**, **1/8**,
   **1/8 triplet** or **1/16** at the song's tempo, over **1 to 3 octaves**.

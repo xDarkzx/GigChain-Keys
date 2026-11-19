@@ -185,6 +185,24 @@ CarryOver carryOver(const RenderGraph* previous, std::vector<StripSpec>& specs, 
             // while its instrument plays on: its notes go too (its effects' state does
             // not carry over, so nothing else would end them).
             if (shared && strip->hasMidiEffects() && !nodes.empty()) carried.releasing.insert(nodes.front());
+            // The same for its hardware synth, when the new patch plays it (the new strip would never
+            // end the chord this one sent; otherwise this one rings on as a tail and ends it itself).
+            if (strip->hasMidiEffects() && strip->hardware() && hardwareUsed.contains(strip->hardware().get())) {
+                strip->hardware()->releaseHeld();
+            }
+            // A strip moved to another keyboard (#51): it hears only the new one, so the
+            // notes held from the old one would never get their note-off; they go too, its
+            // instrument's and its hardware synth's. (Moved to every keyboard: it still hears them.)
+            const uint16_t was = strip->route().source;
+            const bool otherKeyboard = std::ranges::any_of(specs, [&](const StripSpec& s) {
+                const bool same = (!nodes.empty() && s.instrument.get() == nodes.front()) ||
+                                  (s.hardware != nullptr && s.hardware == strip->hardware());
+                return same && s.route.source != 0 && s.route.source != was;
+            });
+            if (otherKeyboard) {
+                if (shared && !nodes.empty()) carried.releasing.insert(nodes.front());
+                if (strip->hardware()) strip->hardware()->releaseHeld();
+            }
             if (strip->tailDone() || carried.tails.size() >= maxTails) continue;
             if (shared) {
                 // Its sound plays on in the new patch; the effects it plays on without ring out.
@@ -330,6 +348,8 @@ void ChannelStrip::render(std::span<const MidiEvent> events, const AudioBlock& m
     for (const MidiEvent& event : events) {
         const bool newNote = (event.status & 0xF0) == 0x90 && event.data2 > 0;
         if (newNote && !plays(event.sampleOffset)) continue;
+        // Another keyboard than this strip's: neither its notes nor its knobs (the app's own reach it).
+        if (m_route.source != 0 && event.source != 0 && event.source != m_route.source) continue;
         // A controller mapped to a parameter moves it, and nothing else hears it.
         bool mapped = false;
         if ((event.status & 0xF0) == 0xB0) {

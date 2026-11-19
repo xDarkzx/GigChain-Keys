@@ -8,6 +8,25 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+### Added
+
+- **A keyboard for each channel.** Two keyboards, two sounds: in a channel's
+  **Keyboard Zone**, choose the **Keyboard** it plays from (organ on the top
+  keyboard, piano on the bottom one), as in MainStage. It is kept by the
+  keyboard's name, so unplug it and plug it back in, in any USB port, and it
+  plays its sound again. While it is not plugged in, the channel plays from
+  every keyboard, so another keyboard swapped in on stage plays it: never
+  silence. **Every keyboard**, as before, is the default, and the on-screen
+  keyboard plays every channel. Asked for on GitHub (#51).
+- **Chords in the song's key** (like Sunday Keys' Easy Chord). In a
+  channel's **Keyboard Zone**, **One key plays: Chords in the song's key**:
+  each key plays the chord the song's key has on it (in D: E plays E minor,
+  G plays G major). Low keys play an open, warm voicing; add the octave with
+  your thumb for the chord an octave higher on top. With no key, a key plays
+  itself and its octave. Give the pad the left hand and the right hand is
+  free for the melody. A pedal or pad (**Settings > MIDI > Pedals and
+  pads**) switches the chords on and off. Asked for on GitHub (#50).
+
 ## [0.11.0] - 2026-11-16 (alpha)
 
 The settings a live keyboard player needs, MainStage's and more: your own

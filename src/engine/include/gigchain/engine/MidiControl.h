@@ -26,8 +26,9 @@ enum class ControlAction : int
     StopSong,     // stops it
     PreviousPart, // the part before (playing: at the next bar line)
     ToggleClick,  // the click on or off
+    ToggleKeyChords, // channels playing chords in the song's key: chords, or single keys
 };
-inline constexpr int kControlActionCount = 14;
+inline constexpr int kControlActionCount = 15;
 
 // One MIDI control: a CC (a pedal or button), a note (a pad or key) or a
 // program change, on one channel.

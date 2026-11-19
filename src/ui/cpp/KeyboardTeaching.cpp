@@ -46,7 +46,8 @@ QString controlActionLabel(int action)
         QT_TRANSLATE_NOOP("SettingsController", "Play the song"),
         QT_TRANSLATE_NOOP("SettingsController", "Stop the song"),
         QT_TRANSLATE_NOOP("SettingsController", "Previous part of the song (on the next bar)"),
-        QT_TRANSLATE_NOOP("SettingsController", "Click on / off")};
+        QT_TRANSLATE_NOOP("SettingsController", "Click on / off"),
+        QT_TRANSLATE_NOOP("SettingsController", "Chords in the song's key: on / off")};
     if (action < 0 || action >= engine::kControlActionCount) return {};
     return QCoreApplication::translate("SettingsController", kLabels.at(static_cast<std::size_t>(action)));
 }

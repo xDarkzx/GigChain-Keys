@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 
 namespace gigchain::engine {
@@ -18,6 +19,10 @@ struct MidiEffectSettings
     int arpeggio = 0;   // core::ArpPattern
     int arpRate = 1;    // core::ArpRate
     int arpOctaves = 1; // 1..core::kMaxArpOctaves
+    // The song's key, for core::ChordTrigger::InKey: its pitch class (C = 0)
+    // moved by the channel's transpose, -1 none; and whether it is minor.
+    int keyRoot = -1;
+    bool keyMinor = false;
 
     [[nodiscard]] bool any() const noexcept { return chord != 0 || arpeggio != 0; }
 };
@@ -48,6 +53,11 @@ private:
     MidiEffectSettings m_settings;
     std::array<int, kMaxHeld> m_held{}; // keys down, in the order played
     std::size_t m_heldCount = 0;
+    // For each note it plays (per MIDI channel; the arpeggiator: all in the first), how many keys down play it.
+    std::array<std::array<uint8_t, 128>, 16> m_owners{};
+    // Who holds each key it was given down: (keyboard << 4 | MIDI channel) + 1, 0 empty.
+    static constexpr std::size_t kHolders = 4;
+    std::array<std::array<uint32_t, kHolders>, 128> m_holders{};
     int m_velocity = 100;      // the last key's
     int m_playing = -1;        // the arpeggiated note sounding (-1: none)
     double m_offAt = 0.0;      // when it ends (quarters)

@@ -64,7 +64,7 @@ std::size_t MidiEffects::process(std::span<const MidiEvent> in, std::span<MidiEv
     const auto send = [&out, &written](const MidiEvent& e) {
         if (written < out.size()) out.subspan(written++, 1).front() = e;
     };
-    const core::ChordIntervals chord = core::chordIntervals(m_settings.chord);
+    const core::ChordIntervals fixedChord = core::chordIntervals(m_settings.chord);
     const double perSample = time.sampleRate > 0.0 ? time.tempo / 60.0 / time.sampleRate : 0.0;
     // No tempo to step on (no device yet): the chord alone.
     const bool arp = m_settings.arpeggio != 0 && perSample > 0.0;
@@ -117,9 +117,53 @@ std::size_t MidiEffects::process(std::span<const MidiEvent> in, std::span<MidiEv
             continue;
         }
         m_status = static_cast<uint8_t>(0x90 | (e.status & 0x0F));
+        // Who holds this key down (each keyboard, and MIDI channel, on its own): pressed again while
+        // down, or by a second keyboard while the first holds it, its chord already sounds; let go,
+        // it ends only when no one holds it; a key-up that never came down here (a velocity layer
+        // kept its press out) ends nothing.
+        // Notes go out on the MIDI channel they came in on, so only holders on the same channel share
+        // them (an instrument that keeps channels apart ends each with its own channel's note-off).
+        // The arpeggiator plays one stream for all of them.
+        const uint32_t channel = e.status & 0x0FU;
+        const std::size_t lane = arp ? 0 : channel;
+        auto& holders = m_holders.at(e.data1 & 0x7F);
+        const uint32_t who = ((uint32_t{e.source} << 4U) | channel) + 1U;
+        const auto mine = std::ranges::find(holders, who);
+        const bool othersHold = std::ranges::any_of(holders, [who, channel, arp](uint32_t h) {
+            return h != 0 && h != who && (arp || ((h - 1U) & 0x0FU) == channel);
+        });
+        if (on) {
+            if (mine != holders.end()) continue;
+            const auto room = std::ranges::find(holders, 0U);
+            if (room == holders.end()) continue; // (more hands on one key than it keeps: ignored)
+            *room = who;
+            if (othersHold) continue;
+        } else {
+            if (mine == holders.end()) continue;
+            *mine = 0;
+            if (othersHold) continue;
+        }
+        // A key-chord depends on the key pressed (its press and release alike: the same notes). The
+        // note arrives moved by the whole rig's transpose: so is the key (settings.keyRoot has the channel's own).
+        const int keyRoot = m_settings.keyRoot < 0 ? -1 : (((m_settings.keyRoot + e.transpose) % 12) + 12) % 12;
+        const core::ChordIntervals chord = m_settings.chord == static_cast<int>(core::ChordTrigger::InKey)
+                                               ? core::keyChordIntervals(e.data1, keyRoot, m_settings.keyMinor)
+                                               : fixedChord;
+        if (on) m_velocity = e.data2;
         for (std::size_t k = 0; k < chord.count; ++k) {
             const int key = e.data1 + chord.steps.at(k);
             if (key < 0 || key > 127) continue;
+            // Two keys' chords sharing a note: it starts with the first and ends with the last let go.
+            uint8_t& owners = m_owners.at(lane).at(static_cast<std::size_t>(key)); // (at most a count of the keys down)
+            if (on) {
+                const bool sounding = owners > 0;
+                ++owners;
+                if (sounding) continue;
+            } else {
+                if (owners == 0) continue; // (not this effect's note)
+                --owners;
+                if (owners > 0) continue;
+            }
             if (!arp) {
                 MidiEvent played = e;
                 played.data1 = static_cast<uint8_t>(key);

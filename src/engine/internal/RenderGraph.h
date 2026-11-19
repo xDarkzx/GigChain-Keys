@@ -135,6 +135,7 @@ public:
     [[nodiscard]] int loopSlot() const { return m_loopSlot.load(std::memory_order_relaxed); }
     [[nodiscard]] int outputPair() const noexcept { return m_outputPair; } // StripSpec::outputPair
     [[nodiscard]] bool hasMidiEffects() const noexcept { return !m_effected.empty(); }
+    [[nodiscard]] const RouteSettings& route() const noexcept { return m_route; }
     // The hardware synth it plays (null: none), and whether a note it sent there is still held.
     [[nodiscard]] const std::shared_ptr<HardwareOut>& hardware() const noexcept { return m_hardware; }
     [[nodiscard]] bool holdsHardwareNotes() const noexcept { return m_hardware && m_hardware->holdsNotes(); }

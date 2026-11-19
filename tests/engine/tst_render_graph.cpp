@@ -168,6 +168,37 @@ private slots:
         for (const MidiEvent& e : {sustain, expression, modWheel, bend, pressure, keyPressure}) QVERIFY(routeEvent(e, piano).has_value());
     }
 
+    // Two keyboards, two sounds (issue #51): a channel set to one keyboard
+    // hears only that one, its notes and its pedals; a channel set to none
+    // hears both; the app's own notes (the on-screen keyboard) reach all.
+    // A keyboard keeps its number by name, so it is known again when it
+    // comes back.
+    void aChannelHearsOnlyItsKeyboard()
+    {
+        const uint16_t lower = keyboardSource(u"Keystation 61 MK3"_s);
+        const uint16_t upper = keyboardSource(u"Nord Stage 3 MIDI"_s);
+        QVERIFY(lower != 0 && upper != 0 && lower != upper);
+        QCOMPARE(keyboardSource(u"Keystation 61 MK3"_s), lower); // plugged back in: the same
+
+        const auto from = [](MidiEvent e, uint16_t source) {
+            e.source = source;
+            return e;
+        };
+        const RouteSettings organ{.source = upper};
+        const RouteSettings any;
+        QVERIFY(routeEvent(from(noteOn(60), upper), organ).has_value());
+        QVERIFY(!routeEvent(from(noteOn(60), lower), organ).has_value());
+        QVERIFY(!routeEvent(from(cc(0xB0, 64, 127), lower), organ).has_value()); // the other's sustain pedal too
+        QVERIFY(routeEvent(from(noteOn(60), 0), organ).has_value());             // the on-screen keyboard
+        QVERIFY(routeEvent(from(noteOn(60), lower), any).has_value());
+        QVERIFY(routeEvent(from(noteOn(60), upper), any).has_value());
+
+        // Its keyboard while it plays; not plugged in (or buttons and knobs only): every keyboard.
+        QCOMPARE(routeSourceFor(u"Nord Stage 3 MIDI"_s, {u"Nord Stage 3 MIDI"_s, u"Keystation 61 MK3"_s}), upper);
+        QCOMPARE(routeSourceFor(u"Nord Stage 3 MIDI"_s, {u"Keystation 61 MK3"_s}), uint16_t{0});
+        QCOMPARE(routeSourceFor(QString(), {u"Nord Stage 3 MIDI"_s}), uint16_t{0});
+    }
+
     void routerFiltersAndTransposes()
     {
         const RouteSettings split{48, 59, 12, 0};
@@ -364,6 +395,142 @@ private slots:
         QVERIFY(!synth->holdsNotes());
     }
 
+    // A channel moved to another keyboard (#51) while a note from the first
+    // is held: the new strip never hears that keyboard's note-off, so its
+    // instrument lets go of its notes; the same keyboard again keeps them.
+    void aChannelMovedToAnotherKeyboardLetsGoOfItsNotes()
+    {
+        auto piano = std::make_shared<HeldNoteNode>(0.1F);
+        const auto graphOn = [&piano](uint16_t source) {
+            std::vector<StripSpec> specs;
+            specs.push_back(strip(piano, RouteSettings{.source = source}));
+            return std::make_shared<RenderGraph>(std::move(specs), 48000.0, kFrames);
+        };
+        const auto onA = graphOn(keyboardSource(u"Keyboard A"_s));
+        const auto specsOn = [&piano](uint16_t source) {
+            std::vector<StripSpec> specs;
+            specs.push_back(strip(piano, RouteSettings{.source = source}));
+            return specs;
+        };
+        auto toB = specsOn(keyboardSource(u"Keyboard B"_s));
+        QVERIFY(carryOver(onA.get(), toB, {}, 4).releasing.contains(piano.get()));
+        auto stillA = specsOn(keyboardSource(u"Keyboard A"_s));
+        QVERIFY(!carryOver(onA.get(), stillA, {}, 4).releasing.contains(piano.get()));
+        auto toEvery = specsOn(0); // every keyboard still hears A's key-ups: its notes play on
+        QVERIFY(!carryOver(onA.get(), toEvery, {}, 4).releasing.contains(piano.get()));
+    }
+
+    // The same for a channel playing a hardware synth: its held notes end.
+    void aSynthChannelMovedToAnotherKeyboardLetsGoOfItsNotes()
+    {
+        const auto synth = std::make_shared<HardwareOut>(u"Synth"_s, 1);
+        const auto specsOn = [&synth](uint16_t source) {
+            std::vector<StripSpec> specs;
+            StripSpec spec = strip(nullptr, RouteSettings{.source = source});
+            spec.hardware = synth;
+            specs.push_back(std::move(spec));
+            return specs;
+        };
+        RenderGraph onA(specsOn(keyboardSource(u"Keyboard A"_s)), 48000.0, kFrames);
+        Output out;
+        MidiEvent held = noteOn(60);
+        held.source = keyboardSource(u"Keyboard A"_s);
+        onA.render(std::array{held}, out.block(), 1.0F);
+        MidiEvent e;
+        while (synth->pop(e)) {}
+        QVERIFY(synth->holdsNotes());
+
+        auto toB = specsOn(keyboardSource(u"Keyboard B"_s));
+        (void)carryOver(&onA, toB, {synth.get()}, 4);
+        RenderGraph onB(std::move(toB), 48000.0, kFrames);
+        onB.render(std::span<const MidiEvent>{}, out.block(), 1.0F);
+        QVERIFY(synth->pop(e));
+        QCOMPARE(int(e.status), 0x80);
+        QCOMPARE(int(e.data1), 60);
+        QVERIFY(!synth->holdsNotes());
+    }
+
+    // A chord channel playing a hardware synth, rebuilt (the song's key, key
+    // chords on or off): the new strip knows nothing of the chord the old one
+    // sent, so the synth lets go of it.
+    void aChordChannelRebuiltLetsItsSynthGo()
+    {
+        const auto synth = std::make_shared<HardwareOut>(u"Synth"_s, 1);
+        const auto specs = [&synth] {
+            std::vector<StripSpec> all;
+            StripSpec spec = strip(nullptr);
+            spec.hardware = synth;
+            spec.midiEffects = MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::Major)};
+            all.push_back(std::move(spec));
+            return all;
+        };
+        RenderGraph before(specs(), 48000.0, kFrames);
+        Output out;
+        before.render(std::array{noteOn(60)}, out.block(), 1.0F);
+        MidiEvent e;
+        while (synth->pop(e)) {}
+        QVERIFY(synth->holdsNotes());
+
+        auto again = specs();
+        (void)carryOver(&before, again, {synth.get()}, 4);
+        RenderGraph after(std::move(again), 48000.0, kFrames);
+        after.render(std::span<const MidiEvent>{}, out.block(), 1.0F);
+        int offs = 0;
+        while (synth->pop(e)) offs += (e.status & 0xF0) == 0x80 ? 1 : 0;
+        QCOMPARE(offs, 3);
+        QVERIFY(!synth->holdsNotes());
+    }
+
+    // Asked to let go (the song's key changed under a key-chord channel, #50):
+    // every note the synth holds ends at the next block, with no key let go.
+    void aHardwareSynthLetsGoOfItsNotesWhenAsked()
+    {
+        const auto synth = std::make_shared<HardwareOut>(u"Synth"_s, 1);
+        StripSpec spec = strip(nullptr);
+        spec.hardware = synth;
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+        graph.render(std::array{noteOn(60), noteOn(64)}, out.block(), 1.0F);
+        MidiEvent e;
+        while (synth->pop(e)) {}
+        QVERIFY(synth->holdsNotes());
+
+        synth->releaseHeld();
+        graph.render(std::span<const MidiEvent>{}, out.block(), 1.0F);
+        std::vector<int> ended;
+        while (synth->pop(e)) {
+            QCOMPARE(int(e.status), 0x80);
+            ended.push_back(e.data1);
+        }
+        QCOMPARE(ended, (std::vector<int>{60, 64}));
+        QVERIFY(!synth->holdsNotes());
+    }
+
+    // Two MIDI channels holding the same note both reach the synth on its one
+    // channel: the note ends only when both let go, so it never hangs.
+    void aHardwareSynthEndsANoteOnlyWhenEveryHolderLetsGo()
+    {
+        HardwareOut synth(u"Synth"_s, 1);
+        const auto sent = [&synth] {
+            std::vector<int> statuses;
+            MidiEvent e;
+            while (synth.pop(e)) statuses.push_back(e.status);
+            return statuses;
+        };
+        synth.push(std::array{noteOn(60, 0), noteOn(60, 1)}, true);
+        QCOMPARE(sent(), (std::vector<int>{0x90, 0x90}));
+
+        synth.push(std::array{cc(0x80, 60, 0)}, true);
+        QCOMPARE(sent(), std::vector<int>{}); // the second channel still holds it
+        QVERIFY(synth.holdsNotes());
+
+        synth.push(std::array{cc(0x81, 60, 0)}, true);
+        QCOMPARE(sent(), (std::vector<int>{0x80}));
+        QVERIFY(!synth.holdsNotes());
+    }
+
     void splitsReceiveOnlyTheirNotes()
     {
         auto low = std::make_shared<HeldNoteNode>(0.1F);
@@ -477,6 +644,33 @@ private slots:
         // Only the unmapped mod wheel reached the instrument as MIDI.
         QCOMPARE(synth->received.size(), std::size_t{2});
         QCOMPARE(int(synth->received.at(1).data1), 1);
+    }
+
+    // A strip set to one keyboard (#51): the other keyboard's knob moves
+    // none of its parameters; its own keyboard's does, and so does the app's.
+    void aMappedKnobOnAnotherKeyboardMovesNothing()
+    {
+        auto synth = std::make_shared<HeldNoteNode>(0.1F);
+        StripSpec spec = strip(synth);
+        const uint16_t upper = keyboardSource(u"Upper keys"_s);
+        const uint16_t lower = keyboardSource(u"Lower keys"_s);
+        spec.route.source = upper;
+        spec.mappings.push_back(ParameterMapping{.midiChannel = 0, .controller = 74, .target = -1, .parameter = 42,
+                                                 .minimum = 0.0, .maximum = 1.0, .pickup = false});
+        std::vector<StripSpec> specs;
+        specs.push_back(std::move(spec));
+        RenderGraph graph(std::move(specs), 48000.0, kFrames);
+        Output out;
+        MidiEvent fromLower = cc(0xB0, 74, 127);
+        fromLower.source = lower;
+        graph.render(std::array{fromLower}, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{0});
+        MidiEvent fromUpper = cc(0xB0, 74, 127);
+        fromUpper.source = upper;
+        graph.render(std::array{fromUpper}, out.block(), 1.0F);
+        QCOMPARE(synth->parameterCount, std::size_t{1});
+        graph.render(std::array{cc(0xB0, 74, 0)}, out.block(), 1.0F); // the app's own (source 0)
+        QCOMPARE(synth->parameterCount, std::size_t{2});
     }
 
     // Pickup: a knob far from where the parameter is (0.8) moves nothing
