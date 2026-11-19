@@ -6,8 +6,9 @@
 #include <QString>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
-#include <bitset>
+#include <cstdint>
 #include <span>
 #include <utility>
 
@@ -37,10 +38,10 @@ public:
         // Asked to let go (releaseHeld): every note it holds ends first.
         if (m_releaseHeld.exchange(false, std::memory_order_relaxed)) {
             for (std::size_t note = 0; note < m_held.size(); ++note) {
-                if (!m_held.test(note)) continue;
+                if (m_held.at(note) == 0) continue;
                 const MidiEvent off{.status = static_cast<uint8_t>(0x80 | m_channel), .data1 = static_cast<uint8_t>(note)};
                 if (m_queue.push(off)) {
-                    m_held.reset(note);
+                    m_held.at(note) = 0;
                 } else {
                     m_dropped.fetch_add(1, std::memory_order_relaxed);
                 }
@@ -55,15 +56,21 @@ public:
             const bool off = kind == 0x80 || (kind == 0x90 && event.data2 == 0);
             const std::size_t note = event.data1 & 0x7F;
             if (on && !newNotes) continue;
-            if (off && !m_held.test(note)) continue; // its note-on never went
+            uint8_t& holders = m_held.at(note);
+            if (off && holders == 0) continue; // its note-on never went
+            // The note came from more than one MIDI channel, all on the synth's one: it ends with the last.
+            if (off && holders > 1) {
+                --holders;
+                continue;
+            }
             if (!m_queue.push(out)) {
                 m_dropped.fetch_add(1, std::memory_order_relaxed);
                 continue;
             }
-            if (on) m_held.set(note);
-            if (off) m_held.reset(note);
+            if (on && holders < UINT8_MAX) ++holders;
+            if (off) holders = 0;
         }
-        m_holding.store(m_held.any(), std::memory_order_relaxed);
+        m_holding.store(std::ranges::any_of(m_held, [](uint8_t holders) { return holders > 0; }), std::memory_order_relaxed);
     }
 
     // Any thread: every note it holds ends at its next block. For a strip
@@ -84,7 +91,7 @@ private:
     QString m_port;
     uint8_t m_channel; // 0-15
     MidiQueue m_queue;
-    std::bitset<128> m_held; // audio thread
+    std::array<uint8_t, 128> m_held{}; // audio thread: how many note-ons each note has sent and not yet ended
     std::atomic<bool> m_holding{false};
     std::atomic<bool> m_releaseHeld{false};
     std::atomic<uint64_t> m_dropped{0};

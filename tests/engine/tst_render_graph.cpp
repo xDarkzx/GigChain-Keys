@@ -508,6 +508,29 @@ private slots:
         QVERIFY(!synth->holdsNotes());
     }
 
+    // Two MIDI channels holding the same note both reach the synth on its one
+    // channel: the note ends only when both let go, so it never hangs.
+    void aHardwareSynthEndsANoteOnlyWhenEveryHolderLetsGo()
+    {
+        HardwareOut synth(u"Synth"_s, 1);
+        const auto sent = [&synth] {
+            std::vector<int> statuses;
+            MidiEvent e;
+            while (synth.pop(e)) statuses.push_back(e.status);
+            return statuses;
+        };
+        synth.push(std::array{noteOn(60, 0), noteOn(60, 1)}, true);
+        QCOMPARE(sent(), (std::vector<int>{0x90, 0x90}));
+
+        synth.push(std::array{cc(0x80, 60, 0)}, true);
+        QCOMPARE(sent(), std::vector<int>{}); // the second channel still holds it
+        QVERIFY(synth.holdsNotes());
+
+        synth.push(std::array{cc(0x81, 60, 0)}, true);
+        QCOMPARE(sent(), (std::vector<int>{0x80}));
+        QVERIFY(!synth.holdsNotes());
+    }
+
     void splitsReceiveOnlyTheirNotes()
     {
         auto low = std::make_shared<HeldNoteNode>(0.1F);
