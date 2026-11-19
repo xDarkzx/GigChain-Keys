@@ -1,7 +1,6 @@
 #include "DevControl.h"
 
 #include "DevLog.h"
-#include "SingleInstance.h"
 
 #include <QJsonArray>
 #include <QLocalSocket>
@@ -83,7 +82,7 @@ void DevControl::add(const QString& cmd, const QString& usage, Handler handler)
 
 QString DevControl::defaultSocketName()
 {
-    return ui::SingleInstance::appName() + u"-dev-control"_s;
+    return socketName();
 }
 
 void DevControl::onConnection()

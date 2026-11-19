@@ -1,5 +1,7 @@
 #include "DevProtocol.h"
 
+#include "gigchain/core/Branding.h"
+
 #include <QJsonDocument>
 #include <QStringList>
 
@@ -33,6 +35,11 @@ QByteArray message(uint8_t status, std::initializer_list<int> data)
 }
 
 } // namespace
+
+QString socketName()
+{
+    return branding::organization() + u'-' + branding::executable() + u"-dev-control"_s; // (as SingleInstance names the app)
+}
 
 core::Result<DevRequest> parseRequest(QByteArrayView line)
 {

@@ -190,6 +190,9 @@ void addLifeCommands(DevControl& control)
         reply.ok();
         QTimer::singleShot(0, qApp, &QCoreApplication::quit);
     });
+    control.add(u"pid"_s, u"pid: the app's process id (gck-ctl kill uses it)"_s, [](const DevRequest&, const Reply& reply) {
+        reply.ok({{u"pid"_s, QCoreApplication::applicationPid()}});
+    });
     control.add(u"crash"_s, u"crash: crashes the app on purpose (the crash reporter's path)"_s, [](const DevRequest&, const Reply& reply) {
         reply.ok();
         QTimer::singleShot(100, qApp, [] {

@@ -14,6 +14,9 @@ namespace gigchain::devcontrol {
 // The live test control's wire format (docs/testing/live-test-control.md):
 // one JSON object per line each way. Pure functions, no event loop.
 
+// The local socket the app listens on in a dev build: this user's, named after the app.
+[[nodiscard]] QString socketName();
+
 // The longest request line taken; a longer one is refused and its connection closed.
 inline constexpr qsizetype kMaxLine = qsizetype{64} * 1024;
 
