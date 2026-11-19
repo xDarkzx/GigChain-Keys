@@ -8,6 +8,12 @@
 //   gck-ctl restart [setlist]                        quits it (or kills it) and starts it again
 //   gck-ctl sleep <ms>                               (in a command file: waits)
 //
+// In a command file, a check on the answer before it fails the file when it
+// does not hold: `expect <field> <op> <value>` (op: < > <= >= == != contains;
+// `expect <field> empty` / `notempty`; a field inside another: audio.device).
+// $mark stands for the last mark's answer, $tmp for a scratch folder.
+// `kill-at <pattern> <ms> <command...>` sends that command, then watches.
+//
 // Exit code: 0 done, 1 an error (said), 2 the app is not running with --dev-control.
 #include "DevProtocol.h"
 
@@ -15,6 +21,7 @@
 #include "gigchain/platform/Process.h"
 
 #include <QCoreApplication>
+#include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QJsonDocument>
@@ -83,10 +90,66 @@ Answer ask(const QString& socket, const QString& cmd, const QJsonArray& args = {
     return Answer{json.value(u"ok"_s).toBool() ? kDone : kFailed, json};
 }
 
+// The last answer printed, and the last mark (for expect and $mark).
+QJsonObject& lastAnswer()
+{
+    static QJsonObject answer;
+    return answer;
+}
+QString& lastMark()
+{
+    static QString mark;
+    return mark;
+}
+
 int print(const Answer& answer)
 {
     out() << QString::fromUtf8(QJsonDocument(answer.json).toJson(QJsonDocument::Indented)) << Qt::flush;
+    lastAnswer() = answer.json;
+    if (answer.json.contains(u"mark"_s)) lastMark() = answer.json.value(u"mark"_s).toString();
     return answer.code;
+}
+
+// `expect <field> <op> [value]` on the last answer.
+int expect(const QStringList& words)
+{
+    const QString field = words.value(1);
+    const QString op = words.value(2);
+    const QString wanted = words.mid(3).join(u' '); // (a value of several words: contains Analog Lab V)
+    QJsonValue value = lastAnswer();
+    for (const QString& part : field.split(u'.')) value = value.toObject().value(part);
+    const auto fail = [&](const QString& why) {
+        out() << u"EXPECT FAILED: %1 %2 %3: %4\n"_s.arg(field, op, wanted, why) << Qt::flush;
+        return kFailed;
+    };
+    if (value.isUndefined()) return fail(u"the last answer has no %1"_s.arg(field));
+    const QString text = value.isString() ? value.toString() : QString::fromUtf8(QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact)).mid(1).chopped(1);
+    bool held = false;
+    if (op == u"empty"_s || op == u"notempty"_s) {
+        const bool empty = value.isArray() ? value.toArray().isEmpty() : value.isNull() || text.isEmpty();
+        held = (op == u"empty"_s) == empty;
+    } else if (op == u"contains"_s) {
+        held = text.contains(wanted);
+    } else if (value.isDouble()) {
+        bool number = false;
+        const double other = wanted.toDouble(&number);
+        if (!number) return fail(u"%1 is not a number"_s.arg(wanted));
+        const double v = value.toDouble();
+        if (op == u"<"_s) held = v < other;
+        else if (op == u">"_s) held = v > other;
+        else if (op == u"<="_s) held = v <= other;
+        else if (op == u">="_s) held = v >= other;
+        else if (op == u"=="_s) held = v == other;
+        else if (op == u"!="_s) held = v != other;
+        else return fail(u"no such check (< > <= >= == != contains empty notempty)"_s);
+    } else if (op == u"=="_s || op == u"!="_s) {
+        held = (text == wanted) == (op == u"=="_s);
+    } else {
+        return fail(u"%1 is not a number"_s.arg(text));
+    }
+    if (!held) return fail(u"it is %1"_s.arg(text));
+    out() << u"ok: %1 %2 %3 (%4)\n"_s.arg(field, op, wanted, text) << Qt::flush;
+    return kDone;
 }
 
 int said(int code, const QString& text)
@@ -148,7 +211,7 @@ int kill(const QString& socket)
 
 // Ends the app the moment its log shows a line matching `pattern` (a plugin
 // loading: the app is busy then, so this watches from outside).
-int killAt(const QString& socket, const QString& pattern, int ms)
+int killAt(const QString& socket, const QString& pattern, int ms, const QStringList& then)
 {
     const QRegularExpression match(pattern);
     if (pattern.isEmpty() || !match.isValid()) return said(kFailed, u"kill-at <pattern> [ms]"_s);
@@ -158,6 +221,17 @@ int killAt(const QString& socket, const QString& pattern, int ms)
     QFile log(paths.json.value(u"log"_s).toString());
     if (!log.open(QIODevice::ReadOnly)) return said(kFailed, u"Could not read the log %1"_s.arg(log.fileName()));
     log.seek(log.size());
+    // The command that sets it going (opening a setlist): sent, not waited for (the app is busy, then gone).
+    QLocalSocket sent;
+    if (!then.isEmpty()) {
+        sent.connectToServer(socket);
+        if (!sent.waitForConnected(2000)) return said(kNotRunning, u"The app stopped answering"_s);
+        QJsonArray args;
+        for (qsizetype i = 1; i < then.size(); ++i) args.append(jsonArg(then.at(i)));
+        sent.write(QJsonDocument(QJsonObject{{u"cmd"_s, then.front()}, {u"args"_s, args}}).toJson(QJsonDocument::Compact) + '\n');
+        sent.flush();
+        sent.waitForBytesWritten(2000);
+    }
     QByteArray pending;
     QElapsedTimer clock;
     clock.start();
@@ -190,6 +264,14 @@ int restart(const QString& socket, const QString& setlist)
 // One command, the tool's own or the app's.
 int perform(const QString& socket, const QStringList& words);
 
+// $tmp: a folder for a check's files (setlists, pictures), kept between runs.
+QString scratch()
+{
+    const QString folder = QDir::tempPath() + u"/gck-live"_s;
+    QDir().mkpath(folder);
+    return folder;
+}
+
 int runFile(const QString& socket, const QString& path)
 {
     QFile file(path);
@@ -200,7 +282,12 @@ int runFile(const QString& socket, const QString& path)
         const QString line = QString::fromUtf8(file.readLine()).trimmed();
         if (line.isEmpty() || line.startsWith(u'#')) continue;
         out() << u"> "_s << line << u'\n' << Qt::flush;
-        if (const int code = perform(socket, QProcess::splitCommand(line)); code != kDone) {
+        QStringList words = QProcess::splitCommand(line);
+        for (QString& word : words) {
+            word.replace(u"$mark"_s, lastMark());
+            word.replace(u"$tmp"_s, scratch());
+        }
+        if (const int code = perform(socket, words); code != kDone) {
             out() << u"Stopped at line %1 of %2\n"_s.arg(number).arg(path) << Qt::flush;
             return code;
         }
@@ -216,7 +303,8 @@ int perform(const QString& socket, const QStringList& words)
     if (cmd == u"run"_s) return runFile(socket, first);
     if (cmd == u"start"_s) return start(socket, first);
     if (cmd == u"kill"_s) return kill(socket);
-    if (cmd == u"kill-at"_s) return killAt(socket, first, words.size() > 2 ? words.at(2).toInt() : 60'000);
+    if (cmd == u"kill-at"_s) return killAt(socket, first, words.size() > 2 ? words.at(2).toInt() : 60'000, words.mid(3));
+    if (cmd == u"expect"_s) return expect(words);
     if (cmd == u"restart"_s) return restart(socket, first);
     if (cmd == u"sleep"_s) {
         QThread::msleep(static_cast<unsigned long>(std::clamp(first.toInt(), 0, 600'000)));

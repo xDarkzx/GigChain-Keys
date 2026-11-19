@@ -80,6 +80,37 @@ private slots:
         QCOMPARE(seen, (QJsonArray{60, u"KeyLab mkII 88"_s, 0.5}));
     }
 
+    // A live check passes or fails on its own: expect checks the answer before it; $mark carries a mark on.
+    void aCommandFileChecksItsAnswers()
+    {
+        QJsonArray seen;
+        m_control->add(u"measure"_s, u"measure"_s, [](const DevRequest&, const Reply& reply) {
+            reply.ok({{u"peak"_s, 0.5}, {u"blocked"_s, QJsonArray{}}, {u"audio"_s, QJsonObject{{u"device"_s, u"Scarlett 6i6"_s}}}});
+        });
+        m_control->add(u"mark"_s, u"mark"_s, [](const DevRequest&, const Reply& reply) { reply.ok({{u"mark"_s, u"12:3"_s}}); });
+        m_control->add(u"echo"_s, u"echo"_s, [&seen](const DevRequest& request, const Reply& reply) {
+            seen = request.args;
+            reply.ok();
+        });
+        QTemporaryDir dir;
+        const auto write = [&dir](const QString& name, const QByteArray& text) {
+            QFile file(dir.filePath(name));
+            if (!file.open(QIODevice::WriteOnly)) return QString();
+            file.write(text);
+            return file.fileName();
+        };
+        const QString holds = write(u"holds.txt"_s, "measure\nexpect peak < 0.6\nexpect blocked empty\nexpect audio.device contains Scarlett\n"
+                                                     "mark\necho $mark\n");
+        const Run good = run({u"--socket"_s, m_name, u"run"_s, holds});
+        QVERIFY2(good.code == 0, qPrintable(good.output));
+        QCOMPARE(seen, QJsonArray{u"12:3"_s});
+        const QString breaks = write(u"breaks.txt"_s, "measure\nexpect peak > 0.6\necho never\n");
+        const Run bad = run({u"--socket"_s, m_name, u"run"_s, breaks});
+        QCOMPARE(bad.code, 1);
+        QVERIFY2(bad.output.contains(u"EXPECT FAILED: peak > 0.6"_s), qPrintable(bad.output));
+        QCOMPARE(seen, QJsonArray{u"12:3"_s}); // stopped before echo
+    }
+
     void aCommandFileStopsAtTheFirstError()
     {
         QTemporaryDir dir;

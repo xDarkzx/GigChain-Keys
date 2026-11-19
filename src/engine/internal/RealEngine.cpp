@@ -469,6 +469,7 @@ std::shared_ptr<PluginNode> RealEngine::loadWithSettings(const core::PluginSlot&
     timer.start();
     // Until it has loaded and taken its settings: a crash here blocks it next start.
     const auto loading = m_guard.loading(slot.pluginId);
+    qCInfo(lcEngine).noquote() << "Loading plugin" << slot.displayName; // (a log ending here names the plugin)
     auto node = PluginNode::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());
     if (!node) {
         // Already logged by the plugin's load; tell the user too.
