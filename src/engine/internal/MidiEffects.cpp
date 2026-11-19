@@ -121,10 +121,17 @@ std::size_t MidiEffects::process(std::span<const MidiEvent> in, std::span<MidiEv
         // down, or by a second keyboard while the first holds it, its chord already sounds; let go,
         // it ends only when no one holds it; a key-up that never came down here (a velocity layer
         // kept its press out) ends nothing.
+        // Notes go out on the MIDI channel they came in on, so only holders on the same channel share
+        // them (an instrument that keeps channels apart ends each with its own channel's note-off).
+        // The arpeggiator plays one stream for all of them.
+        const uint32_t channel = e.status & 0x0FU;
+        const std::size_t lane = arp ? 0 : channel;
         auto& holders = m_holders.at(e.data1 & 0x7F);
-        const uint32_t who = ((uint32_t{e.source} << 4U) | (e.status & 0x0FU)) + 1U;
+        const uint32_t who = ((uint32_t{e.source} << 4U) | channel) + 1U;
         const auto mine = std::ranges::find(holders, who);
-        const bool othersHold = std::ranges::any_of(holders, [who](uint32_t h) { return h != 0 && h != who; });
+        const bool othersHold = std::ranges::any_of(holders, [who, channel, arp](uint32_t h) {
+            return h != 0 && h != who && (arp || ((h - 1U) & 0x0FU) == channel);
+        });
         if (on) {
             if (mine != holders.end()) continue;
             const auto room = std::ranges::find(holders, 0U);
@@ -147,7 +154,7 @@ std::size_t MidiEffects::process(std::span<const MidiEvent> in, std::span<MidiEv
             const int key = e.data1 + chord.steps.at(k);
             if (key < 0 || key > 127) continue;
             // Two keys' chords sharing a note: it starts with the first and ends with the last let go.
-            uint8_t& owners = m_owners.at(static_cast<std::size_t>(key)); // (at most a count of the keys down)
+            uint8_t& owners = m_owners.at(lane).at(static_cast<std::size_t>(key)); // (at most a count of the keys down)
             if (on) {
                 const bool sounding = owners > 0;
                 ++owners;

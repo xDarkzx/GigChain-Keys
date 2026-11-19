@@ -53,7 +53,8 @@ private:
     MidiEffectSettings m_settings;
     std::array<int, kMaxHeld> m_held{}; // keys down, in the order played
     std::size_t m_heldCount = 0;
-    std::array<uint8_t, 128> m_owners{}; // for each note it plays, how many keys down play it (chords sharing notes)
+    // For each note it plays (per MIDI channel; the arpeggiator: all in the first), how many keys down play it.
+    std::array<std::array<uint8_t, 128>, 16> m_owners{};
     // Who holds each key it was given down: (keyboard << 4 | MIDI channel) + 1, 0 empty.
     static constexpr std::size_t kHolders = 4;
     std::array<std::array<uint32_t, kHolders>, 128> m_holders{};

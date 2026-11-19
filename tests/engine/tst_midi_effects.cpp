@@ -183,6 +183,33 @@ private slots:
         QCOMPARE(offsAt, (std::vector<long long>{30, 30, 30})); // ended by the second keyboard's key-up
     }
 
+    // The same key on two MIDI channels (a channel that hears all of them):
+    // each channel's chord starts and ends on its own channel, so an
+    // instrument that keeps channels apart never keeps one ringing.
+    void aChordOnEachMidiChannelEndsOnItsOwnChannel()
+    {
+        MidiEffects effects(MidiEffectSettings{.chord = static_cast<int>(core::ChordTrigger::Major)});
+        const auto on = [](int channel, int velocity) {
+            return MidiEvent{.status = static_cast<uint8_t>(0x90 | channel), .data1 = 60, .data2 = static_cast<uint8_t>(velocity)};
+        };
+        std::array<MidiEvent, 64> out{};
+        const TimeInfo time{.tempo = kTempo, .sampleRate = kRate};
+        const std::array in{on(0, 90), on(1, 90), on(0, 0), on(1, 0)};
+        const std::size_t n = effects.process(in, out, kFrames, time);
+        int onsPerChannel[2] = {0, 0};
+        int offsPerChannel[2] = {0, 0};
+        for (std::size_t i = 0; i < n; ++i) {
+            const MidiEvent& e = out.at(i);
+            const int channel = e.status & 0x0F;
+            if ((e.status & 0xF0) == 0x90 && e.data2 > 0) ++onsPerChannel[channel];
+            else ++offsPerChannel[channel];
+        }
+        QCOMPARE(onsPerChannel[0], 3);
+        QCOMPARE(onsPerChannel[1], 3);
+        QCOMPARE(offsPerChannel[0], 3);
+        QCOMPARE(offsPerChannel[1], 3);
+    }
+
     // Up, eighths, two keys: the low key at once, then the high one on the
     // next eighth of the song's grid, and so on, each let go half way; when
     // the keys are up, it stops (its note let go at once).
