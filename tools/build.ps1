@@ -1,6 +1,6 @@
 # Configure, build and test from any PowerShell prompt.
 param(
-    [ValidateSet('debug', 'release', 'asan', 'spike')][string]$Preset = 'debug',
+    [ValidateSet('debug', 'release', 'dev', 'asan', 'spike')][string]$Preset = 'debug',
     [string]$Filter = '',
     [string]$Target = '',
     [switch]$NoTest

@@ -16,6 +16,10 @@
 #include "gigchain/platform/Windows.h"
 #include "gigchain/engine/RealEngineFactory.h"
 
+#ifdef GIGCHAIN_DEV_CONTROL
+#include "DevMarker.h"
+#endif
+
 #include <QElapsedTimer>
 #include <QGuiApplication>
 #include <QLoggingCategory>
@@ -86,6 +90,9 @@ int runApp(int argc, char** argv)
         qCInfo(lcApp).noquote() << branding::name() << branding::version() << "starting; log:" << logPath;
     }
     if (!dllSearch) qCWarning(lcApp).noquote() << dllSearch.error().message; // now in the log file too
+#ifdef GIGCHAIN_DEV_CONTROL
+    qCWarning(lcApp).noquote() << "A developer build with the live test control (" << devcontrol::marker() << "): never to be released";
+#endif
 
     // Already running (a setlist double-clicked): the running app opens it.
     const QStringList arguments = QGuiApplication::arguments();

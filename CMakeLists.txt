@@ -39,11 +39,23 @@ endif()
 include(PianoSamples)
 enable_testing()
 
+# The live test control (docs/testing/live-test-control.md): drives the running
+# app from a terminal. Only the dev presets switch it on; a release, an
+# installer or CI's packages never contain it (tools/package.ps1 checks).
+option(GIGCHAIN_DEV_CONTROL "Build the live test control (developer builds only, never a release)" OFF)
+if(GIGCHAIN_DEV_CONTROL)
+    message(STATUS "Live test control: ON (a developer build, never to be released)")
+    add_compile_definitions(GIGCHAIN_DEV_CONTROL=1)
+endif()
+
 add_subdirectory(src/core)
 add_subdirectory(src/platform)
 add_subdirectory(src/engine)
 add_subdirectory(src/scanner)
 add_subdirectory(src/ui)
+if(GIGCHAIN_DEV_CONTROL)
+    add_subdirectory(src/devcontrol)
+endif()
 add_subdirectory(src/app)
 add_subdirectory(tests)
 if(GIGCHAIN_FUZZ)

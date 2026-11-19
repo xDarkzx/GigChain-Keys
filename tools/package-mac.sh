@@ -11,6 +11,10 @@ APP="$BUILD/GigChain Keys.app"
 DMG="$BUILD/GigChain Keys-$VERSION-arm64.dmg"
 [ -d "$APP" ] || { echo "No app bundle at $APP" >&2; exit 1; }
 [ -x "$APP/Contents/MacOS/GigChainKeysScan" ] || { echo "The plugin scanner is missing from $APP" >&2; exit 1; }
+# No program it ships has the live test control (docs/testing/live-test-control.md).
+if grep -rqF GCK-DEV-CONTROL-v1 "$APP/Contents/MacOS"; then
+    echo "The app contains the live test control: never release a dev build" >&2; exit 1
+fi
 [ -n "${QT_ROOT_DIR:-}" ] || { echo "QT_ROOT_DIR is not set (Qt's folder, e.g. from install-qt-action)" >&2; exit 1; }
 
 # Qt, its plugins and the QML the app uses, into the bundle; the scanner

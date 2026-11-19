@@ -40,7 +40,7 @@ step() { echo "== $*"; }
 
 # ------------------------------------------------------------ build and test
 step configure
-cmake --preset "$PRESET" >/dev/null
+cmake --preset "$PRESET" -DGIGCHAIN_DEV_CONTROL=OFF >/dev/null # (the live test control is never released)
 step build
 cmake --build --preset "$PRESET"
 if [ "$SKIP_TESTS" = 0 ]; then
@@ -74,6 +74,10 @@ mkdir -p "$APPDIR/usr/bin" "$DIST"
 step install
 cmake --install "$BUILD" --prefix "$APPDIR/usr/bin" >/dev/null
 [ -x "$APPDIR/usr/bin/$EXE" ] && [ -x "$APPDIR/usr/bin/${EXE}Scan" ] || { echo "The app or its scanner was not installed" >&2; exit 1; }
+# No program it ships has the live test control (docs/testing/live-test-control.md).
+if grep -qF GCK-DEV-CONTROL-v1 "$APPDIR/usr/bin/$EXE" "$APPDIR/usr/bin/${EXE}Scan"; then
+    echo "The app contains the live test control: never release a dev build" >&2; exit 1
+fi
 
 # The menu entry, the icon, and setlists opening in the app.
 cat > "$WORK/$PACKAGE.desktop" <<EOF

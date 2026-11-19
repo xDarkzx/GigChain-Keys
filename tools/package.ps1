@@ -41,7 +41,8 @@ $exeName = Get-Branding 'PRODUCT_EXECUTABLE'
 $version = Get-Branding 'PRODUCT_VERSION'
 
 # ------------------------------------------------------------ build and test
-Invoke-Step 'configure' { cmake --preset release }
+# (The live test control is never part of a release: switched off even if an old cache had it.)
+Invoke-Step 'configure' { cmake --preset release -DGIGCHAIN_DEV_CONTROL=OFF }
 Invoke-Step 'build' { cmake --build --preset release }
 if (-not $SkipTests) { Invoke-Step 'tests' { ctest --preset release } }
 
@@ -69,6 +70,12 @@ if (-not (Get-ChildItem $stage -Filter 'rtaudio*.dll')) { $problems += 'missing:
 if (-not (Get-ChildItem $stage -Filter '*fluidsynth*.dll')) { $problems += 'missing: the FluidSynth library (the SoundFont Player)' }
 foreach ($licence in 'fluidsynth', 'gcem') {
     if (-not (Test-Path (Join-Path $stage "licenses\$licence.txt"))) { $problems += "missing: licenses\$licence.txt" }
+}
+# No program it ships has the live test control (docs/testing/live-test-control.md).
+foreach ($binary in Get-ChildItem $stage -Filter '*.exe') {
+    if (Select-String -Path $binary.FullName -Pattern 'GCK-DEV-CONTROL-v1' -SimpleMatch -Quiet) {
+        $problems += "$($binary.Name) contains the live test control: never release a dev build"
+    }
 }
 if (Get-ChildItem $stage -Recurse -Filter '*d.dll' | Where-Object { $_.Name -match '^(Qt6\w+d|rtaudiod)\.dll$' }) {
     $problems += 'debug libraries were staged'
