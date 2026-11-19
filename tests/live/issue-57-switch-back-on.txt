@@ -1,0 +1,33 @@
+# #57: a plugin switched back on (Settings > Plugins) loads at once in the
+# song that uses it: no track to add first.
+# Needs: the dev build and Arturia Analog Lab V.
+# Run:   build\dev\gck-ctl run tests\live\issue-57-switch-back-on.txt
+start
+call document newSetlist
+call document addSong
+mark
+call document addChannel "C:/Program Files/Common Files/VST3/Arturia/Analog Lab V.vst3" "Analog Lab V"
+wait "Plugin Analog Lab V ready in" 60000 $mark
+call document saveAs "$tmp/issue57.gigchain.json"
+expect result == true
+
+# Switched off, as a crash while loading would, and the app started again with the song.
+guard-block "C:/Program Files/Common Files/VST3/Arturia/Analog Lab V.vst3"
+restart "$tmp/issue57.gigchain.json"
+status
+expect blockedPlugins contains Analog Lab V
+expect loadedPlugins == 0
+
+# Switched back on: it loads straight away, and plays.
+mark
+call settings unblockPlugin "C:/Program Files/Common Files/VST3/Arturia/Analog Lab V.vst3"
+wait "Plugin Analog Lab V ready in" 60000 $mark
+status
+expect blockedPlugins empty
+expect loadedPlugins >= 1
+sleep 1500
+note 60 100
+level 500
+expect peak > 0.001
+note 60 0
+quit

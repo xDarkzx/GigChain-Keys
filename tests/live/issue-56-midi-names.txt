@@ -1,0 +1,16 @@
+# #56: Settings > MIDI shows each input's whole name, at the report's window
+# size (1424 x 1038 at 162%: 880 x 640), with this computer's real devices.
+# Needs: the dev build; at least one MIDI input plugged in.
+# Run:   build\dev\gck-ctl run tests\live\issue-56-midi-names.txt
+start
+status
+expect midiInputs notempty
+resize 880 640
+ui-call settingsDialog open
+ui-set settingsDialog page 2
+sleep 800
+shot "$tmp/issue56-settings-midi.png"
+ui-tree settingsDialog
+expect items contains midiName0
+ui-call settingsDialog close
+quit

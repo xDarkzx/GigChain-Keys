@@ -4,6 +4,33 @@ A way to drive the real, running app from a terminal, so a fix is checked
 live (the reporter's steps, in the real app, measured) and not only by unit
 tests. Never part of a release.
 
+## How to use it
+
+```powershell
+tools\build.ps1 -Preset dev -NoTest       # once; then incremental
+build\dev\gck-ctl start                   # the dev app, listening (start <setlist> opens one)
+build\dev\gck-ctl help                    # every command with its arguments
+build\dev\gck-ctl status
+build\dev\gck-ctl call document addChannel "C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3" Piano
+build\dev\gck-ctl play "on 60 100; wait 400; off 60"
+build\dev\gck-ctl level 500
+build\dev\gck-ctl shot $env:TEMP\window.png
+build\dev\gck-ctl quit
+```
+
+`gck-ctl run <file>` runs a file of commands, one a line, and stops at the
+first that fails. `expect <field> <op> <value>` checks the answer before it,
+so a file passes or fails on its own; `$mark` is the last `mark`, `$tmp` a
+scratch folder. The live checks of fixes are in [tests/live](../../tests/live).
+Every answer is JSON with `"ok"` (and `"error"` saying why when not) and `"ms"`
+(how long it took). Every command reaches the app's log as `Dev control: ...`.
+
+The tool's own commands: `start [setlist]`, `kill`, `kill-at <pattern> [ms]
+[command...]` (ends the app the moment its log matches: a kill during a plugin
+load), `restart [setlist]`, `sleep <ms>`, `run <file>`.
+
+`tools\run.ps1 -Preset dev -DevControl` starts the app the same way.
+
 ## Why
 
 Unit tests and the verification gate prove the code; they do not prove that a
@@ -34,9 +61,8 @@ takes a screenshot, from a script, before and after a fix.
 - Any way in from a shipped build. Release builds, installers and CI
   artifacts must not contain the control code at all.
 - Any change to how the app behaves or performs when it is not switched on.
-  On the audio thread: nothing in a release build; in a dev build only what
-  `record` needs (one atomic check a block while not recording, copying into
-  a lock-free buffer while it is).
+  Nothing on the audio thread, in any build (`record` uses the app's own
+  performance recorder).
 - Reachable from the network or by another user on the machine.
 
 ## Approaches considered
@@ -127,11 +153,12 @@ plugin. Needs one engine call added: inject a raw message with its source.
 | Command | Answers |
 | --- | --- |
 | `level <ms> [channel]` | the highest peak and RMS of the output (or a channel) over that long, sampled every 5 ms |
-| `record <seconds> <file.wav>` | the output itself, to listen to or compare (sound by ear) |
+| `record <seconds> <file.wav>` | the mix as the audience hears it (the app's performance recorder), to listen to or compare |
 | `cpu <ms>` | the audio load, highest and average; dropouts and late blocks in that time |
 | `keys` | the keys and pedal the instruments hear now (held notes left behind show here) |
-| `process` | memory, handles and threads (leaks while debugging) |
-| `timing <command>` | how long a command took (a song switch, a plugin load) |
+| `process` | the memory the app uses now (leaks while debugging) |
+| (every answer) | `ms`: how long the command took (a song switch, a plugin load) |
+| `windows` | the app's open windows by title (a plugin's own: `shot <file> window:<title>`) |
 
 ### 5. What the app said
 

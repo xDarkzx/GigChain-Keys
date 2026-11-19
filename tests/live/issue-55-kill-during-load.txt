@@ -1,0 +1,34 @@
+# #55: the app killed (not crashed) while a plugin loads does not switch the
+# plugin off: the next start keeps it, and it plays.
+# Needs: the dev build and Arturia Analog Lab V (slow enough to load to kill mid-load).
+# Run:   build\dev\gck-ctl run tests\live\issue-55-kill-during-load.txt
+start
+call document newSetlist
+call document addSong
+mark
+call document addChannel "C:/Program Files/Common Files/VST3/Arturia/Analog Lab V.vst3" "Analog Lab V"
+wait "Plugin Analog Lab V ready in" 60000 $mark
+call document saveAs "$tmp/issue55.gigchain.json"
+expect result == true
+
+# An empty setlist, then the saved one again: Analog Lab loads, and the app is killed while it does.
+call document newSetlist
+sleep 1000
+kill-at "Loading plugin Analog Lab V" 60000 call document open "$tmp/issue55.gigchain.json"
+sleep 2000
+
+# The next start: no crash report, so Analog Lab stays on (noted once, not blocked).
+# (Its note is cleared again as soon as it loads fine: Sustain Pads may load it at start.)
+start
+status
+expect blockedPlugins empty
+log $mark "closed while loading .*Analog Lab V"
+expect lines contains stays on
+mark
+call document open "$tmp/issue55.gigchain.json"
+wait "Plugin Analog Lab V ready in" 60000 $mark
+status
+expect loadedPlugins >= 1
+expect blockedPlugins empty
+log $mark "stays on|switched off"
+quit

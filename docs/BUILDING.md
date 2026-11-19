@@ -36,6 +36,12 @@ $env:QT_ROOT_DIR = 'C:\Qt\6.10.2\msvc2022_64'
 Other presets: `asan` (AddressSanitizer). To build and test one target, pass
 `-Target <name> -Filter <test>`.
 
+`dev` (a Release build in `build\dev`) adds the live test control: drive the
+running app from a terminal to check a fix live (`build\dev\gck-ctl start`,
+then `gck-ctl help`). It is never released: no other preset builds it, and
+packaging fails if a program it would ship contains it. See
+[testing/live-test-control.md](testing/live-test-control.md).
+
 ## Linux (and WSL)
 
 Ubuntu 22.04 or newer, x64; on Windows, WSL 2 with WSLg (it shows Linux
