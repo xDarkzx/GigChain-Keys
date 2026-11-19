@@ -135,6 +135,7 @@ int runApp(int argc, char** argv)
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-cache.json"_s;
     engineOptions.pluginGuardFolder =
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + u"/plugin-guard"_s;
+    engineOptions.lastRunCrashed = !lastCrash.isEmpty(); // (closed or killed: not a plugin's crash)
     // Built next to the app (src/scanner): new plugins are read there.
     engineOptions.pluginScanner =
         QCoreApplication::applicationDirPath() + u"/"_s + platform::programFileName(branding::executable() + u"Scan"_s);

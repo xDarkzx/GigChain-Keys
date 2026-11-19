@@ -609,6 +609,7 @@ private slots:
         QTemporaryDir guardFolder;
         RealEngineOptions options;
         options.pluginGuardFolder = guardFolder.path();
+        options.lastRunCrashed = true; // (the crash reporter found it)
         // The last run "died" while loading it: its marker is still there.
         PluginLoadGuard lastRun(guardFolder.path());
         const auto loading = lastRun.loading(kSmall);
@@ -639,9 +640,9 @@ private slots:
 
         engine.unblockPlugin(kSmall); // "Try again"
         QVERIFY(engine.blockedPlugins().isEmpty());
-        engine.applyPatch(patch);
-        QVERIFY(engine.poll().empty());
+        // It loads at once where the song uses it, nothing else to do (#57).
         QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
+        QVERIFY(engine.poll().empty());
     }
 
     void aLearnedPadSwitchesSongsAndIsNotPlayed()

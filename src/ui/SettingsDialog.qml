@@ -376,34 +376,49 @@ StageDialog {
                         spacing: 8
                         SettingsSection { title: qsTr("MIDI inputs") }
 
-                        // header
+                        // header (each device's name sits on its own line, over its settings)
                         RowLayout {
                             Layout.leftMargin: 20
                             Layout.rightMargin: 20
                             visible: dialog.settings.midiInputs.length > 0
                             spacing: 12
-                            Label { Layout.fillWidth: true; text: qsTr("Device"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
                             Label { Layout.preferredWidth: 160; text: qsTr("Mode"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
                             Label { Layout.preferredWidth: 130; text: qsTr("Channel"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
                             Label { Layout.preferredWidth: 130; text: qsTr("Touch"); color: Theme.textDim; font.pixelSize: Theme.smallFontSize }
-                            Item { Layout.preferredWidth: 110 }
+                            Item { Layout.fillWidth: true }
                         }
                         Repeater {
                             model: dialog.settings.midiInputs
-                            delegate: RowLayout {
-                                id: midiRow
+                            // A device: its whole name on a line of its own (a keyboard's two ports
+                            // differ only at the end, #56), its settings under it.
+                            delegate: ColumnLayout {
+                                id: midiDevice
                                 required property var modelData
                                 required property int index
-                                objectName: "midiRow" + index
+                                Layout.fillWidth: true
                                 Layout.leftMargin: 20
                                 Layout.rightMargin: 20
-                                spacing: 12
+                                Layout.topMargin: 4
+                                spacing: 4
                                 Label {
+                                    objectName: "midiName" + midiDevice.index
                                     Layout.fillWidth: true
-                                    text: midiRow.modelData.name
-                                    color: midiRow.modelData.mode !== 2 ? Theme.text : Theme.textDim
+                                    text: midiDevice.modelData.name
+                                    color: midiDevice.modelData.mode !== 2 ? Theme.text : Theme.textDim
                                     elide: Text.ElideRight
+                                    // (Longer than even a whole line: all of it on hover.)
+                                    HoverHandler { id: nameHover }
+                                    ToolTip.visible: nameHover.hovered && truncated
+                                    ToolTip.delay: 600
+                                    ToolTip.text: text
                                 }
+                            RowLayout {
+                                id: midiRow
+                                readonly property var modelData: midiDevice.modelData
+                                readonly property int index: midiDevice.index
+                                objectName: "midiRow" + index
+                                Layout.fillWidth: true
+                                spacing: 12
                                 StageComboBox {
                                     objectName: "midiMode" + midiRow.index
                                     Layout.preferredWidth: 160
@@ -442,6 +457,8 @@ StageDialog {
                                     enabled: midiRow.modelData.mode !== 2 && !dialog.settings.teaching.active
                                     onClicked: dialog.settings.startTeaching(midiRow.modelData.name)
                                 }
+                                Item { Layout.fillWidth: true }
+                            }
                             }
                         }
 

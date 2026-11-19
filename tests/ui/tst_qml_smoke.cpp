@@ -1362,6 +1362,43 @@ private slots:
         QVERIFY(m_session->document().setLoopControls({}));
     }
 
+    // Settings > MIDI shows each input's whole name: a keyboard's two ports
+    // differ only at the end (#56).
+    void midiInputsShowTheirWholeNames()
+    {
+        const QStringList names{u"KeyLab mkII 88 MIDI 40:0"_s, u"KeyLab mkII 88 DAW 40:1"_s};
+        engine::MidiSetup setup;
+        setup.enabled = names;
+        setup.configured = true;
+        QVERIFY(m_engine->setMidiSetup(setup).has_value());
+        const QSize before = window()->size();
+        window()->resize(880, 640); // the report's window (1424 x 1038 at 162%)
+        auto* dialog = window()->findChild<QObject*>(u"settingsDialog"_s);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "open"));
+        QVERIFY(dialog->setProperty("page", 2)); // MIDI
+        settle();
+        shoot(u"settings-midi-names"_s);
+        auto* content = dialog->property("contentItem").value<QQuickItem*>();
+        QVERIFY(content != nullptr);
+        const auto rightEdge = [content](QQuickItem* item) { return item->mapToItem(content, QPointF(item->width(), 0)).x(); };
+        for (int i = 0; i < names.size(); ++i) {
+            auto* name = visualChild(content, u"midiName%1"_s.arg(i), false);
+            QVERIFY(name != nullptr);
+            QCOMPARE(name->property("text").toString(), names.at(i));
+            // The whole name has room, inside the dialog; and so do the row's controls.
+            QVERIFY2(name->width() >= name->implicitWidth(), qPrintable(u"%1: %2 of %3"_s.arg(names.at(i)).arg(name->width()).arg(name->implicitWidth())));
+            const double textEnd = name->mapToItem(content, QPointF(name->implicitWidth(), 0)).x(); // (where its text ends)
+            QVERIFY2(textEnd <= content->width(), qPrintable(u"%1 ends at %2 of %3"_s.arg(names.at(i)).arg(textEnd).arg(content->width())));
+            auto* teach = visualChild(content, u"teachKeyboard%1"_s.arg(i), false);
+            QVERIFY(teach != nullptr);
+            QVERIFY2(rightEdge(teach) <= content->width(), qPrintable(u"Teach… ends at %1 of %2"_s.arg(rightEdge(teach)).arg(content->width())));
+        }
+        window()->resize(before);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        settle();
+        QVERIFY(m_engine->setMidiSetup({}).has_value());
+    }
+
     void channelVolumeTypesAndPanDragsSideways()
     {
         QVERIFY(m_session->document().addChannel(u"fake.grand-piano"_s, u"Grand Piano"_s));
@@ -4555,7 +4592,8 @@ private slots:
                 menuItem(u"loopsMenuButton"_s, u"loopsLearn"_s);
                 QTest::qWait(400);
                 for (QObject* dialog : w->findChildren<QObject*>(u"loopControlsDialog"_s)) {
-                    auto* content = dialog->property("contentItem").value<QQuickItem*>();
+                    shoot(u"settings-midi-names"_s);
+        auto* content = dialog->property("contentItem").value<QQuickItem*>();
                     if (dialog->property("visible").toBool() && content != nullptr && content->parentItem() != nullptr) spot(content->parentItem());
                 }
                 atWord(u"hands"_s, 0.8);

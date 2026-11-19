@@ -26,7 +26,7 @@ private slots:
             const auto loading = guard.loading(kPiano);
         } // loaded (or failed cleanly): the marker goes
         PluginLoadGuard nextStart(dir.path());
-        QVERIFY(nextStart.takeCrashed().isEmpty());
+        QVERIFY(nextStart.takeCrashed(true).isEmpty());
         QVERIFY(!nextStart.isBlocked(kPiano));
     }
 
@@ -37,10 +37,10 @@ private slots:
         const auto loading = crashed.loading(kPiano); // the app "dies" here: the marker stays
 
         PluginLoadGuard nextStart(dir.path());
-        QCOMPARE(nextStart.takeCrashed(), QStringList{kPiano});
+        QCOMPARE(nextStart.takeCrashed(true), QStringList{kPiano});
         QVERIFY(nextStart.isBlocked(kPiano));
         QVERIFY(!nextStart.isBlocked(kSynth));
-        QVERIFY(nextStart.takeCrashed().isEmpty()); // reported once
+        QVERIFY(nextStart.takeCrashed(true).isEmpty()); // reported once
 
         PluginLoadGuard later(dir.path()); // still blocked at later starts
         QCOMPARE(later.blocked(), QStringList{kPiano});
@@ -48,6 +48,53 @@ private slots:
         QVERIFY(!later.isBlocked(kPiano));
         PluginLoadGuard afterThat(dir.path());
         QVERIFY(!afterThat.isBlocked(kPiano));
+    }
+
+    // The app closed or killed while a plugin loads (no crash report): not the
+    // plugin's fault, so it stays on (#55).
+    void aLoadCutShortWithoutACrashLeavesThePluginOn()
+    {
+        QTemporaryDir dir;
+        PluginLoadGuard killed(dir.path());
+        const auto loading = killed.loading(kPiano);
+
+        PluginLoadGuard nextStart(dir.path());
+        QVERIFY(nextStart.takeCrashed(false).isEmpty());
+        QVERIFY(!nextStart.isBlocked(kPiano));
+        PluginLoadGuard later(dir.path());
+        QVERIFY(later.blocked().isEmpty());
+    }
+
+    // A plugin that takes the app down without a crash report (it never gets
+    // to write one) is caught the second time in a row: never a crash at every start.
+    void aLoadCutShortTwiceInARowIsBlocked()
+    {
+        QTemporaryDir dir;
+        {
+            PluginLoadGuard first(dir.path());
+            const auto loading = first.loading(kPiano);
+            PluginLoadGuard second(dir.path());
+            QVERIFY(second.takeCrashed(false).isEmpty());
+            const auto again = second.loading(kPiano); // the app goes down again here
+            PluginLoadGuard third(dir.path());
+            QCOMPARE(third.takeCrashed(false), QStringList{kPiano});
+            QVERIFY(third.isBlocked(kPiano));
+        }
+    }
+
+    // Once it loads fine, an earlier cut-short load is forgotten.
+    void aLoadThatFinishesClearsAnEarlierCutShortOne()
+    {
+        QTemporaryDir dir;
+        PluginLoadGuard first(dir.path());
+        const auto cutShort = first.loading(kPiano);
+        PluginLoadGuard second(dir.path());
+        QVERIFY(second.takeCrashed(false).isEmpty());
+        { const auto loaded = second.loading(kPiano); } // loads fine
+        const auto cutShortAgain = second.loading(kPiano);
+        PluginLoadGuard third(dir.path());
+        QVERIFY(third.takeCrashed(false).isEmpty()); // the first time again
+        QVERIFY(!third.isBlocked(kPiano));
     }
 
     // Paths are compared as the system does: on Windows whatever the case and
@@ -59,7 +106,7 @@ private slots:
         PluginLoadGuard crashed(dir.path());
         const auto loading = crashed.loading(kPiano);
         PluginLoadGuard nextStart(dir.path());
-        (void)nextStart.takeCrashed();
+        (void)nextStart.takeCrashed(true);
 #ifdef Q_OS_WIN
         QVERIFY(nextStart.isBlocked(u"c:\\plugins\\test plugin a.vst3"_s));
 #else
@@ -74,7 +121,7 @@ private slots:
     {
         PluginLoadGuard off;
         const auto loading = off.loading(kPiano);
-        QVERIFY(off.takeCrashed().isEmpty());
+        QVERIFY(off.takeCrashed(true).isEmpty());
         QVERIFY(!off.isBlocked(kPiano));
     }
 

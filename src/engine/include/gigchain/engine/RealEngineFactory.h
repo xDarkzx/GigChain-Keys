@@ -34,6 +34,9 @@ struct RealEngineOptions
     QStringList userPluginFolders;
     QString pluginCacheFile;   // what the plugin scan learned; empty: open every plugin
     QString pluginGuardFolder; // remembers plugins that crashed the app while loading; empty: off
+    // The crash reporter found that the last run crashed (not closed or killed): a
+    // plugin it was loading is switched off at once (PluginLoadGuard::takeCrashed).
+    bool lastRunCrashed = false;
     // The plugin scanner program: new plugins are read in a process of their
     // own, so one that crashes while being read cannot take the app down.
     // Empty or missing: read in the app (a missing one is logged).

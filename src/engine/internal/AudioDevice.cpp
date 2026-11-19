@@ -31,6 +31,16 @@ std::unique_ptr<RtAudio> probe(AudioApi api)
     });
 }
 
+// Stops a running stream at once. JACK's stopStream() first waits for its last
+// blocks to play out, but RtAudio refuses every block of a size other than the
+// one asked for, so with PipeWire's graph running at another size the wait never
+// ends and the app hangs (#54). abortStream() skips that wait: no callback runs
+// once it returns, which is all a pause or a close needs.
+RtAudioErrorType stopRunning(RtAudio& rt)
+{
+    return rt.getCurrentApi() == RtAudio::UNIX_JACK ? rt.abortStream() : rt.stopStream();
+}
+
 } // namespace
 
 AudioDevice::AudioDevice() = default;
@@ -250,7 +260,7 @@ void AudioDevice::close()
             return;
         }
     }
-    if (m_rtaudio->isStreamRunning() && m_rtaudio->stopStream() != RTAUDIO_NO_ERROR) {
+    if (m_rtaudio->isStreamRunning() && stopRunning(*m_rtaudio) != RTAUDIO_NO_ERROR) {
         qCWarning(lcEngine).noquote() << "Stopping" << m_choice.name << "reported an error";
     }
     if (m_rtaudio->isStreamOpen()) m_rtaudio->closeStream();
@@ -260,7 +270,7 @@ void AudioDevice::close()
 core::Result<void> AudioDevice::pause()
 {
     if (!m_rtaudio || !m_rtaudio->isStreamRunning()) return {};
-    if (m_rtaudio->stopStream() != RTAUDIO_NO_ERROR) {
+    if (stopRunning(*m_rtaudio) != RTAUDIO_NO_ERROR) {
         const std::scoped_lock lock(m_errorMutex);
         const QString why = m_errors.empty() ? u"unknown error"_s : m_errors.back();
         m_errors.clear();

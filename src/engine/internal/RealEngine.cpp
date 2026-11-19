@@ -119,7 +119,7 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     std::ranges::transform(engine->applyClockSetup(), std::back_inserter(engine->m_pendingNotices), &Notice::warning);
     engine->m_progress = options.progress;
     engine->m_guard = PluginLoadGuard(options.pluginGuardFolder);
-    for (const QString& crashed : engine->m_guard.takeCrashed()) {
+    for (const QString& crashed : engine->m_guard.takeCrashed(options.lastRunCrashed)) {
         engine->m_pendingNotices.push_back(Notice::warning(
             u"%1 crashed the app while loading last time, so it is switched off (Settings > Plugins to try it again)"_s.arg(
                 QFileInfo(crashed).completeBaseName())));
@@ -1124,6 +1124,24 @@ std::vector<std::shared_ptr<INode>> RealEngine::busNodes(const EffectsBus& bus)
         if (const auto it = bus.nodes.find(key); it != bus.nodes.end()) nodes.push_back(it->second);
     }
     return nodes;
+}
+
+void RealEngine::unblockPlugin(const QString& pluginId)
+{
+    GC_ONLY_MAIN_THREAD();
+    if (!m_guard.isBlocked(pluginId)) return;
+    m_guard.unblock(pluginId);
+    // Switched back on: it loads at once wherever it is used, the effects buses and
+    // the song playing, rather than waiting for something else to rebuild them (#57).
+    for (EffectsBus* bus : {&m_master, &m_aux, &m_padsFx}) {
+        const std::vector<QString> keys = busKeys(*bus);
+        for (std::size_t i = 0; i < keys.size(); ++i) {
+            const QString& key = keys.at(i);
+            if (key.isEmpty() || bus->nodes.contains(key) || bus->effects.at(i).pluginId != pluginId) continue;
+            if (auto node = loadWithSettings(bus->effects.at(i))) bus->nodes.emplace(key, std::move(node));
+        }
+    }
+    applyPatch(m_song, m_patch); // (loads the song's missing instances, and plays the buses' new ones)
 }
 
 void RealEngine::setBusEffects(EffectsBus& bus, const std::vector<core::PluginSlot>& effects)

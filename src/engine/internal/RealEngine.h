@@ -62,7 +62,7 @@ public:
     void setProgressHandler(LoadProgress handler) override { m_progress = std::move(handler); }
     [[nodiscard]] std::size_t loadedPluginCount() const override { return m_nodes.size(); }
     [[nodiscard]] QStringList blockedPlugins() const override { return m_guard.blocked(); }
-    void unblockPlugin(const QString& pluginId) override { m_guard.unblock(pluginId); }
+    void unblockPlugin(const QString& pluginId) override;
     std::vector<QString> storePluginStates(core::Setlist& setlist) override;
     bool takePluginEdits() override;
     [[nodiscard]] std::vector<PluginInfo> availablePlugins() const override { return m_plugins; }

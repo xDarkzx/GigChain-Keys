@@ -502,7 +502,15 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io, const T
         Vst::Event event{};
         if (type == 0x90 && e.data2 > 0) {
             event = noteOnEvent(e.sampleOffset, channel, e.data1, e.data2);
-            impl.heldNotes.set((static_cast<std::size_t>(channel) * 128) + e.data1);
+            const std::size_t held = (static_cast<std::size_t>(channel) * 128) + e.data1;
+            // Pressed again while it still holds the note (its key-up lost on the way: a
+            // keyboard's firmware, a USB hiccup): the old one ends first. Some instruments
+            // keep a voice for each press, and the one key-up to come would end only one (#53).
+            if (impl.heldNotes.test(held)) {
+                Vst::Event off = noteOffEvent(e.sampleOffset, channel, e.data1, 0);
+                if (impl.events.addEvent(off) != kResultOk) impl.droppedEvents.fetch_add(1, std::memory_order_relaxed);
+            }
+            impl.heldNotes.set(held);
         } else if (type == 0x80 || type == 0x90) {
             impl.heldNotes.reset((static_cast<std::size_t>(channel) * 128) + e.data1);
             event = noteOffEvent(e.sampleOffset, channel, e.data1, e.data2);
