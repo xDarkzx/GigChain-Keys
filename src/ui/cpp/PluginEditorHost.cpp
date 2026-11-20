@@ -116,6 +116,24 @@ void PluginEditorHost::rebuild()
         emit editorChanged();
         return;
     }
+    // A window not shown yet (a plugin window just detached): opened once it is.
+    // Qt can replace a window's native window when it is first shown (X11 does),
+    // and on Linux that destroys every window inside it, the plugin's own with it:
+    // the empty detached window of #59. (place() opens it again if that still happens.)
+    if (!host->isVisible()) {
+        m_stale = true;
+        disconnect(m_exposedConnection);
+        m_exposedConnection = connect(
+            host, &QWindow::visibleChanged, this,
+            [this](bool visible) {
+                if (!visible) return;
+                disconnect(m_exposedConnection);
+                if (m_stale) rebuild();
+            },
+            Qt::QueuedConnection); // (after it has been shown)
+        emit editorChanged();
+        return;
+    }
     m_stale = false;
 
     FreezeWatchdog::mark(u"opening a plugin window"_s);
@@ -143,6 +161,7 @@ void PluginEditorHost::rebuild()
         return;
     }
     m_editor = std::move(editor);
+    m_hostWindow = host->winId();
     m_eraseFilter = platform::makeNoFlickerFilter(pluginWindow->winId());
     if (m_eraseFilter) QCoreApplication::instance()->installNativeEventFilter(m_eraseFilter.get());
     m_editor->updateGeometry(); // VstView::updateViewGeometry
@@ -164,6 +183,8 @@ void PluginEditorHost::teardown()
     GC_ONLY_MAIN_THREAD();
     disconnect(m_frameConnection);
     disconnect(m_screenConnection);
+    disconnect(m_exposedConnection);
+    m_hostWindow = 0;
     if (m_eraseFilter) {
         QCoreApplication::instance()->removeNativeEventFilter(m_eraseFilter.get());
         m_eraseFilter.reset();
@@ -205,7 +226,15 @@ QSize PluginEditorHost::fit(QSize wanted)
 
 void PluginEditorHost::place()
 {
-    if (!m_window || window() == nullptr || m_windowSize.isEmpty()) return;
+    if (!m_window || window() == nullptr) return;
+    // Its window's native window replaced (shown again on another screen, a
+    // platform recreating it): the plugin's own went with the old one, so it opens
+    // again in the new one (#59).
+    if (window()->winId() != m_hostWindow) {
+        QMetaObject::invokeMethod(this, &PluginEditorHost::rebuild, Qt::QueuedConnection);
+        return;
+    }
+    if (m_windowSize.isEmpty()) return;
     // At the top of the area, centred across it.
     const QPointF topLeft = mapToScene(QPointF(0, 0));
     const int side = std::max(0, (static_cast<int>(width()) - m_windowSize.width()) / 2);

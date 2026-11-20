@@ -54,6 +54,9 @@ Downloads for every version are on the
   its window a pixel or two off the size asked (Surge XT on Linux), or keeps a
   size of its own (Analog Lab V), set off endless resizing: the app stopped
   responding every second, for minutes. The window now settles at once (#59).
+- **Linux: a detached plugin window shows the plugin** (it was empty, for
+  every plugin): the plugin now opens once its window is on the screen, and
+  opens again if the system replaces that window (#59).
 
 ## [0.11.0] - 2026-11-16 (alpha)
 
