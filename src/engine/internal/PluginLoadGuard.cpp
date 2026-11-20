@@ -29,6 +29,13 @@ QString normalised(const QString& path)
 
 constexpr qint64 kMaxListBytes = qint64{1024} * 1024;
 
+// Beside a plugin's marker: its last loading was cut short without a crash
+// (the app closed or killed), kept until it loads fine or is cut short again.
+QString cutShortFor(const QString& marker)
+{
+    return marker.chopped(QStringView(u".loading").size()) + u".cutshort"_s;
+}
+
 } // namespace
 
 PluginLoadGuard::PluginLoadGuard(QString folder) : m_folder(std::move(folder))
@@ -42,6 +49,11 @@ PluginLoadGuard::Loading::~Loading()
     if (!QFile::remove(m_marker)) {
         // Left behind, the next start would block a plugin that loaded fine.
         qCWarning(lcEngine).noquote() << "Could not remove the plugin loading marker" << m_marker;
+    }
+    // Loaded fine: a load cut short before is forgotten.
+    const QString cutShort = cutShortFor(m_marker);
+    if (QFileInfo::exists(cutShort) && !QFile::remove(cutShort)) {
+        qCWarning(lcEngine).noquote() << "Could not remove the plugin loading marker" << cutShort;
     }
 }
 
@@ -70,7 +82,7 @@ PluginLoadGuard::Loading PluginLoadGuard::loading(const QString& pluginPath) con
     return Loading(marker);
 }
 
-QStringList PluginLoadGuard::takeCrashed()
+QStringList PluginLoadGuard::takeCrashed(bool lastRunCrashed)
 {
     QStringList crashed;
     if (m_folder.isEmpty()) return crashed;
@@ -78,15 +90,32 @@ QStringList PluginLoadGuard::takeCrashed()
     const QFileInfoList files = markers.entryInfoList({u"*.loading"_s}, QDir::Files);
     for (const QFileInfo& info : files) {
         QFile file(info.filePath());
+        QString path;
         if (file.open(QIODevice::ReadOnly)) {
-            const QString path = QString::fromUtf8(file.read(4096)).trimmed();
+            path = QString::fromUtf8(file.read(4096)).trimmed();
             file.close();
-            if (!path.isEmpty() && !crashed.contains(path)) crashed << path;
         } else {
             qCWarning(lcEngine).noquote() << "Could not read the plugin loading marker" << info.filePath();
         }
         if (!QFile::remove(info.filePath())) {
             qCWarning(lcEngine).noquote() << "Could not remove the plugin loading marker" << info.filePath();
+        }
+        if (path.isEmpty()) continue;
+        const QString cutShort = cutShortFor(info.filePath());
+        if (lastRunCrashed || QFileInfo::exists(cutShort)) {
+            if (!crashed.contains(path)) crashed << path;
+            if (QFileInfo::exists(cutShort) && !QFile::remove(cutShort)) {
+                qCWarning(lcEngine).noquote() << "Could not remove the plugin loading marker" << cutShort;
+            }
+            continue;
+        }
+        // No crash: the app was closed or killed while it loaded. It stays on; the
+        // same again next time, though, and it is switched off.
+        qCInfo(lcEngine).noquote() << "The app was closed while loading" << path
+                                   << "(no crash): it stays on; if it happens again in a row it is switched off";
+        QFile note(cutShort);
+        if (!note.open(QIODevice::WriteOnly | QIODevice::Truncate) || note.write(path.toUtf8()) < 0) {
+            qCWarning(lcEngine).noquote() << "Could not write the plugin loading marker" << cutShort << ":" << note.errorString();
         }
     }
     for (const QString& path : crashed) {
@@ -95,6 +124,11 @@ QStringList PluginLoadGuard::takeCrashed()
     }
     if (!crashed.isEmpty()) writeBlocked();
     return crashed;
+}
+
+bool PluginLoadGuard::samePlugin(const QString& a, const QString& b)
+{
+    return normalised(a) == normalised(b);
 }
 
 bool PluginLoadGuard::isBlocked(const QString& pluginPath) const

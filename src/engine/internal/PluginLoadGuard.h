@@ -38,11 +38,17 @@ public:
     };
     [[nodiscard]] Loading loading(const QString& pluginPath) const;
 
-    // At start-up: the plugins whose loading never ended last time. They are
-    // added to the blocked list and their markers cleared.
-    QStringList takeCrashed();
+    // At start-up: the plugins whose loading never ended last time, now
+    // blocked (their markers cleared). `lastRunCrashed`: the crash reporter
+    // found the last run's crash; without one the app was closed or killed
+    // (#55), so a plugin is blocked only the second time in a row its loading
+    // is cut short (one that kills the app before a report is written is still
+    // caught, and never takes the app down at every start).
+    QStringList takeCrashed(bool lastRunCrashed);
 
     [[nodiscard]] bool isBlocked(const QString& pluginPath) const;
+    // Whether two paths name one plugin, as the system compares them (Windows: whatever the case and slashes).
+    [[nodiscard]] static bool samePlugin(const QString& a, const QString& b);
     [[nodiscard]] QStringList blocked() const { return m_blocked; }
     void unblock(const QString& pluginPath);
 

@@ -84,7 +84,18 @@ public:
     [[nodiscard]] std::vector<AudioOutput> audioOutputs() const override;
     [[nodiscard]] AudioSetup audioSetup() const override { return m_setup; }
     core::Result<void> setAudioSetup(const AudioSetup& setup) override;
-    [[nodiscard]] std::vector<MidiPort> midiInputs() const override { return {}; }
+    // The inputs switched on are plugged in (none until a setup names some).
+    [[nodiscard]] std::vector<MidiPort> midiInputs() const override
+    {
+        std::vector<MidiPort> ports(static_cast<std::size_t>(m_midiSetup.enabled.size()));
+        std::ranges::transform(m_midiSetup.enabled, ports.begin(), [](const QString& name) {
+            MidiPort port;
+            port.name = name;
+            port.enabled = true;
+            return port;
+        });
+        return ports;
+    }
     [[nodiscard]] MidiSetup midiSetup() const override { return m_midiSetup; }
     core::Result<void> setMidiSetup(const MidiSetup& setup) override
     {

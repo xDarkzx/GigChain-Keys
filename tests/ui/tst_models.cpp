@@ -8,6 +8,8 @@
 #include "Notifications.h"
 #include "PluginListModel.h"
 #include "SelectedChannel.h"
+#include "Session.h"
+#include "SettingsController.h"
 #include "SetlistModel.h"
 #include "SpyEngine.h"
 #include "SustainPadsController.h"
@@ -389,6 +391,58 @@ private slots:
     }
 
     // A key as a chart writes it, as Sustain Pads' key.
+    // Sustain Pads' instrument switched off at start (it crashed the app while
+    // loading): Pads Pro plays. Switched back on (Settings > Plugins), the saved
+    // choice plays again, and the screen says so (#57). A choice refused while
+    // switched off is not taken later behind the screen's back.
+    void aSustainPadsInstrumentSwitchedBackOnPlaysAgain()
+    {
+        const QString keys = u"C:/Plugins/Keys.vst3"_s;
+        const QString strings = u"C:/Plugins/Strings.vst3"_s;
+        m_settings->setValue(u"sustainPads/instrument"_s, keys);
+        m_settings->setValue(u"sustainPads/instrumentName"_s, u"Keys"_s);
+        m_engine->blocked = {keys};
+        m_engine->sustainPadsRefusal = u"switched off"_s;
+        Session session(*m_engine, *m_settings);
+        auto* pads = session.initialProperties().value(u"sustainPads"_s).value<SustainPadsController*>();
+        QVERIFY(pads != nullptr);
+        QCOMPARE(pads->instrumentId(), QString()); // Pads Pro meanwhile
+
+        m_engine->sustainPadsRefusal.clear();
+        session.settingsController().unblockPlugin(keys);
+        QCOMPARE(pads->instrumentId(), keys);
+        QCOMPARE(m_engine->sustainPadsInstrument, keys);
+
+        // Strings chosen while switched off: refused, and Keys goes on playing, even once Strings is back.
+        m_engine->blocked = {strings};
+        m_engine->sustainPadsRefusal = u"switched off"_s;
+        QVERIFY(!pads->loadInstrument(strings, u"Strings"_s));
+        m_engine->sustainPadsRefusal.clear();
+        session.settingsController().unblockPlugin(strings);
+        QCOMPARE(pads->instrumentId(), keys);
+        QCOMPARE(m_engine->sustainPadsInstrument, keys);
+    }
+
+    // Pads Pro chosen while the saved instrument is switched off (Pads Pro was
+    // playing already): that choice holds, and switching the old one back on
+    // does not take it over.
+    void choosingPadsProWhileTheSavedInstrumentIsOffHolds()
+    {
+        const QString keys = u"C:/Plugins/Keys.vst3"_s;
+        m_settings->setValue(u"sustainPads/instrument"_s, keys);
+        m_engine->blocked = {keys};
+        m_engine->sustainPadsRefusal = u"switched off"_s;
+        Session session(*m_engine, *m_settings);
+        auto* pads = session.initialProperties().value(u"sustainPads"_s).value<SustainPadsController*>();
+        QVERIFY(pads != nullptr);
+        QVERIFY(pads->loadInstrument({}, {})); // Pads Pro, on purpose
+        m_engine->sustainPadsRefusal.clear();
+        session.settingsController().unblockPlugin(keys);
+        QCOMPARE(pads->instrumentId(), QString());
+        QCOMPARE(m_engine->sustainPadsInstrument, QString());
+        QVERIFY(m_settings->value(u"sustainPads/instrument"_s).toString().isEmpty());
+    }
+
     void aWrittenKeyIsReadAsSustainPadsKey()
     {
         QCOMPARE(SustainPadsController::keyOf(u"C"_s), 0);

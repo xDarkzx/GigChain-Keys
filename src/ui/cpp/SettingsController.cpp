@@ -466,6 +466,7 @@ QVariantList SettingsController::blockedPlugins() const
 void SettingsController::unblockPlugin(const QString& path)
 {
     m_engine.unblockPlugin(path);
+    emit pluginSwitchedBackOn(path); // (Sustain Pads take their saved instrument again)
     emit changed();
 }
 

@@ -4,7 +4,9 @@
 #include "EffectWindows.h"
 #include "InstrumentWindows.h"
 #include "gigchain/engine/IEngine.h"
+#include "gigchain/platform/PluginFolders.h"
 
+#include <QDir>
 #include <QGuiApplication>
 #include <QLoggingCategory>
 #include <QScreen>
@@ -146,9 +148,36 @@ bool SustainPadsController::loadInstrument(const QString& pluginId, const QStrin
     return true;
 }
 
+void SustainPadsController::pluginSwitchedBackOn(const QString& pluginId)
+{
+    const QString saved = m_store.value(kInstrumentKey).toString();
+    // (One plugin, one path, as the system compares them.)
+    const auto same = [](const QString& a, const QString& b) {
+        return QDir::cleanPath(QDir::fromNativeSeparators(a)).compare(QDir::cleanPath(QDir::fromNativeSeparators(b)), platform::fileNameCase()) == 0;
+    };
+    if (saved.isEmpty() || saved == m_instrumentId || !same(saved, pluginId)) return;
+    const QString name = m_store.value(kInstrumentNameKey, saved).toString();
+    const QByteArray state = QByteArray::fromBase64(m_store.value(kInstrumentStateKey).toByteArray());
+    if (auto loaded = m_engine.setSustainPadsInstrument(saved, state); !loaded) {
+        m_document.reportMessage(tr("Sustain Pads: %1 could not be loaded (%2). Pads Pro plays instead.").arg(name, loaded.error().message));
+        return;
+    }
+    m_instrumentId = saved;
+    m_instrumentName = name;
+    qCInfo(lcUi).noquote() << "Sustain Pads play" << m_instrumentName << "again (switched back on)";
+    emit instrumentChanged();
+}
+
 void SustainPadsController::usePadsPro()
 {
-    if (m_instrumentId.isEmpty()) return;
+    if (m_instrumentId.isEmpty()) {
+        // Pads Pro plays already (the saved instrument switched off at start): chosen
+        // on purpose now, so the saved one is forgotten and never takes over later.
+        m_store.remove(kInstrumentKey);
+        m_store.remove(kInstrumentNameKey);
+        m_store.remove(kInstrumentStateKey);
+        return;
+    }
     m_windows.closeSustainPads();
     if (auto back = m_engine.setSustainPadsInstrument({}, {}); !back) {
         m_document.reportMessage(tr("Sustain Pads: %1").arg(back.error().message)); // (never expected: it only lets go)

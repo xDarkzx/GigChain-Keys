@@ -223,6 +223,49 @@ private slots:
         QVERIFY2(held > damped * 3.0F && held > 0.001F, qPrintable(u"without pedal %1, with pedal %2"_s.arg(damped).arg(held)));
     }
 
+    // A key pressed again while the instrument still holds it (its key-up lost
+    // on the way: a keyboard's firmware, a USB hiccup) leaves no voice that
+    // nothing can end: one key-up stops it like a single press (#53).
+    void aRepeatedKeyPressEndsWithOneKeyUp()
+    {
+        // (The instrument in the report: it keeps a voice for each press, and its
+        // first sound holds while the key is down. The test piano and Arturia's
+        // B-3 end both presses with one key-up, so they cannot show it.)
+        const QString analogLab = u"C:/Program Files/Common Files/VST3/Arturia/Analog Lab V.vst3"_s;
+        if (!QFileInfo::exists(analogLab)) QSKIP("Arturia Analog Lab V is not installed");
+        constexpr int kRelease = 10;
+        constexpr int kListenFrom = 120;
+        // How loud while held, and after the key-up (silence 0.6 s later or a voice ringing on).
+        struct Heard
+        {
+            float held = -1.0F;
+            float after = -1.0F;
+        };
+        auto play = [&analogLab](int presses) {
+            auto node = Vst3Node::load(analogLab, kRate, kBlock);
+            if (!node) return Heard{};
+            std::vector<float> left(kBlock);
+            std::vector<float> right(kBlock);
+            Heard heard{.held = 0.0F, .after = 0.0F};
+            for (int block = 0; block < 160; ++block) {
+                std::vector<MidiEvent> events;
+                if (block < presses) events.push_back(MidiEvent{.status = 0x90, .data1 = 60, .data2 = 100});
+                if (block == kRelease) events.push_back(MidiEvent{.status = 0x80, .data1 = 60, .data2 = 0});
+                (*node)->process(std::span<const MidiEvent>(events), AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, kTime);
+                const float peak = blockPeak(left, right);
+                if (block < kRelease) heard.held = std::max(heard.held, peak);
+                if (block >= kListenFrom) heard.after = std::max(heard.after, peak);
+            }
+            return heard;
+        };
+        const Heard once = play(1);
+        const Heard twice = play(2);
+        qInfo() << "held: once" << once.held << "twice" << twice.held << "| after release: once" << once.after << "twice" << twice.after;
+        // (It played: a silent instrument would pass the check below for nothing.)
+        QVERIFY2(once.held > 0.01F && twice.held > 0.01F, qPrintable(u"held once %1, twice %2"_s.arg(once.held).arg(twice.held)));
+        QVERIFY2(twice.after <= (once.after * 2.0F) + 0.0005F, qPrintable(u"pressed once %1, pressed twice %2"_s.arg(once.after).arg(twice.after)));
+    }
+
     // The keyboard's universal controllers reach the instrument: VST3 takes
     // no raw controllers, so each goes to the parameter the plugin assigns
     // it (the mod wheel, volume, expression and sustain at least; breath,

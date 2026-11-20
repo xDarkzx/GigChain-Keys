@@ -27,6 +27,30 @@ Downloads for every version are on the
   free for the melody. A pedal or pad (**Settings > MIDI > Pedals and
   pads**) switches the chords on and off. Asked for on GitHub (#50).
 
+### Changed
+
+- **Settings > MIDI shows each device's whole name**, on a line of its own
+  over its settings: a keyboard's two ports ("KeyLab mkII 88 MIDI" and
+  "KeyLab mkII 88 DAW") no longer look the same. A name too long even for
+  that shows in full when you point at it (#56).
+
+### Fixed
+
+- **Linux, JACK: the app no longer hangs at start** (or on a panic, or when
+  a keyboard is plugged in) when PipeWire runs at another buffer size than
+  the one asked for. The audio now stops at once instead of waiting for
+  blocks that never come (#54).
+- **A key pressed again before its key-up arrived no longer leaves a note
+  ringing.** A lost key-up (a keyboard's firmware, a USB hiccup) made some
+  instruments (Analog Lab among them) keep a voice nothing could end: the
+  held note now ends before it plays again (#53).
+- **Closing or killing the app while a plugin loads no longer switches the
+  plugin off.** Only a real crash does; a load cut short twice in a row
+  still does, so a plugin that takes the app down is never loaded at every
+  start (#55).
+- **A plugin switched back on (Settings > Plugins) loads at once** in the
+  song and the effects that use it, without having to add a track first (#57).
+
 ## [0.11.0] - 2026-11-16 (alpha)
 
 The settings a live keyboard player needs, MainStage's and more: your own

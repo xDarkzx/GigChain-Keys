@@ -248,6 +248,8 @@ signals:
     void chartTextSizeChanged();
     // The plugins were looked for again: the plugin lists read them again.
     void pluginsChanged();
+    // A plugin switched off by the plugin guard was switched back on (Settings > Plugins).
+    void pluginSwitchedBackOn(const QString& path);
     void globalTransposeChanged();
     void middleCChanged();
 

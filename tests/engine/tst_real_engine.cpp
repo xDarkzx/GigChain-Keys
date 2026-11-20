@@ -609,6 +609,7 @@ private slots:
         QTemporaryDir guardFolder;
         RealEngineOptions options;
         options.pluginGuardFolder = guardFolder.path();
+        options.lastRunCrashed = true; // (the crash reporter found it)
         // The last run "died" while loading it: its marker is still there.
         PluginLoadGuard lastRun(guardFolder.path());
         const auto loading = lastRun.loading(kSmall);
@@ -639,9 +640,41 @@ private slots:
 
         engine.unblockPlugin(kSmall); // "Try again"
         QVERIFY(engine.blockedPlugins().isEmpty());
-        engine.applyPatch(patch);
-        QVERIFY(engine.poll().empty());
+        // It loads at once where the song uses it, nothing else to do (#57).
         QCOMPARE(engine.loadedPluginCount(), std::size_t{1});
+        QVERIFY(engine.poll().empty());
+    }
+
+    // A plugin switched back on returns among Sustain Pads' effects too, without
+    // choosing it again (#57). (Its instrument: SustainPadsController chooses it again.)
+    void aPluginSwitchedBackOnReturnsToSustainPads()
+    {
+        if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");
+        QTemporaryDir guardFolder;
+        RealEngineOptions options;
+        options.pluginGuardFolder = guardFolder.path();
+        options.lastRunCrashed = true;
+        {
+            PluginLoadGuard lastRun(guardFolder.path()); // the last run died loading it
+            const auto effect = lastRun.loading(kSmall);
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"crashed the app while loading last time"_s));
+            auto created = createRealEngine(options);
+            if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+            QVERIFY(created.has_value());
+            IEngine& engine = **created;
+            engine.setMasterVolume(core::limits::kMinVolumeDb);
+            (void)engine.poll();
+
+            std::vector<core::PluginSlot> effects{slot(kSmall, u"Kotelnikov"_s)};
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"Kotelnikov is switched off"_s));
+            engine.setSustainPadsEffects(effects);
+            (void)engine.storeSustainPadsEffectStates(effects);
+            QVERIFY(effects.front().state.isEmpty()); // (no instance to store from)
+
+            engine.unblockPlugin(kSmall);
+            (void)engine.storeSustainPadsEffectStates(effects);
+            QVERIFY2(!effects.front().state.isEmpty(), "the effect did not come back");
+        }
     }
 
     void aLearnedPadSwitchesSongsAndIsNotPlayed()

@@ -134,6 +134,9 @@ public:
 
     // With the engine's poll: the meter.
     void poll();
+    // A plugin switched back on (Settings > Plugins): the saved instrument, kept
+    // while it was switched off (Pads Pro played meanwhile), plays again (#57).
+    void pluginSwitchedBackOn(const QString& pluginId);
 
     // Sent to the engine as they are now (also on every change).
     [[nodiscard]] const engine::SustainPadsSettings& settings() const { return m_settings; }
