@@ -32,7 +32,8 @@ QByteArray message(int status, int data1, int data2)
 }
 
 // Plays `steps` from `next` on, a timer between waits; answers once the last is sent.
-void playFrom(engine::IEngine& engine, std::shared_ptr<std::vector<PlayStep>> steps, std::size_t next, QString keyboard, Reply reply)
+void playFrom(engine::IEngine& engine, const std::shared_ptr<std::vector<PlayStep>>& steps, std::size_t next,
+              const QString& keyboard, const Reply& reply)
 {
     while (next < steps->size()) {
         const PlayStep& step = steps->at(next++);

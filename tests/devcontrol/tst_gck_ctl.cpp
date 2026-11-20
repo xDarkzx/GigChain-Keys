@@ -27,7 +27,7 @@ class TestGckCtl : public QObject
     };
 
     // Runs gck-ctl with `args`; this test's event loop answers it meanwhile.
-    Run run(const QStringList& args) const
+    [[nodiscard]] Run run(const QStringList& args) const
     {
         QProcess tool;
         tool.setProcessChannelMode(QProcess::MergedChannels);
@@ -41,7 +41,13 @@ private slots:
     void init()
     {
         m_name = u"gck-cli-"_s + QUuid::createUuid().toString(QUuid::Id128).left(12);
-        m_control = std::make_unique<DevControl>(DevControl::Context{.socketName = m_name});
+        m_control = std::make_unique<DevControl>(DevControl::Context{.engine = nullptr,
+                                                                     .objects = {},
+                                                                     .window = nullptr,
+                                                                     .logFile = {},
+                                                                     .dataFolder = {},
+                                                                     .socketName = m_name,
+                                                                     .quit = {}});
         QVERIFY(m_control->listen().has_value());
     }
 

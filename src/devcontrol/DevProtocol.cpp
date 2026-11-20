@@ -6,6 +6,7 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <iterator>
 #include <optional>
 
 using namespace Qt::StringLiterals;
@@ -30,7 +31,7 @@ std::optional<int> number(const QString& text, int low, int high)
 QByteArray message(uint8_t status, std::initializer_list<int> data)
 {
     QByteArray bytes(1, static_cast<char>(status));
-    for (const int byte : data) bytes.append(static_cast<char>(byte));
+    std::ranges::transform(data, std::back_inserter(bytes), [](int byte) { return static_cast<char>(byte); });
     return bytes;
 }
 
@@ -150,7 +151,7 @@ core::Result<QByteArray> parseHexMidi(const QString& hex)
         return bytes;
     }
     if (bytes.size() > 3) return tl::unexpected(problem(u"One message has at most 3 bytes (sysex aside): %1 given"_s.arg(bytes.size())));
-    if (std::any_of(bytes.begin() + 1, bytes.end(), [](char b) { return static_cast<uint8_t>(b) >= 0x80; })) {
+    if (std::any_of(std::next(bytes.begin()), bytes.end(),[](char b) { return static_cast<uint8_t>(b) >= 0x80; })) {
         return tl::unexpected(problem(u"Data bytes are 00-7F"_s));
     }
     return bytes;

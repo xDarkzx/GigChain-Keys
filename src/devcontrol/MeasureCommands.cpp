@@ -133,7 +133,7 @@ void addMeasureCommands(DevControl& control)
                 if (line.contains(u"Dev control: {"_s)) continue; // (the requests themselves, this one's pattern included)
                 if (pattern.match(line).hasMatch()) return void(*found = line);
             }
-            for (std::size_t i = static_cast<std::size_t>(mark.notices); i < notices->size(); ++i) {
+            for (auto i = static_cast<std::size_t>(mark.notices); i < notices->size(); ++i) {
                 const QString text = notices->at(i).value(u"text"_s).toString();
                 if (pattern.match(text).hasMatch()) return void(*found = u"(shown) "_s + text);
             }
@@ -203,7 +203,7 @@ void addMeasureCommands(DevControl& control)
     });
     control.add(u"keys"_s, u"keys: the keys, pedal and wheels the instruments hear now (a stuck note shows here)"_s,
                 [&control](const DevRequest&, const Reply& reply) {
-        engine::IEngine* engine = control.context().engine;
+        const engine::IEngine* engine = control.context().engine;
         if (engine == nullptr) return reply.fail(u"No engine"_s);
         const engine::MidiActivity now = engine->keyboardActivity();
         QJsonArray down;

@@ -11,7 +11,7 @@ namespace gigchain::devcontrol {
 
 Q_LOGGING_CATEGORY(lcDev, "gigchain.devcontrol")
 
-Reply::Reply(QLocalSocket* socket, QString cmd) : m_state(std::make_shared<State>(State{socket, std::move(cmd), false, {}}))
+Reply::Reply(QLocalSocket* socket, QString cmd) : m_state(std::make_shared<State>(State{.socket = socket, .cmd = std::move(cmd), .done = false, .took = {}}))
 {
     m_state->took.start();
 }

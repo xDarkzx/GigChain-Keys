@@ -38,13 +38,13 @@ QObject* resolve(const DevControl& control, const QString& path, QString& error)
     const QStringList parts = path.split(u'.');
     QString first = parts.front();
     if (const auto alias = aliases().find(first); alias != aliases().end()) first = alias->second;
-    QObject* object = control.context().objects.value(first).value<QObject*>();
+    auto* object = control.context().objects.value(first).value<QObject*>();
     if (object == nullptr) {
         error = u"No object %1 (objects lists them)"_s.arg(parts.front());
         return nullptr;
     }
     for (qsizetype i = 1; i < parts.size(); ++i) {
-        QObject* next = object->property(parts.at(i).toUtf8().constData()).value<QObject*>();
+        auto* next = object->property(parts.at(i).toUtf8().constData()).value<QObject*>();
         if (next == nullptr) {
             error = u"%1 has no object property %2"_s.arg(parts.mid(0, i).join(u'.'), parts.at(i));
             return nullptr;
@@ -75,7 +75,7 @@ void addObjectCommands(DevControl& control)
     control.add(u"objects"_s, u"objects: the screen's controllers and models, by name"_s, [&control](const DevRequest&, const Reply& reply) {
         QJsonArray names;
         for (auto it = control.context().objects.cbegin(); it != control.context().objects.cend(); ++it) {
-            if (QObject* object = it.value().value<QObject*>(); object != nullptr) {
+            if (auto* object = it.value().value<QObject*>(); object != nullptr) {
                 names.append(QJsonObject{{u"name"_s, it.key()}, {u"class"_s, QString::fromLatin1(object->metaObject()->className())}});
             }
         }
@@ -165,7 +165,7 @@ void addObjectCommands(DevControl& control)
         if (const auto* channels = qobject_cast<const QAbstractItemModel*>(resolve(control, u"channelModel"_s, error))) {
             status.insert(u"channels"_s, modelRows(*channels));
         }
-        if (engine::IEngine* engine = control.context().engine) {
+        if (const engine::IEngine* engine = control.context().engine) {
             status.insert(u"loadedPlugins"_s, static_cast<qint64>(engine->loadedPluginCount()));
             status.insert(u"blockedPlugins"_s, QJsonArray::fromStringList(engine->blockedPlugins()));
             const engine::AudioSetup audio = engine->audioSetup();
@@ -211,6 +211,7 @@ void addLifeCommands(DevControl& control)
         QTimer::singleShot(100, qApp, [] {
             qCCritical(lcDev) << "Dev control: crashing on purpose";
             volatile int* nowhere = nullptr;
+            // cppcheck-suppress nullPointer
             *nowhere = 1; // NOLINT(clang-analyzer-core.NullDereference): the crash asked for
         });
     });

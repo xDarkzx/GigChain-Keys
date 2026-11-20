@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <ranges>
 
 using namespace Qt::StringLiterals;
 
@@ -106,8 +107,10 @@ QQuickItem* topAt(QQuickItem* item, QPointF scene)
     const bool inside = item->contains(item->mapFromScene(scene));
     if (item->clip() && !inside) return nullptr;
     const QList<QQuickItem*> children = paintOrder(*item);
-    for (auto child = children.crbegin(); child != children.crend(); ++child) {
-        if (QQuickItem* top = topAt(*child, scene)) return top;
+    // (The topmost first: the last painted.)
+    for (QQuickItem* child : std::views::reverse(children)) {
+        // cppcheck-suppress useStlAlgorithm ; (the item found below the child is the answer, not the child)
+        if (QQuickItem* top = topAt(child, scene)) return top;
     }
     // (The popup layer takes the mouse even with nothing open; an open modal dialog is checked on its own.)
     if (item->inherits("QQuickOverlay")) return nullptr;
@@ -260,10 +263,10 @@ void addUiCommands(DevControl& control)
         // (A dialog or a plugin window in front gets them, as a player's would.)
         QWindow* target = QGuiApplication::focusWindow() != nullptr ? QGuiApplication::focusWindow() : window;
         for (int i = 0; i < keys.count(); ++i) {
-            const QKeyCombination combination = keys[i];
+            const QKeyCombination combination = keys[i]; // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access): i < keys.count()
             const int key = static_cast<int>(combination.key());
             const Qt::KeyboardModifiers mods = combination.keyboardModifiers();
-            const QString text = mods & ~Qt::ShiftModifier ? QString() : QKeySequence(combination.key()).toString().left(1).toLower();
+            const QString text = (mods & ~Qt::ShiftModifier) ? QString() : QKeySequence(combination.key()).toString().left(1).toLower();
             const QString typed = key >= Qt::Key_Space && key <= Qt::Key_AsciiTilde ? text : QString();
             if (!qt_sendShortcutOverrideEvent(target, static_cast<ulong>(timestamp()), key, mods, typed, false, 1)) {
                 qt_handleKeyEvent(target, QEvent::KeyPress, key, mods, typed, false, 1);

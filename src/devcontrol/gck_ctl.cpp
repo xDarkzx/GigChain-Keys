@@ -72,7 +72,7 @@ Answer ask(const QString& socket, const QString& cmd, const QJsonArray& args = {
     QLocalSocket connection;
     connection.connectToServer(socket);
     if (!connection.waitForConnected(2000)) {
-        return Answer{kNotRunning, QJsonObject{{u"ok"_s, false}, {u"error"_s, u"The app is not running with --dev-control (nothing on %1)"_s.arg(socket)}}};
+        return Answer{.code = kNotRunning, .json = QJsonObject{{u"ok"_s, false}, {u"error"_s, u"The app is not running with --dev-control (nothing on %1)"_s.arg(socket)}}};
     }
     connection.write(QJsonDocument(QJsonObject{{u"cmd"_s, cmd}, {u"args"_s, args}}).toJson(QJsonDocument::Compact) + '\n');
     connection.flush();
@@ -81,13 +81,13 @@ Answer ask(const QString& socket, const QString& cmd, const QJsonArray& args = {
     constexpr qint64 kLongest = qint64{15} * 60 * 1000; // (wait and cpu may run ten minutes)
     while (!connection.canReadLine()) {
         if (connection.state() != QLocalSocket::ConnectedState && !connection.waitForReadyRead(100)) {
-            return Answer{kFailed, QJsonObject{{u"ok"_s, false}, {u"error"_s, u"The app closed the connection before answering %1"_s.arg(cmd)}}};
+            return Answer{.code = kFailed, .json = QJsonObject{{u"ok"_s, false}, {u"error"_s, u"The app closed the connection before answering %1"_s.arg(cmd)}}};
         }
-        if (waited.elapsed() > kLongest) return Answer{kFailed, QJsonObject{{u"ok"_s, false}, {u"error"_s, u"No answer to %1"_s.arg(cmd)}}};
+        if (waited.elapsed() > kLongest) return Answer{.code = kFailed, .json = QJsonObject{{u"ok"_s, false}, {u"error"_s, u"No answer to %1"_s.arg(cmd)}}};
         connection.waitForReadyRead(1000);
     }
     const QJsonObject json = QJsonDocument::fromJson(connection.readLine()).object();
-    return Answer{json.value(u"ok"_s).toBool() ? kDone : kFailed, json};
+    return Answer{.code = json.value(u"ok"_s).toBool() ? kDone : kFailed, .json = json};
 }
 
 // The last answer printed, and the last mark (for expect and $mark).
@@ -154,7 +154,7 @@ int expect(const QStringList& words)
 
 int said(int code, const QString& text)
 {
-    return print(Answer{code, QJsonObject{{u"ok"_s, code == kDone}, {code == kDone ? u"note"_s : u"error"_s, text}}});
+    return print(Answer{.code = code, .json = QJsonObject{{u"ok"_s, code == kDone}, {code == kDone ? u"note"_s : u"error"_s, text}}});
 }
 
 bool running(const QString& socket)
@@ -197,7 +197,7 @@ int start(const QString& socket, const QString& setlist)
     if (!waitUntil([&socket] { return running(socket); }, 120'000)) {
         return said(kFailed, u"Started (pid %1), but the live test control never answered: a release build, or it crashed (see its log)"_s.arg(pid));
     }
-    return print(Answer{kDone, QJsonObject{{u"ok"_s, true}, {u"pid"_s, pid}}});
+    return print(Answer{.code = kDone, .json = QJsonObject{{u"ok"_s, true}, {u"pid"_s, pid}}});
 }
 
 int kill(const QString& socket)
@@ -243,7 +243,7 @@ int killAt(const QString& socket, const QString& pattern, int ms, const QStringL
             pending.remove(0, end + 1);
             if (line.contains(u"Dev control: {"_s) || !match.match(line).hasMatch()) continue;
             if (!killProcess(pid.json.value(u"pid"_s).toInteger())) return said(kFailed, u"Saw \"%1\" but could not end the app"_s.arg(line));
-            return print(Answer{kDone, QJsonObject{{u"ok"_s, true}, {u"killedAt"_s, line}}});
+            return print(Answer{.code = kDone, .json = QJsonObject{{u"ok"_s, true}, {u"killedAt"_s, line}}});
         }
         QThread::msleep(10);
     }
@@ -298,7 +298,7 @@ int runFile(const QString& socket, const QString& path)
 int perform(const QString& socket, const QStringList& words)
 {
     if (words.isEmpty()) return said(kFailed, u"No command (gck-ctl help lists the app's)"_s);
-    const QString cmd = words.front();
+    const QString& cmd = words.front();
     const QString first = words.value(1);
     if (cmd == u"run"_s) return runFile(socket, first);
     if (cmd == u"start"_s) return start(socket, first);

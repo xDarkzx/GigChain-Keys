@@ -15,10 +15,10 @@ namespace gigchain::devcontrol {
 QJsonValue toJson(const QVariant& value)
 {
     if (!value.isValid() || value.isNull()) return QJsonValue::Null;
-    if (QObject* object = value.value<QObject*>(); object != nullptr) {
+    if (auto* object = value.value<QObject*>(); object != nullptr) {
         return QJsonObject{{u"object"_s, QString::fromLatin1(object->metaObject()->className())}, {u"objectName"_s, object->objectName()}};
     }
-    const QJsonValue json = QJsonValue::fromVariant(value);
+    QJsonValue json = QJsonValue::fromVariant(value);
     if (!json.isNull()) return json;
     if (value.canConvert<QString>()) return value.toString();
     return u"(%1)"_s.arg(QString::fromLatin1(value.typeName()));

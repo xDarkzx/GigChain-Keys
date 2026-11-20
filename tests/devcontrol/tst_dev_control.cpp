@@ -39,14 +39,15 @@ class TestDevControl : public QObject
 
     [[nodiscard]] QQuickWindow* window() const { return qobject_cast<QQuickWindow*>(m_qml->rootObjects().value(0)); }
 
-    DevControl::Context context(const QString& name) const
+    [[nodiscard]] DevControl::Context context(const QString& name) const
     {
         return DevControl::Context{.engine = m_engine.get(),
                                    .objects = m_session->initialProperties(),
                                    .window = window(),
                                    .logFile = m_dir->filePath(u"app.log"_s),
                                    .dataFolder = m_dir->path(),
-                                   .socketName = name};
+                                   .socketName = name,
+                                   .quit = {}};
     }
 
 private slots:
@@ -130,7 +131,7 @@ private slots:
     void aTooLongLineClosesTheConnection()
     {
         DevClient client(m_name);
-        const QJsonObject answer = client.sendRaw(QByteArray(70 * 1024, 'x'));
+        const QJsonObject answer = client.sendRaw(QByteArray(qsizetype{70} * 1024, 'x'));
         QVERIFY(!answer.value(u"ok"_s).toBool());
         QVERIFY(answer.value(u"error"_s).toString().contains(u"long"_s));
         QTRY_VERIFY(client.socket().state() == QLocalSocket::UnconnectedState);
