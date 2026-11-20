@@ -34,8 +34,9 @@ Outcome settle(QSize own, QSize room, const std::function<QSize(QSize)>& keeps, 
             changed = changed || size != window;
             window = size;
         };
-        const double scale = std::min({1.0, double(room.width()) / natural.width(), double(room.height()) / natural.height()});
-        const QSize shown(int(natural.width() * scale), int(natural.height() * scale));
+        const double scale = std::min({1.0, static_cast<double>(room.width()) / natural.width(),
+                                       static_cast<double>(room.height()) / natural.height()});
+        const QSize shown(static_cast<int>(natural.width() * scale), static_cast<int>(natural.height() * scale));
         resize(shown); // (the fitter, from the plugin's own size)
         plugin = keeps(shown);
         if (plugin != shown) {

@@ -26,10 +26,10 @@ KeptSize afterAskingSize(QSize natural, QSize shown, QSize kept)
     // A size of its own (Analog Lab V keeping 814 x 886 when asked for 814 x 562):
     // that is its size from now on, in its own units (the size asked may have been
     // fitted down into the room), so the next fit asks for what it keeps.
-    const double wide = double(natural.width()) / shown.width();
-    const double high = double(natural.height()) / shown.height();
+    const double wide = static_cast<double>(natural.width()) / shown.width();
+    const double high = static_cast<double>(natural.height()) / shown.height();
     return KeptSize{.follow = true,
-                    .natural = QSize(int(std::lround(kept.width() * wide)), int(std::lround(kept.height() * high)))};
+                    .natural = QSize(static_cast<int>(std::lround(kept.width() * wide)), static_cast<int>(std::lround(kept.height() * high)))};
 }
 
 } // namespace gigchain::engine
