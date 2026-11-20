@@ -962,7 +962,13 @@ core::Result<void> RealEngine::injectMidi(const QString& keyboard, const QByteAr
         qCWarning(lcEngine).noquote() << "Not played in:" << shaped.error().message;
         return tl::unexpected(shaped.error());
     }
-    if (*shaped && !m_injected.push(**shaped)) m_droppedInjected.fetch_add(1, std::memory_order_relaxed);
+    if (!*shaped) return {}; // filtered out, as the keyboard's settings say: nothing to play
+    if (!m_injected.push(**shaped)) {
+        const QString message = u"Not played in: the queue of played-in messages is full (%1 bytes as %2)"_s.arg(
+            QString::fromLatin1(bytes.toHex(' ')), keyboard.isEmpty() ? u"no particular keyboard"_s : keyboard);
+        qCWarning(lcEngine).noquote() << message;
+        return core::fail(core::ErrorCode::InvalidData, message);
+    }
     return {};
 }
 

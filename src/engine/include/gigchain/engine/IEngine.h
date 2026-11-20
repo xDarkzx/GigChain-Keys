@@ -253,6 +253,8 @@ public:
     virtual core::Result<void> startRecording(const QString& path) = 0;
     virtual core::Result<double> stopRecording() = 0;
     [[nodiscard]] virtual bool recording() const = 0;
+    // The file being recorded to (empty: not recording): which recording it is.
+    [[nodiscard]] virtual QString recordingPath() const = 0;
     // The outputs the audio device has open (2: only the mix's, 1-2).
     [[nodiscard]] virtual int outputChannels() const = 0;
     [[nodiscard]] virtual bool clickOn() const = 0;

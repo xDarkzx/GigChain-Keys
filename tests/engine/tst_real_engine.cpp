@@ -268,6 +268,22 @@ private slots:
     // A MIDI message played in as a keyboard sends it (the live test control):
     // from no particular keyboard it plays; a keyboard that is not plugged in
     // is said, not silently ignored; a message that is not one is refused.
+    // A message that cannot be played in (its queue full: far more than the audio
+    // takes between two blocks) says so, to the one who played it.
+    void aMessageThatCannotBePlayedInSaysSo()
+    {
+        auto created = createQuietEngine();
+        QVERIFY2(created.has_value(), created ? "" : qPrintable(created.error().message));
+        IEngine& engine = **created;
+        const QByteArray note = QByteArray::fromHex("903C64");
+        QString refused;
+        for (int i = 0; i < 20'000 && refused.isEmpty(); ++i) {
+            if (auto played = engine.injectMidi({}, note); !played) refused = played.error().message;
+        }
+        QVERIFY2(refused.contains(u"full"_s), qPrintable(refused));
+        (void)engine.poll(); // (its count of dropped messages, logged)
+    }
+
     void aMessagePlayedInAsAKeyboardIsHeard()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");

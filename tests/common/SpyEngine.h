@@ -340,6 +340,7 @@ public:
         return 12.5;
     }
     [[nodiscard]] bool recording() const override { return !recordingTo.isEmpty(); }
+    [[nodiscard]] QString recordingPath() const override { return recordingTo; }
     int outputs = 8; // an 8-output interface
     [[nodiscard]] int outputChannels() const override { return outputs; }
     engine::BackingTrackState track;

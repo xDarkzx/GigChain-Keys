@@ -5,6 +5,7 @@
 
 #include "OfficialArtwork.h"
 #include "Session.h"
+#include "SpyEngine.h"
 
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/FileLog.h"
@@ -343,6 +344,33 @@ private slots:
         QVERIFY(!recorded.value(u"ok"_s).toBool()); // the demo engine has no audio to record
         QVERIFY(!recorded.value(u"error"_s).toString().isEmpty());
         QVERIFY(!client.ask(u"record"_s, {500, m_dir->filePath(u"long.wav"_s)}).value(u"ok"_s).toBool()); // at most 120 s
+    }
+
+    // A timed recording stops only itself: one the player started meanwhile (the
+    // Rec button) goes on, and the request says its own was stopped.
+    void aTimedRecordingStopsOnlyItself()
+    {
+        test::SpyEngine spy;
+        const QString name = m_name + u"-rec"_s;
+        DevControl control(DevControl::Context{.engine = &spy, .objects = {}, .window = nullptr, .logFile = {},
+                                               .dataFolder = m_dir->path(), .socketName = name, .quit = {}});
+        addMeasureCommands(control);
+        QVERIFY(control.listen().has_value());
+        DevClient client(name);
+
+        const QString mine = m_dir->filePath(u"mine.wav"_s);
+        QVERIFY(client.ask(u"record"_s, {0.2, mine}).value(u"ok"_s).toBool()); // alone: it stops itself
+        QVERIFY(!spy.recording());
+
+        const QString theirs = m_dir->filePath(u"theirs.wav"_s);
+        QTimer::singleShot(100, &control, [&spy, &theirs] {
+            (void)spy.stopRecording(); // (the Rec button: stops ours, starts another)
+            (void)spy.startRecording(theirs);
+        });
+        const QJsonObject replaced = client.ask(u"record"_s, {0.4, mine});
+        QVERIFY(!replaced.value(u"ok"_s).toBool());
+        QVERIFY2(replaced.value(u"error"_s).toString().contains(u"replaced"_s), qPrintable(replaced.value(u"error"_s).toString()));
+        QCOMPARE(spy.recordingPath(), theirs); // still recording
     }
 
     // Quitting never waits on the "save changes?" question: with unsaved changes

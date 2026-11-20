@@ -226,7 +226,13 @@ void addMeasureCommands(DevControl& control)
             return reply.fail(u"record <seconds 0.1-120> <file.wav>"_s);
         }
         if (auto started = engine->startRecording(file); !started) return reply.fail(started.error().message);
-        QTimer::singleShot(static_cast<int>(seconds * 1000.0), &control, [engine, reply, file] {
+        // The engine may name the file its own way (a separator): this recording is the file it took.
+        const QString recordingNow = engine->recordingPath();
+        QTimer::singleShot(static_cast<int>(seconds * 1000.0), &control, [engine, reply, file, recordingNow] {
+            // Stopped or replaced meanwhile (the Rec button): another recording is never stopped for it.
+            if (engine->recordingPath() != recordingNow) {
+                return reply.fail(u"The recording to %1 was stopped or replaced before its end"_s.arg(QDir::toNativeSeparators(file)));
+            }
             const auto stopped = engine->stopRecording();
             if (!stopped) return reply.fail(stopped.error().message);
             reply.ok({{u"file"_s, QDir::toNativeSeparators(file)}, {u"seconds"_s, *stopped}});

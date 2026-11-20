@@ -134,6 +134,7 @@ public:
     }
     core::Result<double> stopRecording() override { return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Not recording")); }
     [[nodiscard]] bool recording() const override { return false; }
+    [[nodiscard]] QString recordingPath() const override { return {}; }
     // (As an 8-output interface, so the output choices can be seen and tested.)
     [[nodiscard]] int outputChannels() const override { return 8; }
     [[nodiscard]] bool clickOn() const override { return m_click; }

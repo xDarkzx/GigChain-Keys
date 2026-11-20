@@ -66,8 +66,11 @@ struct Answer
     QJsonObject json;
 };
 
-// Sends one command and waits for its answer (as long as the command takes).
-Answer ask(const QString& socket, const QString& cmd, const QJsonArray& args = {})
+// (wait and cpu may run ten minutes)
+constexpr qint64 kLongest = qint64{15} * 60 * 1000;
+
+// Sends one command and waits for its answer (as long as the command takes, up to `longest` ms).
+Answer ask(const QString& socket, const QString& cmd, const QJsonArray& args = {}, qint64 longest = kLongest)
 {
     QLocalSocket connection;
     connection.connectToServer(socket);
@@ -78,12 +81,11 @@ Answer ask(const QString& socket, const QString& cmd, const QJsonArray& args = {
     connection.flush();
     QElapsedTimer waited;
     waited.start();
-    constexpr qint64 kLongest = qint64{15} * 60 * 1000; // (wait and cpu may run ten minutes)
     while (!connection.canReadLine()) {
         if (connection.state() != QLocalSocket::ConnectedState && !connection.waitForReadyRead(100)) {
             return Answer{.code = kFailed, .json = QJsonObject{{u"ok"_s, false}, {u"error"_s, u"The app closed the connection before answering %1"_s.arg(cmd)}}};
         }
-        if (waited.elapsed() > kLongest) return Answer{.code = kFailed, .json = QJsonObject{{u"ok"_s, false}, {u"error"_s, u"No answer to %1"_s.arg(cmd)}}};
+        if (waited.elapsed() > longest) return Answer{.code = kFailed, .json = QJsonObject{{u"ok"_s, false}, {u"error"_s, u"No answer to %1"_s.arg(cmd)}}};
         connection.waitForReadyRead(1000);
     }
     const QJsonObject json = QJsonDocument::fromJson(connection.readLine()).object();
@@ -253,9 +255,15 @@ int killAt(const QString& socket, const QString& pattern, int ms, const QStringL
 int restart(const QString& socket, const QString& setlist)
 {
     if (running(socket)) {
-        (void)ask(socket, u"quit"_s, QJsonArray{u"discard"_s}); // (unsaved changes dropped, as the kill below would)
+        // Its process id first, while it answers: an app stuck on quit is ended without asking it again.
+        constexpr qint64 kQuick = 5'000;
+        const Answer pid = ask(socket, u"pid"_s, {}, kQuick);
+        if (pid.code != kDone) return print(pid);
+        const qint64 process = pid.json.value(u"pid"_s).toInteger();
+        (void)ask(socket, u"quit"_s, QJsonArray{u"discard"_s}, kQuick); // (unsaved changes dropped, as ending it would)
         if (!waitUntil([&socket] { return !running(socket); }, 15'000)) {
-            if (const int killed = kill(socket); killed != kDone) return killed;
+            if (!killProcess(process)) return said(kFailed, u"The app did not quit, and process %1 could not be ended"_s.arg(process));
+            if (!waitUntil([&socket] { return !running(socket); }, 5'000)) return said(kFailed, u"Process %1 was ended but its control still answers"_s.arg(process));
         }
     }
     return start(socket, setlist);
