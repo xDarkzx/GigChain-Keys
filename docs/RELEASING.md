@@ -17,6 +17,29 @@ README's **Download** links open the latest release, which skips pre-releases.
 
 The tag is the version with a `v`: `v0.1.0`.
 
+## The weekly release
+
+A version ships **every Monday** (New Zealand time). The week before it:
+
+- **A milestone per version** (`0.12`): every issue and pull request meant
+  for it goes in, so one page shows what is in and what is left. Bug reports
+  that come in during the week are fixed for that Monday's version.
+- **Through the week:** each change goes through its own pull request from
+  `main` (a branch on top of another only when it truly needs the other),
+  CI (Windows debug, release and dev; Linux), the review comments resolved,
+  then a squash merge.
+- **Freeze: Sunday at noon.** Nothing new merges after it unless it fixes
+  something the release candidate broke.
+- **Sunday afternoon: the release candidate.** Build the downloads from
+  `main`'s head, run every live check (`tests/live`, see
+  [testing/live-test-control.md](testing/live-test-control.md)) and a soak
+  (`tools/soak.ps1`) on that build. A failure is fixed before Monday, or
+  its change is taken out.
+- **Monday:** tag and publish exactly that build (the steps below). What
+  merged after the freeze waits for the next Monday.
+- **A patch release** (0.12.1) only for what hurts players: a crash, lost
+  work, no sound, an app that will not start.
+
 ## Steps
 
 1. **Finish the changelog.** In [`CHANGELOG.md`](../CHANGELOG.md), rename
