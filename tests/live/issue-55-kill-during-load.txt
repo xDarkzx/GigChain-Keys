@@ -31,4 +31,4 @@ status
 expect loadedPlugins >= 1
 expect blockedPlugins empty
 log $mark "stays on|switched off"
-quit
+quit discard

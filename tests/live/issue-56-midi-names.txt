@@ -13,4 +13,4 @@ shot "$tmp/issue56-settings-midi.png"
 ui-tree settingsDialog
 expect items contains midiName0
 ui-call settingsDialog close
-quit
+quit discard

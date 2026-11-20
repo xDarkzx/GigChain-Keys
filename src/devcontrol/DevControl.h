@@ -64,6 +64,7 @@ public:
         QString logFile;                // the app's log
         QString dataFolder;             // AppLocalData: settings, plugin guard, crash reports
         QString socketName;             // where it listens
+        std::function<void()> quit;     // ends the app (empty: QCoreApplication::quit)
     };
     using Handler = std::function<void(const DevRequest&, const Reply&)>;
 

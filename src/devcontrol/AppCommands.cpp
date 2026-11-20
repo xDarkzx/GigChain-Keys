@@ -186,9 +186,22 @@ void addObjectCommands(DevControl& control)
 
 void addLifeCommands(DevControl& control)
 {
-    control.add(u"quit"_s, u"quit: closes the app the normal way"_s, [](const DevRequest&, const Reply& reply) {
+    control.add(u"quit"_s, u"quit [discard]: closes the app the normal way; unsaved changes: refused, or dropped with discard"_s,
+                [&control](const DevRequest& request, const Reply& reply) {
+        // (Closing with unsaved changes would wait on "save changes?" with nobody to answer it.)
+        QString error;
+        if (QObject* doc = resolve(control, u"document"_s, error); doc != nullptr && doc->property("dirty").toBool()) {
+            if (argText(request, 0) != u"discard"_s) {
+                return reply.fail(u"The setlist has unsaved changes: quit discard drops them (or save it first: call document save)"_s);
+            }
+            QMetaObject::invokeMethod(doc, "newSetlist"); // (the changes dropped)
+        }
         reply.ok();
-        QTimer::singleShot(0, qApp, &QCoreApplication::quit);
+        const std::function<void()> quit = control.context().quit;
+        QTimer::singleShot(0, qApp, [quit] {
+            if (quit) quit();
+            else QCoreApplication::quit();
+        });
     });
     control.add(u"pid"_s, u"pid: the app's process id (gck-ctl kill uses it)"_s, [](const DevRequest&, const Reply& reply) {
         reply.ok({{u"pid"_s, QCoreApplication::applicationPid()}});

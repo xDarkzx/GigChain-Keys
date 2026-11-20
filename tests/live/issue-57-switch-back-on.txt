@@ -30,4 +30,4 @@ note 60 100
 level 500
 expect peak > 0.001
 note 60 0
-quit
+quit discard

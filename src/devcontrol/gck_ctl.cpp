@@ -5,7 +5,7 @@
 //   gck-ctl start [setlist]                          starts the dev app next to it with --dev-control
 //   gck-ctl kill                                     ends the app at once (as a player's force quit)
 //   gck-ctl kill-at <pattern> [ms]                   ends it the moment its log shows a matching line
-//   gck-ctl restart [setlist]                        quits it (or kills it) and starts it again
+//   gck-ctl restart [setlist]                        quits it (unsaved changes dropped; else kills it) and starts it again
 //   gck-ctl sleep <ms>                               (in a command file: waits)
 //
 // In a command file, a check on the answer before it fails the file when it
@@ -253,7 +253,7 @@ int killAt(const QString& socket, const QString& pattern, int ms, const QStringL
 int restart(const QString& socket, const QString& setlist)
 {
     if (running(socket)) {
-        (void)ask(socket, u"quit"_s);
+        (void)ask(socket, u"quit"_s, QJsonArray{u"discard"_s}); // (unsaved changes dropped, as the kill below would)
         if (!waitUntil([&socket] { return !running(socket); }, 15'000)) {
             if (const int killed = kill(socket); killed != kDone) return killed;
         }

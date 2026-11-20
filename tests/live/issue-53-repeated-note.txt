@@ -24,4 +24,4 @@ level 300
 expect peak < 0.02
 keys
 expect down empty
-quit
+quit discard

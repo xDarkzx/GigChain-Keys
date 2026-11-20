@@ -344,6 +344,28 @@ private slots:
         QVERIFY(!client.ask(u"record"_s, {500, m_dir->filePath(u"long.wav"_s)}).value(u"ok"_s).toBool()); // at most 120 s
     }
 
+    // Quitting never waits on the "save changes?" question: with unsaved changes
+    // it says so, and `quit discard` drops them and quits.
+    void quitSaysWhenChangesAreUnsaved()
+    {
+        bool quitted = false;
+        m_control.reset();
+        auto ctx = context(m_name);
+        ctx.quit = [&quitted] { quitted = true; };
+        m_control = std::make_unique<DevControl>(ctx);
+        addAppCommands(*m_control);
+        QVERIFY(m_control->listen().has_value());
+        DevClient client(m_name);
+        QVERIFY(client.ask(u"call"_s, {u"document"_s, u"addSong"_s}).value(u"ok"_s).toBool()); // (a change)
+        const QJsonObject refused = client.ask(u"quit"_s);
+        QVERIFY(!refused.value(u"ok"_s).toBool());
+        QVERIFY2(refused.value(u"error"_s).toString().contains(u"unsaved"_s), qPrintable(refused.value(u"error"_s).toString()));
+        QVERIFY(!quitted);
+        QVERIFY(client.ask(u"quit"_s, {u"discard"_s}).value(u"ok"_s).toBool());
+        QTRY_VERIFY(quitted);
+        QVERIFY(!m_session->document().isDirty());
+    }
+
     void guardBlockSwitchesAPluginOff()
     {
         DevClient client(m_name);
