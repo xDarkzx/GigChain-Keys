@@ -1,11 +1,15 @@
 name: Linux
 
 # The Linux downloads: an AppImage (most distributions) and a .deb (Ubuntu,
-# Debian, Mint...), from tools/package-linux.sh. On a release tag, or by
-# hand (Actions → Linux → Run workflow). Built on Ubuntu 22.04: what the
-# packages link against is that old or older, so newer systems run them.
+# Debian, Mint...), from tools/package-linux.sh. On a release tag, by hand
+# (Actions → Linux → Run workflow), and on every pull request to main: Linux
+# is built and tested before anything merges, not first on release day.
+# Built on Ubuntu 22.04: what the packages link against is that old or older,
+# so newer systems run them.
 "on":
   workflow_dispatch:
+  pull_request:
+    branches: [main]
   push:
     tags: ["v*"]
 
@@ -80,6 +84,7 @@ jobs:
           path: ${{ github.workspace }}/../vcpkg-cache
           key: vcpkg-linux-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
 
+      # (A pull request's packages are only checked: kept a week, for trying one.)
       - name: Upload the AppImage and the .deb
         uses: actions/upload-artifact@v7
         with:
@@ -88,6 +93,7 @@ jobs:
             dist/*.AppImage
             dist/*.deb
           if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 90 }}
 
       - name: Upload test logs
         if: always()

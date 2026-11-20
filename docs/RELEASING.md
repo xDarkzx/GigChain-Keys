@@ -17,6 +17,45 @@ README's **Download** links open the latest release, which skips pre-releases.
 
 The tag is the version with a `v`: `v0.1.0`.
 
+## The weekly release
+
+A version ships **every Monday** (New Zealand time). The week before it:
+
+- **A milestone per version** (`0.12`): every issue and pull request meant
+  for it goes in, so one page shows what is in and what is left. Bug reports
+  that come in during the week are fixed for that Monday's version.
+- **Through the week:** each change goes through its own pull request from
+  `main` (a branch on top of another only when it truly needs the other),
+  CI (Windows debug, release and dev; Linux), the review comments resolved,
+  then a squash merge.
+- **Freeze: Sunday at noon.** Nothing new merges after it unless it fixes
+  something the release candidate broke.
+- **Sunday afternoon: the release candidate.** First the release commit
+  (steps 1 and 2 below, through its own pull request), then from that
+  commit:
+  - the Windows downloads (step 3; `package.ps1` runs every test on the
+    release build it packs), a soak of that release build
+    (`tools/soak.ps1`, the `release` preset) and the installer tried
+    (step 4);
+  - every live check (`tests/live`, see
+    [testing/live-test-control.md](testing/live-test-control.md)) with
+    `tools/live-checks.ps1`. The live test control is left out of release
+    builds, so the checks drive the `dev` build of the same commit: the
+    same code with the control compiled in;
+  - the Linux and Mac downloads, started by hand on that commit (Actions →
+    Linux / Mac → Run workflow; ask before the Mac run, it is paid), their
+    artifacts kept.
+
+  Write down the candidate's commit (`git rev-parse HEAD`): Monday's tag
+  goes on it. A failure is fixed before Monday, or its change is taken out. Either way
+  the candidate is built and tested again from the new commit: only a
+  candidate that passed is published.
+- **Monday:** tag the candidate's commit and publish exactly the files
+  tested on Sunday (steps 5 to 8). What merged after the freeze waits for
+  the next Monday.
+- **A patch release** (0.12.1) only for what hurts players: a crash, lost
+  work, no sound, an app that will not start.
+
 ## Steps
 
 1. **Finish the changelog.** In [`CHANGELOG.md`](../CHANGELOG.md), rename
@@ -39,13 +78,19 @@ The tag is the version with a `v`: `v0.1.0`.
 5. **Tag and push:**
 
    ```powershell
-   git tag -a v0.1.0 -m "GigChain Keys 0.1.0"
-   git push origin main v0.1.0
+   git tag -a v0.1.0 <candidate commit> -m "GigChain Keys 0.1.0"
+   git push origin v0.1.0
    ```
 
-   The tag starts the Mac build (`.github/workflows/mac.yml`) and the Linux
-   build (`.github/workflows/linux.yml`). When they finish, download their
-   artifacts (`gh run download <run id>`), and rename
+   `<candidate commit>` is the commit the candidate was built from, written
+   down on Sunday (`git rev-parse HEAD` when building it): the tag names it,
+   never whatever is checked out on Monday. Pushing the tag also starts the
+   Mac and Linux workflows again (their `v*` trigger); that Mac run is paid,
+   so ask before pushing the tag, and cancel it (Actions → Mac → Cancel)
+   when Sunday's Mac files are being published. The Mac and Linux
+   files published are the ones from Sunday's runs on that commit
+   (`.github/workflows/mac.yml`, `.github/workflows/linux.yml`), not new
+   builds: download their artifacts (`gh run download <run id>`), and rename
    `GigChain Keys-<version>-arm64.dmg` to `GigChainKeys-<version>-arm64.dmg`
    (GitHub turns spaces in release file names into dots). The Linux ones
    (`GigChainKeys-<version>-x86_64.AppImage`, `gigchain-keys_<version>_amd64.deb`)
