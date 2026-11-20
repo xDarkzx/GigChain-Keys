@@ -19,6 +19,7 @@
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 #include "pluginterfaces/vst/ivstevents.h"
+#include "pluginterfaces/vst/ivstmessage.h"
 #include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "pluginterfaces/gui/iplugview.h"
@@ -55,7 +56,7 @@ constexpr int32 kMaxPointsPerBlock = 5;
 constexpr int32 kMappedParameterRoom = 32;
 
 // One host context for the whole process, installed before the first plugin
-// loads (the SDK's PlugProvider reads it from PluginContextFactory).
+// loads (DirectPlugProvider reads it from PluginContextFactory).
 Vst::HostApplication& hostContext()
 {
     static Vst::HostApplication host;
@@ -149,12 +150,103 @@ std::span<Vst::Sample32*> channels32(const Vst::AudioBusBuffers& bus)
 }
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
+// A plugin's two halves (its sound and its window) talk to each other directly,
+// as in hosts built on JUCE. The SDK's PlugProvider puts a ConnectionProxy
+// between them that drops every message not sent from the UI thread, and
+// analysers send what they measure from the audio thread: FabFilter Pro-Q 3's
+// spectrum never reached its window (#61; measured: 86 of its 96 messages in
+// 3.5 s came from the audio thread).
+class DirectPlugProvider : public Vst::PlugProvider
+{
+public:
+    using Vst::PlugProvider::PlugProvider;
+    ~DirectPlugProvider() override { disconnectDirectly(); }
+    DirectPlugProvider(const DirectPlugProvider&) = delete;
+    DirectPlugProvider& operator=(const DirectPlugProvider&) = delete;
+    DirectPlugProvider(DirectPlugProvider&&) = delete;
+    DirectPlugProvider& operator=(DirectPlugProvider&&) = delete;
+
+    // The SDK's PlugProvider::initialize (setupPlugin), step for step, but the
+    // halves connected directly, and once: a plugin may refuse to connect again
+    // (TDR Kotelnikov's window does), so they are never connected to the proxies
+    // first. The plugin is terminated by the base class's destructor.
+    core::Result<void> setUp(const QString& name)
+    {
+        FUnknown* const host = Vst::PluginContextFactory::instance().getPluginContext();
+        component = factory.createInstance<Vst::IComponent>(classInfo.ID());
+        if (!component) return core::fail(core::ErrorCode::InvalidData, u"%1 could not be created"_s.arg(name));
+        const FUnknownPtr<IPluginBase> componentBase(component);
+        if (!componentBase || componentBase->initialize(host) != kResultOk) {
+            component = nullptr;
+            return core::fail(core::ErrorCode::InvalidData, u"%1 failed to initialise"_s.arg(name));
+        }
+        // One object, sound and window: nothing to connect.
+        if (const FUnknownPtr<Vst::IEditController> single(component); single) {
+            controller = single;
+            return {};
+        }
+        TUID controllerId{};
+        if (component->getControllerClassId(controllerId) != kResultTrue) { // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay): the SDK's TUID is a char array
+            qCInfo(lcEngine).noquote() << name << "has no window half: it plays without a window";
+            return {};
+        }
+        controller = factory.createInstance<Vst::IEditController>(VST3::UID(controllerId));
+        if (!controller) {
+            qCWarning(lcEngine).noquote() << name << "could not create its window half: it plays without a window";
+            return {};
+        }
+        const FUnknownPtr<IPluginBase> controllerBase(controller);
+        if (!controllerBase || controllerBase->initialize(host) != kResultOk) {
+            controller = nullptr; // (the sound half is terminated by the destructor)
+            return core::fail(core::ErrorCode::InvalidData, u"%1's window half failed to initialise"_s.arg(name));
+        }
+        const FUnknownPtr<Vst::IConnectionPoint> fromComponent(component);
+        const FUnknownPtr<Vst::IConnectionPoint> fromController(controller);
+        if (!fromComponent || !fromController) {
+            return core::fail(core::ErrorCode::InvalidData, u"%1's halves cannot be connected to each other"_s.arg(name));
+        }
+        m_component = fromComponent;
+        m_controller = fromController;
+        if (fromComponent->connect(fromController) != kResultTrue) {
+            return core::fail(core::ErrorCode::InvalidData, u"%1's sound refused to connect to its window"_s.arg(name));
+        }
+        m_componentConnected = true;
+        if (fromController->connect(fromComponent) != kResultTrue) {
+            return core::fail(core::ErrorCode::InvalidData, u"%1's window refused to connect to its sound"_s.arg(name));
+        }
+        m_controllerConnected = true;
+        return {};
+    }
+
+private:
+    // Before the plugin is terminated (the base class's destructor): each
+    // connection that was made, undone.
+    void disconnectDirectly() noexcept
+    {
+        if (m_componentConnected && m_component->disconnect(m_controller) != kResultTrue) {
+            qCWarning(lcEngine).noquote() << classInfo.name().c_str() << "(sound) refused to disconnect from its window";
+        }
+        if (m_controllerConnected && m_controller->disconnect(m_component) != kResultTrue) {
+            qCWarning(lcEngine).noquote() << classInfo.name().c_str() << "(window) refused to disconnect from its sound";
+        }
+        m_componentConnected = false;
+        m_controllerConnected = false;
+        m_component = nullptr;
+        m_controller = nullptr;
+    }
+
+    IPtr<Vst::IConnectionPoint> m_component;
+    IPtr<Vst::IConnectionPoint> m_controller;
+    bool m_componentConnected = false;
+    bool m_controllerConnected = false;
+};
+
 } // namespace
 
 struct Vst3Node::Impl
 {
     VST3::Hosting::Module::Ptr module;
-    IPtr<Vst::PlugProvider> provider;
+    IPtr<DirectPlugProvider> provider;
     IPtr<Vst::IComponent> component;
     IPtr<Vst::IAudioProcessor> processor;
     IPtr<Vst::IEditController> controller;
@@ -346,15 +438,13 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
             impl->name = QString::fromStdString(info.name());
             impl->bundlePath = bundlePath;
             impl->instrument = QString::fromStdString(info.subCategoriesString()).contains(u"Instrument"_s);
-            impl->provider = owned(new Vst::PlugProvider(factory, info, true));
+            impl->provider = owned(new DirectPlugProvider(factory, info, true));
             break;
         }
         if (!impl->provider) {
             return core::fail(core::ErrorCode::InvalidData, u"%1 contains no audio processor"_s.arg(bundlePath));
         }
-        if (!impl->provider->initialize()) {
-            return core::fail(core::ErrorCode::InvalidData, u"%1 failed to initialise"_s.arg(impl->name));
-        }
+        if (auto set = impl->provider->setUp(impl->name); !set) return tl::unexpected(set.error());
 
         impl->component = impl->provider->getComponentPtr();
         impl->controller = impl->provider->getControllerPtr();
