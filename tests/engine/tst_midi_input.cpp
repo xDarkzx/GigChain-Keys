@@ -123,26 +123,26 @@ private slots:
         };
 
         const auto note = played(keys, {0x91, 60, 64}); // channel 2
-        QVERIFY(note.has_value());
+        if (!note) QFAIL("the note on its channel was filtered out");
         QCOMPARE(note.value().source, uint16_t{7});
         QCOMPARE(int(note.value().data2), int(heavy.at(64)));
         QVERIFY(int(note.value().data2) < 64); // heavy touch: softer
         QVERIFY(!played(keys, {0x90, 60, 64}).has_value()); // channel 1: filtered out
 
         const auto knob = played(keys, {0xB1, 21, 90}); // the taught knob arrives as the learned one
-        QVERIFY(knob.has_value());
+        if (!knob) QFAIL("the taught knob was filtered out");
         QCOMPARE(int(knob.value().status), 0xB0);
         QCOMPARE(int(knob.value().data1), 74);
 
         const KeyboardShape controls{.source = 9, .channel = 0, .controlsOnly = true, .rig = {}, .velocity = &heavy};
         const auto button = played(controls, {0x90, 36, 64});
-        QVERIFY(button.has_value());
+        if (!button) QFAIL("the controls keyboard's button was filtered out");
         QVERIFY(button.value().controlsOnly); // its buttons and knobs only: never played
         QCOMPARE(int(button.value().data2), 64);  // (no touch curve on a control)
 
         const KeyboardShape plain;      // from no particular keyboard
         const auto any = played(plain, {0x95, 40, 100});
-        QVERIFY(any.has_value());
+        if (!any) QFAIL("a note from no particular keyboard was filtered out");
         QCOMPARE(any.value().source, uint16_t{0});
         QCOMPARE(int(any.value().data2), 100);
         QVERIFY(!played(plain, {0xF0, 0x7E, 0xF7}).has_value()); // sysex: not played
