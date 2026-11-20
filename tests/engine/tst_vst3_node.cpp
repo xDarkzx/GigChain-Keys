@@ -15,7 +15,9 @@
 #include <windows.h>
 #endif
 
+#include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <numbers>
 #include <vector>
 
@@ -245,7 +247,8 @@ private slots:
         const std::vector<Vst3Node::Parameter> parameters = (*node)->parameters();
         std::vector<double> before;
         before.reserve(parameters.size());
-        for (const auto& p : parameters) before.push_back((*node)->parameterValue(p.id));
+        std::ranges::transform(parameters, std::back_inserter(before),
+                               [&node](const Vst3Node::Parameter& p) { return (*node)->parameterValue(p.id); });
 
         // The mod wheel and a few knobs, all the way up, as a KeyLab's factory mapping sends them.
         play({MidiEvent{.status = 0xB0, .data1 = 1, .data2 = 127}, MidiEvent{.status = 0xB0, .data1 = 74, .data2 = 127},
