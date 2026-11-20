@@ -255,12 +255,47 @@ private slots:
               MidiEvent{.status = 0xB0, .data1 = 71, .data2 = 127}, MidiEvent{.status = 0xB0, .data1 = 76, .data2 = 127}},
              20);
         (*node)->showParameterChanges();
+        // Only what it moved itself counts: not the parameters the knobs set directly.
+        std::vector<uint32_t> setByKnobs;
+        for (const int cc : {1, 74, 71, 76}) {
+            if (const auto mapped = (*node)->controllerParameter(0, cc)) setByKnobs.push_back(*mapped);
+        }
         int moved = 0;
         for (std::size_t i = 0; i < parameters.size(); ++i) {
+            if (std::ranges::find(setByKnobs, parameters.at(i).id) != setByKnobs.end()) continue;
             if (std::abs((*node)->parameterValue(parameters.at(i).id) - before.at(i)) > 1e-6) ++moved;
         }
-        qInfo() << "parameters shown moved:" << moved << "of" << parameters.size();
+        qInfo() << "parameters it moved itself, shown:" << moved << "of" << parameters.size() << "(set by the knobs:"
+                << setByKnobs.size() << ")";
         QVERIFY2(moved > 0, "the plugin moved its own parameters, and its window showed none of it");
+    }
+
+    // A value the plugin reports while playing (outputParameterChanges: FabFilter
+    // Pro-DS reports parameter 0x40000003 as sound goes through it, measured)
+    // reaches its own window (#60).
+    void aValueThePluginReportsShowsInItsWindow()
+    {
+        const QString proDs = u"C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-DS.vst3"_s;
+        if (!QFileInfo::exists(proDs)) QSKIP("FabFilter Pro-DS not installed");
+        constexpr uint32_t kReported = 0x40000003;
+        auto node = Vst3Node::load(proDs, kRate, kBlock);
+        QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
+        (*node)->showParameterChanges();
+        const double before = (*node)->parameterValue(kReported);
+        std::vector<float> left(kBlock);
+        std::vector<float> right(kBlock);
+        double phase = 0.0;
+        for (int block = 0; block < 80; ++block) { // a loud 7 kHz hiss, what a de-esser works on
+            for (int i = 0; i < kBlock; ++i) {
+                left.at(static_cast<std::size_t>(i)) = right.at(static_cast<std::size_t>(i)) = 0.8F * static_cast<float>(std::sin(phase));
+                phase += 2.0 * std::numbers::pi * 7000.0 / kRate;
+            }
+            (*node)->process({}, AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, kTime);
+        }
+        (*node)->showParameterChanges();
+        const double after = (*node)->parameterValue(kReported);
+        qInfo() << "reported value in its window: before" << before << "after" << after;
+        QVERIFY2(std::abs(after - before) > 1e-6, "the value the plugin reported never reached its window");
     }
 
     // A key pressed again while the instrument still holds it (its key-up lost

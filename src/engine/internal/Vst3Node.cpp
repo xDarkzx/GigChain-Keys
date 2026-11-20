@@ -41,6 +41,7 @@
 #include <span>
 #include <string>
 #include <utility>
+#include <vector>
 
 using namespace Qt::StringLiterals;
 using namespace Steinberg;
@@ -279,16 +280,44 @@ struct Vst3Node::Impl
     std::array<std::array<Vst::ParamID, Vst::kCountCtrlNumber>, 16> midiMapping{};
     // Parameters that moved on the audio thread, set by the host (mapped knobs) or
     // by the plugin itself (outputChanges), for the main thread to show in the
-    // plugin's own window: id and value packed, 0 = nothing new. A slot per
-    // id % size; two ids sharing a slot only lose a window update, never the sound.
-    std::array<std::atomic<uint64_t>, 256> parameterEcho{};
+    // plugin's own window. A mailbox per parameter, made at load (`echoIds`
+    // sorted, `echoValues` beside it): the latest value of each, so no move of
+    // one parameter is lost to another's. 0 = nothing new; else kNewValue | its
+    // value's float bits.
+    static constexpr uint64_t kNewValue = uint64_t{1} << 32U;
+    std::vector<Vst::ParamID> echoIds;
+    std::vector<std::atomic<uint64_t>> echoValues;
 
-    // Audio thread: a parameter's new value, for the main thread to show in its window.
+    // Main thread, at load: a mailbox for each of the plugin's parameters.
+    void makeEchoMailboxes()
+    {
+        echoIds.clear();
+        if (!controller) return;
+        const int32 count = controller->getParameterCount();
+        echoIds.reserve(static_cast<std::size_t>(std::max(count, 0)));
+        for (int32 i = 0; i < count; ++i) {
+            Vst::ParameterInfo info{};
+            if (controller->getParameterInfo(i, info) == kResultOk) echoIds.push_back(info.id);
+        }
+        std::ranges::sort(echoIds);
+        const auto [first, last] = std::ranges::unique(echoIds);
+        echoIds.erase(first, last);
+        echoValues = std::vector<std::atomic<uint64_t>>(echoIds.size());
+    }
+
+    // Audio thread: a parameter's new value, for the main thread to show in its
+    // window (no allocation: a binary search of the ids made at load).
     void echo(Vst::ParamID id, double value) noexcept
     {
-        const uint64_t packed = (uint64_t{id} << 32U) | std::bit_cast<uint32_t>(static_cast<float>(std::clamp(value, 0.0, 1.0)));
-        parameterEcho.at(id % parameterEcho.size()).store(packed == 0 ? 1 : packed, std::memory_order_relaxed);
+        const auto found = std::ranges::lower_bound(echoIds, id);
+        if (found == echoIds.end() || *found != id) {
+            droppedEchoes.fetch_add(1, std::memory_order_relaxed); // (not one it listed at load)
+            return;
+        }
+        const uint64_t packed = kNewValue | std::bit_cast<uint32_t>(static_cast<float>(std::clamp(value, 0.0, 1.0)));
+        echoValues.at(static_cast<std::size_t>(found - echoIds.begin())).store(packed, std::memory_order_relaxed);
     }
+    std::atomic<uint64_t> droppedEchoes{0}; // moves of parameters it did not list (its window misses them)
 
     // Main thread, at load: asks the plugin which parameter each controller
     // moves, and reserves a queue for each (and for mapped knobs) so the
@@ -481,6 +510,7 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
             }
         }
         impl->mapMidiControllers();
+        impl->makeEchoMailboxes();
 
         if (auto activated = impl->activate(sampleRate, maxBlock); !activated) {
             return tl::unexpected(activated.error());
@@ -559,12 +589,14 @@ void Vst3Node::showParameterChanges()
     GC_ONLY_MAIN_THREAD();
     Impl& impl = *m_impl;
     if (!impl.controller) return;
-    for (auto& slot : impl.parameterEcho) {
-        const uint64_t packed = slot.exchange(0, std::memory_order_relaxed);
+    for (std::size_t i = 0; i < impl.echoValues.size(); ++i) {
+        const uint64_t packed = impl.echoValues.at(i).exchange(0, std::memory_order_relaxed);
         if (packed == 0) continue;
-        const auto id = static_cast<Vst::ParamID>(packed >> 32U);
         const auto value = static_cast<double>(std::bit_cast<float>(static_cast<uint32_t>(packed & 0xFFFFFFFFU)));
-        impl.controller->setParamNormalized(id, value); // what the knob shows; the sound already changed
+        impl.controller->setParamNormalized(impl.echoIds.at(i), value); // what the knob shows; the sound already changed
+    }
+    if (const uint64_t missed = impl.echoValues.empty() ? 0 : impl.droppedEchoes.exchange(0); missed > 0) {
+        qCInfo(lcEngine).noquote() << impl.name << "moved" << missed << "time(s) a parameter it does not list: its window was not told";
     }
 }
 
