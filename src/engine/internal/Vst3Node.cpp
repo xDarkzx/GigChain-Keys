@@ -187,13 +187,12 @@ public:
         }
         TUID controllerId{};
         if (component->getControllerClassId(controllerId) != kResultTrue) { // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay): the SDK's TUID is a char array
-            qCInfo(lcEngine).noquote() << name << "has no window half: it plays without a window";
-            return {};
+            // (The SDK's provider refuses these too: its connection fails without a controller.)
+            return core::fail(core::ErrorCode::InvalidData, u"%1 does not name its window half (edit controller)"_s.arg(name));
         }
         controller = factory.createInstance<Vst::IEditController>(VST3::UID(controllerId));
         if (!controller) {
-            qCWarning(lcEngine).noquote() << name << "could not create its window half: it plays without a window";
-            return {};
+            return core::fail(core::ErrorCode::InvalidData, u"%1's window half (edit controller) could not be created"_s.arg(name));
         }
         const FUnknownPtr<IPluginBase> controllerBase(controller);
         if (!controllerBase || controllerBase->initialize(host) != kResultOk) {

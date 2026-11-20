@@ -9,6 +9,7 @@
 
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QScopeGuard>
 #include <QWindow>
 #include <QtTest>
 
@@ -205,13 +206,18 @@ private slots:
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
             }
         });
+        // Stopped on every way out (a capture can throw): a joinable thread destroyed ends the test run.
+        const auto stopAudio = [&playing, &audio] {
+            playing = false;
+            if (audio.joinable()) audio.join();
+        };
+        const auto stopOnExit = qScopeGuard(stopAudio);
         QTest::qWait(1500);
         const QImage silent = windowcapture::captureWindow(parent.window());
         tone = true;
         QTest::qWait(2000);
         const QImage sounding = windowcapture::captureWindow(parent.window());
-        playing = false;
-        audio.join();
+        stopAudio();
         (*editor)->detach();
 
         if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
@@ -220,12 +226,17 @@ private slots:
         }
         QVERIFY2(!silent.isNull() && !sounding.isNull(), "the window could not be captured");
         QCOMPARE(sounding.size(), silent.size());
+        // Only the spectrum's area counts: Pro-Q 3's title bar is the top 5%, its
+        // frequency scale and bottom bar the last 7%, and its output meter the
+        // right 5% (a meter moving is not the spectrum). Before the fix not one
+        // pixel of the whole window changed.
+        const QRect spectrum(0, silent.height() * 5 / 100, silent.width() * 95 / 100, silent.height() * 88 / 100);
         qsizetype changed = 0;
-        for (int y = 0; y < silent.height(); ++y) {
-            for (int x = 0; x < silent.width(); ++x) changed += silent.pixel(x, y) != sounding.pixel(x, y) ? 1 : 0;
+        for (int y = spectrum.top(); y <= spectrum.bottom(); ++y) {
+            for (int x = spectrum.left(); x <= spectrum.right(); ++x) changed += silent.pixel(x, y) != sounding.pixel(x, y) ? 1 : 0;
         }
-        qInfo() << "pixels the tone changed:" << changed << "of" << silent.width() * silent.height();
-        QVERIFY2(changed > 1000, "the analyser drew nothing for the sound going through it");
+        qInfo() << "spectrum pixels the tone changed:" << changed << "of" << spectrum.width() * spectrum.height();
+        QVERIFY2(changed > 1000, "the analyser drew no spectrum for the sound going through it");
 #endif
     }
 
