@@ -46,6 +46,15 @@
       }
     },
     {
+      "name": "linux-dev",
+      "inherits": "linux-base",
+      "description": "Linux developer build with the live test control: never released",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GIGCHAIN_DEV_CONTROL": "ON"
+      }
+    },
+    {
       "name": "linux-clang",
       "inherits": "linux-base",
       "description": "Clang 18 with -Werror: Apple's compiler family, checked before any Mac build",
@@ -85,6 +94,15 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "dev",
+      "inherits": "base",
+      "description": "A developer build with the live test control (docs/testing/live-test-control.md): never released",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GIGCHAIN_DEV_CONTROL": "ON"
       }
     },
     {
@@ -133,6 +151,10 @@
       "configurePreset": "linux-release"
     },
     {
+      "name": "linux-dev",
+      "configurePreset": "linux-dev"
+    },
+    {
       "name": "linux-clang",
       "configurePreset": "linux-clang"
     },
@@ -151,6 +173,10 @@
     {
       "name": "release",
       "configurePreset": "release"
+    },
+    {
+      "name": "dev",
+      "configurePreset": "dev"
     },
     {
       "name": "asan",
@@ -191,6 +217,11 @@
       "configurePreset": "linux-release"
     },
     {
+      "name": "linux-dev",
+      "inherits": "base",
+      "configurePreset": "linux-dev"
+    },
+    {
       "name": "linux-clang",
       "inherits": "base",
       "configurePreset": "linux-clang"
@@ -219,6 +250,11 @@
       "name": "release",
       "inherits": "base",
       "configurePreset": "release"
+    },
+    {
+      "name": "dev",
+      "inherits": "base",
+      "configurePreset": "dev"
     },
     {
       "name": "asan",

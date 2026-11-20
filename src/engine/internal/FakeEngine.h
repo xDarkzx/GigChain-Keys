@@ -74,6 +74,9 @@ public:
     void injectNote(int midiChannel, int note, int velocity) override;
     // (The demo has no instruments to hear it; a knob learned for the mixer moves it.)
     void injectController(int midiChannel, int controller, int value) override;
+    // Notes and controllers as injectNote / injectController (any keyboard
+    // name: the demo has no keyboards to tell apart); each one logged.
+    core::Result<void> injectMidi(const QString& keyboard, const QByteArray& bytes) override;
     // No audio, no clock: a timed note plays at once (its keys light), and the clock stands.
     void scheduleNote(int midiChannel, int note, int velocity, double /*quarter*/) override { injectNote(midiChannel, note, velocity); }
     void clearScheduledNotes() override {}
@@ -131,6 +134,7 @@ public:
     }
     core::Result<double> stopRecording() override { return core::fail(core::ErrorCode::InvalidData, QStringLiteral("Not recording")); }
     [[nodiscard]] bool recording() const override { return false; }
+    [[nodiscard]] QString recordingPath() const override { return {}; }
     // (As an 8-output interface, so the output choices can be seen and tested.)
     [[nodiscard]] int outputChannels() const override { return 8; }
     [[nodiscard]] bool clickOn() const override { return m_click; }

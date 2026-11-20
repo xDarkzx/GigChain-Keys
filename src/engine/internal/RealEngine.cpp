@@ -469,6 +469,7 @@ std::shared_ptr<PluginNode> RealEngine::loadWithSettings(const core::PluginSlot&
     timer.start();
     // Until it has loaded and taken its settings: a crash here blocks it next start.
     const auto loading = m_guard.loading(slot.pluginId);
+    qCInfo(lcEngine).noquote() << "Loading plugin" << slot.displayName; // (a log ending here names the plugin)
     auto node = PluginNode::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());
     if (!node) {
         // Already logged by the plugin's load; tell the user too.
@@ -950,6 +951,28 @@ void RealEngine::injectController(int midiChannel, int controller, int value)
                                    .sampleOffset = 0})) {
         m_droppedInjected.fetch_add(1, std::memory_order_relaxed);
     }
+}
+
+core::Result<void> RealEngine::injectMidi(const QString& keyboard, const QByteArray& bytes)
+{
+    GC_ONLY_MAIN_THREAD(); // (the injected queue's one producer)
+    const auto* data = reinterpret_cast<const unsigned char*>(bytes.constData()); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): bytes as MIDI
+    auto shaped = m_midi.shapeAs(keyboard, std::span(data, static_cast<std::size_t>(bytes.size())));
+    if (!shaped) {
+        qCWarning(lcEngine).noquote() << "Not played in:" << shaped.error().message;
+        return tl::unexpected(shaped.error());
+    }
+    if (!*shaped) return {}; // filtered out, as the keyboard's settings say: nothing to play
+    if (!m_injected.push(**shaped)) {
+        const QString message = u"Not played in: the queue of played-in messages is full (%1 bytes as %2)"_s.arg(
+            QString::fromLatin1(bytes.toHex(' ')), keyboard.isEmpty() ? u"no particular keyboard"_s : keyboard);
+        qCWarning(lcEngine).noquote() << message;
+        return core::fail(core::ErrorCode::InvalidData, message);
+    }
+    if (const MidiEvent& queued = **shaped; !queued.controlsOnly && (queued.status & 0xF0) == 0x90 && queued.data2 > 0) {
+        m_midi.recordPress(queued.data1, queued.data2); // (queued: timed as a keyboard's key)
+    }
+    return {};
 }
 
 void RealEngine::scheduleNote(int midiChannel, int note, int velocity, double quarter)

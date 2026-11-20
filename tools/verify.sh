@@ -4,6 +4,7 @@
 #   bash tools/verify.sh              the debug build, every test
 #   bash tools/verify.sh <regex>      only the tests matching <regex>
 #   PRESET=linux-asan bash tools/verify.sh
+#   PRESET=linux-dev bash tools/verify.sh '^(tst_dev_|tst_gck_ctl)'   the live test control's build and tests
 # First run: tools/setup-linux.sh (--system, then --user).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

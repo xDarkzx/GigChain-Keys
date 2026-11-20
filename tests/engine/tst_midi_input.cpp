@@ -1,6 +1,8 @@
 #include "MidiClockOut.h"
 #include "MidiInput.h"
 
+#include "gigchain/engine/MidiSetup.h"
+
 #include <QtTest>
 
 #include <algorithm>
@@ -103,6 +105,49 @@ class TestMidiInput : public QObject
     Q_OBJECT
 
 private slots:
+    // What a keyboard sends is shaped by its settings: its channel filter, its
+    // tag (a channel may listen to it alone), its taught controls and its
+    // touch. The same steps for a real key and one played in as that keyboard.
+    void aKeyboardShapesWhatItSends()
+    {
+        std::array<uint8_t, 128> heavy{};
+        for (std::size_t v = 0; v < heavy.size(); ++v) {
+            heavy.at(v) = static_cast<uint8_t>(v == 0 ? 0 : curvedVelocity(static_cast<int>(v), VelocityCurve::Heavy));
+        }
+        const KeyboardRig rig{{.from = MidiTrigger{.kind = MidiTrigger::ControlChange, .channel = 1, .number = 21},
+                               .to = MidiTrigger{.kind = MidiTrigger::ControlChange, .channel = 0, .number = 74}}};
+        const KeyboardShape keys{.source = 7, .channel = 2, .controlsOnly = false, .rig = rig, .velocity = &heavy};
+        const auto played = [](const KeyboardShape& shape, std::initializer_list<unsigned char> bytes) {
+            const std::vector<unsigned char> message(bytes);
+            return shapeAsKeyboard(shape, message);
+        };
+
+        const auto note = played(keys, {0x91, 60, 64}); // channel 2
+        if (!note) QFAIL("the note on its channel was filtered out");
+        QCOMPARE(note.value().source, uint16_t{7});
+        QCOMPARE(int(note.value().data2), int(heavy.at(64)));
+        QVERIFY(int(note.value().data2) < 64); // heavy touch: softer
+        QVERIFY(!played(keys, {0x90, 60, 64}).has_value()); // channel 1: filtered out
+
+        const auto knob = played(keys, {0xB1, 21, 90}); // the taught knob arrives as the learned one
+        if (!knob) QFAIL("the taught knob was filtered out");
+        QCOMPARE(int(knob.value().status), 0xB0);
+        QCOMPARE(int(knob.value().data1), 74);
+
+        const KeyboardShape controls{.source = 9, .channel = 0, .controlsOnly = true, .rig = {}, .velocity = &heavy};
+        const auto button = played(controls, {0x90, 36, 64});
+        if (!button) QFAIL("the controls keyboard's button was filtered out");
+        QVERIFY(button.value().controlsOnly); // its buttons and knobs only: never played
+        QCOMPARE(int(button.value().data2), 64);  // (no touch curve on a control)
+
+        const KeyboardShape plain;      // from no particular keyboard
+        const auto any = played(plain, {0x95, 40, 100});
+        if (!any) QFAIL("a note from no particular keyboard was filtered out");
+        QCOMPARE(any.value().source, uint16_t{0});
+        QCOMPARE(int(any.value().data2), 100);
+        QVERIFY(!played(plain, {0xF0, 0x7E, 0xF7}).has_value()); // sysex: not played
+    }
+
     // Unplugged while open: Windows fails to let go of the input's buffers.
     // Closing must not crash (RtMidi 6.0.0 freed them twice: thestk/rtmidi#376),
     // and the port opens again once plugged back in.

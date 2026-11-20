@@ -1,0 +1,27 @@
+# #53: a key pressed again before its key-up arrived (the key-up lost on the
+# way) leaves no voice that nothing can end: one key-up stops it.
+# Needs: the dev build and Arturia Analog Lab V (the instrument in the report).
+# Run:   build\dev\gck-ctl run tests\live\issue-53-repeated-note.txt
+start
+call document newSetlist
+call document addSong
+mark
+call document addChannel "C:/Program Files/Common Files/VST3/Arturia/Analog Lab V.vst3" "Analog Lab V"
+wait "Plugin Analog Lab V ready in" 60000 $mark
+sleep 1500
+
+# Pressed once, let go: silent 0.6 s later (about 0.004).
+play "on 60 100; wait 50; off 60"
+sleep 600
+level 300
+expect peak < 0.02
+
+# Pressed twice, let go once (the report's On, On, Off): silent too.
+# Before the fix a voice rang on: about 0.11.
+play "on 60 100; wait 50; on 60 100; wait 50; off 60"
+sleep 600
+level 300
+expect peak < 0.02
+keys
+expect down empty
+quit discard

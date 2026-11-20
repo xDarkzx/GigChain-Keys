@@ -148,7 +148,9 @@ public:
         };
     }
     [[nodiscard]] engine::LevelReading channelLevel(const core::ChannelId&) override { return {0.5F, 0.25F}; }
-    [[nodiscard]] engine::LevelReading masterLevel() override { return {0.4F, 0.2F}; }
+    // A peak that came before (the engine reports the peak since the last reading): given once, then 0.4.
+    float earlierPeak = 0.0F;
+    [[nodiscard]] engine::LevelReading masterLevel() override { return {std::max(std::exchange(earlierPeak, 0.0F), 0.4F), 0.2F}; }
     [[nodiscard]] float cpuLoad() const override { return 0.25F; }
     [[nodiscard]] bool midiActivity() const override { return true; }
     engine::MidiActivity keyboard;
@@ -207,6 +209,7 @@ public:
     [[nodiscard]] bool masterMuted() const override { return muted; }
     void injectNote(int channel, int note, int velocity) override { notes.push_back({channel, note, velocity}); }
     void injectController(int, int, int) override {}
+    core::Result<void> injectMidi(const QString&, const QByteArray&) override { return {}; }
     struct TimedNote
     {
         int channel = 0;
@@ -339,6 +342,7 @@ public:
         return 12.5;
     }
     [[nodiscard]] bool recording() const override { return !recordingTo.isEmpty(); }
+    [[nodiscard]] QString recordingPath() const override { return recordingTo; }
     int outputs = 8; // an 8-output interface
     [[nodiscard]] int outputChannels() const override { return outputs; }
     engine::BackingTrackState track;

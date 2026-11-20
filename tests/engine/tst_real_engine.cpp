@@ -265,6 +265,60 @@ private slots:
         QVERIFY(engine.cpuLoad() > 0.0F && engine.cpuLoad() < 1.0F);
     }
 
+    // A MIDI message played in as a keyboard sends it (the live test control):
+    // from no particular keyboard it plays; a keyboard that is not plugged in
+    // is said, not silently ignored; a message that is not one is refused.
+    // A message that cannot be played in (its queue full: far more than the audio
+    // takes between two blocks) says so, to the one who played it.
+    void aMessageThatCannotBePlayedInSaysSo()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY2(created.has_value(), created ? "" : qPrintable(created.error().message));
+        IEngine& engine = **created;
+        const QByteArray note = QByteArray::fromHex("903C64");
+        QString refused;
+        for (int i = 0; i < 20'000 && refused.isEmpty(); ++i) {
+            if (auto played = engine.injectMidi({}, note); !played) refused = played.error().message;
+        }
+        QVERIFY2(refused.contains(u"full"_s), qPrintable(refused));
+        // A note refused is not timed as a key played: only those queued are.
+        (void)engine.takeKeyPresses();
+        std::size_t accepted = 0;
+        int refusals = 0;
+        for (int i = 0; i < 20'000 && refusals < 10; ++i) {
+            if (engine.injectMidi({}, note)) ++accepted;
+            else ++refusals;
+        }
+        QCOMPARE(refusals, 10);
+        QCOMPARE(engine.takeKeyPresses().size(), std::min<std::size_t>(accepted, 1024));
+        (void)engine.poll(); // (its count of dropped messages, logged)
+    }
+
+    void aMessagePlayedInAsAKeyboardIsHeard()
+    {
+        if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(-90.0);
+        const core::Patch patch = pianoPatch();
+        engine.applyPatch(patch);
+        QVERIFY(engine.poll().empty());
+
+        QVERIFY(engine.injectMidi({}, QByteArray::fromHex("903c6e")).has_value());
+        const float peak = loudestUntilAbove(engine, [&] { return engine.channelLevel(patch.channels.at(0).id).peak; }, 0.001F);
+        QVERIFY2(peak > 0.001F, "the message played in stayed silent");
+        QVERIFY(engine.injectMidi({}, QByteArray::fromHex("803c00")).has_value());
+
+        const auto unplugged = engine.injectMidi(u"No Such Keyboard"_s, QByteArray::fromHex("903c6e"));
+        QVERIFY(!unplugged.has_value());
+        QVERIFY2(unplugged.error().message.contains(u"No Such Keyboard"_s), qPrintable(unplugged.error().message));
+        QVERIFY(!engine.injectMidi({}, QByteArray::fromHex("3c6e")).has_value()); // no status byte
+        QVERIFY(!engine.injectMidi({}, QByteArray::fromHex("f8")).has_value());   // a clock tick: not played in
+    }
+
     void changingTheSampleRateKeepsPlaying()
     {
         if (!QFileInfo::exists(kPiano)) QSKIP("The test instrument is not installed");
@@ -1261,7 +1315,11 @@ private slots:
             heard = std::max(heard, level());
         }
         engine.injectNote(1, 62, 0);
-        QVERIFY2(heard == 0.0F, qPrintable(u"the muted channel played after the rebuild (peak %1)"_s.arg(heard)));
+        // (A mute glides to silence over a few milliseconds, never a click, and a rebuilt strip starts where
+        // the old one's gains were: rebuilt within those milliseconds, the end of the glide can let through a
+        // trace, around -95 dB. A muted channel that plays is around 0.3: far above -80 dB.)
+        constexpr float kInaudible = 1e-4F; // -80 dB
+        QVERIFY2(heard < kInaudible, qPrintable(u"the muted channel played after the rebuild (peak %1)"_s.arg(heard)));
 
         engine.setChannelMute(id, false);
         engine.setKeyChordsOn(true);

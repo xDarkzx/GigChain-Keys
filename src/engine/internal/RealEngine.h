@@ -118,6 +118,7 @@ public:
     [[nodiscard]] double masterVolume() const override { return m_masterDb; }
     void injectNote(int midiChannel, int note, int velocity) override;
     void injectController(int midiChannel, int controller, int value) override;
+    core::Result<void> injectMidi(const QString& keyboard, const QByteArray& bytes) override;
     void scheduleNote(int midiChannel, int note, int velocity, double quarter) override;
     void clearScheduledNotes() override;
     [[nodiscard]] BeatClock beatClock() const override;
@@ -177,6 +178,7 @@ public:
     core::Result<void> startRecording(const QString& path) override { return m_recorder.start(path, m_audio.sampleRate()); }
     core::Result<double> stopRecording() override { return m_recorder.stop(); }
     [[nodiscard]] bool recording() const override { return m_recorder.recording(); }
+    [[nodiscard]] QString recordingPath() const override { return m_recorder.recording() ? m_recorder.filePath() : QString(); }
     [[nodiscard]] int outputChannels() const override { return m_audio.outputChannels(); }
     [[nodiscard]] bool clickOn() const override { return m_click.isOn(); }
     void setClickOnlyWhilePlaying(bool only) override { m_click.setOnlyWhilePlaying(only); }
