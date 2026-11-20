@@ -50,6 +50,10 @@ Downloads for every version are on the
   start (#55).
 - **A plugin switched back on (Settings > Plugins) loads at once** in the
   song and the effects that use it, without having to add a track first (#57).
+- **Opening a plugin's window no longer freezes the app.** A plugin that keeps
+  its window a pixel or two off the size asked (Surge XT on Linux), or keeps a
+  size of its own (Analog Lab V), set off endless resizing: the app stopped
+  responding every second, for minutes. The window now settles at once (#59).
 
 ## [0.11.0] - 2026-11-16 (alpha)
 

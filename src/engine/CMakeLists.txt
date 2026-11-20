@@ -37,6 +37,8 @@ add_library(gigchain_engine STATIC
     internal/Vst2Node.cpp
     internal/Vst3Node.h
     internal/Vst3Node.cpp
+    internal/EditorSizing.h
+    internal/EditorSizing.cpp
     internal/EngineLog.h
     internal/EngineLog.cpp
     internal/AudioDevice.h

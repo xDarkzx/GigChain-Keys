@@ -5,6 +5,7 @@
 #include "gigchain/platform/Process.h"
 #include "PluginModules.h"
 #include "Vst3RunLoop.h"
+#include "EditorSizing.h"
 #include "gigchain/core/Checks.h"
 
 #include "public.sdk/source/common/memorystream.h"
@@ -982,10 +983,17 @@ private:
             }
             if (m_view->getSize(&current) != kResultOk) return;
         }
-        if (current.getWidth() != shown.width() || current.getHeight() != shown.height()) {
-            qCWarning(lcEngine).noquote() << m_title << "is" << current.getWidth() << "x" << current.getHeight()
-                                          << "instead of" << shown.width() << "x" << shown.height();
-            m_fitter(QSize(current.getWidth(), current.getHeight())); // the window follows what it kept
+        const QSize kept(current.getWidth(), current.getHeight());
+        if (kept != shown) {
+            // Its rounding is left alone; a size of its own becomes its size, and the
+            // window follows it once: never the endless resizing of #59.
+            const KeptSize after = afterAskingSize(QSize(m_natural.getWidth(), m_natural.getHeight()), shown, kept);
+            m_natural = ViewRect(0, 0, after.natural.width(), after.natural.height());
+            if (after.follow) {
+                qCInfo(lcEngine).noquote() << m_title << "keeps" << kept.width() << "x" << kept.height() << "for"
+                                           << shown.width() << "x" << shown.height() << ": shown at the size it keeps";
+                m_fitter(kept);
+            }
         }
     }
 
