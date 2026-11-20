@@ -273,6 +273,7 @@ private slots:
     void aMessageThatCannotBePlayedInSaysSo()
     {
         auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
         QVERIFY2(created.has_value(), created ? "" : qPrintable(created.error().message));
         IEngine& engine = **created;
         const QByteArray note = QByteArray::fromHex("903C64");
