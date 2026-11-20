@@ -46,7 +46,8 @@ A version ships **every Monday** (New Zealand time). The week before it:
     Linux / Mac → Run workflow; ask before the Mac run, it is paid), their
     artifacts kept.
 
-  A failure is fixed before Monday, or its change is taken out. Either way
+  Write down the candidate's commit (`git rev-parse HEAD`): Monday's tag
+  goes on it. A failure is fixed before Monday, or its change is taken out. Either way
   the candidate is built and tested again from the new commit: only a
   candidate that passed is published.
 - **Monday:** tag the candidate's commit and publish exactly the files
@@ -77,11 +78,16 @@ A version ships **every Monday** (New Zealand time). The week before it:
 5. **Tag and push:**
 
    ```powershell
-   git tag -a v0.1.0 -m "GigChain Keys 0.1.0"
+   git tag -a v0.1.0 <candidate commit> -m "GigChain Keys 0.1.0"
    git push origin v0.1.0
    ```
 
-   The tag is the commit the candidate was built from. The Mac and Linux
+   `<candidate commit>` is the commit the candidate was built from, written
+   down on Sunday (`git rev-parse HEAD` when building it): the tag names it,
+   never whatever is checked out on Monday. Pushing the tag also starts the
+   Mac and Linux workflows again (their `v*` trigger); that Mac run is paid,
+   so ask before pushing the tag, and cancel it (Actions → Mac → Cancel)
+   when Sunday's Mac files are being published. The Mac and Linux
    files published are the ones from Sunday's runs on that commit
    (`.github/workflows/mac.yml`, `.github/workflows/linux.yml`), not new
    builds: download their artifacts (`gh run download <run id>`), and rename

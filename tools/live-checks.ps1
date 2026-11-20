@@ -17,6 +17,14 @@ New-Item -ItemType Directory -Force $outDir | Out-Null
 $stamp = Get-Date -Format 'yyyy-MM-dd_HHmm'
 $report = Join-Path $outDir "$stamp.log"
 function Write-Report([string]$text) { Add-Content -Path $report -Value $text -Encoding utf8; Write-Output $text }
+# Never against a copy someone is using: a live check starts and quits the app.
+# (Checked before the build, and again before every check: an app opened
+# meanwhile is never driven.)
+function Test-Closed {
+    if (-not (Get-Process GigChainKeys -ErrorAction SilentlyContinue)) { return $true }
+    Write-Report 'GigChain Keys is running: the live checks need it closed (the rest were not run)'
+    return $false
+}
 
 if ($Update) {
     # (Each checked: a failed fetch or checkout would test an older revision.)
@@ -27,16 +35,15 @@ if ($Update) {
     Write-Report "checkout: $(git log --oneline -1)"
 }
 
-# Never against a copy someone is using: a live check starts and quits the app.
-if (Get-Process GigChainKeys -ErrorAction SilentlyContinue) {
-    Write-Report 'GigChain Keys is running: the live checks need it closed (nothing was run)'
-    exit 1
-}
+if (-not (Test-Closed)) { exit 1 }
 
 # In its own process: its exit code is the build's, whatever went wrong (a
-# PowerShell error in the script included), never an earlier command's.
-cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\build.ps1`" -Preset dev -NoTest >> `"$report`" 2>&1"
-if ($LASTEXITCODE -ne 0) {
+# PowerShell error in the script included), never an earlier command's. Its
+# output goes into the report as UTF-8, like the rest.
+$built = cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\build.ps1`" -Preset dev -NoTest 2>&1"
+$buildCode = $LASTEXITCODE
+Add-Content -Path $report -Value $built -Encoding utf8
+if ($buildCode -ne 0) {
     Write-Report 'The dev build failed: no checks run (see above)'
     Add-Content -Path (Join-Path $outDir 'summary.log') -Value "$stamp BUILD FAILED" -Encoding utf8
     exit 2
@@ -49,14 +56,18 @@ try { $checks = @(Get-ChildItem (Join-Path $root 'tests\live') -Filter '*.txt' -
 catch { Write-Report "The live checks could not be listed: $_"; exit 1 }
 if ($checks.Count -eq 0) { Write-Report 'No live checks in tests\live: nothing was checked'; exit 1 }
 $failed = 0
+$ours = Join-Path $root 'build\dev\*'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8 # (gck-ctl prints UTF-8: plugin names, "—")
 foreach ($check in $checks) {
+    if (-not (Test-Closed)) { exit 1 }
     Write-Report "== $($check.Name)"
-    & $tool run $check.FullName *>> $report
+    $said = cmd /c "`"$tool`" run `"$($check.FullName)`" 2>&1"
     $code = $LASTEXITCODE
-    # (Whatever happened, the app is not left running for the next check.)
-    & $tool quit discard *> $null
+    Add-Content -Path $report -Value $said -Encoding utf8
+    # (Whatever happened, this run's app is not left running for the next check:
+    # only this checkout's dev build is ended, never another copy.)
     Start-Sleep -Seconds 3
-    Get-Process GigChainKeys -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$root\build\dev\*" } | Stop-Process -Force
+    Get-Process GigChainKeys -ErrorAction SilentlyContinue | Where-Object { $_.Path -like $ours } | Stop-Process -Force
     $verdict = if ($code -eq 0) { 'PASS' } else { $failed++; "FAIL (exit $code)" }
     Write-Report "   $verdict"
     Add-Content -Path (Join-Path $outDir 'summary.log') -Value "$stamp $($check.Name) $verdict" -Encoding utf8
