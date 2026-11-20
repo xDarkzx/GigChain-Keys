@@ -3,6 +3,7 @@
 //   gck-ctl [--socket <name>] <command> [args...]   one command; prints its answer
 //   gck-ctl run <file>                               one command a line (# comments); stops at the first error
 //   gck-ctl start [setlist]                          starts the dev app next to it with --dev-control
+//                                                    (start and restart: the app's own socket only, no --socket)
 //   gck-ctl kill                                     ends the app at once (as a player's force quit)
 //   gck-ctl kill-at <pattern> [ms]                   ends it the moment its log shows a matching line
 //   gck-ctl restart [setlist]                        quits it (unsaved changes dropped; else kills it) and starts it again
@@ -221,7 +222,7 @@ int killAt(const QString& socket, const QString& pattern, int ms, const QStringL
     const Answer pid = ask(socket, u"pid"_s);
     if (paths.code != kDone || pid.code != kDone) return print(paths.code != kDone ? paths : pid);
     QFile log(paths.json.value(u"log"_s).toString());
-    if (!log.open(QIODevice::ReadOnly)) return said(kFailed, u"Could not read the log %1"_s.arg(log.fileName()));
+    if (!log.open(QIODevice::ReadOnly)) return said(kFailed, u"Could not read the log %1: %2"_s.arg(log.fileName(), log.errorString()));
     log.seek(log.size());
     // The command that sets it going (opening a setlist): sent, not waited for (the app is busy, then gone).
     QLocalSocket sent;
@@ -283,7 +284,7 @@ QString scratch()
 int runFile(const QString& socket, const QString& path)
 {
     QFile file(path);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return said(kFailed, u"Could not read %1"_s.arg(path));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return said(kFailed, u"Could not read %1: %2"_s.arg(path, file.errorString()));
     int number = 0;
     while (!file.atEnd()) {
         ++number;
@@ -309,6 +310,10 @@ int perform(const QString& socket, const QStringList& words)
     const QString& cmd = words.front();
     const QString first = words.value(1);
     if (cmd == u"run"_s) return runFile(socket, first);
+    // The app always listens on its own socket: starting it elsewhere would wait on a socket nobody opens.
+    if ((cmd == u"start"_s || cmd == u"restart"_s) && socket != devcontrol::socketName()) {
+        return said(kFailed, u"%1 starts the app on its own socket (%2), not %3: leave out --socket"_s.arg(cmd, devcontrol::socketName(), socket));
+    }
     if (cmd == u"start"_s) return start(socket, first);
     if (cmd == u"kill"_s) return kill(socket);
     if (cmd == u"kill-at"_s) return killAt(socket, first, words.size() > 2 ? words.at(2).toInt() : 60'000, words.mid(3));

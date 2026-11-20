@@ -168,6 +168,8 @@ void addMeasureCommands(DevControl& control)
             }
             if (!known) return reply.fail(u"No channel %1 in this sound (status lists them)"_s.arg(channel));
         }
+        // The engine gives the peak since the last reading: one read now drops what came before this request.
+        (void)(channel.isEmpty() ? engine->masterLevel() : engine->channelLevel(core::ChannelId(channel)));
         auto loudest = std::make_shared<engine::LevelReading>();
         sampleFor(&control, ms, 5, reply, [engine, channel, loudest] {
             const engine::LevelReading now = channel.isEmpty() ? engine->masterLevel() : engine->channelLevel(core::ChannelId(channel));

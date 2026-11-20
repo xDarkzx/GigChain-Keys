@@ -282,6 +282,16 @@ private slots:
             if (auto played = engine.injectMidi({}, note); !played) refused = played.error().message;
         }
         QVERIFY2(refused.contains(u"full"_s), qPrintable(refused));
+        // A note refused is not timed as a key played: only those queued are.
+        (void)engine.takeKeyPresses();
+        std::size_t accepted = 0;
+        int refusals = 0;
+        for (int i = 0; i < 20'000 && refusals < 10; ++i) {
+            if (engine.injectMidi({}, note)) ++accepted;
+            else ++refusals;
+        }
+        QCOMPARE(refusals, 10);
+        QCOMPARE(engine.takeKeyPresses().size(), std::min<std::size_t>(accepted, 1024));
         (void)engine.poll(); // (its count of dropped messages, logged)
     }
 

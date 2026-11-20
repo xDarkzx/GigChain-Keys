@@ -969,6 +969,9 @@ core::Result<void> RealEngine::injectMidi(const QString& keyboard, const QByteAr
         qCWarning(lcEngine).noquote() << message;
         return core::fail(core::ErrorCode::InvalidData, message);
     }
+    if (const MidiEvent& queued = **shaped; !queued.controlsOnly && (queued.status & 0xF0) == 0x90 && queued.data2 > 0) {
+        m_midi.recordPress(queued.data1, queued.data2); // (queued: timed as a keyboard's key)
+    }
     return {};
 }
 

@@ -141,7 +141,8 @@ public:
     // Main thread: one message (`bytes`) as the open input `portName` passes
     // it on (empty: from no particular keyboard), for the live test control.
     // A transport request goes where a keyboard's does; a key pressed is seen
-    // and timed as a keyboard's. Nullopt: nothing to play (another channel, a
+    // as a keyboard's (the caller times it with recordPress once it is queued,
+    // so a note refused is never counted). Nullopt: nothing to play (another channel, a
     // dropped control, a transport request, sysex). Errors: no open input of
     // that name, not a MIDI message, a clock tick (only a real clock times).
     // Never touches the input's own queue or its thread's state (its Mackie

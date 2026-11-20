@@ -26,6 +26,24 @@ using namespace gigchain;
 using namespace gigchain::devcontrol;
 using namespace Qt::StringLiterals;
 
+namespace {
+
+// No key held: only from a reply that succeeded and lists the keys (an error or no answer is not "none").
+bool noKeysDown(DevClient& client)
+{
+    const QJsonObject reply = client.ask(u"keys"_s);
+    return reply.value(u"ok"_s).toBool() && reply.value(u"down"_s).isArray() && reply.value(u"down"_s).toArray().isEmpty();
+}
+
+// A dialog closed: only from a reply that succeeded and says so.
+bool closed(DevClient& client, const QString& dialog)
+{
+    const QJsonObject reply = client.ask(u"ui-get"_s, {dialog, u"opened"_s});
+    return reply.value(u"ok"_s).toBool() && reply.value(u"value"_s).isBool() && !reply.value(u"value"_s).toBool();
+}
+
+} // namespace
+
 class TestDevControl : public QObject
 {
     Q_OBJECT
@@ -238,7 +256,7 @@ private slots:
         QVERIFY(!covered.value(u"ok"_s).toBool());
         QVERIFY2(covered.value(u"error"_s).toString().contains(u"covered"_s), qPrintable(covered.value(u"error"_s).toString()));
         QVERIFY(client.ask(u"key"_s, {u"Escape"_s}).value(u"ok"_s).toBool()); // closes it
-        QTRY_VERIFY(!client.ask(u"ui-get"_s, {u"settingsDialog"_s, u"opened"_s}).value(u"value"_s).toBool());
+        QTRY_VERIFY(closed(client, u"settingsDialog"_s));
     }
 
     void hoverShowsATooltip()
@@ -272,7 +290,7 @@ private slots:
         QVERIFY(client.ask(u"note"_s, {60, 100}).value(u"ok"_s).toBool());
         QTRY_VERIFY(client.ask(u"keys"_s).value(u"down"_s).toArray().contains(QJsonObject{{u"key"_s, 60}, {u"velocity"_s, 100}}));
         QVERIFY(client.ask(u"note"_s, {60, 0}).value(u"ok"_s).toBool());
-        QTRY_VERIFY(client.ask(u"keys"_s).value(u"down"_s).toArray().isEmpty());
+        QTRY_VERIFY(noKeysDown(client));
         QVERIFY(client.ask(u"cc"_s, {64, 127}).value(u"ok"_s).toBool());
         QVERIFY(client.ask(u"midi"_s, {u"B0 40 00"_s}).value(u"ok"_s).toBool());
         const QJsonObject bad = client.ask(u"midi"_s, {u"GG"_s});
@@ -286,7 +304,7 @@ private slots:
         const QJsonObject played = client.ask(u"play"_s, {u"on 64 90; wait 150; off 64"_s});
         QVERIFY2(played.value(u"ok"_s).toBool(), qPrintable(played.value(u"error"_s).toString()));
         QVERIFY2(played.value(u"ms"_s).toInt() >= 150, qPrintable(QString::number(played.value(u"ms"_s).toInt())));
-        QTRY_VERIFY(client.ask(u"keys"_s).value(u"down"_s).toArray().isEmpty());
+        QTRY_VERIFY(noKeysDown(client));
         QVERIFY(!client.ask(u"play"_s, {u"on 64 90; jump"_s}).value(u"ok"_s).toBool());
     }
 
@@ -371,6 +389,22 @@ private slots:
         QVERIFY(!replaced.value(u"ok"_s).toBool());
         QVERIFY2(replaced.value(u"error"_s).toString().contains(u"replaced"_s), qPrintable(replaced.value(u"error"_s).toString()));
         QCOMPARE(spy.recordingPath(), theirs); // still recording
+    }
+
+    // A level measures only its own time: a peak from before the request (not yet read) is left out.
+    void aLevelLeavesOutWhatCameBefore()
+    {
+        test::SpyEngine spy;
+        const QString name = m_name + u"-level"_s;
+        DevControl control(DevControl::Context{.engine = &spy, .objects = {}, .window = nullptr, .logFile = {},
+                                               .dataFolder = m_dir->path(), .socketName = name, .quit = {}});
+        addMeasureCommands(control);
+        QVERIFY(control.listen().has_value());
+        DevClient client(name);
+        spy.earlierPeak = 0.9F;
+        const QJsonObject level = client.ask(u"level"_s, {50});
+        QVERIFY2(level.value(u"ok"_s).toBool(), qPrintable(level.value(u"error"_s).toString()));
+        QCOMPARE(static_cast<float>(level.value(u"peak"_s).toDouble()), 0.4F);
     }
 
     // Quitting never waits on the "save changes?" question: with unsaved changes

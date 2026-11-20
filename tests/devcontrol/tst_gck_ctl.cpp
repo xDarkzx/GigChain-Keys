@@ -135,6 +135,30 @@ private slots:
         QCOMPARE(helps, 1); // stopped at jump
         QVERIFY2(checked.output.contains(u"jump"_s), qPrintable(checked.output));
     }
+
+    // The app listens on its own socket: start and restart elsewhere say so at once (nothing is started or quit).
+    void startingOnAnotherSocketIsRefused()
+    {
+        bool quitAsked = false;
+        m_control->add(u"quit"_s, u"quit"_s, [&quitAsked](const DevRequest&, const Reply& reply) {
+            quitAsked = true;
+            reply.ok();
+        });
+        for (const QString& cmd : {u"start"_s, u"restart"_s}) {
+            const Run refused = run({u"--socket"_s, m_name, cmd});
+            QCOMPARE(refused.code, 1);
+            QVERIFY2(refused.output.contains(u"leave out --socket"_s), qPrintable(refused.output));
+        }
+        QVERIFY(!quitAsked);
+    }
+
+    // A file that cannot be read says why.
+    void aMissingCommandFileSaysWhy()
+    {
+        const Run missing = run({u"--socket"_s, m_name, u"run"_s, u"no-such-check.txt"_s});
+        QCOMPARE(missing.code, 1);
+        QVERIFY2(missing.output.contains(u"no-such-check.txt: "_s), qPrintable(missing.output));
+    }
 };
 
 QTEST_MAIN(TestGckCtl)

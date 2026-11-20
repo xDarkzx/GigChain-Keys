@@ -376,8 +376,7 @@ core::Result<std::optional<MidiEvent>> MidiInput::shapeAs(const QString& portNam
     if (!parseMidi(bytes)) return core::fail(core::ErrorCode::InvalidData, u"Not a whole MIDI channel message: \"%1\""_s.arg(hex));
     auto event = shapeAsKeyboard(keyboard, bytes);
     if (event && !event->controlsOnly && (event->status & 0xF0) == 0x90 && event->data2 > 0) {
-        m_activity.store(true, std::memory_order_relaxed);
-        recordPress(event->data1, event->data2); // (timed as a keyboard's key)
+        m_activity.store(true, std::memory_order_relaxed); // (timed by the caller once it is queued: recordPress)
     }
     return event;
 }

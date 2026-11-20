@@ -1,0 +1,24 @@
+# FabFilter Pro-Q 3's analyser shows the sound going through it (the
+# spectrum, so a player can see where to cut).
+# Needs: the dev build, Arturia Piano V2 and FabFilter Pro-Q 3.
+# Run:   build\dev\gck-ctl run tests\live\fabfilter-analyser.txt
+start
+call document newSetlist
+call document addSong
+mark
+call document addChannel "C:/Program Files/Common Files/VST3/Arturia/Piano V2.vst3" "Piano V2"
+wait "Plugin Piano V2 ready in" 60000 $mark
+mark
+call document addEffect 0 "C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-Q 3.vst3" "Pro-Q 3"
+wait "Plugin Pro-Q 3 ready in" 60000 $mark
+plugin-window 0 0
+sleep 2500
+windows
+# A chord held while the picture is taken: the analyser should draw it.
+play "on 48 110; on 60 110; on 64 110; on 67 110"
+sleep 1500
+level 300
+expect peak > 0.01
+shot "$tmp/proq-analyser.png" "window:Pro-Q 3 — Piano V2"
+play "off 48; off 60; off 64; off 67"
+quit discard
