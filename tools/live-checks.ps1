@@ -6,7 +6,8 @@
 #   tools\live-checks.ps1            the checks, on this checkout as it is
 #   tools\live-checks.ps1 -Update    first moves this checkout to origin/main (a checkout kept for this only)
 # Report: build\live\<date>.log, and a line per check in build\live\summary.log.
-# Exit code: 0 every check passed, 1 one failed, 2 the build failed.
+# Exit code: 0 every check passed, 1 one failed (or none were found), 2 the
+# checkout or the build failed.
 param([switch]$Update)
 $ErrorActionPreference = 'Continue'
 $root = Split-Path $PSScriptRoot -Parent
@@ -18,8 +19,11 @@ $report = Join-Path $outDir "$stamp.log"
 function Write-Report([string]$text) { Add-Content -Path $report -Value $text -Encoding utf8; Write-Output $text }
 
 if ($Update) {
+    # (Each checked: a failed fetch or checkout would test an older revision.)
     git fetch --quiet origin
+    if ($LASTEXITCODE -ne 0) { Write-Report "git fetch failed (exit $LASTEXITCODE): no checks run"; exit 2 }
     git checkout --quiet --detach origin/main
+    if ($LASTEXITCODE -ne 0) { Write-Report "git checkout origin/main failed (exit $LASTEXITCODE): no checks run"; exit 2 }
     Write-Report "checkout: $(git log --oneline -1)"
 }
 
@@ -29,7 +33,9 @@ if (Get-Process GigChainKeys -ErrorAction SilentlyContinue) {
     exit 1
 }
 
-& (Join-Path $PSScriptRoot 'build.ps1') -Preset dev -NoTest *>> $report
+# In its own process: its exit code is the build's, whatever went wrong (a
+# PowerShell error in the script included), never an earlier command's.
+cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\build.ps1`" -Preset dev -NoTest >> `"$report`" 2>&1"
 if ($LASTEXITCODE -ne 0) {
     Write-Report 'The dev build failed: no checks run (see above)'
     Add-Content -Path (Join-Path $outDir 'summary.log') -Value "$stamp BUILD FAILED" -Encoding utf8
@@ -38,8 +44,12 @@ if ($LASTEXITCODE -ne 0) {
 
 $env:PATH = "$(if ($env:QT_ROOT_DIR) { $env:QT_ROOT_DIR } else { 'C:\Qt\6.10.2\msvc2022_64' })\bin;$env:PATH"
 $tool = Join-Path $root 'build\dev\gck-ctl.exe'
+# No checks found is a failure: a missing folder must never read as "all passed".
+try { $checks = @(Get-ChildItem (Join-Path $root 'tests\live') -Filter '*.txt' -ErrorAction Stop | Sort-Object Name) }
+catch { Write-Report "The live checks could not be listed: $_"; exit 1 }
+if ($checks.Count -eq 0) { Write-Report 'No live checks in tests\live: nothing was checked'; exit 1 }
 $failed = 0
-foreach ($check in Get-ChildItem (Join-Path $root 'tests\live') -Filter '*.txt' | Sort-Object Name) {
+foreach ($check in $checks) {
     Write-Report "== $($check.Name)"
     & $tool run $check.FullName *>> $report
     $code = $LASTEXITCODE

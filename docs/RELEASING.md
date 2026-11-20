@@ -30,13 +30,28 @@ A version ships **every Monday** (New Zealand time). The week before it:
   then a squash merge.
 - **Freeze: Sunday at noon.** Nothing new merges after it unless it fixes
   something the release candidate broke.
-- **Sunday afternoon: the release candidate.** Build the downloads from
-  `main`'s head, run every live check (`tests/live`, see
-  [testing/live-test-control.md](testing/live-test-control.md)) and a soak
-  (`tools/soak.ps1`) on that build. A failure is fixed before Monday, or
-  its change is taken out.
-- **Monday:** tag and publish exactly that build (the steps below). What
-  merged after the freeze waits for the next Monday.
+- **Sunday afternoon: the release candidate.** First the release commit
+  (steps 1 and 2 below, through its own pull request), then from that
+  commit:
+  - the Windows downloads (step 3; `package.ps1` runs every test on the
+    release build it packs), a soak of that release build
+    (`tools/soak.ps1`, the `release` preset) and the installer tried
+    (step 4);
+  - every live check (`tests/live`, see
+    [testing/live-test-control.md](testing/live-test-control.md)) with
+    `tools/live-checks.ps1`. The live test control is left out of release
+    builds, so the checks drive the `dev` build of the same commit: the
+    same code with the control compiled in;
+  - the Linux and Mac downloads, started by hand on that commit (Actions →
+    Linux / Mac → Run workflow; ask before the Mac run, it is paid), their
+    artifacts kept.
+
+  A failure is fixed before Monday, or its change is taken out. Either way
+  the candidate is built and tested again from the new commit: only a
+  candidate that passed is published.
+- **Monday:** tag the candidate's commit and publish exactly the files
+  tested on Sunday (steps 5 to 8). What merged after the freeze waits for
+  the next Monday.
 - **A patch release** (0.12.1) only for what hurts players: a crash, lost
   work, no sound, an app that will not start.
 
@@ -63,12 +78,13 @@ A version ships **every Monday** (New Zealand time). The week before it:
 
    ```powershell
    git tag -a v0.1.0 -m "GigChain Keys 0.1.0"
-   git push origin main v0.1.0
+   git push origin v0.1.0
    ```
 
-   The tag starts the Mac build (`.github/workflows/mac.yml`) and the Linux
-   build (`.github/workflows/linux.yml`). When they finish, download their
-   artifacts (`gh run download <run id>`), and rename
+   The tag is the commit the candidate was built from. The Mac and Linux
+   files published are the ones from Sunday's runs on that commit
+   (`.github/workflows/mac.yml`, `.github/workflows/linux.yml`), not new
+   builds: download their artifacts (`gh run download <run id>`), and rename
    `GigChain Keys-<version>-arm64.dmg` to `GigChainKeys-<version>-arm64.dmg`
    (GitHub turns spaces in release file names into dots). The Linux ones
    (`GigChainKeys-<version>-x86_64.AppImage`, `gigchain-keys_<version>_amd64.deb`)
