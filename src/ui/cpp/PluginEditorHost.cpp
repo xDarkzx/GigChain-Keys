@@ -231,7 +231,18 @@ void PluginEditorHost::place()
     // platform recreating it): the plugin's own went with the old one, so it opens
     // again in the new one (#59).
     if (window()->winId() != m_hostWindow) {
-        QMetaObject::invokeMethod(this, &PluginEditorHost::rebuild, Qt::QueuedConnection);
+        // Once, however often it is placed meanwhile (opening it is slow), and
+        // only if still needed when it runs.
+        if (!m_reopenQueued) {
+            m_reopenQueued = true;
+            QMetaObject::invokeMethod(
+                this,
+                [this] {
+                    m_reopenQueued = false;
+                    if (m_window && window() != nullptr && window()->winId() != m_hostWindow) rebuild();
+                },
+                Qt::QueuedConnection);
+        }
         return;
     }
     if (m_windowSize.isEmpty()) return;

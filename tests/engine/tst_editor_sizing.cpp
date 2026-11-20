@@ -22,6 +22,7 @@ struct Outcome
     int rounds = 0;
     QSize window;
     QSize plugin;
+    QSize natural; // the plugin's own size, as the host keeps it
 };
 Outcome settle(QSize own, QSize room, const std::function<QSize(QSize)>& keeps, int most = 50)
 {
@@ -44,9 +45,9 @@ Outcome settle(QSize own, QSize room, const std::function<QSize(QSize)>& keeps, 
             natural = after.natural;
             if (after.follow) resize(plugin); // (the window follows what it kept)
         }
-        if (!changed) return Outcome{.rounds = round, .window = window, .plugin = plugin};
+        if (!changed) return Outcome{.rounds = round, .window = window, .plugin = plugin, .natural = natural};
     }
-    return Outcome{.rounds = 0, .window = window, .plugin = plugin};
+    return Outcome{.rounds = 0, .window = window, .plugin = plugin, .natural = natural};
 }
 
 } // namespace
@@ -74,6 +75,21 @@ private slots:
         const Outcome outcome = settle(QSize(814, 562), QSize(2000, 1200), ownSize);
         QVERIFY2(outcome.rounds > 0 && outcome.rounds <= 3, qPrintable(QString::number(outcome.rounds)));
         QCOMPARE(outcome.window, QSize(814, 886));
+    }
+
+    // A plugin that will not be made smaller, in a room too small for it: its own
+    // size stays its own (never grown by the fit's scale, round after round), and
+    // its window stays the room's size, showing what fits.
+    void aPluginRefusingToShrinkSettles()
+    {
+        const auto fixed = [](QSize) { return QSize(800, 500); };
+        const Outcome outcome = settle(QSize(800, 500), QSize(400, 250), fixed);
+        QVERIFY2(outcome.rounds > 0 && outcome.rounds <= 3, qPrintable(QString::number(outcome.rounds)));
+        QCOMPARE(outcome.window, QSize(400, 250));
+        QCOMPARE(outcome.natural, QSize(800, 500));
+        const KeptSize again = afterAskingSize(QSize(800, 500), QSize(400, 250), QSize(800, 500));
+        QVERIFY(!again.follow);
+        QCOMPARE(again.natural, QSize(800, 500));
     }
 
     // A plugin that takes the size it is given: one round, nothing changed.

@@ -23,6 +23,13 @@ KeptSize afterAskingSize(QSize natural, QSize shown, QSize kept)
         return KeptSize{.follow = false, .natural = natural};
     }
     if (shown.isEmpty() || kept.isEmpty()) return KeptSize{.follow = true, .natural = natural};
+    // Fitted down into a room too small for it and kept bigger than asked: it does
+    // not scale, so what it kept is its own size, as it is (scaling it up by the
+    // fit would grow it at every fit, without end). Its window stays the room's
+    // size, showing what fits: following it would only be fitted back again.
+    const bool fittedDown = shown.width() < natural.width() - kRounding || shown.height() < natural.height() - kRounding;
+    const bool refused = kept.width() > shown.width() + kRounding || kept.height() > shown.height() + kRounding;
+    if (fittedDown && refused) return KeptSize{.follow = false, .natural = kept};
     // A size of its own (Analog Lab V keeping 814 x 886 when asked for 814 x 562):
     // that is its size from now on, in its own units (the size asked may have been
     // fitted down into the room), so the next fit asks for what it keeps.
