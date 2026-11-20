@@ -57,6 +57,9 @@ Downloads for every version are on the
 - **Linux: a detached plugin window shows the plugin** (it was empty, for
   every plugin): the plugin now opens once its window is on the screen, and
   opens again if the system replaces that window (#59).
+- **Analysers show the sound going through them** (FabFilter Pro-Q 3's
+  spectrum was empty, so there was nothing to see where to cut). What a
+  plugin measures while playing now reaches its window (#61).
 
 ## [0.11.0] - 2026-11-16 (alpha)
 

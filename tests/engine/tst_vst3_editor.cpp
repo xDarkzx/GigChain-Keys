@@ -9,15 +9,24 @@
 
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QScopeGuard>
 #include <QWindow>
 #include <QtTest>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <ole2.h>
+#include "WindowCapture.h" // (after Qt, which defines Q_OS_WIN)
 #endif
 
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <cstring>
 #include <memory>
+#include <numbers>
+#include <thread>
+#include <vector>
 
 using namespace gigchain;
 using namespace gigchain::engine;
@@ -45,6 +54,21 @@ public:
     HiddenParent& operator=(HiddenParent&&) = delete;
 
     [[nodiscard]] quintptr handle() const { return reinterpret_cast<quintptr>(m_hwnd); } // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): an HWND as a window id
+    [[nodiscard]] HWND window() const { return m_hwnd; }
+
+    // Shown, so the window system draws it and it can be captured (one off every
+    // screen is never drawn), but unseen: all but fully see-through, behind every
+    // window, clicks going through it, no taskbar button, never focused.
+    void showUnseen(QSize size) const
+    {
+        SetWindowLongPtrW(m_hwnd, GWL_EXSTYLE,
+                          GetWindowLongPtrW(m_hwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED
+                              | WS_EX_TRANSPARENT);
+        SetLayeredWindowAttributes(m_hwnd, 0, 1, LWA_ALPHA);
+        SetWindowPos(m_hwnd, HWND_BOTTOM, GetSystemMetrics(SM_XVIRTUALSCREEN), GetSystemMetrics(SM_YVIRTUALSCREEN),
+                     size.width(), size.height(), SWP_NOACTIVATE);
+        ShowWindow(m_hwnd, SW_SHOWNOACTIVATE);
+    }
 
 private:
     HWND m_hwnd;
@@ -139,6 +163,80 @@ private slots:
         QTest::qWait(300); // idled meanwhile
         (*editor)->detach();
         QVERIFY(!(*editor)->isAttached());
+#endif
+    }
+
+    // An analyser shows the sound going through it (#61): FabFilter Pro-Q 3's
+    // spectrum, drawn while a tone plays and not while it is silent.
+    void anAnalyserShowsTheSoundGoingThroughIt()
+    {
+#ifndef Q_OS_WIN
+        QSKIP("The test analyser is FabFilter Pro-Q 3 (Windows)");
+#else
+        const QString proQ = u"C:/Program Files/Common Files/VST3/FabFilter/FabFilter Pro-Q 3.vst3"_s;
+        if (!QFileInfo::exists(proQ)) QSKIP("FabFilter Pro-Q 3 is not installed");
+        constexpr double kRate = 48000.0;
+        constexpr int kBlock = 256;
+        auto node = Vst3Node::load(proQ, kRate, kBlock);
+        QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
+        auto editor = Vst3Node::createEditor(*node);
+        QVERIFY2(editor.has_value() && *editor, "no editor");
+        HiddenParent parent;
+        QVERIFY((*editor)->attach({.handle = parent.handle(), .kind = platform::nativeWindowKind()}).has_value());
+        const QSize size = (*editor)->preferredSize();
+        parent.showUnseen(size);
+        (*editor)->updateGeometry();
+
+        // The audio thread: silence, then a tone, as the engine plays them.
+        std::atomic<bool> playing{true};
+        std::atomic<bool> tone{false};
+        std::thread audio([&node, &playing, &tone] {
+            std::vector<float> left(kBlock);
+            std::vector<float> right(kBlock);
+            TimeInfo time{.tempo = 120.0, .sampleRate = kRate, .samplePosition = 0, .ppqPosition = 0.0,
+                                .barStartPpq = 0.0, .timeSigNumerator = 4, .timeSigDenominator = 4};
+            double phase = 0.0;
+            while (playing.load()) {
+                for (std::size_t i = 0; i < left.size(); ++i) {
+                    left.at(i) = right.at(i) = tone.load() ? 0.5F * static_cast<float>(std::sin(phase)) : 0.0F;
+                    phase += 2.0 * std::numbers::pi * 220.0 / kRate;
+                }
+                (*node)->process({}, AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, time);
+                time.samplePosition += kBlock; // (playing on, as the engine does)
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+        });
+        // Stopped on every way out (a capture can throw): a joinable thread destroyed ends the test run.
+        const auto stopAudio = [&playing, &audio] {
+            playing = false;
+            if (audio.joinable()) audio.join();
+        };
+        const auto stopOnExit = qScopeGuard(stopAudio);
+        QTest::qWait(1500);
+        const QImage silent = windowcapture::captureWindow(parent.window());
+        tone = true;
+        QTest::qWait(2000);
+        const QImage sounding = windowcapture::captureWindow(parent.window());
+        stopAudio();
+        (*editor)->detach();
+
+        if (const QString folder = qEnvironmentVariable("GIGCHAIN_SCREENSHOTS"); !folder.isEmpty()) {
+            silent.save(folder + u"/proq-silent.png"_s);
+            sounding.save(folder + u"/proq-sounding.png"_s);
+        }
+        QVERIFY2(!silent.isNull() && !sounding.isNull(), "the window could not be captured");
+        QCOMPARE(sounding.size(), silent.size());
+        // Only the spectrum's area counts: Pro-Q 3's title bar is the top 5%, its
+        // frequency scale and bottom bar the last 7%, and its output meter the
+        // right 5% (a meter moving is not the spectrum). Before the fix not one
+        // pixel of the whole window changed.
+        const QRect spectrum(0, silent.height() * 5 / 100, silent.width() * 95 / 100, silent.height() * 88 / 100);
+        qsizetype changed = 0;
+        for (int y = spectrum.top(); y <= spectrum.bottom(); ++y) {
+            for (int x = spectrum.left(); x <= spectrum.right(); ++x) changed += silent.pixel(x, y) != sounding.pixel(x, y) ? 1 : 0;
+        }
+        qInfo() << "spectrum pixels the tone changed:" << changed << "of" << spectrum.width() * spectrum.height();
+        QVERIFY2(changed > 1000, "the analyser drew no spectrum for the sound going through it");
 #endif
     }
 
