@@ -223,6 +223,43 @@ private slots:
         QVERIFY2(held > damped * 3.0F && held > 0.001F, qPrintable(u"without pedal %1, with pedal %2"_s.arg(damped).arg(held)));
     }
 
+    // A parameter the plugin moves itself (its own MIDI mapping: a controller
+    // reaches a hidden helper parameter, which moves the real one) shows in its
+    // own window, as one the host sets does (#60).
+    void aPluginsOwnParameterMovesShowInItsWindow()
+    {
+        const QString analogLab = u"C:/Program Files/Common Files/VST3/Arturia/Analog Lab V.vst3"_s;
+        if (!QFileInfo::exists(analogLab)) QSKIP("Arturia Analog Lab V is not installed");
+        auto node = Vst3Node::load(analogLab, kRate, kBlock);
+        QVERIFY2(node.has_value(), node ? "" : qPrintable(node.error().message));
+        std::vector<float> left(kBlock);
+        std::vector<float> right(kBlock);
+        const auto play = [&](std::vector<MidiEvent> events, int blocks) {
+            for (int block = 0; block < blocks; ++block) {
+                (*node)->process(block == 0 ? std::span<const MidiEvent>(events) : std::span<const MidiEvent>(),
+                                 AudioBlock{.left = left.data(), .right = right.data(), .frames = kBlock}, kTime);
+            }
+        };
+        play({}, 20);
+        (*node)->showParameterChanges();
+        const std::vector<Vst3Node::Parameter> parameters = (*node)->parameters();
+        std::vector<double> before;
+        before.reserve(parameters.size());
+        for (const auto& p : parameters) before.push_back((*node)->parameterValue(p.id));
+
+        // The mod wheel and a few knobs, all the way up, as a KeyLab's factory mapping sends them.
+        play({MidiEvent{.status = 0xB0, .data1 = 1, .data2 = 127}, MidiEvent{.status = 0xB0, .data1 = 74, .data2 = 127},
+              MidiEvent{.status = 0xB0, .data1 = 71, .data2 = 127}, MidiEvent{.status = 0xB0, .data1 = 76, .data2 = 127}},
+             20);
+        (*node)->showParameterChanges();
+        int moved = 0;
+        for (std::size_t i = 0; i < parameters.size(); ++i) {
+            if (std::abs((*node)->parameterValue(parameters.at(i).id) - before.at(i)) > 1e-6) ++moved;
+        }
+        qInfo() << "parameters shown moved:" << moved << "of" << parameters.size();
+        QVERIFY2(moved > 0, "the plugin moved its own parameters, and its window showed none of it");
+    }
+
     // A key pressed again while the instrument still holds it (its key-up lost
     // on the way: a keyboard's firmware, a USB hiccup) leaves no voice that
     // nothing can end: one key-up stops it like a single press (#53).

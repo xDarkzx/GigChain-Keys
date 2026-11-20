@@ -60,6 +60,10 @@ Downloads for every version are on the
 - **Analysers show the sound going through them** (FabFilter Pro-Q 3's
   spectrum was empty, so there was nothing to see where to cut). What a
   plugin measures while playing now reaches its window (#61).
+- **A plugin's own window follows your keyboard's knobs.** Knobs a plugin maps
+  to its own controls (Analog Lab with an Arturia KeyLab, out of the box) moved
+  the sound while the knob on screen stood still; the window now moves with
+  them, and with any change the plugin makes itself (#60).
 
 ## [0.11.0] - 2026-11-16 (alpha)
 

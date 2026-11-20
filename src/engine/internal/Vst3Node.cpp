@@ -254,6 +254,10 @@ struct Vst3Node::Impl
     // (Room for a Note Off before each Note On too: a key pressed again while held, process().)
     Vst::EventList events{2 * kMaxStripEventsPerBlock};
     Vst::ParameterChanges parameterChanges;
+    // Where the plugin says which parameters it moved itself this block (its own
+    // MIDI mapping, a modulation, a snapshot): its window is told after (#60).
+    static constexpr int32 kOutputParameterRoom = 128;
+    Vst::ParameterChanges outputChanges{kOutputParameterRoom};
     Vst::ProcessContext context{};
     QString name;
     QString bundlePath;
@@ -273,11 +277,18 @@ struct Vst3Node::Impl
     // the plugin's own parameters, per MIDI channel: VST3 plugins take no raw
     // controllers, the host translates them (IMidiMapping). Built at load.
     std::array<std::array<Vst::ParamID, Vst::kCountCtrlNumber>, 16> midiMapping{};
-    // Parameters the host set from the audio thread (mapped knobs), for the
-    // main thread to show in the plugin's own window: id and value packed,
-    // 0 = nothing new. A slot per id % size; two ids sharing a slot only lose
-    // a window update, never the sound.
-    std::array<std::atomic<uint64_t>, 32> parameterEcho{};
+    // Parameters that moved on the audio thread, set by the host (mapped knobs) or
+    // by the plugin itself (outputChanges), for the main thread to show in the
+    // plugin's own window: id and value packed, 0 = nothing new. A slot per
+    // id % size; two ids sharing a slot only lose a window update, never the sound.
+    std::array<std::atomic<uint64_t>, 256> parameterEcho{};
+
+    // Audio thread: a parameter's new value, for the main thread to show in its window.
+    void echo(Vst::ParamID id, double value) noexcept
+    {
+        const uint64_t packed = (uint64_t{id} << 32U) | std::bit_cast<uint32_t>(static_cast<float>(std::clamp(value, 0.0, 1.0)));
+        parameterEcho.at(id % parameterEcho.size()).store(packed == 0 ? 1 : packed, std::memory_order_relaxed);
+    }
 
     // Main thread, at load: asks the plugin which parameter each controller
     // moves, and reserves a queue for each (and for mapped knobs) so the
@@ -313,6 +324,7 @@ struct Vst3Node::Impl
         const Vst::ParamID id = midiMapping.at(static_cast<std::size_t>(channel)).at(static_cast<std::size_t>(number));
         if (id == Vst::kNoParamId) return;
         setParameter(id, value, sampleOffset);
+        echo(id, value); // (its window follows too: a keyboard's knob mapped by the plugin itself, #60)
     }
 
     // Audio thread: a parameter change in this block's queue.
@@ -378,6 +390,7 @@ struct Vst3Node::Impl
                          .timeSigDenominator = 4}); // until the first block says otherwise
         data.inputEvents = &events;
         data.inputParameterChanges = &parameterChanges;
+        data.outputParameterChanges = &outputChanges;
         data.processContext = &context;
 
         if (!succeeded(component->setActive(true))) {
@@ -524,8 +537,7 @@ void Vst3Node::queueParameter(uint32_t id, double value, int32_t sampleOffset) n
     Impl& impl = *m_impl;
     const double clamped = std::clamp(value, 0.0, 1.0);
     impl.setParameter(id, clamped, sampleOffset);
-    const uint64_t packed = (uint64_t{id} << 32U) | std::bit_cast<uint32_t>(static_cast<float>(clamped));
-    impl.parameterEcho.at(id % impl.parameterEcho.size()).store(packed == 0 ? 1 : packed, std::memory_order_relaxed);
+    impl.echo(id, clamped);
 }
 
 bool Vst3Node::holdsNotes() const noexcept
@@ -639,6 +651,15 @@ void Vst3Node::process(std::span<const MidiEvent> events, AudioBlock io, const T
     }
     // Taken by the plugin; the next block's changes start from empty.
     impl.parameterChanges.clearQueue();
+    // What it moved itself: its window follows (each parameter's last value this block).
+    for (int32 i = 0; i < impl.outputChanges.getParameterCount(); ++i) {
+        Vst::IParamValueQueue* queue = impl.outputChanges.getParameterData(i);
+        if (queue == nullptr || queue->getPointCount() <= 0) continue;
+        int32 offset = 0;
+        Vst::ParamValue value = 0.0;
+        if (queue->getPoint(queue->getPointCount() - 1, offset, value) == kResultOk) impl.echo(queue->getParameterId(), value);
+    }
+    impl.outputChanges.clearQueue();
 
     const std::span<const Vst::AudioBusBuffers> outputs(impl.data.outputs,
                                                         static_cast<std::size_t>(std::max(impl.data.numOutputs, 0)));
