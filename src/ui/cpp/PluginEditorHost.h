@@ -91,6 +91,9 @@ private:
     // item: ancestors move it without a geometry change (splitter drags).
     QMetaObject::Connection m_frameConnection;
     QMetaObject::Connection m_screenConnection; // another screen: its scaling
+    QMetaObject::Connection m_exposedConnection; // a window not shown yet: when it is
+    WId m_hostWindow = 0; // the native window the plugin's is in (replaced: opened again)
+    bool m_reopenQueued = false; // that reopening asked for, not yet run
     bool m_stale = false; // the editor to show changed while hidden: open it when shown
     bool m_suspended = false;
 };

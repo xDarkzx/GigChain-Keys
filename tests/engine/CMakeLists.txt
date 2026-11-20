@@ -10,6 +10,8 @@ gigchain_add_test(tst_song_transport SOURCES tst_song_transport.cpp LIBS gigchai
 target_include_directories(tst_song_transport PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_graph_exchange SOURCES tst_graph_exchange.cpp LIBS gigchain::engine)
 target_include_directories(tst_graph_exchange PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+gigchain_add_test(tst_editor_sizing SOURCES tst_editor_sizing.cpp LIBS gigchain::engine)
+target_include_directories(tst_editor_sizing PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_vst3_node SOURCES tst_vst3_node.cpp LIBS gigchain::engine)
 target_include_directories(tst_vst3_node PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 if(WIN32)
