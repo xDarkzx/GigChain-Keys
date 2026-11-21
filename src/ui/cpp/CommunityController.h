@@ -39,7 +39,7 @@ class CommunityController : public QObject
     Q_PROPERTY(bool asksOff READ asksOff NOTIFY changed)
     Q_PROPERTY(QString discordUrl READ discordUrl CONSTANT)
     Q_PROPERTY(QString sponsorUrl READ sponsorUrl CONSTANT)
-    // A donation with no account (card or PayPal): the main way to give.
+    // A donation with no account (card, Apple Pay or Google Pay): the main way to give.
     Q_PROPERTY(QString donateUrl READ donateUrl CONSTANT)
     Q_PROPERTY(QString videosUrl READ videosUrl CONSTANT)
     Q_PROPERTY(QString issuesUrl READ issuesUrl CONSTANT)

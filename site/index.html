@@ -164,6 +164,7 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   }
   .thanks[hidden] { display: none; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .thanks h3 { margin: 0 0 6px; font-size: 18px; }
   .thanks p { margin: 0 0 14px; color: var(--dim); }
   .thanks .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -351,7 +352,8 @@
   </section>
 </main>
 
-<div class="thanks" id="thanks" role="dialog" aria-labelledby="thanks-title" hidden>
+<p class="sr-only" id="thanks-said" role="status" aria-live="polite"></p>
+<div class="thanks" id="thanks" role="region" aria-labelledby="thanks-title" hidden>
   <h3 id="thanks-title">Thanks for downloading! 🎹</h3>
   <p>GigChain Keys is free and always will be: no ads, no account, no paid version. It's made by one keyboard player,
     with a new version every Monday. If it helps your gigs, a coffee keeps it going. First goal: code signing, so
@@ -416,7 +418,12 @@
     var link = event.target.closest('#main-download, a.file');
     if (!link || thanked || link.getAttribute("href").charAt(0) === "#") return;
     thanked = true;
-    setTimeout(function () { thanks.hidden = false; }, 800);
+    setTimeout(function () {
+      thanks.hidden = false;
+      // (Said politely to a screen reader too: the panel never takes the focus.)
+      document.getElementById("thanks-said").textContent =
+        "Thanks for downloading. A panel at the bottom of the page offers a way to donate; Escape closes it.";
+    }, 800);
   }
   document.addEventListener("click", showThanks);
   document.getElementById("thanks-close").addEventListener("click", function () { thanks.hidden = true; });

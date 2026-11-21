@@ -264,7 +264,7 @@ so Windows and macOS install GigChain Keys without a warning.
   <a href="https://github.com/sponsors/xDarkzx"><img alt="Sponsor GigChain Keys on GitHub" src="https://img.shields.io/badge/♥%20Sponsor-monthly-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
 </p>
 
-Any amount, once, by card or PayPal with no account: [**Buy me a coffee**](https://buymeacoffee.com/ddazomnike).
+Any amount, once, by card, Apple Pay or Google Pay, with no account: [**Buy me a coffee**](https://buymeacoffee.com/ddazomnike).
 Monthly: [**GitHub Sponsors**](https://github.com/sponsors/xDarkzx). Thank you!
 
 ## Versions

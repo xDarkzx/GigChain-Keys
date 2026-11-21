@@ -34,7 +34,7 @@ Downloads for every version are on the
   "KeyLab mkII 88 DAW") no longer look the same. A name too long even for
   that shows in full when you point at it (#56).
 - **Donate with no account.** **Help > Support GigChain Keys** (and What's new) now has
-  **☕ Donate**: any amount by card or PayPal through Buy Me a Coffee, no
+  **☕ Donate**: any amount by card, Apple Pay or Google Pay through Buy Me a Coffee, no
   GitHub account needed. Monthly sponsoring stays on GitHub Sponsors. The
   first goal is code signing, so Windows and Mac stop warning on install.
 

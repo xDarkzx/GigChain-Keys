@@ -128,7 +128,7 @@ A version ships **every Monday** (New Zealand time). The week before it:
    ```markdown
    **Free, and new every Monday.** If GigChain Keys helps your gigs, a coffee
    keeps it going: ☕ [Buy me a coffee](https://buymeacoffee.com/ddazomnike)
-   (card or PayPal, no account) · ♥ [Sponsor monthly](https://github.com/sponsors/xDarkzx).
+   (card, Apple Pay or Google Pay, no account) · ♥ [Sponsor monthly](https://github.com/sponsors/xDarkzx).
    First goal: code signing, so Windows and Mac stop warning on install.
    ```
 8. **Check the README links:** the **Download** links open the release page,
