@@ -17,6 +17,10 @@ function(gigchain_add_test name)
     set_tests_properties(${name} PROPERTIES
         ENVIRONMENT_MODIFICATION
             "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;QT_QPA_PLATFORM=set:offscreen")
+    if(WIN32) # off-screen Qt has no fonts on Windows: the system's, so text has its real size (a layout test means something)
+        file(TO_CMAKE_PATH "$ENV{SystemRoot}/Fonts" _fonts)
+        set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_FONTDIR=set:${_fonts}")
+    endif()
 endfunction()
 
 # Renaming the product must stay a one-file change (branding.cmake): neither

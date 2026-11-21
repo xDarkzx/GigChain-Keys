@@ -119,6 +119,11 @@ QString CommunityController::sponsorUrl()
     return u"https://github.com/sponsors/xDarkzx"_s;
 }
 
+QString CommunityController::donateUrl()
+{
+    return u"https://buymeacoffee.com/ddazomnike"_s;
+}
+
 QString CommunityController::videosUrl()
 {
     return u"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4"_s;

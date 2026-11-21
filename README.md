@@ -24,7 +24,7 @@
   <a href="SUPPORT.md"><b>Get help</b></a> ·
   <a href="CHANGELOG.md"><b>What's new</b></a> ·
   <a href="https://discord.gg/BGn8Ujh37m"><b>Discord</b></a> ·
-  <a href="https://github.com/sponsors/xDarkzx"><b>♥ Sponsor</b></a>
+  <a href="https://buymeacoffee.com/ddazomnike"><b>☕ Donate</b></a>
 </p>
 
 > **Free forever, no ads, no account.** If GigChain Keys helps your gigs, a
@@ -260,11 +260,12 @@ fix and build things, and the first goal is **code-signing certificates**,
 so Windows and macOS install GigChain Keys without a warning.
 
 <p>
-  <a href="https://github.com/sponsors/xDarkzx"><img alt="Sponsor GigChain Keys on GitHub" src="https://img.shields.io/badge/♥%20Sponsor-GigChain%20Keys-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
+  <a href="https://buymeacoffee.com/ddazomnike"><img alt="Buy me a coffee" src="https://img.shields.io/badge/☕%20Buy%20me%20a%20coffee-Donate-ffdd00?style=for-the-badge&logo=buymeacoffee&logoColor=black"></a>
+  <a href="https://github.com/sponsors/xDarkzx"><img alt="Sponsor GigChain Keys on GitHub" src="https://img.shields.io/badge/♥%20Sponsor-monthly-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
 </p>
 
-One-off or monthly, any amount, through
-[**GitHub Sponsors**](https://github.com/sponsors/xDarkzx). Thank you!
+Any amount, once, by card or PayPal with no account: [**Buy me a coffee**](https://buymeacoffee.com/ddazomnike).
+Monthly: [**GitHub Sponsors**](https://github.com/sponsors/xDarkzx). Thank you!
 
 ## Versions
 

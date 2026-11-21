@@ -608,6 +608,31 @@ private slots:
         settle();
     }
 
+    // What's new offers Donate first, and every button fits inside the window
+    // (none pushed off its right edge).
+    void whatsNewOffersDonateAndItsButtonsFit()
+    {
+        QQuickWindow* w = window();
+        w->resize(1280, 800);
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        auto* dialog = w->findChild<QObject*>(u"whatsNewDialog"_s);
+        QVERIFY(dialog != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "open"));
+        settle();
+        const qreal left = dialog->property("x").toReal();
+        const qreal right = left + dialog->property("width").toReal();
+        if (const QString to = qEnvironmentVariable("GIGCHAIN_SHOT_WHATSNEW"); !to.isEmpty()) QVERIFY(w->grabWindow().save(to));
+        for (const QString& name : {u"whatsNewDonate"_s, u"whatsNewStar"_s, u"whatsNewClose"_s}) {
+            QQuickItem* button = item(name);
+            QVERIFY2(button != nullptr && button->isVisible(), qPrintable(name));
+            const QRectF place = button->mapRectToItem(button->window()->contentItem(), QRectF(0, 0, button->width(), button->height()));
+            QVERIFY2(place.left() >= left && place.right() <= right,
+                     qPrintable(u"%1 at %2-%3, the window %4-%5"_s.arg(name).arg(place.left()).arg(place.right()).arg(left).arg(right)));
+        }
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        settle();
+    }
+
     void performModeToggles()
     {
         QObject* root = m_qml->rootObjects().value(0);

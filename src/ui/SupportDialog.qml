@@ -67,10 +67,11 @@ StageDialog {
                 }
                 Repeater {
                     model: [
+                        { icon: "☕", name: qsTr("Donate"), why: qsTr("Any amount, by card or PayPal, no account needed. First goal: code signing, so Windows and Mac stop warning when you install it."), url: support.community.donateUrl },
                         { icon: "⭐", name: qsTr("Star it on GitHub"), why: qsTr("Takes a second, and helps other players find it."), url: Branding.website },
                         { icon: "💬", name: qsTr("Join the Discord"), why: qsTr("Show your rig, ask anything, suggest what's next."), url: support.community.discordUrl },
                         { icon: "▶", name: qsTr("Subscribe on YouTube"), why: qsTr("New features, and how to get the most from them."), url: support.community.videosUrl },
-                        { icon: "♥", name: qsTr("Sponsor"), why: qsTr("Any amount helps keep it free for everyone."), url: support.community.sponsorUrl },
+                        { icon: "♥", name: qsTr("Sponsor monthly"), why: qsTr("A small amount each month, through GitHub Sponsors."), url: support.community.sponsorUrl },
                         { icon: "💡", name: qsTr("Report a bug or an idea"), why: qsTr("What breaks and what's missing decides what comes next."), url: support.community.issuesUrl }
                     ]
                     delegate: RowLayout {
