@@ -109,7 +109,9 @@ chmod +x GigChainKeys-*-x86_64.AppImage
 `sudo apt remove gigchain-keys`.
 
 Sound goes through PulseAudio or PipeWire (or JACK, chosen in **Settings**;
-on PipeWire, start the app with `pw-jack` to use JACK);
+on PipeWire, the menu entry, `gigchain-keys` and the AppImage start the app
+through `pw-jack` when it is installed, so JACK works: the .deb recommends
+`pipewire-jack`, which has it);
 Linux VST3 plugins are found in `~/.vst3` and `/usr/lib/vst3`. The AppImage
 uses your system's sound libraries: if it says `libjack.so.0` is missing,
 install `libjack-jackd2-0` (the .deb installs it for you).

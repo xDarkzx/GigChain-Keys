@@ -12,6 +12,7 @@
 #include "gigchain/core/Branding.h"
 #include "gigchain/core/FileLog.h"
 #include "gigchain/engine/FakeEngineFactory.h"
+#include "gigchain/platform/Audio.h"
 #include "gigchain/platform/Process.h"
 #include "gigchain/platform/Windows.h"
 #include "gigchain/engine/RealEngineFactory.h"
@@ -181,6 +182,16 @@ int runApp(int argc, char** argv)
     }
     if (!engineProblem.isEmpty()) {
         session.document().reportMessage(QGuiApplication::tr("No audio output (%1). Running without sound.").arg(engineProblem));
+    }
+    // Linux: a session with no realtime priority runs the audio, and the
+    // plugin hosts started for Wine plugins, at ordinary priority: about five
+    // times the dropouts (#71). The system grants it, not the app: the player
+    // is told how, at each start until it is fixed.
+    const std::optional<int> realtimeLimit = platform::realtimePriorityLimit();
+    if (realtimeLimit) qCInfo(lcApp) << "Realtime priority limit (RLIMIT_RTPRIO):" << *realtimeLimit;
+    if (const QString advice = platform::realtimePriorityAdvice(realtimeLimit); !advice.isEmpty()) {
+        qCWarning(lcApp).noquote() << advice;
+        session.document().reportMessage(advice, ui::Notifications::Warning);
     }
 
     // "<exe> <setlist>" opens that file; otherwise the last one reopens only
