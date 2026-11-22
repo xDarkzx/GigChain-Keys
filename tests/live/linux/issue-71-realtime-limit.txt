@@ -1,0 +1,14 @@
+# #71: Linux, a session whose realtime priority limit is 0 is told at start,
+# with the fix (join the pipewire or audio group, log in again), and the
+# limit is logged.
+# Needs: the Linux dev build, started from a shell where `ulimit -r` says 0
+# (WSL's default; elsewhere: `prlimit --rtprio=0:0 bash`).
+# Run:   ~/.cache/gigchain/build/linux-dev/gck-ctl run tests/live/linux/issue-71-realtime-limit.txt
+# (The message is shown before the control listens, so `notices` has not
+# seen it: the log's "Shown (warning)" line is what the player was shown.)
+start
+wait "Realtime priority limit \(RLIMIT_RTPRIO\): 0" 15000
+wait "Shown \(warning\): This session's realtime priority limit is 0, .*usermod -aG pipewire .*usermod -aG audio .*log in again" 5000
+sleep 1500
+shot "$tmp/issue71-realtime-limit.png"
+quit discard

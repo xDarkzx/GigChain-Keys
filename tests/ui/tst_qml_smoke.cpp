@@ -1575,6 +1575,42 @@ private slots:
         QVERIFY2(m_warnings.isEmpty(), qPrintable(m_warnings.join(u'\n')));
     }
 
+    // A message said while the main window is not up yet (at start, behind
+    // the splash: no audio, a crash last time, no realtime priority, #71)
+    // waits for it: its time counts only once it can be seen.
+    void aMessageSaidBeforeTheWindowIsUpWaitsForIt()
+    {
+        // As at start: the message is there when the windows are made, and
+        // the main window is hidden (main.cpp shows it after the splash).
+        ui::Notifications n;
+        n.post(u"Said behind the splash"_s, ui::Notifications::Info);
+        QQmlComponent component(m_qml.get());
+        component.setData(R"(import QtQuick
+import GigChain.Ui
+Window {
+    id: owner
+    required property Notifications model
+    width: 800
+    height: 600
+    property NotificationWindow toasts: NotificationWindow { notifications: owner.model; owner: owner }
+})"_ba, QUrl(u"qrc:/startup-messages.qml"_s));
+        std::unique_ptr<QObject> made(component.createWithInitialProperties({{u"model"_s, QVariant::fromValue(&n)}}));
+        QVERIFY2(made != nullptr, qPrintable(component.errorString()));
+        auto* owner = qobject_cast<QQuickWindow*>(made.get());
+        auto* toasts = made->property("toasts").value<QQuickWindow*>();
+        QVERIFY(owner != nullptr && toasts != nullptr);
+        QVERIFY(!owner->isVisible());
+        QTest::qWait(ui::Notifications::shownFor(ui::Notifications::Info) + 1500);
+        QCOMPARE(n.rowCount(), 1); // still owed: never seen
+        QVERIFY(!toasts->isVisible());
+        owner->show();
+        QTRY_VERIFY_WITH_TIMEOUT(toasts->isVisible(), 2000);
+        QTest::qWait(ui::Notifications::shownFor(ui::Notifications::Info) / 2);
+        QCOMPARE(n.rowCount(), 1); // its whole time, from being seen
+        QTRY_COMPARE_WITH_TIMEOUT(n.rowCount(), 0, ui::Notifications::shownFor(ui::Notifications::Info) + 1000);
+        QVERIFY2(m_warnings.isEmpty(), qPrintable(m_warnings.join(u'\n')));
+    }
+
     // A channel's keyboard zone and knobs, from its menu, as a person uses them.
     void zoneAndKnobDialogsEditTheChannel()
     {

@@ -1,0 +1,10 @@
+# #71, the other side: a session that grants realtime priority (a limit
+# above 0) is not told anything; the limit is only logged.
+# Needs: the Linux dev build, started from a shell where `ulimit -r` is above 0
+# (`sudo prlimit --pid $$ --rtprio=95:95` raises it for that shell).
+# Run:   ~/.cache/gigchain/build/linux-dev/gck-ctl run tests/live/linux/issue-71-realtime-granted.txt
+start
+wait "Realtime priority limit \(RLIMIT_RTPRIO\): [1-9]" 15000
+log 0:0 "Shown \(warning\): This session's realtime priority"
+expect lines empty
+quit discard

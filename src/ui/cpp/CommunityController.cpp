@@ -208,10 +208,14 @@ void CommunityController::addPerformTime(qint64 milliseconds)
 QStringList CommunityController::changesFor(const QString& changelog, const QString& version)
 {
     QStringList changes;
+    qsizetype more = 0; // (past kMaxChanges: counted, and said)
     bool inside = false;
     QString item;
     const auto close = [&] {
-        if (!item.isEmpty() && changes.size() < kMaxChanges) changes << plain(item);
+        if (!item.isEmpty()) {
+            if (changes.size() < kMaxChanges) changes << plain(item);
+            else ++more;
+        }
         item.clear();
     };
     const QString heading = u"## ["_s + version + u']';
@@ -232,6 +236,7 @@ QStringList CommunityController::changesFor(const QString& changelog, const QStr
         }
     }
     close();
+    if (more > 0) changes << tr("And %n more: every change is in the release notes on GitHub.", nullptr, static_cast<int>(more));
     return changes;
 }
 

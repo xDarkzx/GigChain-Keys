@@ -5,8 +5,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // Messages for the user, at the bottom right of the main window, each in its
-// level's colour. Each goes by itself after its level's time (paused while
-// the mouse is on it), or with its close button. A window of its own, owned
+// level's colour. Each goes by itself after its level's time on screen
+// (paused while the mouse is on it), or with its close button. A window of its own, owned
 // by the main window: it shows above a plugin's window, and only above this
 // app.
 Window {
@@ -91,7 +91,10 @@ Window {
             Timer {
                 id: lifetime
                 interval: toasts.notifications.shownFor(toast.level)
-                running: !hover.hovered // read at leisure; starts over when the mouse leaves
+                // Read at leisure: starts over when the mouse leaves, and
+                // counts only once it can be seen (a message said at start,
+                // behind the splash, waits for the main window).
+                running: toasts.visible && !hover.hovered
                 onTriggered: toasts.notifications.dismiss(toast.notificationId)
             }
             onRepeatsChanged: lifetime.restart() // said again: its time starts over
