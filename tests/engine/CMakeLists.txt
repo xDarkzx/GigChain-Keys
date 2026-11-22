@@ -61,6 +61,10 @@ gigchain_add_test(tst_sustain_pads SOURCES tst_sustain_pads.cpp LIBS gigchain::e
 target_include_directories(tst_sustain_pads PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_piano_samples SOURCES tst_piano_samples.cpp LIBS gigchain::engine)
 target_include_directories(tst_piano_samples PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
+# The instruments' sound checks render minutes of audio: "heavy", left out of
+# everyday runs (the test presets exclude the label) and run in full for a
+# release candidate (ctest --preset dev-full, or tools\verify.ps1 -Full).
+set_tests_properties(tst_saw_stack tst_piano_pro tst_pads_pro tst_sustain_pads tst_piano_samples PROPERTIES LABELS heavy)
 gigchain_add_test(tst_safety_limiter SOURCES tst_safety_limiter.cpp LIBS gigchain::engine)
 target_include_directories(tst_safety_limiter PRIVATE ${PROJECT_SOURCE_DIR}/src/engine/internal)
 gigchain_add_test(tst_plugin_load_guard SOURCES tst_plugin_load_guard.cpp LIBS gigchain::engine)
