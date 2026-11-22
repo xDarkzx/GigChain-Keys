@@ -33,7 +33,9 @@ A version ships **every Monday** (New Zealand time). The week before it:
 - **Sunday afternoon: the release candidate.** First the release commit
   (steps 1 and 2 below, through its own pull request), then from that
   commit:
-  - the Windows downloads (step 3; `package.ps1` runs every test on the
+  - every test, the heavy sound tests included (`tools\verify.ps1 -Force
+    -Full`; everyday runs leave the tests labelled `heavy` out);
+  - the Windows downloads (step 3; `package.ps1` runs the tests on the
     release build it packs), a soak of that release build
     (`tools/soak.ps1`, the `release` preset) and the installer tried
     (step 4);

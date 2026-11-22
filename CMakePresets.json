@@ -197,7 +197,7 @@
   ],
   "testPresets": [
     {
-      "name": "base",
+      "name": "base-full",
       "hidden": true,
       "output": {
         "outputOnFailure": true
@@ -205,6 +205,21 @@
       "execution": {
         "timeout": 1200
       }
+    },
+    {
+      "name": "base",
+      "hidden": true,
+      "inherits": "base-full",
+      "filter": {
+        "exclude": {
+          "label": "heavy"
+        }
+      }
+    },
+    {
+      "name": "dev-full",
+      "inherits": "base-full",
+      "configurePreset": "dev"
     },
     {
       "name": "linux-debug",

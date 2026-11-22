@@ -4,11 +4,15 @@
 #   2. clang-tidy on the changed C++ files: any finding on a changed line fails
 #   3. cppcheck on the same files: same rule; a file it cannot analyse fails
 #   4. qmllint on the changed QML files: any finding on a changed line fails
-#   5. the whole test suite (ctest); the real-plugin test must really run
+#   5. only the tests changed with the code (a test written for this fix),
+#      plus the quick source scans, in the dev build (Release). The gate is
+#      about the code itself: security, memory (clang-analyzer, cppcheck),
+#      bad and slow code (bugprone, cert, performance). -Full runs every
+#      test, the heavy sound tests included (the release candidate).
 # Findings on lines that were not changed are old ones: listed in the log,
 # never hidden, but they do not fail the gate.
 # Full output: build\verify\verify.log. Verdict: build\verify\last.json.
-param([switch]$Force)
+param([switch]$Force, [switch]$Full)
 $ErrorActionPreference = 'Continue'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $root = (Get-Location).Path
@@ -27,9 +31,19 @@ $changed = @(@(git diff --name-only HEAD) + $untracked | Where-Object { $_ -and 
     Sort-Object -Unique)
 $sources = @($changed | Where-Object { $_ -match '^(src|tests|cmake|tools|ports)/|CMakeLists\.txt$|CMakePresets\.json$|vcpkg\.json$' })
 
+# Which tests: the ones changed with the code (-Full: all of them).
+$allTests = [bool]$Full
+$testNames = New-Object 'System.Collections.Generic.HashSet[string]'
+foreach ($file in $sources) {
+    if ($file -match '^tests/[^/]+/(tst_\w+)\.cpp$') { [void]$testNames.Add($Matches[1]) }
+}
+# (The source scans, named without tst_, are quick and always run.)
+$testFilter = if ($allTests) { '' } else { '^([^t]|t[^s]|ts[^t]|tst[^_])' + $(if ($testNames.Count) { '|^(' + (@($testNames | Sort-Object) -join '|') + ')$' } else { '' }) }
+
 $sha = [System.Security.Cryptography.SHA256]::Create()
 $material = New-Object System.Text.StringBuilder
 [void]$material.AppendLine($head)
+[void]$material.AppendLine("full=$allTests") # (a passed subset never answers for -Full)
 [void]$material.AppendLine((git diff HEAD | Out-String))
 foreach ($file in $untracked) {
     if (Test-Path $file -PathType Leaf) {
@@ -271,33 +285,29 @@ if ($qmlFiles.Count -eq 0) {
 }
 
 # ------------------------------------------------------------ 5. tests
-if (-not $built) {
-    Add-Check 'tests' $false 'not run: the build failed'
+# In the dev build: Release (sound renders at full speed, as players hear
+# it), every test built, the live test control's own tests included.
+$scope = if ($allTests) { 'every test' } else { "changed tests: $(if ($testNames.Count) { @($testNames | Sort-Object) -join ', ' } else { 'none, the source scans only' })" }
+if (-not $devBuilt) {
+    Add-Check "tests ($scope)" $false 'not run: the dev build failed'
 } else {
-    $tests = Invoke-Logged 'ctest' 'ctest' @('--preset', 'debug', '-V')
+    $arguments = @('--preset', $(if ($allTests) { 'dev-full' } else { 'dev' }), '-V')
+    if ($testFilter) { $arguments += @('-R', $testFilter) }
+    $tests = Invoke-Logged 'ctest' 'ctest' $arguments
     $failed = @(Get-Content $tests.File | Where-Object { $_ -match '^\s*\d+ - .*\((Failed|SEGFAULT|Timeout|Exception|Not Run|Subprocess aborted)' })
     $skips = @(Get-Content $tests.File | Where-Object { $_ -match 'SKIP\s+:' })
     $total = (Get-Content $tests.File | Where-Object { $_ -match 'tests passed, \d+ tests failed out of \d+' } | Select-Object -Last 1)
+    # The real-plugin test must really run, whenever it is one of them.
+    $pluginViewDue = $allTests -or $testNames.Contains('tst_plugin_view')
     $pluginViewRan = @(Get-Content $tests.File | Where-Object { $_ -match 'PASS\s+: TestPluginView::' }).Count -gt 0
     $pluginViewSkipped = @($skips | Where-Object { $_ -match 'TestPluginView::' }).Count -gt 0
-    $ok = $tests.Code -eq 0 -and $failed.Count -eq 0 -and $pluginViewRan -and -not $pluginViewSkipped
+    $ok = $tests.Code -eq 0 -and $failed.Count -eq 0 -and [bool]$total -and (-not $pluginViewDue -or ($pluginViewRan -and -not $pluginViewSkipped))
     $detail = "$total"
     if ($failed.Count) { $detail += "`n" + ($failed -join "`n") }
-    if (-not $pluginViewRan -or $pluginViewSkipped) { $detail += "`nthe real-plugin test (tst_plugin_view) did not run to completion" }
+    if ($pluginViewDue -and (-not $pluginViewRan -or $pluginViewSkipped)) { $detail += "`nthe real-plugin test (tst_plugin_view) did not run to completion" }
     if ($skips.Count) { $detail += "`nskipped: " + (($skips | ForEach-Object { $_.Trim() }) -join '; ') }
     if (-not $ok -and $tests.Code -ne 0 -and -not $failed.Count) { $detail += "`n" + (Get-Tail $tests.File 20) }
-    Add-Check 'tests (ctest, every test)' $ok $detail
-}
-
-# The live test control's own tests (the dev build only).
-if (-not $devBuilt) {
-    Add-Check 'tests (dev: live test control)' $false 'not run: the dev build failed'
-} else {
-    $devTests = Invoke-Logged 'ctest-dev' 'ctest' @('--preset', 'dev', '-R', '^(tst_dev_|tst_gck_ctl)', '-V')
-    $devFailed = @(Get-Content $devTests.File | Where-Object { $_ -match '^\s*\d+ - .*\((Failed|SEGFAULT|Timeout|Exception|Not Run|Subprocess aborted)' })
-    $devTotal = (Get-Content $devTests.File | Where-Object { $_ -match 'tests passed, \d+ tests failed out of \d+' } | Select-Object -Last 1)
-    $devOk = $devTests.Code -eq 0 -and $devFailed.Count -eq 0 -and $devTotal
-    Add-Check 'tests (dev: live test control)' $devOk ("$devTotal" + $(if ($devFailed.Count) { "`n" + ($devFailed -join "`n") } else { '' }))
+    Add-Check "tests ($scope)" $ok $detail
 }
 
 Save-Result $false
