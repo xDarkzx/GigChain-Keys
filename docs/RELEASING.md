@@ -128,7 +128,7 @@ A version ships **every Monday** (New Zealand time). The week before it:
    ```markdown
    **Free, and new every Monday.** If GigChain Keys helps your gigs, a coffee
    keeps it going: ☕ [Buy me a coffee](https://buymeacoffee.com/ddazomnike)
-   (card, Apple Pay or Google Pay, no account) · ♥ [Sponsor monthly](https://github.com/sponsors/xDarkzx).
+   (card, Apple Pay or Google Pay, no account) · ♥ [Donate monthly](https://github.com/sponsors/xDarkzx).
    First goal: code signing, so Windows and Mac stop warning on install.
    ```
 8. **Check the README links:** the **Download** links open the release page,
@@ -140,5 +140,5 @@ The installer and the Mac app are not signed yet, so Windows SmartScreen and
 macOS Gatekeeper warn on first start (the README says how to get past them,
 and the checksums let people check their download). Signing needs a
 code-signing certificate (Windows) and an Apple Developer ID (macOS), both
-yearly costs; they come when interest and sponsorship allow. When they exist, signing goes
+yearly costs; they come when interest and donations allow. When they exist, signing goes
 into `tools\package.ps1` and the Mac workflow, before the files are uploaded.

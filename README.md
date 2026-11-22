@@ -76,7 +76,7 @@ All versions, with their release notes, are on the
 During the alpha, the Windows installer and the macOS app are **not
 code-signed**. Code-signing certificates carry a yearly cost, and they will
 be added as the project grows and community interest and
-[sponsorship](#support-the-project) make that possible. Until then, Windows
+[donations](#support-the-project) make that possible. Until then, Windows
 and macOS show a one-time warning on first start; the steps below get past
 it. The builds are made from the source in this repository by its public
 build scripts, and every release lists the **SHA-256 checksum** of each file
@@ -261,11 +261,11 @@ so Windows and macOS install GigChain Keys without a warning.
 
 <p>
   <a href="https://buymeacoffee.com/ddazomnike"><img alt="Buy me a coffee" src="https://img.shields.io/badge/☕%20Buy%20me%20a%20coffee-Donate-ffdd00?style=for-the-badge&logo=buymeacoffee&logoColor=black"></a>
-  <a href="https://github.com/sponsors/xDarkzx"><img alt="Sponsor GigChain Keys on GitHub" src="https://img.shields.io/badge/♥%20Sponsor-monthly-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
+  <a href="https://github.com/sponsors/xDarkzx"><img alt="Donate monthly on GitHub" src="https://img.shields.io/badge/♥%20Donate-monthly-db61a2?style=for-the-badge&logo=github&logoColor=white"></a>
 </p>
 
 Any amount, once, by card, Apple Pay or Google Pay, with no account: [**Buy me a coffee**](https://buymeacoffee.com/ddazomnike).
-Monthly: [**GitHub Sponsors**](https://github.com/sponsors/xDarkzx). Thank you!
+Or [**donate monthly on GitHub**](https://github.com/sponsors/xDarkzx). Thank you!
 
 ## Versions
 

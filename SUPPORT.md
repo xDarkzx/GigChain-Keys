@@ -47,5 +47,6 @@ GigChain Keys is made by one person, in their own time. There is no fixed
 response time, but every report is read. Problems that stop a gig (crashes,
 dropouts, lost setlists) come first.
 
-If GigChain Keys helps you, you can support it through
-[GitHub Sponsors](https://github.com/sponsors/xDarkzx).
+If GigChain Keys helps you, you can
+[donate](https://buymeacoffee.com/ddazomnike) (any amount, no account), or
+[donate monthly on GitHub](https://github.com/sponsors/xDarkzx).

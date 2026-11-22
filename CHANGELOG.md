@@ -35,7 +35,7 @@ Downloads for every version are on the
   that shows in full when you point at it (#56).
 - **Donate with no account.** **Help > Support GigChain Keys** (and What's new) now has
   **☕ Donate**: any amount by card, Apple Pay or Google Pay through Buy Me a Coffee, no
-  GitHub account needed. Monthly sponsoring stays on GitHub Sponsors. The
+  GitHub account needed. Donating monthly stays on GitHub. The
   first goal is code signing, so Windows and Mac stop warning on install.
 
 ### Fixed
