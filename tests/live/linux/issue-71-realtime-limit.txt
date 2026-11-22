@@ -8,7 +8,7 @@
 # seen it: the log's "Shown (warning)" line is what the player was shown.)
 start
 wait "Realtime priority limit \(RLIMIT_RTPRIO\): 0" 15000
-wait "Shown \(warning\): This session's realtime priority limit is 0, .*usermod -aG pipewire .*usermod -aG audio .*log in again" 5000
+wait "Shown \(warning\): This session's realtime priority limit is 0, .*usermod -aG pipewire .*-aG audio.*log in again" 5000
 sleep 1500
 shot "$tmp/issue71-realtime-limit.png"
 quit discard

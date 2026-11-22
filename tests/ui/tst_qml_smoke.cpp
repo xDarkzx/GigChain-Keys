@@ -7,6 +7,7 @@
 #include "gigchain/engine/BuiltinReadings.h"
 #include "gigchain/engine/FakeEngineFactory.h"
 #include "gigchain/engine/SidechainCurves.h"
+#include "gigchain/platform/Audio.h"
 
 #include "../common/MakeSoundFont.h"
 
@@ -1609,6 +1610,30 @@ Window {
         QCOMPARE(n.rowCount(), 1); // its whole time, from being seen
         QTRY_COMPARE_WITH_TIMEOUT(n.rowCount(), 0, ui::Notifications::shownFor(ui::Notifications::Info) + 1000);
         QVERIFY2(m_warnings.isEmpty(), qPrintable(m_warnings.join(u'\n')));
+    }
+
+    // The longest message the app says at start (#71's, with the commands to
+    // type) is read whole, not cut short with "...".
+    void aLongMessageIsShownWhole()
+    {
+        auto* toasts = window()->findChild<QQuickWindow*>(u"notificationWindow"_s);
+        QVERIFY(toasts != nullptr);
+        ui::Notifications& n = *m_session->document().notifications();
+        n.post(platform::realtimePriorityAdvice(0), ui::Notifications::Warning);
+        QTRY_VERIFY_WITH_TIMEOUT(toasts->isVisible(), 2000);
+        auto* list = toasts->findChild<QObject*>(u"notificationList"_s);
+        QVERIFY(list != nullptr);
+        QObject* text = nullptr;
+        QTRY_VERIFY([&] {
+            QQuickItem* row = nullptr;
+            QMetaObject::invokeMethod(list, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, row), Q_ARG(int, 0));
+            text = row != nullptr ? row->findChild<QObject*>(u"notificationText"_s) : nullptr;
+            return text != nullptr;
+        }());
+        QTRY_VERIFY(text->property("width").toReal() > 0);
+        QVERIFY2(!text->property("truncated").toBool(), qPrintable(text->property("text").toString()));
+        n.dismiss(n.data(n.index(0), n.roleNames().key("notificationId")).toInt()); // (closed, as its button does)
+        QTRY_VERIFY_WITH_TIMEOUT(!toasts->isVisible(), 2000);
     }
 
     // A channel's keyboard zone and knobs, from its menu, as a person uses them.

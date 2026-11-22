@@ -26,6 +26,10 @@ Window {
     // Shown while there is something to say (the model's count: the list's
     // own does not update while this window is hidden).
     visible: owner.visible && notifications.count > 0
+    // Above the main window when it shows up with a message waiting (at
+    // start, the main window is brought to the front after this one shows;
+    // not every Linux window manager keeps an owned window above its owner).
+    onVisibleChanged: if (visible) Qt.callLater(raise)
 
     ListView {
         id: list
@@ -70,12 +74,13 @@ Window {
 
                 Label {
                     id: message
+                    objectName: "notificationText"
                     Layout.fillWidth: true
                     text: toast.repeats > 1 ? qsTr("%1  (×%2)").arg(toast.text).arg(toast.repeats) : toast.text
                     color: Theme.text
                     font.pixelSize: Theme.fontSize
                     wrapMode: Text.Wrap
-                    maximumLineCount: 3
+                    maximumLineCount: 5 // (a message with what to do about it, read whole)
                     elide: Text.ElideRight
                 }
                 StageButton {
