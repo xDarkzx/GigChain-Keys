@@ -256,8 +256,8 @@ the link.
 
 GigChain Keys is free and stays free: no adverts, no paid version, no keys.
 If it helps your gigs, a donation keeps it going. It pays for the time to
-fix and build things, and the first goal is **code-signing certificates**,
-so Windows and macOS install GigChain Keys without a warning.
+fix and build things, and the first goal is **code signing** (and Apple's
+notarisation), so Windows and macOS warn less when you install GigChain Keys.
 
 <p>
   <a href="https://buymeacoffee.com/ddazomnike"><img alt="Buy me a coffee" src="https://img.shields.io/badge/☕%20Buy%20me%20a%20coffee-Donate-ffdd00?style=for-the-badge&logo=buymeacoffee&logoColor=black"></a>

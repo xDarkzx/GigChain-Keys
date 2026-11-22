@@ -36,7 +36,8 @@ Downloads for every version are on the
 - **Donate with no account.** **Help > Support GigChain Keys** (and What's new) now has
   **☕ Donate**: any amount by card, Apple Pay or Google Pay through Buy Me a Coffee, no
   GitHub account needed. Donating monthly stays on GitHub. The
-  first goal is code signing, so Windows and Mac stop warning on install.
+  first goal is code signing (and Apple's notarisation), so Windows and Mac
+  warn less when you install it.
 
 ### Fixed
 

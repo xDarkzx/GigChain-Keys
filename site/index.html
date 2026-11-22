@@ -356,8 +356,8 @@
 <div class="thanks" id="thanks" role="region" aria-labelledby="thanks-title" hidden>
   <h3 id="thanks-title">Thanks for downloading! 🎹</h3>
   <p>GigChain Keys is free and always will be: no ads, no account, no paid version. It's made by one keyboard player,
-    with a new version every Monday. If it helps your gigs, a coffee keeps it going. First goal: code signing, so
-    Windows and Mac stop warning when you install it.</p>
+    with a new version every Monday. If it helps your gigs, a coffee keeps it going. First goal: code signing (and
+    Apple's notarisation), so Windows and Mac warn less when you install it.</p>
   <div class="row">
     <a class="give" href="https://buymeacoffee.com/ddazomnike">☕ Buy me a coffee</a>
     <a href="https://github.com/sponsors/xDarkzx">♥ Donate monthly</a>
@@ -416,7 +416,8 @@
   var thanked = false;
   function showThanks(event) {
     var link = event.target.closest('#main-download, a.file');
-    if (!link || thanked || link.getAttribute("href").charAt(0) === "#") return;
+    // Only a real download (a release file): a click that opens the releases page leaves this page.
+    if (!link || thanked || link.href.indexOf("/releases/download/") < 0) return;
     thanked = true;
     setTimeout(function () {
       thanks.hidden = false;

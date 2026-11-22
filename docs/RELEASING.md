@@ -129,7 +129,7 @@ A version ships **every Monday** (New Zealand time). The week before it:
    **Free, and new every Monday.** If GigChain Keys helps your gigs, a coffee
    keeps it going: ☕ [Buy me a coffee](https://buymeacoffee.com/ddazomnike)
    (card, Apple Pay or Google Pay, no account) · ♥ [Donate monthly](https://github.com/sponsors/xDarkzx).
-   First goal: code signing, so Windows and Mac stop warning on install.
+   First goal: code signing (and Apple's notarisation), so Windows and Mac warn less on installing.
    ```
 8. **Check the README links:** the **Download** links open the release page,
    and the badge shows the new version.
