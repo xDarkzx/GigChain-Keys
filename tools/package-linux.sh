@@ -46,7 +46,11 @@ cmake --build --preset "$PRESET"
 if [ "$SKIP_TESTS" = 0 ]; then
     step tests
     QT_QPA_PLATFORM=offscreen ctest --preset "$PRESET"
+    bash "$ROOT/tools/linux-launcher-test.sh"
 fi
+# How the packages start the app (tools/linux-launcher.sh: through pw-jack
+# when PipeWire runs, so JACK works from the menu, #70), with the app's path.
+launcher() { sed "s|^APP=@APP@\$|APP=$1|" "$ROOT/tools/linux-launcher.sh"; }
 
 # ------------------------------------------------------------ the tools
 # linuxdeploy and its Qt plugin (AppImages themselves: run extracted, so no
@@ -181,6 +185,16 @@ echo "every library found; the scanner starts on its own"
 
 # ------------------------------------------------------------ the AppImage
 step appimage
+# Started through the launcher, with the app next to it. (linuxdeploy's
+# AppRun is the app itself, or, when a plugin added hooks, a script that runs
+# them, then AppRun.wrapped: the launcher takes the app's place.)
+APPRUN="$APPDIR/AppRun"
+[ -e "$APPDIR/AppRun.wrapped" ] && APPRUN="$APPDIR/AppRun.wrapped"
+rm -f "$APPRUN"
+# shellcheck disable=SC2016 # (expanded when the AppImage starts)
+launcher '"${APPDIR:-$(dirname "$(readlink -f "$0")")}/usr/bin/'"$EXE"'"' > "$APPRUN"
+chmod 755 "$APPRUN"
+grep -qF "/usr/bin/$EXE\"" "$APPRUN" || { echo "The AppImage's launcher does not start the app" >&2; exit 1; }
 APPIMAGE="$DIST/$EXE-$VERSION-x86_64.AppImage"
 rm -f "$APPIMAGE"
 ARCH=x86_64 appimagetool-x86_64.AppImage --no-appstream "$APPDIR" "$APPIMAGE" >/dev/null
@@ -196,8 +210,12 @@ OPT="/opt/$PACKAGE"
 mkdir -p "$DEB$OPT" "$DEB/usr/bin" "$DEB/usr/share/applications" "$DEB/usr/share/icons/hicolor/256x256/apps" \
     "$DEB/usr/share/mime/packages" "$DEB/usr/share/doc/$PACKAGE" "$DEB/DEBIAN"
 cp -a "$APPDIR/usr/." "$DEB$OPT/"
-ln -s "$OPT/bin/$EXE" "$DEB/usr/bin/$PACKAGE"
-sed "s|^Exec=.*|Exec=$OPT/bin/$EXE %f|" "$WORK/$PACKAGE.desktop" > "$DEB/usr/share/applications/$PACKAGE.desktop"
+# The command and the menu entry start it through the launcher.
+launcher "\"$OPT/bin/$EXE\"" > "$DEB/usr/bin/$PACKAGE"
+chmod 755 "$DEB/usr/bin/$PACKAGE"
+grep -qxF "APP=\"$OPT/bin/$EXE\"" "$DEB/usr/bin/$PACKAGE" && [ -x "$DEB$OPT/bin/$EXE" ] \
+    || { echo "The .deb's launcher does not start the app" >&2; exit 1; }
+sed "s|^Exec=.*|Exec=/usr/bin/$PACKAGE %f|" "$WORK/$PACKAGE.desktop" > "$DEB/usr/share/applications/$PACKAGE.desktop"
 cp "$WORK/$PACKAGE.png" "$DEB/usr/share/icons/hicolor/256x256/apps/"
 cp "$WORK/$PACKAGE.xml" "$DEB/usr/share/mime/packages/"
 cp "$APPDIR/usr/bin/LICENSE.txt" "$DEB/usr/share/doc/$PACKAGE/copyright"
@@ -212,7 +230,7 @@ Section: sound
 Priority: optional
 Homepage: $WEBSITE
 Depends: libc6 (>= 2.35), libasound2, libpulse0, libjack-jackd2-0 | libjack-0.125, libgl1, libegl1, libfontconfig1, libfreetype6, libx11-6, libx11-xcb1, libxcb1, libxcb-cursor0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-shape0, libxcb-xinerama0, libxcb-xkb1, libxkbcommon0, libxkbcommon-x11-0, libdbus-1-3
-Recommends: pipewire-pulse | pulseaudio
+Recommends: pipewire-pulse | pulseaudio, pipewire-jack | pipewire-audio-client-libraries
 Suggests: jackd2
 Description: Live VST3 host for keyboard players
  $NAME plays your VST3 instruments live: setlists of songs and sounds,

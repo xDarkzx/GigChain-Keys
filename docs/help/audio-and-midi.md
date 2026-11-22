@@ -15,10 +15,22 @@ Open **Settings > Audio**.
    On Linux the system driver is PulseAudio (or PipeWire, which stands in
    for it). **JACK** gives the lowest delay. On PipeWire (most current
    distributions), JACK's devices are there only when the app is started
-   with `pw-jack`: type `pw-jack gigchain-keys` (or
-   `pw-jack ./GigChainKeys-*-x86_64.AppImage`). Started without it, a JACK
-   device you chose is missing; the app says so and plays through the
-   system driver meanwhile.
+   with `pw-jack`: the menu entry, the `gigchain-keys` command and the
+   AppImage do that for you when `pw-jack` is installed (the .deb installs
+   it unless you said no to recommended packages). If a JACK device you
+   chose is missing, the app says so and plays through the system driver
+   meanwhile: install `pw-jack` and start the app again. On Ubuntu 24.04
+   and later, and on Debian, type `sudo apt install pipewire-jack`; on
+   Ubuntu 22.04, `sudo apt install pipewire-audio-client-libraries`.
+   (`GIGCHAIN_NO_PW_JACK=1 gigchain-keys` starts it without `pw-jack`.)
+
+   **Linux: realtime priority.** The audio, and plugins running through
+   Wine (yabridge), need realtime priority, or they drop out several times
+   as often. Your system gives it to members of the `pipewire` group (or
+   the `audio` group). When this session's limit is 0, the app says so at
+   start: type `sudo usermod -aG pipewire $USER` (or, where there is no
+   `pipewire` group, `sudo usermod -aG audio $USER`), then log out and log
+   in again (joining a group counts from the next login).
 2. **Device.** Pick your audio interface or speakers.
 3. **Buffer size.** This sets the delay (shown as **Latency** in
    milliseconds). Smaller feels tighter under your fingers; bigger is safer

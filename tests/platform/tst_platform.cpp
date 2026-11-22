@@ -1,4 +1,5 @@
 // The platform layer: what differs by system, each piece on its own.
+#include "gigchain/platform/Audio.h"
 #include "gigchain/platform/MemoryUse.h"
 #include "gigchain/platform/PluginFolders.h"
 #include "gigchain/platform/Timing.h"
@@ -10,7 +11,12 @@
 #include <QtTest>
 
 #include <limits>
+#include <optional>
 #include <thread>
+
+#ifdef Q_OS_LINUX
+#include <sys/resource.h>
+#endif
 
 using namespace gigchain;
 using namespace Qt::StringLiterals;
@@ -127,6 +133,51 @@ private slots:
         QVERIFY2(bytes.has_value(), bytes ? "" : qPrintable(bytes.error().message));
         QVERIFY(*bytes > 1024LL * 1024); // a Qt test program: megabytes
         QVERIFY(*bytes < 64LL * 1024 * 1024 * 1024);
+    }
+
+    // Linux: the realtime priority the session allows this process
+    // (RLIMIT_RTPRIO), read as the system reports it (#71). Windows and the
+    // Mac have no such limit: any app may ask for a realtime audio thread.
+    void theRealtimePriorityLimitIsThisSystems()
+    {
+        // (A limit that cannot be read is a failure with its cause, not "no limit".)
+        const core::Result<std::optional<int>> limit = platform::realtimePriorityLimit();
+        QVERIFY2(limit.has_value(), limit ? "" : qPrintable(limit.error().message));
+#ifdef Q_OS_LINUX
+        rlimit saved{};
+        QCOMPARE(getrlimit(RLIMIT_RTPRIO, &saved), 0);
+        QVERIFY(limit->has_value());
+        QCOMPARE(**limit, saved.rlim_cur == RLIM_INFINITY ? std::numeric_limits<int>::max() : static_cast<int>(saved.rlim_cur));
+        // A session that grants none (a user not in the pipewire or audio
+        // group): 0. (Lowering the soft limit needs no rights; it is put back.)
+        rlimit none = saved;
+        none.rlim_cur = 0;
+        QCOMPARE(setrlimit(RLIMIT_RTPRIO, &none), 0);
+        const core::Result<std::optional<int>> withNone = platform::realtimePriorityLimit();
+        QCOMPARE(setrlimit(RLIMIT_RTPRIO, &saved), 0);
+        QVERIFY(withNone.has_value());
+        QCOMPARE(*withNone, std::optional<int>(0));
+#else
+        QVERIFY(!limit->has_value());
+#endif
+    }
+
+    // The player is told only when the session grants no realtime priority,
+    // and told what to do about it: the app cannot give it to itself.
+    void noRealtimePriorityIsExplained()
+    {
+        const QString advice = platform::realtimePriorityAdvice(0);
+        QVERIFY(advice.contains(u"realtime priority"_s));
+        // A limit of 0 is a risk, not a measurement: PipeWire can still get
+        // realtime threads through RTKit, so it says "can", not "does".
+        QVERIFY2(advice.contains(u"limit"_s) && advice.contains(u"can drop out"_s), qPrintable(advice));
+        QVERIFY2(!advice.contains(u"has no realtime priority"_s), qPrintable(advice));
+        QVERIFY2(advice.contains(u"usermod -aG audio"_s), qPrintable(advice)); // (the whole command for each group)
+        QVERIFY2(advice.contains(u"pipewire"_s) && advice.contains(u"audio"_s), qPrintable(advice)); // the groups
+        QVERIFY2(advice.contains(u"log in again"_s), qPrintable(advice)); // (a group counts from the next login)
+        QVERIFY(platform::realtimePriorityAdvice(95).isEmpty());
+        QVERIFY(platform::realtimePriorityAdvice(std::numeric_limits<int>::max()).isEmpty());
+        QVERIFY(platform::realtimePriorityAdvice(std::nullopt).isEmpty()); // (Windows, the Mac)
     }
 };
 
