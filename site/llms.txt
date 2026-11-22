@@ -1,0 +1,28 @@
+# GigChain Keys
+
+> GigChain Keys is a free, open-source (GPL-3.0) MainStage alternative for Windows, macOS and Linux: a live-performance rig for keyboard players. It hosts VST3 and VST2 instruments and effects, keeps a setlist with each song's sounds loaded up front (instant, gapless sound changes), layers and splits the keyboard, shows chord and lyric charts on stage, and has built-in pianos, synths, pads and a SoundFont player. No ads, no account, no licence key.
+
+Apple's MainStage runs only on a Mac. On Windows and Linux, GigChain Keys does the same job: setlists of songs and sounds, a mixer with channel strips and effects, keyboard splits and layers, MIDI Learn, a full-screen Perform mode for touch screens, a live looper, and a practice mode with scored daily warm-ups. New versions come out every Monday.
+
+## Download
+
+- [Download page (Windows installer and portable zip, macOS Apple Silicon disk image, Linux AppImage and .deb)](https://xdarkzx.github.io/GigChain-Keys/)
+- [Latest release on GitHub](https://github.com/xDarkzx/GigChain-Keys/releases/latest)
+
+## Guides
+
+- [Free MainStage alternatives for Windows, Mac & Linux, compared](https://xdarkzx.github.io/GigChain-Keys/free-mainstage-alternatives.html): GigChain Keys, Cantabile Lite, Element and Carla
+- [MainStage for Windows? What to use instead](https://xdarkzx.github.io/GigChain-Keys/mainstage-for-windows.html)
+- [How to play VST plugins live without a DAW](https://xdarkzx.github.io/GigChain-Keys/play-vst-plugins-live.html)
+- [A free Gig Performer alternative](https://xdarkzx.github.io/GigChain-Keys/gig-performer-alternative.html)
+- [A free Cantabile alternative, with setlists](https://xdarkzx.github.io/GigChain-Keys/cantabile-alternative.html)
+- [Carla vs GigChain Keys](https://xdarkzx.github.io/GigChain-Keys/carla-vs-gigchain-keys.html)
+
+## Project
+
+- [Source code and README](https://github.com/xDarkzx/GigChain-Keys)
+- [User guide](https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/README.md)
+- [Changelog](https://github.com/xDarkzx/GigChain-Keys/blob/main/CHANGELOG.md)
+- [YouTube videos](https://www.youtube.com/playlist?list=PLQp8ULNqWrb4)
+- [Discord](https://discord.gg/BGn8Ujh37m)
+- [Donate (Buy Me a Coffee)](https://buymeacoffee.com/ddazomnike)

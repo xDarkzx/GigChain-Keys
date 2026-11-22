@@ -55,7 +55,7 @@ StageDialog {
             Layout.leftMargin: Theme.spacingLarge
             Layout.rightMargin: Theme.spacingLarge
             wrapMode: Text.Wrap
-            text: qsTr("%1 is free and made by a keyboard player. A star, a share or a hello on Discord keeps it going.").arg(Branding.name)
+            text: qsTr("%1 is free and made by one keyboard player. If this update helps your gigs, a coffee keeps the weekly updates coming.").arg(Branding.name)
             color: Theme.textDim
         }
         RowLayout {
@@ -63,10 +63,12 @@ StageDialog {
             Layout.margins: Theme.spacingLarge
             spacing: Theme.spacing
             StageButton {
+                objectName: "whatsNewDonate"
+                visible: !news.community.asksOff
                 Layout.preferredHeight: Theme.touchTarget
                 focusPolicy: Qt.TabFocus
-                text: qsTr("▶ Watch the videos")
-                onClicked: news.openLink(news.community.videosUrl)
+                text: qsTr("☕ Donate")
+                onClicked: news.openLink(news.community.donateUrl)
             }
             StageButton {
                 objectName: "whatsNewStar"

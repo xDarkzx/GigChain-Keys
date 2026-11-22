@@ -33,6 +33,11 @@ Downloads for every version are on the
   over its settings: a keyboard's two ports ("KeyLab mkII 88 MIDI" and
   "KeyLab mkII 88 DAW") no longer look the same. A name too long even for
   that shows in full when you point at it (#56).
+- **Donate with no account.** **Help > Support GigChain Keys** (and What's new) now has
+  **☕ Donate**: any amount by card, Apple Pay or Google Pay through Buy Me a Coffee, no
+  GitHub account needed. Donating monthly stays on GitHub. The
+  first goal is code signing (and Apple's notarisation), so Windows and Mac
+  warn less when you install it.
 
 ### Fixed
 

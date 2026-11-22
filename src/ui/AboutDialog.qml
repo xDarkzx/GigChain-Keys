@@ -87,7 +87,7 @@ StageDialog {
                 objectName: "aboutSupport"
                 Layout.preferredHeight: Theme.touchTarget
                 text: qsTr("♥ Support…")
-                tip: qsTr("Star it, join the Discord, sponsor it: every way to help")
+                tip: qsTr("Star it, join the Discord, donate: every way to help")
                 onClicked: {
                     about.close()
                     about.supportRequested()
