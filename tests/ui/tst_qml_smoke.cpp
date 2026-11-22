@@ -608,9 +608,9 @@ private slots:
         settle();
     }
 
-    // What's new offers Donate first, and every button fits inside the window
+    // What's new offers Support (donate or sponsor) first, and every button fits inside the window
     // (none pushed off its right edge).
-    void whatsNewOffersDonateAndItsButtonsFit()
+    void whatsNewOffersSupportAndItsButtonsFit()
     {
         QQuickWindow* w = window();
         w->resize(1280, 800);
@@ -622,7 +622,7 @@ private slots:
         const qreal left = dialog->property("x").toReal();
         const qreal right = left + dialog->property("width").toReal();
         if (const QString to = qEnvironmentVariable("GIGCHAIN_SHOT_WHATSNEW"); !to.isEmpty()) QVERIFY(w->grabWindow().save(to));
-        for (const QString& name : {u"whatsNewDonate"_s, u"whatsNewStar"_s, u"whatsNewClose"_s}) {
+        for (const QString& name : {u"whatsNewSupport"_s, u"whatsNewStar"_s, u"whatsNewClose"_s}) {
             QQuickItem* button = item(name);
             QVERIFY2(button != nullptr && button->isVisible(), qPrintable(name));
             const QRectF place = button->mapRectToScene(QRectF(0, 0, button->width(), button->height()));

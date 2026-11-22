@@ -63,12 +63,13 @@ StageDialog {
             Layout.margins: Theme.spacingLarge
             spacing: Theme.spacing
             StageButton {
-                objectName: "whatsNewDonate"
+                objectName: "whatsNewSupport"
                 visible: !news.community.asksOff
                 Layout.preferredHeight: Theme.touchTarget
                 focusPolicy: Qt.TabFocus
-                text: qsTr("☕ Donate")
-                onClicked: news.openLink(news.community.donateUrl)
+                text: qsTr("♥ Support")
+                tip: qsTr("Donate once, or sponsor it on GitHub")
+                onClicked: news.openLink(news.community.supportPageUrl)
             }
             StageButton {
                 objectName: "whatsNewStar"

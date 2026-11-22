@@ -48,5 +48,6 @@ response time, but every report is read. Problems that stop a gig (crashes,
 dropouts, lost setlists) come first.
 
 If GigChain Keys helps you, you can
-[donate](https://buymeacoffee.com/ddazomnike) (any amount, no account), or
-[donate monthly on GitHub](https://github.com/sponsors/xDarkzx).
+[donate](https://buymeacoffee.com/ddazomnike) (once, any amount, no account) or
+[sponsor it on GitHub](https://github.com/sponsors/xDarkzx): both are on the
+[Support page](https://xdarkzx.github.io/GigChain-Keys/support.html).

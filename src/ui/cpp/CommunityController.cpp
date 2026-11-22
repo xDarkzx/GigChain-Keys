@@ -124,6 +124,11 @@ QString CommunityController::donateUrl()
     return u"https://buymeacoffee.com/ddazomnike"_s;
 }
 
+QString CommunityController::supportPageUrl()
+{
+    return branding::homepage() + u"/support.html"_s; // (the product's name only in branding.cmake)
+}
+
 QString CommunityController::videosUrl()
 {
     return u"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4"_s;

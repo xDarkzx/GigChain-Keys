@@ -127,8 +127,9 @@ A version ships **every Monday** (New Zealand time). The week before it:
 
    ```markdown
    **Free, and new every Monday.** If GigChain Keys helps your gigs, a coffee
-   keeps it going: ☕ [Buy me a coffee](https://buymeacoffee.com/ddazomnike)
-   (card, Apple Pay or Google Pay, no account) · ♥ [Donate monthly](https://github.com/sponsors/xDarkzx).
+   keeps it going: ☕ [Donate](https://buymeacoffee.com/ddazomnike)
+   (card, Apple Pay or Google Pay, no account) · ♥ [Sponsor](https://github.com/sponsors/xDarkzx)
+   · [all the ways to support it](https://xdarkzx.github.io/GigChain-Keys/support.html).
    First goal: code signing (and Apple's notarisation), so Windows and Mac warn less on installing.
    ```
 8. **Check the README links:** the **Download** links open the release page,

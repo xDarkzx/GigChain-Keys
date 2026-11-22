@@ -24,7 +24,7 @@
   <a href="SUPPORT.md"><b>Get help</b></a> ·
   <a href="CHANGELOG.md"><b>What's new</b></a> ·
   <a href="https://discord.gg/BGn8Ujh37m"><b>Discord</b></a> ·
-  <a href="https://buymeacoffee.com/ddazomnike"><b>☕ Donate</b></a>
+  <a href="https://xdarkzx.github.io/GigChain-Keys/support.html"><b>♥ Support</b></a>
 </p>
 
 > **Free forever, no ads, no account.** If GigChain Keys helps your gigs, a
@@ -255,17 +255,22 @@ the link.
 ### Support the project
 
 GigChain Keys is free and stays free: no adverts, no paid version, no keys.
-If it helps your gigs, a donation keeps it going. It pays for the time to
+If it helps your gigs, a donation or a sponsorship keeps it going. It pays for the time to
 fix and build things, and the first goal is **code signing** (and Apple's
 notarisation), so Windows and macOS warn less when you install GigChain Keys.
 
 <p>
-  <a href="https://buymeacoffee.com/ddazomnike"><img alt="Buy me a coffee" src="https://img.shields.io/badge/☕%20Buy%20me%20a%20coffee-Donate-ffdd00?style=for-the-badge&logo=buymeacoffee&logoColor=black"></a>
-  <a href="https://github.com/sponsors/xDarkzx"><img alt="Donate monthly on GitHub" src="https://img.shields.io/badge/♥%20Donate-monthly-db61a2?style=for-the-badge&logo=github&logoColor=white"></a>
+  <a href="https://buymeacoffee.com/ddazomnike"><img alt="Donate with Buy Me a Coffee" src="https://img.shields.io/badge/☕%20Donate-Buy%20me%20a%20coffee-ffdd00?style=for-the-badge&logo=buymeacoffee&logoColor=black"></a>
+  <a href="https://github.com/sponsors/xDarkzx"><img alt="Sponsor on GitHub" src="https://img.shields.io/badge/♥%20Sponsor-GitHub%20Sponsors-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
 </p>
 
-Any amount, once, by card, Apple Pay or Google Pay, with no account: [**Buy me a coffee**](https://buymeacoffee.com/ddazomnike).
-Or [**donate monthly on GitHub**](https://github.com/sponsors/xDarkzx). Thank you!
+- **☕ Donate:** once, any amount, by card, Apple Pay or Google Pay, with no
+  account, through [Buy Me a Coffee](https://buymeacoffee.com/ddazomnike).
+- **♥ Sponsor:** ongoing support through
+  [GitHub Sponsors](https://github.com/sponsors/xDarkzx).
+
+Both, and the free ways to help, are on the
+[**Support page**](https://xdarkzx.github.io/GigChain-Keys/support.html). Thank you!
 
 ## Versions
 
