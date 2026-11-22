@@ -41,6 +41,8 @@ class CommunityController : public QObject
     Q_PROPERTY(QString sponsorUrl READ sponsorUrl CONSTANT)
     // A donation with no account (card, Apple Pay or Google Pay): the main way to give.
     Q_PROPERTY(QString donateUrl READ donateUrl CONSTANT)
+    // The website's Support page: donate or sponsor, side by side.
+    Q_PROPERTY(QString supportPageUrl READ supportPageUrl CONSTANT)
     Q_PROPERTY(QString videosUrl READ videosUrl CONSTANT)
     Q_PROPERTY(QString issuesUrl READ issuesUrl CONSTANT)
 
@@ -71,6 +73,7 @@ public:
     [[nodiscard]] static QString discordUrl();
     [[nodiscard]] static QString sponsorUrl();
     [[nodiscard]] static QString donateUrl();
+    [[nodiscard]] static QString supportPageUrl();
     [[nodiscard]] static QString videosUrl();
     [[nodiscard]] static QString issuesUrl();
 

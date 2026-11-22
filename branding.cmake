@@ -21,6 +21,7 @@ set(PRODUCT_EXECUTABLE "GigChainKeys")         # GigChainKeys.exe
 set(PRODUCT_BUNDLE_ID "nz.dkstudios.gigchainkeys") # the Mac's app id: never changes after the first release
 set(PRODUCT_FILE_EXTENSION "gigchain")         # setlists: <name>.gigchain.json
 set(PRODUCT_WEBSITE "https://github.com/xDarkzx/GigChain-Keys")
+set(PRODUCT_HOMEPAGE "https://xdarkzx.github.io/GigChain-Keys") # the download site (its Support page: support.html)
 
 # The splash screen picture. The name is part of this picture, so a rename
 # needs a new picture too. Rounded corners should be transparent.

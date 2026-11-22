@@ -25,4 +25,4 @@ Apple's MainStage runs only on a Mac. On Windows and Linux, GigChain Keys does t
 - [Changelog](https://github.com/xDarkzx/GigChain-Keys/blob/main/CHANGELOG.md)
 - [YouTube videos](https://www.youtube.com/playlist?list=PLQp8ULNqWrb4)
 - [Discord](https://discord.gg/BGn8Ujh37m)
-- [Donate (Buy Me a Coffee)](https://buymeacoffee.com/ddazomnike)
+- [Support it: donate once (Buy Me a Coffee) or sponsor (GitHub Sponsors)](https://xdarkzx.github.io/GigChain-Keys/support.html)

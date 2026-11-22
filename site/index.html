@@ -170,6 +170,8 @@
   .thanks .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .thanks .give { background: var(--amber); color: #1a1204; font-weight: 700; padding: 10px 18px; border-radius: 8px; text-decoration: none; }
   .thanks .give:hover { background: #ffc566; }
+  .thanks .give.sponsor { background: #db61a2; color: #1d0614; }
+  .thanks .give.sponsor:hover { background: #e884b8; }
   .thanks .close { margin-left: auto; background: none; border: 0; color: var(--dim); font: inherit; cursor: pointer; padding: 8px; }
   .thanks .close:hover { color: var(--text); }
 </style>
@@ -183,7 +185,8 @@
       <a href="#watch" class="hide-small">Watch</a>
       <a href="#features" class="hide-small">Features</a>
       <a href="#download">Download</a>
-      <a href="https://github.com/xDarkzx/GigChain-Keys">GitHub</a>
+      <a href="https://github.com/xDarkzx/GigChain-Keys" class="hide-small">GitHub</a>
+      <a href="support.html">♥ Support</a>
     </nav>
   </div>
 </header>
@@ -345,8 +348,7 @@
         <a href="https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md">Getting started</a>
         <a href="https://github.com/xDarkzx/GigChain-Keys/issues/new/choose">Report a bug or idea</a>
         <a href="https://github.com/xDarkzx/GigChain-Keys">Star it on GitHub</a>
-        <a href="https://buymeacoffee.com/ddazomnike">☕ Donate</a>
-        <a href="https://github.com/sponsors/xDarkzx">♥ Donate monthly</a>
+        <a href="support.html">☕ Donate or ♥ Sponsor</a>
       </div>
     </div>
   </section>
@@ -356,11 +358,12 @@
 <div class="thanks" id="thanks" role="region" aria-labelledby="thanks-title" hidden>
   <h3 id="thanks-title">Thanks for downloading! 🎹</h3>
   <p>GigChain Keys is free and always will be: no ads, no account, no paid version. It's made by one keyboard player,
-    with a new version every Monday. If it helps your gigs, a coffee keeps it going. First goal: code signing (and
+    with a new version every Monday. If it helps your gigs, a donation or a sponsorship keeps it going. First goal: code signing (and
     Apple's notarisation), so Windows and Mac warn less when you install it.</p>
   <div class="row">
-    <a class="give" href="https://buymeacoffee.com/ddazomnike">☕ Buy me a coffee</a>
-    <a href="https://github.com/sponsors/xDarkzx">♥ Donate monthly</a>
+    <a class="give" href="https://buymeacoffee.com/ddazomnike">☕ Donate</a>
+    <a class="give sponsor" href="https://github.com/sponsors/xDarkzx">♥ Sponsor</a>
+    <a href="support.html">More ways to help</a>
     <button class="close" type="button" id="thanks-close">Not now</button>
   </div>
 </div>

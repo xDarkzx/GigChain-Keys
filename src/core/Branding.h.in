@@ -15,6 +15,7 @@ inline QString version() { return QStringLiteral("@PRODUCT_VERSION@"); }
 inline QString organization() { return QStringLiteral("@PRODUCT_ORGANIZATION@"); }
 inline QString executable() { return QStringLiteral("@PRODUCT_EXECUTABLE@"); }
 inline QString website() { return QStringLiteral("@PRODUCT_WEBSITE@"); }
+inline QString homepage() { return QStringLiteral("@PRODUCT_HOMEPAGE@"); }
 // Setlist files end with this, e.g. ".gigchain": one extension of the app's
 // own, so double-clicking a setlist opens it.
 inline QString setlistSuffix() { return QStringLiteral(".@PRODUCT_FILE_EXTENSION@"); }
