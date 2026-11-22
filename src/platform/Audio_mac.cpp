@@ -10,9 +10,9 @@ QString systemAudioName()
 }
 
 // (Any app may ask for a realtime audio thread: Core Audio's own are.)
-std::optional<int> realtimePriorityLimit()
+core::Result<std::optional<int>> realtimePriorityLimit()
 {
-    return std::nullopt;
+    return std::optional<int>{};
 }
 
 } // namespace gigchain::platform

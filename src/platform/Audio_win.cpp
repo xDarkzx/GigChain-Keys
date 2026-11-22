@@ -10,9 +10,9 @@ QString systemAudioName()
 }
 
 // (Any app may ask for a realtime audio thread: WASAPI's "Pro Audio" task.)
-std::optional<int> realtimePriorityLimit()
+core::Result<std::optional<int>> realtimePriorityLimit()
 {
-    return std::nullopt;
+    return std::optional<int>{};
 }
 
 } // namespace gigchain::platform

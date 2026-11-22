@@ -230,7 +230,7 @@ Section: sound
 Priority: optional
 Homepage: $WEBSITE
 Depends: libc6 (>= 2.35), libasound2, libpulse0, libjack-jackd2-0 | libjack-0.125, libgl1, libegl1, libfontconfig1, libfreetype6, libx11-6, libx11-xcb1, libxcb1, libxcb-cursor0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-shape0, libxcb-xinerama0, libxcb-xkb1, libxkbcommon0, libxkbcommon-x11-0, libdbus-1-3
-Recommends: pipewire-pulse | pulseaudio, pipewire-jack
+Recommends: pipewire-pulse | pulseaudio, pipewire-jack | pipewire-audio-client-libraries
 Suggests: jackd2
 Description: Live VST3 host for keyboard players
  $NAME plays your VST3 instruments live: setlists of songs and sounds,

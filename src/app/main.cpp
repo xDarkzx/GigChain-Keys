@@ -187,11 +187,13 @@ int runApp(int argc, char** argv)
     // plugin hosts started for Wine plugins, at ordinary priority: about five
     // times the dropouts (#71). The system grants it, not the app: the player
     // is told how, at each start until it is fixed.
-    const std::optional<int> realtimeLimit = platform::realtimePriorityLimit();
-    if (realtimeLimit) qCInfo(lcApp) << "Realtime priority limit (RLIMIT_RTPRIO):" << *realtimeLimit;
-    if (const QString advice = platform::realtimePriorityAdvice(realtimeLimit); !advice.isEmpty()) {
-        qCWarning(lcApp).noquote() << advice;
-        session.document().reportMessage(advice, ui::Notifications::Warning);
+    // (Not read: logged with its cause there; nothing for the player to do.)
+    if (const core::Result<std::optional<int>> realtimeLimit = platform::realtimePriorityLimit(); realtimeLimit) {
+        if (*realtimeLimit) qCInfo(lcApp) << "Realtime priority limit (RLIMIT_RTPRIO):" << **realtimeLimit;
+        if (const QString advice = platform::realtimePriorityAdvice(*realtimeLimit); !advice.isEmpty()) {
+            qCWarning(lcApp).noquote() << advice;
+            session.document().reportMessage(advice, ui::Notifications::Warning);
+        }
     }
 
     // "<exe> <setlist>" opens that file; otherwise the last one reopens only

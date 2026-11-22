@@ -45,12 +45,13 @@ Downloads for every version are on the
   when it is installed and PipeWire runs, so a JACK device chosen in
   Settings is there without a wrapper of your own (it was missing, and the
   app played through the system driver, with far more delay). The .deb now
-  recommends `pipewire-jack`, which has `pw-jack` (#70).
-- **Linux: the app says when the session has no realtime priority.** Without
-  it, the audio, and plugins running through Wine (yabridge), drop out about
-  five times as often, and nothing said why. The app now tells you at start,
-  and how to fix it: join the `pipewire` (or `audio`) group, then log in
-  again (#71).
+  recommends the package that has `pw-jack` (`pipewire-jack`, or
+  `pipewire-audio-client-libraries` on Ubuntu 22.04) (#70).
+- **Linux: the app says when the session's realtime priority limit is 0.**
+  Then the audio, and plugins running through Wine (yabridge) above all, can
+  drop out about five times as often, and nothing said why. The app now
+  tells you at start, and how to fix it: join the `pipewire` (or `audio`)
+  group, then log in again (#71).
 
 ### Fixed
 
