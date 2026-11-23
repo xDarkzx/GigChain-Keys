@@ -376,11 +376,24 @@
   </div>
 </footer>
 
+<!-- The words the script below writes ({os}, {version}, {size}: filled in by it). -->
+<script type="application/json" id="i18n">
+{
+  "downloadFor": "Download for {os}",
+  "forComputers": "For Windows, macOS and Linux computers",
+  "thanksSaid": "Thanks for downloading. A panel at the bottom of the page offers a way to donate; Escape closes it.",
+  "versionLine": "Version {version}, free, for Windows, macOS and Linux.",
+  "versionDetail": "Version {version} · {size} · free"
+}
+</script>
 <script>
 // Point every button at the latest release's own files, and lead with this
 // computer's system. Without the GitHub API (offline, rate limited) every
 // link still goes to the latest release's page.
 (function () {
+  // The words this script writes, translated with the page (tools/site_i18n.py).
+  var say = JSON.parse(document.getElementById("i18n").textContent);
+  function fill(text, values) { return text.replace(/\{(\w+)\}/g, function (all, key) { return values[key]; }); }
   var patterns = {
     "win-setup": /-x64-setup\.exe$/,
     "win-zip": /-x64-portable\.zip$/,
@@ -405,13 +418,13 @@
   var button = document.getElementById("main-download");
   var detail = document.getElementById("main-detail");
   if (os) {
-    button.firstChild.nodeValue = "Download for " + names[os];
+    button.firstChild.nodeValue = fill(say.downloadFor, { os: names[os] });
     var card = document.querySelector('.dl[data-os="' + os + '"]');
     if (card) card.classList.add("mine");
   } else {
     // A phone or tablet: the app is for computers, so show every system.
     button.href = "#download";
-    detail.textContent = "For Windows, macOS and Linux computers";
+    detail.textContent = say.forComputers;
   }
 
   // After a download starts: the thank-you, once a visit (the download is never held up).
@@ -425,8 +438,7 @@
     setTimeout(function () {
       thanks.hidden = false;
       // (Said politely to a screen reader too: the panel never takes the focus.)
-      document.getElementById("thanks-said").textContent =
-        "Thanks for downloading. A panel at the bottom of the page offers a way to donate; Escape closes it.";
+      document.getElementById("thanks-said").textContent = say.thanksSaid;
     }, 800);
   }
   document.addEventListener("click", showThanks);
@@ -451,11 +463,10 @@
         });
       });
       var version = (release.tag_name || "").replace(/^v/, "");
-      document.getElementById("version-line").textContent =
-        "Version " + version + ", free, for Windows, macOS and Linux.";
+      document.getElementById("version-line").textContent = fill(say.versionLine, { version: version });
       if (os && found[main[os]]) {
         button.href = found[main[os]].browser_download_url;
-        detail.textContent = "Version " + version + " · " + megabytes(found[main[os]].size) + " · free";
+        detail.textContent = fill(say.versionDetail, { version: version, size: megabytes(found[main[os]].size) });
       }
     })
     .catch(function (e) { console.warn("Latest release not read, the links go to its page:", e); });
