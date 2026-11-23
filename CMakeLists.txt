@@ -16,7 +16,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerHardening)
 include(PlatformSources)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Network Qml Quick QuickControls2 Multimedia Test)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Network Qml Quick QuickControls2 Multimedia Test LinguistTools)
 find_package(tl-expected CONFIG REQUIRED)
 find_package(RtAudio CONFIG REQUIRED)
 find_package(RtMidi CONFIG REQUIRED)

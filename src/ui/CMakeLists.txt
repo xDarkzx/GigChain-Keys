@@ -38,6 +38,7 @@ qt_add_qml_module(gigchain_ui
         cpp/PluginEditorHost.h cpp/PluginEditorHost.cpp
         cpp/PluginIcons.h cpp/PluginIcons.cpp
         cpp/OfficialArtwork.h cpp/OfficialArtwork.cpp
+        cpp/Language.h cpp/Language.cpp
     QML_FILES
         Theme.qml
         Main.qml
@@ -272,6 +273,33 @@ qt_add_resources(gigchain_ui "changelog" PREFIX "/changelog" BASE "${PROJECT_SOU
 # The user guide (Help > User guide, HelpLibrary), at :/help/<page>.md.
 file(GLOB _gigchain_help_pages CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/docs/help/*.md")
 qt_add_resources(gigchain_ui "help" PREFIX "/help" BASE "${PROJECT_SOURCE_DIR}/docs/help" FILES ${_gigchain_help_pages})
+
+# The app in other languages (docs/i18n/app.md), at :/i18n/gigchain_<code>.qm.
+# `cmake --build <dir> --target update_translations` refreshes the .ts files
+# from the source (lupdate); every build compiles them (lrelease).
+set(GIGCHAIN_LANGUAGES hi pt_BR es id de fr ru ja ko zh_CN)
+list(TRANSFORM GIGCHAIN_LANGUAGES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/translations/gigchain_" OUTPUT_VARIABLE _gigchain_ts)
+list(TRANSFORM _gigchain_ts APPEND ".ts")
+qt_add_translations(gigchain_ui
+    TS_FILES ${_gigchain_ts}
+    RESOURCE_PREFIX "/i18n"
+    LUPDATE_OPTIONS -no-obsolete -locations none
+    SOURCE_TARGETS gigchain_ui
+    SOURCES "${PROJECT_SOURCE_DIR}/src/app/main.cpp") # (the app is defined after this module)
+
+# Qt's own translations (the standard dialogs' buttons), where Qt has the
+# language, at :/i18n/qtbase_<code>.qm.
+set(_gigchain_qt_qm "")
+foreach(_language IN LISTS GIGCHAIN_LANGUAGES)
+    set(_qm "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_TRANSLATIONS}/qtbase_${_language}.qm")
+    if(EXISTS "${_qm}")
+        list(APPEND _gigchain_qt_qm "${_qm}")
+    endif()
+endforeach()
+if(_gigchain_qt_qm)
+    qt_add_resources(gigchain_ui "qt_translations" PREFIX "/i18n" BASE "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_TRANSLATIONS}"
+                     FILES ${_gigchain_qt_qm})
+endif()
 
 if(MSVC)
     get_target_property(_gigchain_ui_sources gigchain_ui SOURCES)

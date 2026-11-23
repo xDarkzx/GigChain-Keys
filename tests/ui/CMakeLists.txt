@@ -19,3 +19,4 @@ if(WIN32)
     # A real plugin in a real (off-screen) window, measured through Windows.
     gigchain_add_test(tst_plugin_view SOURCES tst_plugin_view.cpp LIBS gigchain_ui)
 endif()
+gigchain_add_test(tst_language SOURCES tst_language.cpp LIBS gigchain_ui)
