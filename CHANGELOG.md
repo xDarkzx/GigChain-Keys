@@ -8,8 +8,19 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-23 (alpha)
+
+Two keyboards, two sounds; chords in the song's key; a welcome on the first
+start and What's new after each update; JACK from the menu on Linux; and the
+fixes players reported on GitHub.
+
 ### Added
 
+- **A welcome, and What's new.** The first start shows three steps to your
+  first sound, with the Getting started guide and the Discord. After each
+  update, **What's new** lists what changed. At most twice in the app's life
+  (after a real gig in Perform, and after a month) it asks whether you would
+  like to support it, with **Don't ask again**.
 - **A keyboard for each channel.** Two keyboards, two sounds: in a channel's
   **Keyboard Zone**, choose the **Keyboard** it plays from (organ on the top
   keyboard, piano on the bottom one), as in MainStage. It is kept by the
