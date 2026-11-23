@@ -55,8 +55,13 @@ English page.
     their own);
   - a language menu in the header;
   - links to its own language's pages, and to the shared CSS and images;
-  - a one-line offer at the top when the reader's browser prefers another
-    language the site has ("Esta página também está em português");
+  - the reader's own language, at once: an English page goes straight to
+    the version in their browser's language, when the site has it (in the
+    page's `<head>`, so the English never flashes). A language they pick in
+    the menu is remembered and always kept. A page already in another
+    language (a link someone shared) stays, and offers theirs in one line
+    instead ("Esta página também está em português"). Search engines read
+    the English pages as they are;
   - the sitemap listing every page in every language.
 - **Checked before it is published**, and on every pull request that
   touches `site/` (`python3 tools/site_i18n.py check`, with its tests in
@@ -88,5 +93,6 @@ language and the page). A fix changes that phrase in
 
 - The comparison pages (above).
 - The app, then its user guide: next, the same way.
-- Choosing a language by the reader's location (only their browser's
-  language, and only as an offer: never a redirect).
+- Choosing a language by the reader's location: their browser's language
+  says what they read (a Hindi speaker in Canada, an English speaker in
+  Brazil), with no outside location service.
