@@ -1,0 +1,1254 @@
+{
+ "language": "hi",
+ "phrases": {
+  "eb7b3611327e": {
+   "en": "Free MainStage Alternative for Windows, Mac &amp; Linux | GigChain Keys",
+   "t": "Windows, Mac और Linux के लिए MainStage का मुफ़्त विकल्प | GigChain Keys"
+  },
+  "8c913a73e83e": {
+   "en": "MainStage is Mac only. GigChain Keys is a free, open-source MainStage alternative for Windows, Mac and Linux: your VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads, and a stage-ready Perform mode.",
+   "t": "MainStage सिर्फ़ Mac पर चलता है। GigChain Keys, Windows, Mac और Linux के लिए MainStage का मुफ़्त और open-source विकल्प है: आपके VST3 और VST2 plugins, setlists, chord charts, layers और splits, साथ में आने वाले pianos, synths और pads, और stage के लिए तैयार Perform mode।"
+  },
+  "866170f94ee0": {
+   "en": "GigChain Keys: a free MainStage alternative for Windows, Mac & Linux",
+   "t": "GigChain Keys: Windows, Mac और Linux के लिए MainStage का मुफ़्त विकल्प"
+  },
+  "0f5870aefead": {
+   "en": "Your sounds, setlist, chord charts and practice in one free app. Windows, macOS and Linux.",
+   "t": "आपकी sounds, setlist, chord charts और practice, सब एक मुफ़्त app में। Windows, macOS और Linux।"
+  },
+  "ecaffe3bf69c": {
+   "en": "Live performance VST host for keyboard players",
+   "t": "Live बजाने वाले keyboard players के लिए VST host"
+  },
+  "d1396f6805ce": {
+   "en": "A free, open-source MainStage alternative for Windows, Mac and Linux: VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads.",
+   "t": "Windows, Mac और Linux के लिए MainStage का मुफ़्त और open-source विकल्प: VST3 और VST2 plugins, setlists, chord charts, layers और splits, साथ में आने वाले pianos, synths और pads।"
+  },
+  "2b4d48210396": {
+   "en": "Is there MainStage for Windows?",
+   "t": "क्या MainStage, Windows के लिए है?"
+  },
+  "ed07dad61ee9": {
+   "en": "No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux): it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches sounds instantly on stage. It's free.",
+   "t": "नहीं: Apple का MainStage सिर्फ़ Mac पर चलता है। GigChain Keys यही काम Windows पर (और Mac और Linux पर भी) करता है: यह आपके VST plugins चलाता है, हर गाने की sounds की setlist रखता है, keyboard पर layers और splits बनाता है, और stage पर sound तुरंत बदलता है। और यह मुफ़्त है।"
+  },
+  "2abe0172cab2": {
+   "en": "Is GigChain Keys free?",
+   "t": "क्या GigChain Keys मुफ़्त है?"
+  },
+  "3d1f935ed096": {
+   "en": "Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL.",
+   "t": "हाँ। न ads, न account, न licence key, न subscription। यह GPL के तहत open source है।"
+  },
+  "04a91be943fb": {
+   "en": "Which plugins work in GigChain Keys?",
+   "t": "GigChain Keys में कौन-से plugins चलते हैं?"
+  },
+  "ecffd7549d7a": {
+   "en": "VST3 and VST2 instruments and effects, such as Kontakt, Arturia, Spitfire, Surge XT and Vital.",
+   "t": "VST3 और VST2 instruments और effects, जैसे Kontakt, Arturia, Spitfire, Surge XT और Vital।"
+  },
+  "024d86cdde10": {
+   "en": "Does GigChain Keys run on Linux?",
+   "t": "क्या GigChain Keys, Linux पर चलता है?"
+  },
+  "a8f4326fad80": {
+   "en": "Yes: an AppImage for most distributions and a .deb for Ubuntu, Debian and Mint, with JACK, PipeWire and ALSA.",
+   "t": "हाँ: ज़्यादातर distributions के लिए एक AppImage, और Ubuntu, Debian और Mint के लिए एक .deb, JACK, PipeWire और ALSA के साथ।"
+  },
+  "9eb360f946c2": {
+   "en": "<a href=\"#watch\" class=\"hide-small\">Watch</a>",
+   "t": "<a href=\"#watch\" class=\"hide-small\">वीडियो</a>"
+  },
+  "75ce51101dce": {
+   "en": "<a href=\"#features\" class=\"hide-small\">Features</a>",
+   "t": "<a href=\"#features\" class=\"hide-small\">फ़ीचर्स</a>"
+  },
+  "89a580f42a1e": {
+   "en": "<a href=\"#download\">Download</a>",
+   "t": "<a href=\"#download\">डाउनलोड</a>"
+  },
+  "055f7269c6aa": {
+   "en": "<a href=\"support.html\">♥ Support</a>",
+   "t": "<a href=\"support.html\">♥ सपोर्ट करें</a>"
+  },
+  "c5d997af8729": {
+   "en": "A free MainStage alternative for Windows, Mac and Linux",
+   "t": "Windows, Mac और Linux के लिए MainStage का मुफ़्त विकल्प"
+  },
+  "fc0225584c5c": {
+   "en": "Your whole keyboard rig on stage: your sounds, setlist, chord charts and practice in one free app.",
+   "t": "आपका पूरा keyboard setup stage पर: आपकी sounds, setlist, chord charts और practice, सब एक मुफ़्त app में।"
+  },
+  "75f527181b57": {
+   "en": "Free",
+   "t": "मुफ़्त"
+  },
+  "df76b5bc094a": {
+   "en": "No ads",
+   "t": "कोई ads नहीं"
+  },
+  "685b04426605": {
+   "en": "No licence keys",
+   "t": "कोई licence key नहीं"
+  },
+  "d3123ff1f8e3": {
+   "en": "Open source (GPLv3)",
+   "t": "ओपन सोर्स (GPLv3)"
+  },
+  "b5edc4b33989": {
+   "en": "Plays your VST plugins",
+   "t": "आपके VST plugins चलाता है"
+  },
+  "d52dd151cd77": {
+   "en": "<a class=\"btn\" id=\"main-download\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\"> Download<small id=\"main-detail\">Windows · macOS · Linux</small> </a>",
+   "t": "<a class=\"btn\" id=\"main-download\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\"> डाउनलोड करें<small id=\"main-detail\">Windows · macOS · Linux</small> </a>"
+  },
+  "5abc01b2780c": {
+   "en": "<a href=\"#download\">Other systems and versions</a>",
+   "t": "<a href=\"#download\">दूसरे systems और versions</a>"
+  },
+  "3f1702b0a6ce": {
+   "en": "<b>Public alpha.</b> It works and is played on real rigs, but try it at home and in rehearsal before you trust it on a gig, and <a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">tell us what breaks</a>.",
+   "t": "<b>Public alpha।</b> यह काम करता है और असली setups पर बजाया जा रहा है, लेकिन किसी gig पर भरोसा करने से पहले इसे घर पर और rehearsal में आज़माएँ, और <a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">जो गड़बड़ हो, हमें बताएँ</a>।"
+  },
+  "e8bd86c9a348": {
+   "en": "GigChain Keys: a song's chord chart, its sections, the mixer and the keyboard",
+   "t": "GigChain Keys: एक गाने का chord chart, उसके sections, mixer और keyboard"
+  },
+  "64ce9609c081": {
+   "en": "See it in two minutes",
+   "t": "दो मिनट में देखें"
+  },
+  "10235504c37d": {
+   "en": "The whole app, start to finish.",
+   "t": "पूरा app, शुरू से आख़िर तक।"
+  },
+  "4363d082ec26": {
+   "en": "GigChain Keys: the overview",
+   "t": "GigChain Keys: एक झलक"
+  },
+  "95686bc07a9c": {
+   "en": "<a href=\"https://youtu.be/JhIZuH2CdhM\">Chord charts and lyrics</a>",
+   "t": "<a href=\"https://youtu.be/JhIZuH2CdhM\">Chord charts और lyrics</a>"
+  },
+  "32b6b405c03d": {
+   "en": "<a href=\"https://youtu.be/UxjiNPtMoQw\">The 10-minute warm-up</a>",
+   "t": "<a href=\"https://youtu.be/UxjiNPtMoQw\">10 मिनट का warm-up</a>"
+  },
+  "7bd922fd05bf": {
+   "en": "<a href=\"https://youtu.be/GbwlgxBf-Es\">Layers, splits and effects</a>",
+   "t": "<a href=\"https://youtu.be/GbwlgxBf-Es\">Layers, splits और effects</a>"
+  },
+  "a6abbf9e9e97": {
+   "en": "<a href=\"https://youtu.be/Wopcyn-vZmU\">Sounds on your pads</a>",
+   "t": "<a href=\"https://youtu.be/Wopcyn-vZmU\">आपके pads पर sounds</a>"
+  },
+  "c0d4e3b69d5e": {
+   "en": "<a href=\"https://youtu.be/BTiaUMiEjHo\">Pads Pro and Sustain Pads</a>",
+   "t": "<a href=\"https://youtu.be/BTiaUMiEjHo\">Pads Pro और Sustain Pads</a>"
+  },
+  "ce63beccffe2": {
+   "en": "<a href=\"https://youtu.be/laZV1BDlWCk\">The SoundFont Player</a>",
+   "t": "<a href=\"https://youtu.be/laZV1BDlWCk\">SoundFont Player</a>"
+  },
+  "f4539c849138": {
+   "en": "<a href=\"https://youtu.be/8drCLZTLFHI\">The sound update (0.10)</a>",
+   "t": "<a href=\"https://youtu.be/8drCLZTLFHI\">Sound update (0.10)</a>"
+  },
+  "0d6fae79b36e": {
+   "en": "Everything a keys player needs on stage",
+   "t": "Stage पर keyboard player को जो कुछ चाहिए"
+  },
+  "1289a15feda7": {
+   "en": "Load your sounds once, and the whole night is ready.",
+   "t": "अपनी sounds एक बार load करें, और पूरी रात की तैयारी हो गई।"
+  },
+  "1ea4d96e623e": {
+   "en": "Plays your plugins",
+   "t": "आपके plugins चलाता है"
+  },
+  "8c5de7addcd7": {
+   "en": "Your VST3 and VST2 instruments and effects. Every sound in the setlist is loaded up front, so changing songs is instant and held notes ring on.",
+   "t": "आपके VST3 और VST2 instruments और effects। Setlist की हर sound पहले से load रहती है, इसलिए गाना तुरंत बदलता है और दबाए हुए notes बजते रहते हैं।"
+  },
+  "40e6e85103b8": {
+   "en": "All the night's songs in one file, in order, each with its own sounds. Change songs from the keyboard, a pedal or a pad.",
+   "t": "रात के सारे गाने एक file में, क्रम से, हर गाना अपनी sounds के साथ। गाना keyboard, pedal या pad से बदलें।"
+  },
+  "4c5bd2266cf6": {
+   "en": "Chord charts",
+   "t": "कॉर्ड चार्ट"
+  },
+  "b7929b0f90b3": {
+   "en": "Paste a song from any chord website and each chord lands on its word. Big enough to read from the keys.",
+   "t": "किसी भी chords website से गाना paste करें और हर chord अपने शब्द पर आ जाता है। इतना बड़ा कि keyboard से पढ़ सकें।"
+  },
+  "f9bdd3e4ae7f": {
+   "en": "Splits and layers",
+   "t": "Splits और layers"
+  },
+  "adf3bfa6135e": {
+   "en": "Key zones, transpose and velocity layers. Each part of the song (verse, chorus, solo) can switch which sounds play.",
+   "t": "Key zones, transpose और velocity layers। गाने का हर हिस्सा (verse, chorus, solo) बदल सकता है कि कौन-सी sounds बजें।"
+  },
+  "67e6bb800180": {
+   "en": "Perform mode",
+   "t": "Perform मोड"
+  },
+  "693799ffee21": {
+   "en": "Full screen for the stage and touch screens: the chart, big Play, Next part and Loop part buttons that land on the bar line.",
+   "t": "Stage और touch screens के लिए full screen: chart, और बड़े Play, Next part और Loop part buttons जो ठीक bar line पर आते हैं।"
+  },
+  "ddbff60e260a": {
+   "en": "Its own instruments",
+   "t": "इसके अपने instruments"
+  },
+  "c699332316ce": {
+   "en": "Piano Pro (recorded grand, upright, Rhodes, Wurlitzer and more), Saw Stack Pro (EDM supersaws), Pads Pro (ambient pads under the band) and a SoundFont player for any .sf2. Plus Squash, Enhance and Sidechain effects. No plugin to buy.",
+   "t": "Piano Pro (record किए हुए grand, upright, Rhodes, Wurlitzer और भी), Saw Stack Pro (EDM supersaws), Pads Pro (band के नीचे ambient pads) और किसी भी .sf2 के लिए एक SoundFont player। साथ में Squash, Enhance और Sidechain effects। कोई plugin ख़रीदने की ज़रूरत नहीं।"
+  },
+  "233264aa7b63": {
+   "en": "Set up like a pro rig",
+   "t": "Pro setup की तरह तैयार"
+  },
+  "89067c1a12fa": {
+   "en": "Each keyboard's touch, tuning (A4 415–466 Hz), transpose the whole rig in one tap, your own plugin folders, autosave with backups, and a warning if the audio ever drops out.",
+   "t": "हर keyboard का touch, tuning (A4 415–466 Hz), पूरे setup को एक tap में transpose, आपके अपने plugin folders, backups के साथ autosave, और audio कभी कटे तो warning।"
+  },
+  "c1c10ea45b6a": {
+   "en": "Practice and warm-ups",
+   "t": "Practice और warm-ups"
+  },
+  "cad5c8a88781": {
+   "en": "The song's chords fall onto a keyboard, YouTube-piano style. Daily warm-ups at your level, every run scored.",
+   "t": "गाने के chords एक keyboard पर गिरते हैं, YouTube piano videos की तरह। आपके level के हिसाब से रोज़ के warm-ups, हर बार score के साथ।"
+  },
+  "8f3a6c99d8a3": {
+   "en": "Record a loop of any instrument in time with the song and layer on top, street-performer style.",
+   "t": "किसी भी instrument का loop गाने के tempo में record करें और उस पर layers चढ़ाएँ, street performers की तरह।"
+  },
+  "4908a68f7a24": {
+   "en": "Built not to fail",
+   "t": "फ़ेल न होने के लिए बना"
+  },
+  "63cac030dd45": {
+   "en": "Plugins are scanned in a separate process, a crashing plugin is switched off, and an unplugged keyboard comes back by itself.",
+   "t": "Plugins अलग process में scan होते हैं, crash होने वाला plugin बंद हो जाता है, और निकला हुआ keyboard अपने आप वापस जुड़ जाता है।"
+  },
+  "9df4fcc7a2bf": {
+   "en": "Perform mode: big Play, Next part and Loop part buttons, the song's parts as tiles and the chart",
+   "t": "Perform mode: बड़े Play, Next part और Loop part buttons, गाने के parts tiles में और chart"
+  },
+  "b6254454b9e3": {
+   "en": "Perform mode: the song plays along its parts.",
+   "t": "Perform mode: गाना अपने parts के साथ आगे बढ़ता है।"
+  },
+  "a6d7910e9385": {
+   "en": "Practice mode: the chords falling onto a keyboard",
+   "t": "Practice mode: chords एक keyboard पर गिरते हुए"
+  },
+  "117b5db0bdc6": {
+   "en": "Practice: the chords fall onto the keys.",
+   "t": "Practice: chords keys पर गिरते हैं।"
+  },
+  "a479c9c34e87": {
+   "en": "Download",
+   "t": "डाउनलोड"
+  },
+  "7f3d5cf49f8e": {
+   "en": "Free, for Windows, macOS and Linux.",
+   "t": "मुफ़्त, Windows, macOS और Linux के लिए।"
+  },
+  "d80009ee6bdf": {
+   "en": "Windows 10 or 11, 64-bit",
+   "t": "Windows 10 या 11, 64-bit"
+  },
+  "2cd44abe2ce1": {
+   "en": "<a class=\"file\" data-asset=\"win-setup\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Installer<span>Recommended</span></a>",
+   "t": "<a class=\"file\" data-asset=\"win-setup\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Installer<span>सुझाया गया</span></a>"
+  },
+  "865d0ec30bd7": {
+   "en": "<a class=\"file\" data-asset=\"win-zip\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Portable zip<span>No install: unzip anywhere, even a USB stick</span></a>",
+   "t": "<a class=\"file\" data-asset=\"win-zip\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Portable zip<span>Install की ज़रूरत नहीं: कहीं भी unzip करें, USB stick पर भी</span></a>"
+  },
+  "da19310aa049": {
+   "en": "\"Windows protected your PC\"?",
+   "t": "\"Windows protected your PC\" दिख रहा है?"
+  },
+  "e854d518d956": {
+   "en": "The alpha isn't code-signed yet. Click <b>More info</b>, then <b>Run anyway</b>. This happens once.",
+   "t": "Alpha अभी code-signed नहीं है। <b>More info</b> पर click करें, फिर <b>Run anyway</b> पर। यह सिर्फ़ एक बार होता है।"
+  },
+  "fad8b846a21d": {
+   "en": "macOS 13 or later, Apple Silicon (M1 or newer)",
+   "t": "macOS 13 या नया, Apple Silicon (M1 या नया)"
+  },
+  "39f7a3282a03": {
+   "en": "<a class=\"file\" data-asset=\"mac-dmg\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Disk image<span>Drag GigChain Keys to Applications</span></a>",
+   "t": "<a class=\"file\" data-asset=\"mac-dmg\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Disk image<span>GigChain Keys को Applications में drag करें</span></a>"
+  },
+  "c48d280c0dcd": {
+   "en": "macOS won't open it?",
+   "t": "macOS इसे नहीं खोल रहा?"
+  },
+  "7c9b5e95fccf": {
+   "en": "The alpha isn't notarized by Apple yet. Open it once, then go to <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.",
+   "t": "Alpha अभी Apple से notarized नहीं है। इसे एक बार खोलें, फिर <b>System Settings → Privacy &amp; Security</b> में जाकर <b>Open Anyway</b> पर click करें।"
+  },
+  "f9d493d1c08f": {
+   "en": "64-bit: Ubuntu 22.04+, Fedora, Arch, Mint…",
+   "t": "64-bit: Ubuntu 22.04+, Fedora, Arch, Mint…",
+   "same": true
+  },
+  "5350d3e4ea10": {
+   "en": "<a class=\"file\" data-asset=\"appimage\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">AppImage<span>One file for most distributions</span></a>",
+   "t": "<a class=\"file\" data-asset=\"appimage\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">AppImage<span>ज़्यादातर distributions के लिए एक file</span></a>"
+  },
+  "475d0017db4e": {
+   "en": "How to run the AppImage",
+   "t": "AppImage कैसे चलाएँ"
+  },
+  "f065f70a3ff6": {
+   "en": "Make it executable, then run it: <code>chmod +x GigChainKeys-*.AppImage</code>. If it says FUSE is missing, install <code>libfuse2</code>.",
+   "t": "इसे executable बनाएँ, फिर चलाएँ: <code>chmod +x GigChainKeys-*.AppImage</code>। अगर FUSE missing बताए, तो <code>libfuse2</code> install करें।"
+  },
+  "42c788694a56": {
+   "en": "You'll also want a MIDI keyboard. Pianos, synths and pads come built in, and <a href=\"https://github.com/xDarkzx/GigChain-Keys#what-you-need\">free ones</a> cover pianos, synths and pads. Every release lists checksums and notes on the <a href=\"https://github.com/xDarkzx/GigChain-Keys/releases\">releases page</a>.",
+   "t": "आपको एक MIDI keyboard भी चाहिए होगा। Pianos, synths और pads साथ में आते हैं, और pianos, synths और pads के <a href=\"https://github.com/xDarkzx/GigChain-Keys#what-you-need\">मुफ़्त विकल्प</a> भी हैं। हर release के checksums और notes <a href=\"https://github.com/xDarkzx/GigChain-Keys/releases\">releases page</a> पर हैं।"
+  },
+  "9a1fc1731f62": {
+   "en": "Questions",
+   "t": "सवाल"
+  },
+  "0cefd2518ce5": {
+   "en": "No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux too): it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches sounds instantly on stage. It's free.",
+   "t": "नहीं: Apple का MainStage सिर्फ़ Mac पर चलता है। GigChain Keys यही काम Windows पर (और Mac और Linux पर भी) करता है: यह आपके VST plugins चलाता है, हर गाने की sounds की setlist रखता है, keyboard पर layers और splits बनाता है, और stage पर sound तुरंत बदलता है। और यह मुफ़्त है।"
+  },
+  "f1f5ae24ffaa": {
+   "en": "Is it really free?",
+   "t": "क्या यह सच में मुफ़्त है?"
+  },
+  "27847cda8417": {
+   "en": "Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL, paid for by donations.",
+   "t": "हाँ। न ads, न account, न licence key, न subscription। यह GPL के तहत open source है, और donations से चलता है।"
+  },
+  "f2323f6128b1": {
+   "en": "Which plugins work?",
+   "t": "कौन-से plugins चलते हैं?"
+  },
+  "7f61c0d0e840": {
+   "en": "VST3 and VST2 instruments and effects: Kontakt, Arturia, Spitfire, u-he, Surge XT, Vital and the free ones. Plugins on another drive? Add the folder in Settings and click Rescan.",
+   "t": "VST3 और VST2 instruments और effects: Kontakt, Arturia, Spitfire, u-he, Surge XT, Vital और मुफ़्त वाले भी। Plugins किसी दूसरी drive पर हैं? Settings में वह folder जोड़ें और Rescan पर click करें।"
+  },
+  "c33018044e6e": {
+   "en": "Does it work with my MIDI keyboard?",
+   "t": "क्या यह मेरे MIDI keyboard के साथ चलेगा?"
+  },
+  "91c0cd9fc2d2": {
+   "en": "Any USB or MIDI keyboard. Its knobs, faders, pads and pedals can change songs, sounds and parts, and you can set how hard you have to play for full volume.",
+   "t": "किसी भी USB या MIDI keyboard के साथ। उसके knobs, faders, pads और pedals गाने, sounds और parts बदल सकते हैं, और आप तय कर सकते हैं कि full volume के लिए कितना ज़ोर से बजाना पड़े।"
+  },
+  "8f3316e143e1": {
+   "en": "How is it different from Gig Performer or Cantabile?",
+   "t": "यह Gig Performer या Cantabile से कैसे अलग है?"
+  },
+  "9351d176380c": {
+   "en": "They're excellent paid hosts. GigChain Keys is free and open source, adds chord charts, practice and its own instruments, and runs on Linux too. It's newer (a public alpha), so try it at home before a gig.",
+   "t": "वे बढ़िया paid hosts हैं। GigChain Keys मुफ़्त और open source है, इसमें chord charts, practice और इसके अपने instruments भी हैं, और यह Linux पर भी चलता है। यह नया है (public alpha), इसलिए gig से पहले घर पर आज़मा लें।"
+  },
+  "bab602553891": {
+   "en": "Does it run on Linux?",
+   "t": "क्या यह Linux पर चलता है?"
+  },
+  "929a28d26142": {
+   "en": "Guides",
+   "t": "गाइड"
+  },
+  "cefe7398a817": {
+   "en": "<a href=\"free-mainstage-alternatives.html\">Free MainStage alternatives, compared</a>",
+   "t": "<a href=\"free-mainstage-alternatives.html\">MainStage के मुफ़्त विकल्प, तुलना के साथ</a>"
+  },
+  "d5bbe9dddf2c": {
+   "en": "<a href=\"mainstage-for-windows.html\">MainStage for Windows? What to use instead</a>",
+   "t": "<a href=\"mainstage-for-windows.html\">Windows के लिए MainStage? उसकी जगह क्या इस्तेमाल करें</a>"
+  },
+  "ecdbbd3bbaa0": {
+   "en": "<a href=\"play-vst-plugins-live.html\">How to play VST plugins live without a DAW</a>",
+   "t": "<a href=\"play-vst-plugins-live.html\">बिना DAW के VST plugins live कैसे बजाएँ</a>"
+  },
+  "74c9ce570929": {
+   "en": "Made with players",
+   "t": "Players के साथ मिलकर बना"
+  },
+  "ec75d05348a5": {
+   "en": "Your feedback decides what gets fixed and built next.",
+   "t": "आगे क्या ठीक होगा और क्या बनेगा, यह आपका feedback तय करता है।"
+  },
+  "d41804736a6c": {
+   "en": "<a href=\"https://discord.gg/BGn8Ujh37m\">Join the Discord</a>",
+   "t": "<a href=\"https://discord.gg/BGn8Ujh37m\">Discord से जुड़ें</a>"
+  },
+  "67a7b5a200e5": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md\">Getting started</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md\">शुरुआत कैसे करें</a>"
+  },
+  "6bb83d968e51": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">Report a bug or idea</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">Bug या idea बताएँ</a>"
+  },
+  "b295b030d731": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">Star it on GitHub</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">GitHub पर star दें</a>"
+  },
+  "a45e282de1bb": {
+   "en": "<a href=\"support.html\">☕ Donate or ♥ Sponsor</a>",
+   "t": "<a href=\"support.html\">☕ Donate करें या ♥ Sponsor करें</a>"
+  },
+  "87443a59149b": {
+   "en": "Thanks for downloading! 🎹",
+   "t": "डाउनलोड करने के लिए शुक्रिया! 🎹"
+  },
+  "f8b76191bf51": {
+   "en": "GigChain Keys is free and always will be: no ads, no account, no paid version. It's made by one keyboard player, with a new version every Monday. If it helps your gigs, a donation or a sponsorship keeps it going. First goal: code signing (and Apple's notarisation), so Windows and Mac warn less when you install it.",
+   "t": "GigChain Keys मुफ़्त है और हमेशा रहेगा: न ads, न account, न paid version। इसे एक keyboard player बनाता है, हर सोमवार एक नए version के साथ। अगर यह आपके gigs में काम आता है, तो एक donation या sponsorship इसे चलाए रखती है। पहला लक्ष्य: code signing (और Apple का notarisation), ताकि install करते समय Windows और Mac कम warnings दिखाएँ।"
+  },
+  "c03ceee0330b": {
+   "en": "<a class=\"give\" href=\"https://buymeacoffee.com/ddazomnike\">☕ Donate</a>",
+   "t": "<a class=\"give\" href=\"https://buymeacoffee.com/ddazomnike\">☕ Donate करें</a>"
+  },
+  "ecfa1249d02e": {
+   "en": "<a class=\"give sponsor\" href=\"https://github.com/sponsors/xDarkzx\">♥ Sponsor</a>",
+   "t": "<a class=\"give sponsor\" href=\"https://github.com/sponsors/xDarkzx\">♥ Sponsor करें</a>"
+  },
+  "4546f3d0893d": {
+   "en": "<a href=\"support.html\">More ways to help</a>",
+   "t": "<a href=\"support.html\">मदद के और तरीके</a>"
+  },
+  "e45714907316": {
+   "en": "Not now",
+   "t": "अभी नहीं"
+  },
+  "35ec8d316d80": {
+   "en": "GigChain Keys is free software under the GNU GPL, version 3 or later.",
+   "t": "GigChain Keys, GNU GPL version 3 या उसके बाद के version के तहत free (स्वतंत्र) software है।"
+  },
+  "8e61794741d2": {
+   "en": "VST is a registered trademark of Steinberg Media Technologies GmbH. MainStage is a trademark of Apple Inc. GigChain Keys is not affiliated with them.",
+   "t": "VST, Steinberg Media Technologies GmbH का registered trademark है। MainStage, Apple Inc. का trademark है। GigChain Keys इनसे जुड़ा हुआ नहीं है।"
+  },
+  "6c48e6ef2373": {
+   "en": "Download for {os}",
+   "t": "{os} के लिए डाउनलोड करें"
+  },
+  "191664d92f7c": {
+   "en": "For Windows, macOS and Linux computers",
+   "t": "Windows, macOS और Linux computers के लिए"
+  },
+  "b95edd4018a7": {
+   "en": "Thanks for downloading. A panel at the bottom of the page offers a way to donate; Escape closes it.",
+   "t": "डाउनलोड करने के लिए शुक्रिया। Page के नीचे एक panel donate करने का तरीका बताता है; Escape से वह बंद हो जाता है।"
+  },
+  "45275ecb4b21": {
+   "en": "Version {version}, free, for Windows, macOS and Linux.",
+   "t": "Version {version}, मुफ़्त, Windows, macOS और Linux के लिए।"
+  },
+  "4e806fa145f8": {
+   "en": "Version {version} · {size} · free",
+   "t": "Version {version} · {size} · मुफ़्त"
+  },
+  "bd4901dfd4a6": {
+   "en": "Support GigChain Keys: Donate or Sponsor | GigChain Keys",
+   "t": "GigChain Keys को सपोर्ट करें: Donate या Sponsor | GigChain Keys"
+  },
+  "a6e03fa0b48c": {
+   "en": "GigChain Keys is free, with no ads and no paid version. Donate once with Buy Me a Coffee (card, Apple Pay or Google Pay, no account), or sponsor it monthly on GitHub.",
+   "t": "GigChain Keys मुफ़्त है, न ads, न paid version। Buy Me a Coffee से एक बार donate करें (card, Apple Pay या Google Pay, बिना account), या GitHub पर हर महीने sponsor करें।"
+  },
+  "d4585d05f087": {
+   "en": "Support GigChain Keys: donate or sponsor",
+   "t": "GigChain Keys को सपोर्ट करें: donate या sponsor"
+  },
+  "1a86e0a10dbb": {
+   "en": "Free for every keyboard player. Donate once, or sponsor it monthly.",
+   "t": "हर keyboard player के लिए मुफ़्त। एक बार donate करें, या हर महीने sponsor करें।"
+  },
+  "f32d5a3b17e6": {
+   "en": "Support",
+   "t": "सपोर्ट"
+  },
+  "9b3c871bc0ac": {
+   "en": "Yes, completely: no ads, no account, no licence key and no paid version. Donations and sponsors keep it that way.",
+   "t": "हाँ, पूरी तरह: न ads, न account, न licence key और न paid version। Donations और sponsors इसे ऐसा ही बनाए रखते हैं।"
+  },
+  "65893789e1a8": {
+   "en": "Do supporters get extra features?",
+   "t": "क्या supporters को extra features मिलते हैं?"
+  },
+  "20e5af105672": {
+   "en": "No. Everyone gets the same app, with every feature. Support pays for the work, not for access.",
+   "t": "नहीं। सबको एक ही app मिलता है, सारे features के साथ। सपोर्ट काम का खर्च उठाता है, access का नहीं।"
+  },
+  "755067418d53": {
+   "en": "<a href=\"./#features\" class=\"hide-small\">Features</a>",
+   "t": "<a href=\"./#features\" class=\"hide-small\">फ़ीचर्स</a>"
+  },
+  "8270535cb4ab": {
+   "en": "<a href=\"./#download\">Download</a>",
+   "t": "<a href=\"./#download\">डाउनलोड</a>"
+  },
+  "ca6faa27a7a6": {
+   "en": "<a href=\"support.html\" aria-current=\"page\">♥ Support</a>",
+   "t": "<a href=\"support.html\" aria-current=\"page\">♥ सपोर्ट करें</a>"
+  },
+  "4efcf575e641": {
+   "en": "Support GigChain Keys",
+   "t": "GigChain Keys को सपोर्ट करें"
+  },
+  "fcf2c8838853": {
+   "en": "GigChain Keys is free for every keyboard player: no ads, no account, no paid version. It's made by one keyboard player, with a new version every Monday. If it has earned a place in your rig, you can help keep it going.",
+   "t": "GigChain Keys हर keyboard player के लिए मुफ़्त है: न ads, न account, न paid version। इसे एक keyboard player बनाता है, हर सोमवार एक नए version के साथ। अगर इसने आपके setup में जगह बना ली है, तो आप इसे चलाए रखने में मदद कर सकते हैं।"
+  },
+  "e9292906f52e": {
+   "en": "One-time",
+   "t": "एक बार"
+  },
+  "f85f51c17dc3": {
+   "en": "☕ Donate",
+   "t": "☕ Donate करें"
+  },
+  "0762d7e67f6d": {
+   "en": "A thank-you of any amount, whenever you like.",
+   "t": "जितना चाहें, जब चाहें, एक शुक्रिया।"
+  },
+  "6f17b16c1553": {
+   "en": "Card, Apple Pay or Google Pay",
+   "t": "Card, Apple Pay या Google Pay"
+  },
+  "997fb14df751": {
+   "en": "No account needed",
+   "t": "Account की ज़रूरत नहीं"
+  },
+  "89868ff402a6": {
+   "en": "Through Buy Me a Coffee",
+   "t": "Buy Me a Coffee के ज़रिए"
+  },
+  "35ebe3e85031": {
+   "en": "<a class=\"go\" href=\"https://buymeacoffee.com/ddazomnike\">Donate with Buy Me a Coffee</a>",
+   "t": "<a class=\"go\" href=\"https://buymeacoffee.com/ddazomnike\">Buy Me a Coffee से donate करें</a>"
+  },
+  "d31edb7b8a94": {
+   "en": "Monthly",
+   "t": "हर महीने"
+  },
+  "8300dedca8dd": {
+   "en": "♥ Sponsor",
+   "t": "♥ Sponsor करें"
+  },
+  "099384fb5d8d": {
+   "en": "A small amount each month: the steady support that keeps the weekly releases coming.",
+   "t": "हर महीने एक छोटी रकम: वह लगातार सपोर्ट जिससे हर हफ़्ते के releases आते रहते हैं।"
+  },
+  "7856b16ce109": {
+   "en": "Ongoing, cancel any time",
+   "t": "लगातार, जब चाहें cancel करें"
+  },
+  "8b1b4c4bf1cb": {
+   "en": "With your GitHub account",
+   "t": "आपके GitHub account के साथ"
+  },
+  "548826723901": {
+   "en": "Through GitHub Sponsors",
+   "t": "GitHub Sponsors के ज़रिए"
+  },
+  "310699272a6b": {
+   "en": "<a class=\"go\" href=\"https://github.com/sponsors/xDarkzx\">Sponsor on GitHub</a>",
+   "t": "<a class=\"go\" href=\"https://github.com/sponsors/xDarkzx\">GitHub पर sponsor करें</a>"
+  },
+  "5535db6b88da": {
+   "en": "Everyone gets the same app, with every feature. Support pays for the work, never for access.",
+   "t": "सबको एक ही app मिलता है, सारे features के साथ। सपोर्ट काम का खर्च उठाता है, access का कभी नहीं।"
+  },
+  "a889a0abe7e4": {
+   "en": "Where your support goes",
+   "t": "आपका सपोर्ट कहाँ जाता है"
+  },
+  "ea7f7f6781c5": {
+   "en": "<strong>Fewer install warnings</strong>",
+   "t": "<strong>Install करते समय कम warnings</strong>"
+  },
+  "8ec6b28774a8": {
+   "en": "<span>Code signing for Windows, and Apple's signing and notarisation for the Mac, so installing it feels safe.</span>",
+   "t": "<span>Windows के लिए code signing, और Mac के लिए Apple की signing और notarisation, ताकि install करना भरोसेमंद लगे।</span>"
+  },
+  "205ead700236": {
+   "en": "<strong>A release every Monday</strong>",
+   "t": "<strong>हर सोमवार एक release</strong>"
+  },
+  "2f2fac6b997b": {
+   "en": "<span>The time to fix what players report and ship it the same week.</span>",
+   "t": "<span>Players जो बताते हैं उसे ठीक करने और उसी हफ़्ते release करने का समय।</span>"
+  },
+  "7f221fcb5a52": {
+   "en": "<strong>New instruments and features</strong>",
+   "t": "<strong>नए instruments और features</strong>"
+  },
+  "f31293670677": {
+   "en": "<span>Built from what keyboard players ask for on GitHub and Discord.</span>",
+   "t": "<span>GitHub और Discord पर keyboard players जो माँगते हैं, उसी से बनते हैं।</span>"
+  },
+  "590721fed556": {
+   "en": "Other ways to help, free",
+   "t": "मदद के और तरीके, बिना पैसे के"
+  },
+  "f9c05cb52423": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">⭐ Star it on GitHub<span>Helps other players find it</span></a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">⭐ GitHub पर star दें<span>दूसरे players को इसे ढूँढने में मदद मिलती है</span></a>"
+  },
+  "dc828b35f900": {
+   "en": "<a href=\"https://discord.gg/BGn8Ujh37m\">💬 Join the Discord<span>Show your rig, ask, suggest</span></a>",
+   "t": "<a href=\"https://discord.gg/BGn8Ujh37m\">💬 Discord से जुड़ें<span>अपना setup दिखाएँ, सवाल पूछें, सुझाव दें</span></a>"
+  },
+  "69ae2de3ac33": {
+   "en": "<a href=\"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4\">▶ Watch and share the videos<span>How most players find it</span></a>",
+   "t": "<a href=\"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4\">▶ Videos देखें और share करें<span>ज़्यादातर players इसे ऐसे ही ढूँढते हैं</span></a>"
+  },
+  "b3796b762535": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">💡 Report a bug or an idea<span>Decides what comes next</span></a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">💡 Bug या idea बताएँ<span>इससे तय होता है कि आगे क्या आएगा</span></a>"
+  },
+  "540404626cf2": {
+   "en": "What's the difference between donating and sponsoring?",
+   "t": "Donate और sponsor करने में क्या फ़र्क है?"
+  },
+  "52bf04379332": {
+   "en": "Donating is a one-time gift through Buy Me a Coffee, with no account needed. Sponsoring is ongoing support through GitHub Sponsors, and needs a GitHub account. Both go to the same place: GigChain Keys.",
+   "t": "Donate करना Buy Me a Coffee के ज़रिए एक बार का योगदान है, जिसके लिए account नहीं चाहिए। Sponsor करना GitHub Sponsors के ज़रिए लगातार सपोर्ट है, और इसके लिए GitHub account चाहिए। दोनों एक ही जगह जाते हैं: GigChain Keys।"
+  },
+  "e28f3a2b676f": {
+   "en": "Not using it yet? It's free on Windows, Mac and Linux.",
+   "t": "अभी तक इस्तेमाल नहीं किया? यह Windows, Mac और Linux पर मुफ़्त है।"
+  },
+  "f9e80c0a499e": {
+   "en": "<a class=\"btn\" href=\"./#download\">Download GigChain Keys</a>",
+   "t": "<a class=\"btn\" href=\"./#download\">GigChain Keys डाउनलोड करें</a>"
+  },
+  "29a0bdcbd621": {
+   "en": "Buy Me a Coffee and GitHub Sponsors are run by their own companies; payments go through them.",
+   "t": "Buy Me a Coffee और GitHub Sponsors अपनी-अपनी companies चलाती हैं; payments उन्हीं के ज़रिए होते हैं।"
+  },
+  "e3ca95abe18e": {
+   "en": "MainStage for Windows? What to Use Instead (Free) | GigChain Keys",
+   "t": "Windows के लिए MainStage? उसकी जगह क्या इस्तेमाल करें (मुफ़्त) | GigChain Keys"
+  },
+  "6df980db18c6": {
+   "en": "There is no MainStage for Windows. Here's how Windows keyboard players get the same setup: a setlist of sounds, layers and splits, VST plugins and one-press sound changes, free.",
+   "t": "Windows के लिए कोई MainStage नहीं है। Windows पर keyboard players यही setup ऐसे बनाते हैं: sounds की setlist, layers और splits, VST plugins और एक दबाव में sound बदलना, मुफ़्त में।"
+  },
+  "5629538f9c68": {
+   "en": "MainStage for Windows? What to use instead, free",
+   "t": "Windows के लिए MainStage? उसकी जगह क्या इस्तेमाल करें, मुफ़्त में"
+  },
+  "efb684e7d229": {
+   "en": "The same songs-and-sounds live setup as MainStage, on a Windows PC, for free.",
+   "t": "MainStage जैसा ही गानों और sounds वाला live setup, Windows PC पर, मुफ़्त में।"
+  },
+  "b7eece52adf7": {
+   "en": "MainStage for Windows",
+   "t": "Windows के लिए MainStage"
+  },
+  "1240e202212f": {
+   "en": "Can I run MainStage on Windows?",
+   "t": "क्या मैं Windows पर MainStage चला सकता हूँ?"
+  },
+  "a3f155443414": {
+   "en": "No. MainStage is made by Apple and only runs on macOS. There is no Windows version, and running it in a virtual machine isn't practical for live audio.",
+   "t": "नहीं। MainStage, Apple बनाता है और यह सिर्फ़ macOS पर चलता है। इसका कोई Windows version नहीं है, और virtual machine में चलाना live audio के लिए व्यावहारिक नहीं है।"
+  },
+  "3d7e960b2f24": {
+   "en": "What is the Windows equivalent of MainStage?",
+   "t": "Windows पर MainStage जैसा क्या है?"
+  },
+  "61e9e09d0f3b": {
+   "en": "A live VST host with setlists. GigChain Keys is a free one built to work like MainStage: songs, sounds per song, layers and splits, chord charts, and one press to change sound on stage.",
+   "t": "Setlists वाला एक live VST host। GigChain Keys ऐसा ही एक मुफ़्त host है, जो MainStage की तरह काम करने के लिए बना है: गाने, हर गाने की sounds, layers और splits, chord charts, और stage पर एक दबाव में sound बदलना।"
+  },
+  "e0dc8e5c6e60": {
+   "en": "Do I need an audio interface?",
+   "t": "क्या मुझे audio interface चाहिए?"
+  },
+  "4fbe77473c13": {
+   "en": "Not to start: GigChain Keys plays through your computer's normal sound output (WASAPI). For the lowest latency on stage, an audio interface with an ASIO driver is better, and GigChain Keys supports ASIO too.",
+   "t": "शुरू करने के लिए नहीं: GigChain Keys आपके computer के normal sound output (WASAPI) से बजता है। Stage पर सबसे कम latency के लिए ASIO driver वाला audio interface बेहतर है, और GigChain Keys, ASIO को भी support करता है।"
+  },
+  "e7a7f8733139": {
+   "en": "<a href=\"./\">GigChain Keys</a> › Guides",
+   "t": "<a href=\"./\">GigChain Keys</a> › गाइड"
+  },
+  "fb7f2053a57a": {
+   "en": "MainStage for Windows? What to use instead",
+   "t": "Windows के लिए MainStage? उसकी जगह क्या इस्तेमाल करें"
+  },
+  "b92785259b4d": {
+   "en": "There is no MainStage for Windows: Apple only makes it for the Mac. But what MainStage does, a setlist of songs where each song has its sounds ready to play, works just as well on a Windows PC. Here's how to set it up, for free.",
+   "t": "Windows के लिए कोई MainStage नहीं है: Apple इसे सिर्फ़ Mac के लिए बनाता है। लेकिन MainStage जो करता है, गानों की एक setlist जिसमें हर गाने की sounds बजने के लिए तैयार हों, वह Windows PC पर भी उतना ही अच्छा चलता है। इसे मुफ़्त में ऐसे set up करें।"
+  },
+  "b9b08eb13da1": {
+   "en": "What MainStage actually gives you",
+   "t": "MainStage असल में आपको क्या देता है"
+  },
+  "c7a423a191bf": {
+   "en": "Strip away the Apple branding and MainStage is four things:",
+   "t": "Apple की branding हटा दें, तो MainStage चार चीज़ें है:"
+  },
+  "da1f9b0b6cae": {
+   "en": "<strong>A setlist</strong>: your songs in gig order.",
+   "t": "<strong>एक setlist</strong>: आपके गाने, gig के क्रम में।"
+  },
+  "179e4c77984b": {
+   "en": "<strong>Sounds per song</strong> (MainStage calls them patches): piano for the verse, pad plus strings for the chorus.",
+   "t": "<strong>हर गाने की sounds</strong> (MainStage इन्हें patches कहता है): verse के लिए piano, chorus के लिए pad और strings।"
+  },
+  "da7a44b9ed4b": {
+   "en": "<strong>Layers and splits</strong>: several sounds at once, or bass on the left hand and piano on the right.",
+   "t": "<strong>Layers और splits</strong>: एक साथ कई sounds, या बाएँ हाथ में bass और दाएँ में piano।"
+  },
+  "952f3f575234": {
+   "en": "<strong>One press to change</strong>: a footswitch, pad or key moves to the next sound, with no gap in the audio.",
+   "t": "<strong>बदलने के लिए एक दबाव</strong>: एक footswitch, pad या key अगली sound पर ले जाता है, audio में कोई gap नहीं।"
+  },
+  "424cf64e8ca1": {
+   "en": "Any Windows program that does all four can replace it on stage.",
+   "t": "जो भी Windows program ये चारों काम करे, वह stage पर इसकी जगह ले सकता है।"
+  },
+  "706a95a68e64": {
+   "en": "Doing it on Windows with GigChain Keys",
+   "t": "Windows पर GigChain Keys के साथ ऐसे करें"
+  },
+  "fb4703bb3938": {
+   "en": "GigChain Keys is a free, open-source live rig built to work like MainStage, on Windows, Mac and Linux.",
+   "t": "GigChain Keys एक मुफ़्त, open-source live setup है, जो Windows, Mac और Linux पर MainStage की तरह काम करने के लिए बना है।"
+  },
+  "d45bae6258fa": {
+   "en": "GigChain Keys: a setlist of songs, each with its sounds, chord chart and mixer",
+   "t": "GigChain Keys: गानों की एक setlist, हर गाना अपनी sounds, chord chart और mixer के साथ"
+  },
+  "64929c3462ee": {
+   "en": "<strong>Install it</strong> from the <a href=\"./#download\">download page</a> (Windows 10 or 11; installer or portable zip).",
+   "t": "<a href=\"./#download\">डाउनलोड page</a> से <strong>इसे install करें</strong> (Windows 10 या 11; installer या portable zip)।"
+  },
+  "cc5855c39313": {
+   "en": "<strong>Plug in your MIDI keyboard</strong>; it's found automatically.",
+   "t": "<strong>अपना MIDI keyboard लगाएँ</strong>; यह अपने आप मिल जाता है।"
+  },
+  "420b7a97f1a6": {
+   "en": "<strong>Pick your audio</strong>: your normal Windows sound output works straight away. If you have an audio interface, choose its ASIO driver for the lowest latency.",
+   "t": "<strong>अपना audio चुनें</strong>: Windows का normal sound output तुरंत काम करता है। अगर आपके पास audio interface है, तो सबसे कम latency के लिए उसका ASIO driver चुनें।"
+  },
+  "84c531a6d129": {
+   "en": "<strong>Add your plugins</strong>: GigChain Keys scans your VST3 and VST2 folders. Kontakt, Arturia, Spitfire, Surge XT, Vital and the rest all work. No plugins yet? It comes with its own pianos, synths, pads and a SoundFont player.",
+   "t": "<strong>अपने plugins जोड़ें</strong>: GigChain Keys आपके VST3 और VST2 folders scan करता है। Kontakt, Arturia, Spitfire, Surge XT, Vital और बाकी सब चलते हैं। अभी plugins नहीं हैं? इसके साथ इसके अपने pianos, synths, pads और एक SoundFont player आते हैं।"
+  },
+  "d5e5e7af3c1e": {
+   "en": "<strong>Build your setlist</strong>: add a song, add sounds to it, layer or split them, and paste in the chords.",
+   "t": "<strong>अपनी setlist बनाएँ</strong>: एक गाना जोड़ें, उसमें sounds डालें, layer या split करें, और chords paste करें।"
+  },
+  "83b4eff0f45e": {
+   "en": "<strong>Go to Perform mode</strong> on stage: big, clear, one press to the next sound.",
+   "t": "Stage पर <strong>Perform mode में जाएँ</strong>: बड़ा, साफ़, अगली sound के लिए एक दबाव।"
+  },
+  "34a951c02137": {
+   "en": "What's the same, and what's different",
+   "t": "क्या एक जैसा है, और क्या अलग"
+  },
+  "5703321d0ec8": {
+   "en": "Runs on",
+   "t": "कहाँ चलता है"
+  },
+  "858ac5dc2957": {
+   "en": "Mac only",
+   "t": "सिर्फ़ Mac"
+  },
+  "3e8248e32edf": {
+   "en": "Price",
+   "t": "कीमत"
+  },
+  "dc9d4584a554": {
+   "en": "Paid",
+   "t": "पेड"
+  },
+  "72de9496a57b": {
+   "en": "Free, open source",
+   "t": "मुफ़्त, ओपन सोर्स"
+  },
+  "3f3e6c352418": {
+   "en": "Setlists, sounds per song",
+   "t": "Setlists, हर गाने की sounds"
+  },
+  "5397e0583f14": {
+   "en": "Yes",
+   "t": "हाँ"
+  },
+  "8df771bfd6fe": {
+   "en": "Layers and splits",
+   "t": "Layers और splits"
+  },
+  "6291c403d715": {
+   "en": "Your plugins",
+   "t": "आपके plugins"
+  },
+  "0ec3cd34b7c7": {
+   "en": "VST3 and VST2",
+   "t": "VST3 और VST2"
+  },
+  "df2ca03160fe": {
+   "en": "Chord and lyric charts",
+   "t": "Chord और lyric charts"
+  },
+  "039ec17971be": {
+   "en": "Not built in",
+   "t": "Built-in नहीं"
+  },
+  "d253ec78987e": {
+   "en": "Built-in sound library",
+   "t": "साथ आने वाली sound library"
+  },
+  "7c8432f0894e": {
+   "en": "Large (Logic's)",
+   "t": "बड़ी (Logic वाली)"
+  },
+  "6264bf8d2dd4": {
+   "en": "Smaller: pianos, synths, pads, SoundFonts",
+   "t": "छोटी: pianos, synths, pads, SoundFonts"
+  },
+  "e87e70288825": {
+   "en": "Backing tracks, click, tempo",
+   "t": "बैकिंग ट्रैक, क्लिक, टेम्पो"
+  },
+  "8b6c540942e1": {
+   "en": "Yes (up to eight stems per song)",
+   "t": "हाँ (हर गाने में आठ stems तक)"
+  },
+  "9baea84d25fb": {
+   "en": "MainStage's big strength is Logic's huge sound library. On Windows you bring your own plugins (plenty are free: Spitfire LABS, Surge XT, Vital, Dexed, Pianobook instruments), plus GigChain's built-in sounds.",
+   "t": "MainStage की सबसे बड़ी ताक़त Logic की विशाल sound library है। Windows पर आप अपने plugins लाते हैं (बहुत से मुफ़्त हैं: Spitfire LABS, Surge XT, Vital, Dexed, Pianobook instruments), साथ में GigChain की built-in sounds।"
+  },
+  "4cbcacb10ceb": {
+   "en": "Free, no ads, no account. Windows 10 and 11.",
+   "t": "मुफ़्त, न ads, न account। Windows 10 और 11।"
+  },
+  "9cabeb0b4ade": {
+   "en": "No. It's Apple software for macOS only. Virtual machines aren't practical for live audio.",
+   "t": "नहीं। यह Apple का software है, सिर्फ़ macOS के लिए। Virtual machines live audio के लिए व्यावहारिक नहीं हैं।"
+  },
+  "940c195ee64c": {
+   "en": "A live VST host with setlists. GigChain Keys is a free one that works like MainStage. For every free option, see <a href=\"free-mainstage-alternatives.html\">free MainStage alternatives compared</a>.",
+   "t": "Setlists वाला एक live VST host। GigChain Keys ऐसा ही एक मुफ़्त host है जो MainStage की तरह काम करता है। सारे मुफ़्त विकल्पों के लिए देखें <a href=\"free-mainstage-alternatives.html\">MainStage के मुफ़्त विकल्प, तुलना के साथ</a>।"
+  },
+  "04ca1667912b": {
+   "en": "Not to start. Your computer's sound output works. For stage, an interface with an ASIO driver gives the lowest latency, and GigChain Keys supports it.",
+   "t": "शुरू करने के लिए नहीं। आपके computer का sound output काम करता है। Stage के लिए ASIO driver वाला interface सबसे कम latency देता है, और GigChain Keys इसे support करता है।"
+  },
+  "3be40669838b": {
+   "en": "More guides",
+   "t": "और guides"
+  },
+  "0f2f2b09478f": {
+   "en": "<a href=\"free-mainstage-alternatives.html\">Free MainStage alternatives<span>Every free option, compared</span></a>",
+   "t": "<a href=\"free-mainstage-alternatives.html\">MainStage के मुफ़्त विकल्प<span>हर मुफ़्त विकल्प, तुलना के साथ</span></a>"
+  },
+  "ee3078064821": {
+   "en": "<a href=\"play-vst-plugins-live.html\">Play VST plugins live<span>No DAW, low latency, one press per song</span></a>",
+   "t": "<a href=\"play-vst-plugins-live.html\">VST plugins live बजाएँ<span>बिना DAW, कम latency, हर गाने के लिए एक दबाव</span></a>"
+  },
+  "b837e8d79ddc": {
+   "en": "MainStage is a trademark of Apple Inc. VST is a registered trademark of Steinberg Media Technologies GmbH. Other names belong to their owners. GigChain Keys is not affiliated with them.",
+   "t": "MainStage, Apple Inc. का trademark है। VST, Steinberg Media Technologies GmbH का registered trademark है। बाकी नाम उनके मालिकों के हैं। GigChain Keys इनसे जुड़ा हुआ नहीं है।"
+  },
+  "fc996fdec0e6": {
+   "en": "Free MainStage Alternatives for Windows, Mac &amp; Linux (2026) | GigChain Keys",
+   "t": "Windows, Mac और Linux के लिए MainStage के मुफ़्त विकल्प (2026) | GigChain Keys"
+  },
+  "53a497c6992e": {
+   "en": "Every free MainStage alternative compared: GigChain Keys, Cantabile Lite, Element and Carla. Which ones run on Windows, Mac and Linux, which have setlists, and which are really free.",
+   "t": "MainStage के सारे मुफ़्त विकल्पों की तुलना: GigChain Keys, Cantabile Lite, Element और Carla। कौन Windows, Mac और Linux पर चलते हैं, किनमें setlists हैं, और कौन सच में मुफ़्त हैं।"
+  },
+  "dda1fb9d3c5f": {
+   "en": "Free MainStage alternatives for Windows, Mac & Linux, compared",
+   "t": "Windows, Mac और Linux के लिए MainStage के मुफ़्त विकल्प, तुलना के साथ"
+  },
+  "873414f7f384": {
+   "en": "Which free live VST hosts run on your computer, which have setlists, and which are really free.",
+   "t": "कौन-से मुफ़्त live VST hosts आपके computer पर चलते हैं, किनमें setlists हैं, और कौन सच में मुफ़्त हैं।"
+  },
+  "4a229b9ce1bd": {
+   "en": "Free MainStage alternatives",
+   "t": "MainStage के मुफ़्त विकल्प"
+  },
+  "f7ec91b71ecf": {
+   "en": "What is the best free alternative to MainStage?",
+   "t": "MainStage का सबसे अच्छा मुफ़्त विकल्प क्या है?"
+  },
+  "d4a50080a13c": {
+   "en": "For keyboard players who want setlists, layers and splits, chord charts and instant sound changes for free on Windows, Mac or Linux, GigChain Keys is the closest free match to MainStage. Cantabile Lite is free on Windows but keeps setlists for its paid editions; Element and Carla are free plugin hosts built around patching rather than songs.",
+   "t": "जिन keyboard players को Windows, Mac या Linux पर मुफ़्त में setlists, layers और splits, chord charts और तुरंत sound बदलना चाहिए, उनके लिए GigChain Keys, MainStage के सबसे क़रीब का मुफ़्त विकल्प है। Cantabile Lite, Windows पर मुफ़्त है लेकिन setlists उसके paid editions में हैं; Element और Carla मुफ़्त plugin hosts हैं जो गानों के बजाय patching के लिए बने हैं।"
+  },
+  "61134dcf9bbf": {
+   "en": "Is there a free MainStage for Windows?",
+   "t": "क्या Windows के लिए कोई मुफ़्त MainStage है?"
+  },
+  "95c487488e31": {
+   "en": "MainStage itself is Mac only. Free Windows programs that do the same job include GigChain Keys (setlists, layers, splits, chord charts), Cantabile Lite (setlists only in paid editions), Element and Carla.",
+   "t": "MainStage खुद सिर्फ़ Mac पर चलता है। यही काम करने वाले मुफ़्त Windows programs में GigChain Keys (setlists, layers, splits, chord charts), Cantabile Lite (setlists सिर्फ़ paid editions में), Element और Carla शामिल हैं।"
+  },
+  "76d946b7a682": {
+   "en": "Can I use my VST plugins live without a DAW?",
+   "t": "क्या मैं बिना DAW के अपने VST plugins live इस्तेमाल कर सकता हूँ?"
+  },
+  "1e627384f9e2": {
+   "en": "Yes. A live VST host like GigChain Keys loads your VST3 and VST2 instruments and effects directly, plays them from your MIDI keyboard with low latency, and switches between sounds per song, with no DAW or timeline.",
+   "t": "हाँ। GigChain Keys जैसा live VST host आपके VST3 और VST2 instruments और effects सीधे load करता है, उन्हें आपके MIDI keyboard से कम latency में बजाता है, और हर गाने के लिए sounds बदलता है, बिना DAW या timeline के।"
+  },
+  "06519c547d12": {
+   "en": "Free MainStage alternatives for Windows, Mac &amp; Linux",
+   "t": "Windows, Mac और Linux के लिए MainStage के मुफ़्त विकल्प"
+  },
+  "cc71283a5ba0": {
+   "en": "MainStage is Apple's live rig for keyboard players, and it only runs on a Mac. If you play on Windows or Linux, or just don't want to pay, here is every free option, what each one is good at, and where each one stops.",
+   "t": "MainStage, keyboard players के लिए Apple का live setup है, और यह सिर्फ़ Mac पर चलता है। अगर आप Windows या Linux पर बजाते हैं, या बस पैसे नहीं देना चाहते, तो यहाँ हर मुफ़्त विकल्प है, हर एक किसमें अच्छा है, और कहाँ तक जाता है।"
+  },
+  "cc835fe34912": {
+   "en": "The short answer",
+   "t": "छोटा जवाब"
+  },
+  "502984b3e039": {
+   "en": "Free (source)",
+   "t": "मुफ़्त (source code)"
+  },
+  "816c52fd2bdd": {
+   "en": "No",
+   "t": "नहीं"
+  },
+  "6cc3364a242c": {
+   "en": "Open source",
+   "t": "ओपन सोर्स"
+  },
+  "cb0eb824349e": {
+   "en": "Yes (GPL)",
+   "t": "हाँ (GPL)"
+  },
+  "3aa6224d1fc1": {
+   "en": "Setlist of songs",
+   "t": "गानों की setlist"
+  },
+  "0783a58e724f": {
+   "en": "Paid editions",
+   "t": "पेड editions"
+  },
+  "8f7088e6bd06": {
+   "en": "Layers &amp; splits",
+   "t": "Layers और splits"
+  },
+  "46f4e74191d5": {
+   "en": "Layers (splits in paid editions)",
+   "t": "Layers (splits paid editions में)"
+  },
+  "2f9b83746a72": {
+   "en": "By patching",
+   "t": "Patching से"
+  },
+  "2c8788a4a663": {
+   "en": "Chord &amp; lyric charts",
+   "t": "Chord और lyric charts"
+  },
+  "d81f2f3c835e": {
+   "en": "Built-in sounds",
+   "t": "साथ आने वाली sounds"
+  },
+  "b55826a38e9d": {
+   "en": "Pianos, synths, pads, SoundFonts",
+   "t": "पियानो, सिंथ, पैड, SoundFonts"
+  },
+  "8e3ee64d491f": {
+   "en": "Made for",
+   "t": "किसके लिए बना"
+  },
+  "418543c46ae9": {
+   "en": "Keyboard players on stage",
+   "t": "Stage पर keyboard players"
+  },
+  "559db31c2345": {
+   "en": "Live players on Windows",
+   "t": "Windows पर live बजाने वाले"
+  },
+  "32686f4de06a": {
+   "en": "Building plugin chains",
+   "t": "Plugin chains बनाना"
+  },
+  "a5aa391ec8c2": {
+   "en": "Plugin hosting &amp; routing",
+   "t": "Plugin hosting और routing"
+  },
+  "1fc5895b875a": {
+   "en": "Checked November 2026. Paid hosts (MainStage, Gig Performer, Cantabile's paid editions, Camelot) are left out: this page is about what you can use for nothing.",
+   "t": "नवंबर 2026 में जाँचा गया। Paid hosts (MainStage, Gig Performer, Cantabile के paid editions, Camelot) शामिल नहीं हैं: यह page उन चीज़ों के बारे में है जो आप बिना पैसे इस्तेमाल कर सकते हैं।"
+  },
+  "faef353dcd1f": {
+   "en": "A live rig made for keyboard players, built to work like MainStage on Windows, Mac and Linux. You build a setlist of songs, give each song its sounds (your VST3 and VST2 plugins, or the built-in pianos, synths, pads and SoundFont player), layer and split them across the keyboard, and in Perform mode one press moves to the next sound with no gap. Each song can carry its chord and lyric chart, shown big on stage. There's also a practice mode with daily warm-ups.",
+   "t": "Keyboard players के लिए बना एक live setup, जो Windows, Mac और Linux पर MainStage की तरह काम करता है। आप गानों की setlist बनाते हैं, हर गाने को उसकी sounds देते हैं (आपके VST3 और VST2 plugins, या built-in pianos, synths, pads और SoundFont player), उन्हें keyboard पर layer और split करते हैं, और Perform mode में एक दबाव बिना gap के अगली sound पर ले जाता है। हर गाने के साथ उसका chord और lyric chart रह सकता है, जो stage पर बड़ा दिखता है। इसमें रोज़ के warm-ups वाला practice mode भी है।"
+  },
+  "5eadaf20854a": {
+   "en": "<strong>Good for:</strong> cover bands, function and wedding gigs, solo keys players, anyone who wants MainStage's songs-and-sounds way of working without a Mac. <strong>Not for:</strong> recording and editing tracks; it's a live tool, not a DAW.",
+   "t": "<strong>किसके लिए अच्छा:</strong> cover bands, functions और शादी के gigs, solo keys players, और हर वह व्यक्ति जो बिना Mac के MainStage वाला गानों-और-sounds का तरीका चाहता है। <strong>किसके लिए नहीं:</strong> tracks record और edit करना; यह live tool है, DAW नहीं।"
+  },
+  "10f0884c0fae": {
+   "en": "A long-running, well-respected Windows live host. The Lite edition is free and hosts plugins with layers. Set lists and keyboard splits come with the paid Solo edition, song states with Performer, and it doesn't run on Mac or Linux.",
+   "t": "Windows का एक पुराना और भरोसेमंद live host। इसका Lite edition मुफ़्त है और layers के साथ plugins चलाता है। Set lists और keyboard splits paid Solo edition में आते हैं, song states, Performer में, और यह Mac या Linux पर नहीं चलता।"
+  },
+  "6c0119b063ab": {
+   "en": "An open-source plugin host for Windows, Mac and Linux. You connect plugins together in a graph, which makes it flexible for building effects chains and custom routing. It has no setlist of songs or charts; switching sounds between songs is up to you.",
+   "t": "Windows, Mac और Linux के लिए एक open-source plugin host। आप plugins को एक graph में जोड़ते हैं, जिससे effects chains और अपनी routing बनाना आसान होता है। इसमें गानों की setlist या charts नहीं हैं; गानों के बीच sound बदलना आप पर है।"
+  },
+  "92bdd9e190b7": {
+   "en": "A free, open-source plugin host, strongest on Linux, with patchbay routing and support for many plugin formats. Like Element, it's a toolbox for hosting and routing rather than a set of songs to play through on stage.",
+   "t": "एक मुफ़्त, open-source plugin host, जो Linux पर सबसे मज़बूत है, patchbay routing और कई plugin formats के support के साथ। Element की तरह, यह plugins चलाने और route करने का toolbox है, stage पर बजाने के लिए गानों की setlist नहीं।"
+  },
+  "74a286fce976": {
+   "en": "How to choose",
+   "t": "कैसे चुनें"
+  },
+  "47d7d8511e27": {
+   "en": "<strong>You want MainStage's way of working (songs, sounds, one press to change) on Windows or Linux, free:</strong> GigChain Keys.",
+   "t": "<strong>आपको Windows या Linux पर, मुफ़्त में, MainStage वाला तरीका (गाने, sounds, बदलने के लिए एक दबाव) चाहिए:</strong> GigChain Keys।"
+  },
+  "e84aa85527ac": {
+   "en": "<strong>You're on Windows and happy to pay later for a mature, Windows-only tool:</strong> try Cantabile Lite, then its paid editions.",
+   "t": "<strong>आप Windows पर हैं और बाद में एक पुराने, सिर्फ़ Windows वाले tool के लिए पैसे देने को तैयार हैं:</strong> Cantabile Lite आज़माएँ, फिर उसके paid editions।"
+  },
+  "e5f77a7e22e0": {
+   "en": "<strong>You want to wire up plugin chains yourself:</strong> Element or Carla.",
+   "t": "<strong>आप plugin chains ख़ुद जोड़ना चाहते हैं:</strong> Element या Carla।"
+  },
+  "de4598e58199": {
+   "en": "GigChain Keys is free: no ads, no account, no licence key.",
+   "t": "GigChain Keys मुफ़्त है: न ads, न account, न licence key।"
+  },
+  "baa552c59249": {
+   "en": "<a class=\"btn\" href=\"./#download\">Download for Windows, Mac or Linux</a>",
+   "t": "<a class=\"btn\" href=\"./#download\">Windows, Mac या Linux के लिए डाउनलोड करें</a>"
+  },
+  "c592afcd0558": {
+   "en": "For keyboard players who want setlists, layers and splits, chord charts and instant sound changes for free, on any computer, GigChain Keys is the closest match. Cantabile Lite is free on Windows but keeps setlists for its paid editions.",
+   "t": "जिन keyboard players को किसी भी computer पर मुफ़्त में setlists, layers और splits, chord charts और तुरंत sound बदलना चाहिए, उनके लिए GigChain Keys सबसे क़रीब है। Cantabile Lite, Windows पर मुफ़्त है लेकिन setlists उसके paid editions में हैं।"
+  },
+  "d9d534535e9c": {
+   "en": "MainStage itself is Mac only. On Windows you can use GigChain Keys, Cantabile Lite, Element or Carla, all free. See <a href=\"mainstage-for-windows.html\">MainStage for Windows: what to use instead</a>.",
+   "t": "MainStage खुद सिर्फ़ Mac पर चलता है। Windows पर आप GigChain Keys, Cantabile Lite, Element या Carla इस्तेमाल कर सकते हैं, सब मुफ़्त। देखें <a href=\"mainstage-for-windows.html\">Windows के लिए MainStage: उसकी जगह क्या इस्तेमाल करें</a>।"
+  },
+  "9f68a0dbef5f": {
+   "en": "Yes, and it's usually better on stage: lower latency, fewer things to go wrong. See <a href=\"play-vst-plugins-live.html\">how to play VST plugins live without a DAW</a>.",
+   "t": "हाँ, और stage पर यह अक्सर बेहतर होता है: कम latency, गड़बड़ होने की कम गुंजाइश। देखें <a href=\"play-vst-plugins-live.html\">बिना DAW के VST plugins live कैसे बजाएँ</a>।"
+  },
+  "f828df1bfb00": {
+   "en": "<a href=\"mainstage-for-windows.html\">MainStage for Windows?<span>What Windows players use instead</span></a>",
+   "t": "<a href=\"mainstage-for-windows.html\">Windows के लिए MainStage?<span>Windows players उसकी जगह क्या इस्तेमाल करते हैं</span></a>"
+  },
+  "6d7c75066009": {
+   "en": "<a href=\"gig-performer-alternative.html\">Gig Performer alternative<span>A free live rig for keys</span></a>",
+   "t": "<a href=\"gig-performer-alternative.html\">Gig Performer का विकल्प<span>Keys के लिए एक मुफ़्त live setup</span></a>"
+  },
+  "50390d48787f": {
+   "en": "<a href=\"cantabile-alternative.html\">Cantabile alternative<span>Setlists free, on any computer</span></a>",
+   "t": "<a href=\"cantabile-alternative.html\">Cantabile का विकल्प<span>Setlists मुफ़्त, किसी भी computer पर</span></a>"
+  },
+  "a7d7451fd226": {
+   "en": "<a href=\"carla-vs-gigchain-keys.html\">Carla vs GigChain Keys<span>Plugin host or live rig?</span></a>",
+   "t": "<a href=\"carla-vs-gigchain-keys.html\">Carla vs GigChain Keys<span>Plugin host या live setup?</span></a>"
+  },
+  "67bcc5276b68": {
+   "en": "How to Play VST Plugins Live Without a DAW (Free) | GigChain Keys",
+   "t": "बिना DAW के VST plugins live कैसे बजाएँ (मुफ़्त) | GigChain Keys"
+  },
+  "fcff5d328ec1": {
+   "en": "Play Kontakt, Arturia, Spitfire LABS, Surge XT, Vital and any VST3 or VST2 plugin live on stage from your MIDI keyboard, without a DAW: low latency, sounds per song, one press to change. Free.",
+   "t": "Kontakt, Arturia, Spitfire LABS, Surge XT, Vital और कोई भी VST3 या VST2 plugin अपने MIDI keyboard से stage पर live बजाएँ, बिना DAW के: कम latency, हर गाने की sounds, बदलने के लिए एक दबाव। मुफ़्त।"
+  },
+  "d944a7ae5c62": {
+   "en": "How to play VST plugins live without a DAW",
+   "t": "बिना DAW के VST plugins live कैसे बजाएँ"
+  },
+  "eab965d0aaf6": {
+   "en": "Your plugins on stage from your MIDI keyboard: low latency, sounds per song, one press to change. Free.",
+   "t": "आपके plugins stage पर, आपके MIDI keyboard से: कम latency, हर गाने की sounds, बदलने के लिए एक दबाव। मुफ़्त।"
+  },
+  "6e43e7b909c6": {
+   "en": "Install a live VST host",
+   "t": "एक live VST host install करें"
+  },
+  "a6842ed1d321": {
+   "en": "Download and install GigChain Keys for Windows, Mac or Linux.",
+   "t": "Windows, Mac या Linux के लिए GigChain Keys डाउनलोड और install करें।"
+  },
+  "aae273083e3e": {
+   "en": "Choose low-latency audio",
+   "t": "Low-latency audio चुनें"
+  },
+  "90616972d76e": {
+   "en": "Pick your audio interface's ASIO driver on Windows (or Core Audio on Mac, JACK or PipeWire on Linux) and a buffer of 128 or 256 samples.",
+   "t": "Windows पर अपने audio interface का ASIO driver चुनें (या Mac पर Core Audio, Linux पर JACK या PipeWire) और 128 या 256 samples का buffer।"
+  },
+  "9ec9822d5599": {
+   "en": "Scan your plugins",
+   "t": "अपने plugins scan करें"
+  },
+  "8f32b130d55b": {
+   "en": "Let it scan your VST3 and VST2 folders, or add your own folders in Settings.",
+   "t": "इसे आपके VST3 और VST2 folders scan करने दें, या Settings में अपने folders जोड़ें।"
+  },
+  "41635d946b50": {
+   "en": "Make a song and add sounds",
+   "t": "एक गाना बनाएँ और sounds जोड़ें"
+  },
+  "84c00d270569": {
+   "en": "Add a song, add your plugins to it as sounds, and layer or split them across the keyboard.",
+   "t": "एक गाना जोड़ें, उसमें अपने plugins sounds की तरह डालें, और उन्हें keyboard पर layer या split करें।"
+  },
+  "70798c0fe1bc": {
+   "en": "Play in Perform mode",
+   "t": "Perform mode में बजाएँ"
+  },
+  "ec2a7c869635": {
+   "en": "Switch to Perform mode and change sounds with one press of a pad, footswitch or key.",
+   "t": "Perform mode में जाएँ और pad, footswitch या key के एक दबाव से sound बदलें।"
+  },
+  "3bc09644a7ea": {
+   "en": "Play VST plugins live",
+   "t": "VST plugins live बजाएँ"
+  },
+  "ccc41ff17c22": {
+   "en": "A DAW is built for recording: timelines, tracks, arm buttons. On stage you just want to press a key and hear your sound, then press one button and hear the next song's. A live VST host does exactly that, with less to go wrong.",
+   "t": "DAW recording के लिए बना है: timelines, tracks, arm buttons। Stage पर आप बस एक key दबाकर अपनी sound सुनना चाहते हैं, फिर एक button दबाकर अगले गाने की। Live VST host ठीक यही करता है, और गड़बड़ होने की गुंजाइश कम रहती है।"
+  },
+  "8682f51ea600": {
+   "en": "Why not just use your DAW on stage?",
+   "t": "Stage पर अपना DAW ही क्यों न इस्तेमाल करें?"
+  },
+  "149753d358f8": {
+   "en": "<strong>Changing sounds is slow</strong>: selecting tracks and arming them mid-song is fiddly with one hand.",
+   "t": "<strong>Sound बदलना धीमा है</strong>: गाने के बीच tracks चुनना और arm करना एक हाथ से मुश्किल है।"
+  },
+  "f3684e49ca46": {
+   "en": "<strong>Every sound is always loaded and running</strong>, so the computer works harder and latency goes up.",
+   "t": "<strong>हर sound हमेशा load और चालू रहती है</strong>, इसलिए computer पर ज़्यादा ज़ोर पड़ता है और latency बढ़ती है।"
+  },
+  "d43930e732e6": {
+   "en": "<strong>One wrong click</strong> (record, a moved region, a closed window) can stop the sound in the middle of a song.",
+   "t": "<strong>एक गलत click</strong> (record, खिसका हुआ region, बंद हुई window) गाने के बीच में sound रोक सकता है।"
+  },
+  "3b5e0733d7c7": {
+   "en": "A live host loads each song's sounds, switches between them with no gap, and shows a big, simple screen you can read from a stand.",
+   "t": "Live host हर गाने की sounds load करता है, उनके बीच बिना gap के बदलता है, और एक बड़ी, सीधी screen दिखाता है जिसे stand से पढ़ा जा सके।"
+  },
+  "c16dfd1733eb": {
+   "en": "Step by step",
+   "t": "एक-एक कदम"
+  },
+  "5e0b4e6b19be": {
+   "en": "1. Install a live VST host",
+   "t": "1. एक live VST host install करें"
+  },
+  "4c879720b279": {
+   "en": "This guide uses <a href=\"./\">GigChain Keys</a>: free and open source, on Windows, Mac and Linux. Get it from the <a href=\"./#download\">download page</a>.",
+   "t": "यह guide <a href=\"./\">GigChain Keys</a> इस्तेमाल करती है: मुफ़्त और open source, Windows, Mac और Linux पर। इसे <a href=\"./#download\">डाउनलोड page</a> से लें।"
+  },
+  "e0a813d77125": {
+   "en": "2. Choose low-latency audio",
+   "t": "2. Low-latency audio चुनें"
+  },
+  "cf3aa7b2478e": {
+   "en": "Latency is the delay between pressing a key and hearing it. Under about 10 ms feels instant.",
+   "t": "Latency, key दबाने और आवाज़ सुनने के बीच की देरी है। लगभग 10 ms से कम तुरंत लगता है।"
+  },
+  "6d24ffd687a0": {
+   "en": "<strong>Windows:</strong> use your audio interface's <strong>ASIO</strong> driver if you have one. Without an interface, the normal Windows output works for practice.",
+   "t": "<strong>Windows:</strong> अगर आपके पास audio interface है, तो उसका <strong>ASIO</strong> driver इस्तेमाल करें। Interface के बिना, Windows का normal output practice के लिए ठीक है।"
+  },
+  "d1c7d4d6c004": {
+   "en": "<strong>Mac:</strong> Core Audio works well out of the box.",
+   "t": "<strong>Mac:</strong> Core Audio शुरू से ही अच्छा चलता है।"
+  },
+  "a55d30c70153": {
+   "en": "<strong>Linux:</strong> JACK or PipeWire.",
+   "t": "<strong>Linux:</strong> JACK या PipeWire।"
+  },
+  "a97a4692dc94": {
+   "en": "<strong>Buffer size:</strong> start at 256 samples; try 128 if your computer copes without crackles.",
+   "t": "<strong>Buffer size:</strong> 256 samples से शुरू करें; अगर आपका computer बिना crackles के संभाल ले, तो 128 आज़माएँ।"
+  },
+  "f0203e2e0d19": {
+   "en": "3. Scan your plugins",
+   "t": "3. अपने plugins scan करें"
+  },
+  "ab228d70463a": {
+   "en": "GigChain Keys finds VST3 and VST2 plugins in the usual folders, and you can add your own folders and rescan in Settings. Popular choices that work well live:",
+   "t": "GigChain Keys सामान्य folders में VST3 और VST2 plugins ढूँढ लेता है, और आप Settings में अपने folders जोड़कर rescan कर सकते हैं। Live में अच्छे चलने वाले मशहूर plugins:"
+  },
+  "e8a8d3fc795c": {
+   "en": "<strong>Free:</strong> Spitfire LABS, Surge XT, Vital, Dexed, Decent Sampler (and Pianobook instruments), Arturia's free Analog Lab Intro.",
+   "t": "<strong>मुफ़्त:</strong> Spitfire LABS, Surge XT, Vital, Dexed, Decent Sampler (और Pianobook instruments), Arturia का मुफ़्त Analog Lab Intro।"
+  },
+  "5847327113b2": {
+   "en": "<strong>Paid:</strong> Kontakt, Arturia V Collection and Analog Lab, Keyscape, Omnisphere, Pianoteq.",
+   "t": "<strong>Paid:</strong> Kontakt, Arturia V Collection और Analog Lab, Keyscape, Omnisphere, Pianoteq।"
+  },
+  "a8e2334fdfd3": {
+   "en": "No plugins at all? GigChain Keys comes with its own grand and electric pianos, a supersaw synth, pads and a SoundFont player.",
+   "t": "कोई plugin नहीं है? GigChain Keys के साथ इसके अपने grand और electric pianos, एक supersaw synth, pads और एक SoundFont player आते हैं।"
+  },
+  "4a46a1ae3c3a": {
+   "en": "4. Make a song and add its sounds",
+   "t": "4. एक गाना बनाएँ और उसकी sounds जोड़ें"
+  },
+  "c8a7c9a12d5f": {
+   "en": "Add a song, then add sounds to it. Put two on together to <strong>layer</strong> them (piano plus pad), or give each a key range to <strong>split</strong> the keyboard (bass on the left, piano on the right). Each song keeps its own sounds, volumes and effects.",
+   "t": "एक गाना जोड़ें, फिर उसमें sounds डालें। दो sounds एक साथ चालू करके उन्हें <strong>layer</strong> करें (piano और pad), या हर sound को keys की अपनी range देकर keyboard को <strong>split</strong> करें (बाएँ bass, दाएँ piano)। हर गाना अपनी sounds, volumes और effects ख़ुद रखता है।"
+  },
+  "5a527cbdc498": {
+   "en": "5. Play in Perform mode",
+   "t": "5. Perform mode में बजाएँ"
+  },
+  "23dc7723df64": {
+   "en": "GigChain Keys Perform mode: the song's sounds and chord chart, large for the stage",
+   "t": "GigChain Keys का Perform mode: गाने की sounds और chord chart, stage के लिए बड़े"
+  },
+  "4e6ea5110880": {
+   "en": "Perform mode shows the song, its sounds and its chord chart large enough to read on stage. Move to the next sound or song with a pad, footswitch, key, or a tap on the screen. The sound you're holding keeps ringing while the next one comes in.",
+   "t": "Perform mode गाने, उसकी sounds और उसके chord chart को इतना बड़ा दिखाता है कि stage पर पढ़ा जा सके। अगली sound या गाने पर pad, footswitch, key या screen पर एक tap से जाएँ। जो sound आप दबाए हुए हैं वह बजती रहती है, जब तक अगली शुरू होती है।"
+  },
+  "26fefa33f9e4": {
+   "en": "Your plugins on stage, free. Windows, Mac and Linux.",
+   "t": "आपके plugins stage पर, मुफ़्त। Windows, Mac और Linux।"
+  },
+  "4bfef632b0ca": {
+   "en": "Tips for the gig",
+   "t": "Gig के लिए tips"
+  },
+  "ed6374938a50": {
+   "en": "<strong>Turn off Wi-Fi and updates</strong> during the show, and plug the laptop in.",
+   "t": "Show के दौरान <strong>Wi-Fi और updates बंद रखें</strong>, और laptop को charging पर लगाए रखें।"
+  },
+  "c11fe9dfe798": {
+   "en": "<strong>Use the Windows \"High performance\" power plan</strong> so the CPU doesn't slow down mid-song.",
+   "t": "<strong>Windows का \"High performance\" power plan इस्तेमाल करें</strong> ताकि गाने के बीच CPU धीमा न हो।"
+  },
+  "7c0e3fb6b963": {
+   "en": "<strong>Heavy sample libraries</strong> (big Kontakt pianos) load faster from an SSD.",
+   "t": "<strong>भारी sample libraries</strong> (बड़े Kontakt pianos) SSD से जल्दी load होती हैं।"
+  },
+  "21aceb1d91a3": {
+   "en": "<strong>Rehearse the changes</strong>: run the setlist in Perform mode once before the gig.",
+   "t": "<strong>बदलावों का rehearsal करें</strong>: gig से पहले एक बार Perform mode में पूरी setlist चलाएँ।"
+  }
+ }
+}

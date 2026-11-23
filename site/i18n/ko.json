@@ -1,0 +1,1253 @@
+{
+ "language": "ko",
+ "phrases": {
+  "eb7b3611327e": {
+   "en": "Free MainStage Alternative for Windows, Mac &amp; Linux | GigChain Keys",
+   "t": "Windows, Mac, Linux용 무료 MainStage 대안 | GigChain Keys"
+  },
+  "8c913a73e83e": {
+   "en": "MainStage is Mac only. GigChain Keys is a free, open-source MainStage alternative for Windows, Mac and Linux: your VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads, and a stage-ready Perform mode.",
+   "t": "MainStage는 Mac에서만 실행됩니다. GigChain Keys는 Windows, Mac, Linux용 무료 오픈소스 MainStage 대안입니다. 내 VST3·VST2 플러그인, 셋리스트, 코드 차트, 레이어와 스플릿, 내장 피아노·신스·패드, 그리고 무대용 Perform 모드를 갖추고 있습니다."
+  },
+  "866170f94ee0": {
+   "en": "GigChain Keys: a free MainStage alternative for Windows, Mac & Linux",
+   "t": "GigChain Keys: Windows, Mac, Linux용 무료 MainStage 대안"
+  },
+  "0f5870aefead": {
+   "en": "Your sounds, setlist, chord charts and practice in one free app. Windows, macOS and Linux.",
+   "t": "음색, 셋리스트, 코드 차트, 연습을 무료 앱 하나에. Windows, macOS, Linux 지원."
+  },
+  "ecaffe3bf69c": {
+   "en": "Live performance VST host for keyboard players",
+   "t": "라이브 키보디스트를 위한 VST 호스트"
+  },
+  "d1396f6805ce": {
+   "en": "A free, open-source MainStage alternative for Windows, Mac and Linux: VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads.",
+   "t": "Windows, Mac, Linux용 무료 오픈소스 MainStage 대안: VST3·VST2 플러그인, 셋리스트, 코드 차트, 레이어와 스플릿, 내장 피아노·신스·패드."
+  },
+  "2b4d48210396": {
+   "en": "Is there MainStage for Windows?",
+   "t": "Windows용 MainStage가 있나요?"
+  },
+  "ed07dad61ee9": {
+   "en": "No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux): it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches sounds instantly on stage. It's free.",
+   "t": "없습니다. Apple의 MainStage는 Mac에서만 실행됩니다. GigChain Keys는 같은 일을 Windows에서(Mac과 Linux에서도) 해냅니다. VST 플러그인을 불러오고, 곡마다 음색을 셋리스트로 정리하고, 건반에 레이어와 스플릿을 만들고, 무대에서 음색을 즉시 바꿉니다. 게다가 무료입니다."
+  },
+  "2abe0172cab2": {
+   "en": "Is GigChain Keys free?",
+   "t": "GigChain Keys는 무료인가요?"
+  },
+  "3d1f935ed096": {
+   "en": "Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL.",
+   "t": "네. 광고 없음, 계정 없음, 라이선스 키 없음, 구독 없음. GPL 라이선스의 오픈소스입니다."
+  },
+  "04a91be943fb": {
+   "en": "Which plugins work in GigChain Keys?",
+   "t": "GigChain Keys에서는 어떤 플러그인을 쓸 수 있나요?"
+  },
+  "ecffd7549d7a": {
+   "en": "VST3 and VST2 instruments and effects, such as Kontakt, Arturia, Spitfire, Surge XT and Vital.",
+   "t": "VST3·VST2 악기와 이펙트입니다. 예를 들어 Kontakt, Arturia, Spitfire, Surge XT, Vital 등이 있습니다."
+  },
+  "024d86cdde10": {
+   "en": "Does GigChain Keys run on Linux?",
+   "t": "GigChain Keys는 Linux에서 실행되나요?"
+  },
+  "a8f4326fad80": {
+   "en": "Yes: an AppImage for most distributions and a .deb for Ubuntu, Debian and Mint, with JACK, PipeWire and ALSA.",
+   "t": "네. 대부분의 배포판용 AppImage와 Ubuntu, Debian, Mint용 .deb가 있으며, JACK, PipeWire, ALSA를 지원합니다."
+  },
+  "9eb360f946c2": {
+   "en": "<a href=\"#watch\" class=\"hide-small\">Watch</a>",
+   "t": "<a href=\"#watch\" class=\"hide-small\">영상</a>"
+  },
+  "75ce51101dce": {
+   "en": "<a href=\"#features\" class=\"hide-small\">Features</a>",
+   "t": "<a href=\"#features\" class=\"hide-small\">기능</a>"
+  },
+  "89a580f42a1e": {
+   "en": "<a href=\"#download\">Download</a>",
+   "t": "<a href=\"#download\">다운로드</a>"
+  },
+  "055f7269c6aa": {
+   "en": "<a href=\"support.html\">♥ Support</a>",
+   "t": "<a href=\"support.html\">♥ 후원하기</a>"
+  },
+  "c5d997af8729": {
+   "en": "A free MainStage alternative for Windows, Mac and Linux",
+   "t": "Windows, Mac, Linux용 무료 MainStage 대안"
+  },
+  "fc0225584c5c": {
+   "en": "Your whole keyboard rig on stage: your sounds, setlist, chord charts and practice in one free app.",
+   "t": "키보드 장비 전체를 무대 위로. 음색, 셋리스트, 코드 차트, 연습을 무료 앱 하나에."
+  },
+  "75f527181b57": {
+   "en": "Free",
+   "t": "무료"
+  },
+  "df76b5bc094a": {
+   "en": "No ads",
+   "t": "광고 없음"
+  },
+  "685b04426605": {
+   "en": "No licence keys",
+   "t": "라이선스 키 없음"
+  },
+  "d3123ff1f8e3": {
+   "en": "Open source (GPLv3)",
+   "t": "오픈소스 (GPLv3)"
+  },
+  "b5edc4b33989": {
+   "en": "Plays your VST plugins",
+   "t": "내 VST 플러그인 연주"
+  },
+  "d52dd151cd77": {
+   "en": "<a class=\"btn\" id=\"main-download\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\"> Download<small id=\"main-detail\">Windows · macOS · Linux</small> </a>",
+   "t": "<a class=\"btn\" id=\"main-download\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\"> 다운로드<small id=\"main-detail\">Windows · macOS · Linux</small> </a>"
+  },
+  "5abc01b2780c": {
+   "en": "<a href=\"#download\">Other systems and versions</a>",
+   "t": "<a href=\"#download\">다른 운영체제와 버전</a>"
+  },
+  "3f1702b0a6ce": {
+   "en": "<b>Public alpha.</b> It works and is played on real rigs, but try it at home and in rehearsal before you trust it on a gig, and <a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">tell us what breaks</a>.",
+   "t": "<b>공개 알파 버전입니다.</b> 이미 실제 공연 장비에서 쓰이고 있지만, 공연에 쓰기 전에 집과 리허설에서 먼저 써 보시고, <a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">문제가 생기면 알려 주세요</a>."
+  },
+  "e8bd86c9a348": {
+   "en": "GigChain Keys: a song's chord chart, its sections, the mixer and the keyboard",
+   "t": "GigChain Keys: 곡의 코드 차트, 섹션, 믹서, 건반"
+  },
+  "64ce9609c081": {
+   "en": "See it in two minutes",
+   "t": "2분 만에 살펴보기"
+  },
+  "10235504c37d": {
+   "en": "The whole app, start to finish.",
+   "t": "앱 전체를 처음부터 끝까지."
+  },
+  "4363d082ec26": {
+   "en": "GigChain Keys: the overview",
+   "t": "GigChain Keys: 둘러보기"
+  },
+  "95686bc07a9c": {
+   "en": "<a href=\"https://youtu.be/JhIZuH2CdhM\">Chord charts and lyrics</a>",
+   "t": "<a href=\"https://youtu.be/JhIZuH2CdhM\">코드 차트와 가사</a>"
+  },
+  "32b6b405c03d": {
+   "en": "<a href=\"https://youtu.be/UxjiNPtMoQw\">The 10-minute warm-up</a>",
+   "t": "<a href=\"https://youtu.be/UxjiNPtMoQw\">10분 워밍업</a>"
+  },
+  "7bd922fd05bf": {
+   "en": "<a href=\"https://youtu.be/GbwlgxBf-Es\">Layers, splits and effects</a>",
+   "t": "<a href=\"https://youtu.be/GbwlgxBf-Es\">레이어, 스플릿, 이펙트</a>"
+  },
+  "a6abbf9e9e97": {
+   "en": "<a href=\"https://youtu.be/Wopcyn-vZmU\">Sounds on your pads</a>",
+   "t": "<a href=\"https://youtu.be/Wopcyn-vZmU\">패드에 음색 넣기</a>"
+  },
+  "c0d4e3b69d5e": {
+   "en": "<a href=\"https://youtu.be/BTiaUMiEjHo\">Pads Pro and Sustain Pads</a>",
+   "t": "<a href=\"https://youtu.be/BTiaUMiEjHo\">Pads Pro와 Sustain Pads</a>"
+  },
+  "ce63beccffe2": {
+   "en": "<a href=\"https://youtu.be/laZV1BDlWCk\">The SoundFont Player</a>",
+   "t": "<a href=\"https://youtu.be/laZV1BDlWCk\">SoundFont 플레이어</a>"
+  },
+  "f4539c849138": {
+   "en": "<a href=\"https://youtu.be/8drCLZTLFHI\">The sound update (0.10)</a>",
+   "t": "<a href=\"https://youtu.be/8drCLZTLFHI\">사운드 업데이트 (0.10)</a>"
+  },
+  "0d6fae79b36e": {
+   "en": "Everything a keys player needs on stage",
+   "t": "키보디스트가 무대에서 필요한 모든 것"
+  },
+  "1289a15feda7": {
+   "en": "Load your sounds once, and the whole night is ready.",
+   "t": "음색은 한 번만 불러오면 그날 밤 공연 준비가 끝납니다."
+  },
+  "1ea4d96e623e": {
+   "en": "Plays your plugins",
+   "t": "내 플러그인 연주"
+  },
+  "8c5de7addcd7": {
+   "en": "Your VST3 and VST2 instruments and effects. Every sound in the setlist is loaded up front, so changing songs is instant and held notes ring on.",
+   "t": "내 VST3·VST2 악기와 이펙트. 셋리스트의 모든 음색을 미리 불러오기 때문에 곡 전환이 즉시 이루어지고, 누르고 있는 음은 계속 울립니다."
+  },
+  "40e6e85103b8": {
+   "en": "All the night's songs in one file, in order, each with its own sounds. Change songs from the keyboard, a pedal or a pad.",
+   "t": "그날 밤의 모든 곡을 순서대로, 곡마다 고유한 음색과 함께 파일 하나에. 곡은 건반, 페달, 패드로 바꿉니다."
+  },
+  "4c5bd2266cf6": {
+   "en": "Chord charts",
+   "t": "코드 차트"
+  },
+  "b7929b0f90b3": {
+   "en": "Paste a song from any chord website and each chord lands on its word. Big enough to read from the keys.",
+   "t": "아무 코드 사이트에서 곡을 붙여 넣으면 각 코드가 가사의 제자리에 놓입니다. 건반 앞에서 읽을 수 있을 만큼 크게 보여 줍니다."
+  },
+  "f9bdd3e4ae7f": {
+   "en": "Splits and layers",
+   "t": "스플릿과 레이어"
+  },
+  "adf3bfa6135e": {
+   "en": "Key zones, transpose and velocity layers. Each part of the song (verse, chorus, solo) can switch which sounds play.",
+   "t": "키 존, 트랜스포즈, 벨로시티 레이어. 곡의 각 부분(벌스, 코러스, 솔로)마다 어떤 음색을 낼지 바꿀 수 있습니다."
+  },
+  "67e6bb800180": {
+   "en": "Perform mode",
+   "t": "Perform 모드"
+  },
+  "693799ffee21": {
+   "en": "Full screen for the stage and touch screens: the chart, big Play, Next part and Loop part buttons that land on the bar line.",
+   "t": "무대와 터치스크린을 위한 전체 화면: 코드 차트와 마디선에 딱 맞춰 바뀌는 큰 재생, 다음 파트, 파트 반복 버튼."
+  },
+  "ddbff60e260a": {
+   "en": "Its own instruments",
+   "t": "자체 악기"
+  },
+  "c699332316ce": {
+   "en": "Piano Pro (recorded grand, upright, Rhodes, Wurlitzer and more), Saw Stack Pro (EDM supersaws), Pads Pro (ambient pads under the band) and a SoundFont player for any .sf2. Plus Squash, Enhance and Sidechain effects. No plugin to buy.",
+   "t": "Piano Pro(녹음한 그랜드, 업라이트, Rhodes, Wurlitzer 등), Saw Stack Pro(EDM 슈퍼소), Pads Pro(밴드 아래에 깔리는 앰비언트 패드), 그리고 모든 .sf2를 재생하는 SoundFont 플레이어. 여기에 Squash, Enhance, Sidechain 이펙트까지. 플러그인을 살 필요가 없습니다."
+  },
+  "233264aa7b63": {
+   "en": "Set up like a pro rig",
+   "t": "프로 장비처럼 세팅"
+  },
+  "89067c1a12fa": {
+   "en": "Each keyboard's touch, tuning (A4 415–466 Hz), transpose the whole rig in one tap, your own plugin folders, autosave with backups, and a warning if the audio ever drops out.",
+   "t": "건반마다 터치 감도, 튜닝(A4 415–466 Hz), 탭 한 번으로 장비 전체 트랜스포즈, 나만의 플러그인 폴더, 백업이 포함된 자동 저장, 그리고 소리가 끊기면 알려 주는 경고."
+  },
+  "c1c10ea45b6a": {
+   "en": "Practice and warm-ups",
+   "t": "연습과 워밍업"
+  },
+  "cad5c8a88781": {
+   "en": "The song's chords fall onto a keyboard, YouTube-piano style. Daily warm-ups at your level, every run scored.",
+   "t": "곡의 코드가 건반 위로 떨어집니다. 유튜브 피아노 영상처럼요. 내 수준에 맞춘 매일의 워밍업은 할 때마다 점수가 매겨집니다."
+  },
+  "8f3a6c99d8a3": {
+   "en": "Record a loop of any instrument in time with the song and layer on top, street-performer style.",
+   "t": "어떤 악기든 곡의 박자에 맞춰 루프를 녹음하고 그 위에 겹겹이 쌓을 수 있습니다. 버스킹 연주자처럼요."
+  },
+  "4908a68f7a24": {
+   "en": "Built not to fail",
+   "t": "멈추지 않도록 설계"
+  },
+  "63cac030dd45": {
+   "en": "Plugins are scanned in a separate process, a crashing plugin is switched off, and an unplugged keyboard comes back by itself.",
+   "t": "플러그인은 별도 프로세스에서 스캔되고, 충돌한 플러그인은 꺼지며, 뽑혔던 건반은 저절로 다시 연결됩니다."
+  },
+  "9df4fcc7a2bf": {
+   "en": "Perform mode: big Play, Next part and Loop part buttons, the song's parts as tiles and the chart",
+   "t": "Perform 모드: 큰 재생, 다음 파트, 파트 반복 버튼, 타일로 보이는 곡의 파트, 그리고 코드 차트"
+  },
+  "b6254454b9e3": {
+   "en": "Perform mode: the song plays along its parts.",
+   "t": "Perform 모드: 곡이 파트를 따라 진행됩니다."
+  },
+  "a6d7910e9385": {
+   "en": "Practice mode: the chords falling onto a keyboard",
+   "t": "연습 모드: 코드가 건반 위로 떨어지는 화면"
+  },
+  "117b5db0bdc6": {
+   "en": "Practice: the chords fall onto the keys.",
+   "t": "연습: 코드가 건반 위로 떨어집니다."
+  },
+  "a479c9c34e87": {
+   "en": "Download",
+   "t": "다운로드"
+  },
+  "7f3d5cf49f8e": {
+   "en": "Free, for Windows, macOS and Linux.",
+   "t": "무료, Windows, macOS, Linux 지원."
+  },
+  "d80009ee6bdf": {
+   "en": "Windows 10 or 11, 64-bit",
+   "t": "Windows 10 또는 11, 64비트"
+  },
+  "2cd44abe2ce1": {
+   "en": "<a class=\"file\" data-asset=\"win-setup\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Installer<span>Recommended</span></a>",
+   "t": "<a class=\"file\" data-asset=\"win-setup\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">설치 프로그램<span>권장</span></a>"
+  },
+  "865d0ec30bd7": {
+   "en": "<a class=\"file\" data-asset=\"win-zip\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Portable zip<span>No install: unzip anywhere, even a USB stick</span></a>",
+   "t": "<a class=\"file\" data-asset=\"win-zip\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">포터블 zip<span>설치 없이 어디든 압축을 풀면 끝, USB 메모리에서도</span></a>"
+  },
+  "da19310aa049": {
+   "en": "\"Windows protected your PC\"?",
+   "t": "\"Windows의 PC 보호\" 창이 뜨나요?"
+  },
+  "e854d518d956": {
+   "en": "The alpha isn't code-signed yet. Click <b>More info</b>, then <b>Run anyway</b>. This happens once.",
+   "t": "알파 버전은 아직 코드 서명이 되어 있지 않습니다. <b>추가 정보</b>를 누른 뒤 <b>실행</b>을 누르세요. 한 번만 하면 됩니다."
+  },
+  "fad8b846a21d": {
+   "en": "macOS 13 or later, Apple Silicon (M1 or newer)",
+   "t": "macOS 13 이상, Apple Silicon(M1 이상)"
+  },
+  "39f7a3282a03": {
+   "en": "<a class=\"file\" data-asset=\"mac-dmg\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Disk image<span>Drag GigChain Keys to Applications</span></a>",
+   "t": "<a class=\"file\" data-asset=\"mac-dmg\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">디스크 이미지<span>GigChain Keys를 응용 프로그램 폴더로 드래그하세요</span></a>"
+  },
+  "c48d280c0dcd": {
+   "en": "macOS won't open it?",
+   "t": "macOS에서 열리지 않나요?"
+  },
+  "7c9b5e95fccf": {
+   "en": "The alpha isn't notarized by Apple yet. Open it once, then go to <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.",
+   "t": "알파 버전은 아직 Apple의 공증을 받지 않았습니다. 한 번 연 다음 <b>시스템 설정 → 개인정보 보호 및 보안</b>으로 가서 <b>그래도 열기</b>를 누르세요."
+  },
+  "f9d493d1c08f": {
+   "en": "64-bit: Ubuntu 22.04+, Fedora, Arch, Mint…",
+   "t": "64비트: Ubuntu 22.04 이상, Fedora, Arch, Mint 등"
+  },
+  "5350d3e4ea10": {
+   "en": "<a class=\"file\" data-asset=\"appimage\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">AppImage<span>One file for most distributions</span></a>",
+   "t": "<a class=\"file\" data-asset=\"appimage\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">AppImage<span>대부분의 배포판에서 쓰는 파일 하나</span></a>"
+  },
+  "475d0017db4e": {
+   "en": "How to run the AppImage",
+   "t": "AppImage 실행 방법"
+  },
+  "f065f70a3ff6": {
+   "en": "Make it executable, then run it: <code>chmod +x GigChainKeys-*.AppImage</code>. If it says FUSE is missing, install <code>libfuse2</code>.",
+   "t": "실행 가능하게 만든 뒤 실행하세요: <code>chmod +x GigChainKeys-*.AppImage</code>. FUSE가 없다고 나오면 <code>libfuse2</code>를 설치하세요."
+  },
+  "42c788694a56": {
+   "en": "You'll also want a MIDI keyboard. Pianos, synths and pads come built in, and <a href=\"https://github.com/xDarkzx/GigChain-Keys#what-you-need\">free ones</a> cover pianos, synths and pads. Every release lists checksums and notes on the <a href=\"https://github.com/xDarkzx/GigChain-Keys/releases\">releases page</a>.",
+   "t": "MIDI 키보드도 필요합니다. 피아노, 신스, 패드는 내장되어 있고, 피아노, 신스, 패드용 <a href=\"https://github.com/xDarkzx/GigChain-Keys#what-you-need\">무료 플러그인</a>도 있습니다. 각 릴리스의 체크섬과 노트는 <a href=\"https://github.com/xDarkzx/GigChain-Keys/releases\">릴리스 페이지</a>에 있습니다."
+  },
+  "9a1fc1731f62": {
+   "en": "Questions",
+   "t": "자주 묻는 질문"
+  },
+  "0cefd2518ce5": {
+   "en": "No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux too): it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches sounds instantly on stage. It's free.",
+   "t": "없습니다. Apple의 MainStage는 Mac에서만 실행됩니다. GigChain Keys는 같은 일을 Windows에서(Mac과 Linux에서도) 해냅니다. VST 플러그인을 불러오고, 곡마다 음색을 셋리스트로 정리하고, 건반에 레이어와 스플릿을 만들고, 무대에서 음색을 즉시 바꿉니다. 게다가 무료입니다."
+  },
+  "f1f5ae24ffaa": {
+   "en": "Is it really free?",
+   "t": "정말 무료인가요?"
+  },
+  "27847cda8417": {
+   "en": "Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL, paid for by donations.",
+   "t": "네. 광고 없음, 계정 없음, 라이선스 키 없음, 구독 없음. GPL 라이선스의 오픈소스이며 후원으로 운영됩니다."
+  },
+  "f2323f6128b1": {
+   "en": "Which plugins work?",
+   "t": "어떤 플러그인을 쓸 수 있나요?"
+  },
+  "7f61c0d0e840": {
+   "en": "VST3 and VST2 instruments and effects: Kontakt, Arturia, Spitfire, u-he, Surge XT, Vital and the free ones. Plugins on another drive? Add the folder in Settings and click Rescan.",
+   "t": "VST3·VST2 악기와 이펙트: Kontakt, Arturia, Spitfire, u-he, Surge XT, Vital, 그리고 무료 플러그인까지. 플러그인이 다른 드라이브에 있나요? 설정에서 그 폴더를 추가하고 다시 스캔을 누르세요."
+  },
+  "c33018044e6e": {
+   "en": "Does it work with my MIDI keyboard?",
+   "t": "제 MIDI 키보드와 함께 쓸 수 있나요?"
+  },
+  "91c0cd9fc2d2": {
+   "en": "Any USB or MIDI keyboard. Its knobs, faders, pads and pedals can change songs, sounds and parts, and you can set how hard you have to play for full volume.",
+   "t": "USB나 MIDI 키보드라면 어떤 것이든 됩니다. 노브, 페이더, 패드, 페달로 곡, 음색, 파트를 바꿀 수 있고, 최대 볼륨을 내려면 얼마나 세게 쳐야 하는지도 설정할 수 있습니다."
+  },
+  "8f3316e143e1": {
+   "en": "How is it different from Gig Performer or Cantabile?",
+   "t": "Gig Performer나 Cantabile과는 무엇이 다른가요?"
+  },
+  "9351d176380c": {
+   "en": "They're excellent paid hosts. GigChain Keys is free and open source, adds chord charts, practice and its own instruments, and runs on Linux too. It's newer (a public alpha), so try it at home before a gig.",
+   "t": "둘 다 훌륭한 유료 호스트입니다. GigChain Keys는 무료 오픈소스이고, 코드 차트, 연습 기능, 자체 악기를 더했으며, Linux에서도 실행됩니다. 아직 새로운 앱(공개 알파)이니 공연 전에 집에서 먼저 써 보세요."
+  },
+  "bab602553891": {
+   "en": "Does it run on Linux?",
+   "t": "Linux에서 실행되나요?"
+  },
+  "929a28d26142": {
+   "en": "Guides",
+   "t": "가이드"
+  },
+  "cefe7398a817": {
+   "en": "<a href=\"free-mainstage-alternatives.html\">Free MainStage alternatives, compared</a>",
+   "t": "<a href=\"free-mainstage-alternatives.html\">무료 MainStage 대안 비교</a>"
+  },
+  "d5bbe9dddf2c": {
+   "en": "<a href=\"mainstage-for-windows.html\">MainStage for Windows? What to use instead</a>",
+   "t": "<a href=\"mainstage-for-windows.html\">Windows용 MainStage? 대신 쓸 수 있는 것</a>"
+  },
+  "ecdbbd3bbaa0": {
+   "en": "<a href=\"play-vst-plugins-live.html\">How to play VST plugins live without a DAW</a>",
+   "t": "<a href=\"play-vst-plugins-live.html\">DAW 없이 VST 플러그인을 라이브로 연주하는 방법</a>"
+  },
+  "74c9ce570929": {
+   "en": "Made with players",
+   "t": "연주자와 함께 만듭니다"
+  },
+  "ec75d05348a5": {
+   "en": "Your feedback decides what gets fixed and built next.",
+   "t": "여러분의 의견이 다음에 고칠 것과 만들 것을 정합니다."
+  },
+  "d41804736a6c": {
+   "en": "<a href=\"https://discord.gg/BGn8Ujh37m\">Join the Discord</a>",
+   "t": "<a href=\"https://discord.gg/BGn8Ujh37m\">Discord 참여하기</a>"
+  },
+  "67a7b5a200e5": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md\">Getting started</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md\">시작하기</a>"
+  },
+  "6bb83d968e51": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">Report a bug or idea</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">버그나 아이디어 알리기</a>"
+  },
+  "b295b030d731": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">Star it on GitHub</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">GitHub에서 스타 누르기</a>"
+  },
+  "a45e282de1bb": {
+   "en": "<a href=\"support.html\">☕ Donate or ♥ Sponsor</a>",
+   "t": "<a href=\"support.html\">☕ 후원하기 또는 ♥ 스폰서 되기</a>"
+  },
+  "87443a59149b": {
+   "en": "Thanks for downloading! 🎹",
+   "t": "다운로드해 주셔서 감사합니다! 🎹"
+  },
+  "f8b76191bf51": {
+   "en": "GigChain Keys is free and always will be: no ads, no account, no paid version. It's made by one keyboard player, with a new version every Monday. If it helps your gigs, a donation or a sponsorship keeps it going. First goal: code signing (and Apple's notarisation), so Windows and Mac warn less when you install it.",
+   "t": "GigChain Keys는 무료이며 앞으로도 무료입니다. 광고 없음, 계정 없음, 유료 버전 없음. 키보디스트 한 명이 만들고, 매주 월요일 새 버전이 나옵니다. 공연에 도움이 된다면 후원이나 스폰서가 이 프로젝트를 계속 이어 가게 합니다. 첫 목표는 코드 서명(과 Apple 공증)으로, Windows와 Mac에서 설치할 때 뜨는 경고를 줄이는 것입니다."
+  },
+  "c03ceee0330b": {
+   "en": "<a class=\"give\" href=\"https://buymeacoffee.com/ddazomnike\">☕ Donate</a>",
+   "t": "<a class=\"give\" href=\"https://buymeacoffee.com/ddazomnike\">☕ 후원하기</a>"
+  },
+  "ecfa1249d02e": {
+   "en": "<a class=\"give sponsor\" href=\"https://github.com/sponsors/xDarkzx\">♥ Sponsor</a>",
+   "t": "<a class=\"give sponsor\" href=\"https://github.com/sponsors/xDarkzx\">♥ 스폰서 되기</a>"
+  },
+  "4546f3d0893d": {
+   "en": "<a href=\"support.html\">More ways to help</a>",
+   "t": "<a href=\"support.html\">다른 도움 방법</a>"
+  },
+  "e45714907316": {
+   "en": "Not now",
+   "t": "나중에"
+  },
+  "35ec8d316d80": {
+   "en": "GigChain Keys is free software under the GNU GPL, version 3 or later.",
+   "t": "GigChain Keys는 GNU GPL 버전 3 이상으로 배포되는 자유 소프트웨어입니다."
+  },
+  "8e61794741d2": {
+   "en": "VST is a registered trademark of Steinberg Media Technologies GmbH. MainStage is a trademark of Apple Inc. GigChain Keys is not affiliated with them.",
+   "t": "VST는 Steinberg Media Technologies GmbH의 등록 상표입니다. MainStage는 Apple Inc.의 상표입니다. GigChain Keys는 이들과 관련이 없습니다."
+  },
+  "6c48e6ef2373": {
+   "en": "Download for {os}",
+   "t": "{os}용 다운로드"
+  },
+  "191664d92f7c": {
+   "en": "For Windows, macOS and Linux computers",
+   "t": "Windows, macOS, Linux 컴퓨터용"
+  },
+  "b95edd4018a7": {
+   "en": "Thanks for downloading. A panel at the bottom of the page offers a way to donate; Escape closes it.",
+   "t": "다운로드해 주셔서 감사합니다. 페이지 아래쪽 패널에서 후원할 수 있습니다. Esc 키로 닫을 수 있습니다."
+  },
+  "45275ecb4b21": {
+   "en": "Version {version}, free, for Windows, macOS and Linux.",
+   "t": "버전 {version}, 무료, Windows, macOS, Linux 지원."
+  },
+  "4e806fa145f8": {
+   "en": "Version {version} · {size} · free",
+   "t": "버전 {version} · {size} · 무료"
+  },
+  "bd4901dfd4a6": {
+   "en": "Support GigChain Keys: Donate or Sponsor | GigChain Keys",
+   "t": "GigChain Keys 후원하기: 후원 또는 스폰서 | GigChain Keys"
+  },
+  "a6e03fa0b48c": {
+   "en": "GigChain Keys is free, with no ads and no paid version. Donate once with Buy Me a Coffee (card, Apple Pay or Google Pay, no account), or sponsor it monthly on GitHub.",
+   "t": "GigChain Keys는 광고도 유료 버전도 없는 무료 앱입니다. Buy Me a Coffee로 한 번 후원하거나(카드, Apple Pay, Google Pay, 계정 불필요) GitHub에서 매달 스폰서가 되어 주세요."
+  },
+  "d4585d05f087": {
+   "en": "Support GigChain Keys: donate or sponsor",
+   "t": "GigChain Keys 후원하기: 후원 또는 스폰서"
+  },
+  "1a86e0a10dbb": {
+   "en": "Free for every keyboard player. Donate once, or sponsor it monthly.",
+   "t": "모든 키보디스트에게 무료. 한 번 후원하거나 매달 스폰서가 되어 주세요."
+  },
+  "f32d5a3b17e6": {
+   "en": "Support",
+   "t": "후원"
+  },
+  "9b3c871bc0ac": {
+   "en": "Yes, completely: no ads, no account, no licence key and no paid version. Donations and sponsors keep it that way.",
+   "t": "네, 완전히 무료입니다. 광고 없음, 계정 없음, 라이선스 키 없음, 유료 버전 없음. 후원과 스폰서 덕분에 앞으로도 그렇습니다."
+  },
+  "65893789e1a8": {
+   "en": "Do supporters get extra features?",
+   "t": "후원자는 추가 기능을 받나요?"
+  },
+  "20e5af105672": {
+   "en": "No. Everyone gets the same app, with every feature. Support pays for the work, not for access.",
+   "t": "아니요. 모두가 같은 앱을 모든 기능과 함께 씁니다. 후원은 개발에 대한 것이지, 기능을 사는 것이 아닙니다."
+  },
+  "755067418d53": {
+   "en": "<a href=\"./#features\" class=\"hide-small\">Features</a>",
+   "t": "<a href=\"./#features\" class=\"hide-small\">기능</a>"
+  },
+  "8270535cb4ab": {
+   "en": "<a href=\"./#download\">Download</a>",
+   "t": "<a href=\"./#download\">다운로드</a>"
+  },
+  "ca6faa27a7a6": {
+   "en": "<a href=\"support.html\" aria-current=\"page\">♥ Support</a>",
+   "t": "<a href=\"support.html\" aria-current=\"page\">♥ 후원하기</a>"
+  },
+  "4efcf575e641": {
+   "en": "Support GigChain Keys",
+   "t": "GigChain Keys 후원하기"
+  },
+  "fcf2c8838853": {
+   "en": "GigChain Keys is free for every keyboard player: no ads, no account, no paid version. It's made by one keyboard player, with a new version every Monday. If it has earned a place in your rig, you can help keep it going.",
+   "t": "GigChain Keys는 모든 키보디스트에게 무료입니다. 광고 없음, 계정 없음, 유료 버전 없음. 키보디스트 한 명이 만들고, 매주 월요일 새 버전이 나옵니다. 여러분의 장비에서 제 몫을 하고 있다면, 계속 이어 갈 수 있도록 도와주세요."
+  },
+  "e9292906f52e": {
+   "en": "One-time",
+   "t": "1회"
+  },
+  "f85f51c17dc3": {
+   "en": "☕ Donate",
+   "t": "☕ 후원하기"
+  },
+  "0762d7e67f6d": {
+   "en": "A thank-you of any amount, whenever you like.",
+   "t": "원하는 금액으로, 원할 때, 감사의 마음을."
+  },
+  "6f17b16c1553": {
+   "en": "Card, Apple Pay or Google Pay",
+   "t": "카드, Apple Pay, Google Pay"
+  },
+  "997fb14df751": {
+   "en": "No account needed",
+   "t": "계정 필요 없음"
+  },
+  "89868ff402a6": {
+   "en": "Through Buy Me a Coffee",
+   "t": "Buy Me a Coffee를 통해"
+  },
+  "35ebe3e85031": {
+   "en": "<a class=\"go\" href=\"https://buymeacoffee.com/ddazomnike\">Donate with Buy Me a Coffee</a>",
+   "t": "<a class=\"go\" href=\"https://buymeacoffee.com/ddazomnike\">Buy Me a Coffee로 후원하기</a>"
+  },
+  "d31edb7b8a94": {
+   "en": "Monthly",
+   "t": "매달"
+  },
+  "8300dedca8dd": {
+   "en": "♥ Sponsor",
+   "t": "♥ 스폰서 되기"
+  },
+  "099384fb5d8d": {
+   "en": "A small amount each month: the steady support that keeps the weekly releases coming.",
+   "t": "매달 적은 금액으로: 매주 릴리스를 이어 가게 하는 꾸준한 후원입니다."
+  },
+  "7856b16ce109": {
+   "en": "Ongoing, cancel any time",
+   "t": "정기 후원, 언제든 해지 가능"
+  },
+  "8b1b4c4bf1cb": {
+   "en": "With your GitHub account",
+   "t": "GitHub 계정으로"
+  },
+  "548826723901": {
+   "en": "Through GitHub Sponsors",
+   "t": "GitHub Sponsors를 통해"
+  },
+  "310699272a6b": {
+   "en": "<a class=\"go\" href=\"https://github.com/sponsors/xDarkzx\">Sponsor on GitHub</a>",
+   "t": "<a class=\"go\" href=\"https://github.com/sponsors/xDarkzx\">GitHub에서 스폰서 되기</a>"
+  },
+  "5535db6b88da": {
+   "en": "Everyone gets the same app, with every feature. Support pays for the work, never for access.",
+   "t": "모두가 같은 앱을 모든 기능과 함께 씁니다. 후원은 개발에 대한 것이지, 결코 기능을 사는 것이 아닙니다."
+  },
+  "a889a0abe7e4": {
+   "en": "Where your support goes",
+   "t": "후원금은 이렇게 쓰입니다"
+  },
+  "ea7f7f6781c5": {
+   "en": "<strong>Fewer install warnings</strong>",
+   "t": "<strong>설치 시 경고 줄이기</strong>"
+  },
+  "8ec6b28774a8": {
+   "en": "<span>Code signing for Windows, and Apple's signing and notarisation for the Mac, so installing it feels safe.</span>",
+   "t": "<span>Windows용 코드 서명과 Mac용 Apple 서명·공증으로, 안심하고 설치할 수 있게 합니다.</span>"
+  },
+  "205ead700236": {
+   "en": "<strong>A release every Monday</strong>",
+   "t": "<strong>매주 월요일 릴리스</strong>"
+  },
+  "2f2fac6b997b": {
+   "en": "<span>The time to fix what players report and ship it the same week.</span>",
+   "t": "<span>연주자들이 알려 준 문제를 고쳐서 같은 주에 내놓을 시간.</span>"
+  },
+  "7f221fcb5a52": {
+   "en": "<strong>New instruments and features</strong>",
+   "t": "<strong>새로운 악기와 기능</strong>"
+  },
+  "f31293670677": {
+   "en": "<span>Built from what keyboard players ask for on GitHub and Discord.</span>",
+   "t": "<span>키보디스트들이 GitHub와 Discord에서 요청한 것을 바탕으로 만듭니다.</span>"
+  },
+  "590721fed556": {
+   "en": "Other ways to help, free",
+   "t": "무료로 도울 수 있는 다른 방법"
+  },
+  "f9c05cb52423": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">⭐ Star it on GitHub<span>Helps other players find it</span></a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">⭐ GitHub에서 스타 누르기<span>다른 연주자들이 찾는 데 도움이 됩니다</span></a>"
+  },
+  "dc828b35f900": {
+   "en": "<a href=\"https://discord.gg/BGn8Ujh37m\">💬 Join the Discord<span>Show your rig, ask, suggest</span></a>",
+   "t": "<a href=\"https://discord.gg/BGn8Ujh37m\">💬 Discord 참여하기<span>장비 자랑, 질문, 제안</span></a>"
+  },
+  "69ae2de3ac33": {
+   "en": "<a href=\"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4\">▶ Watch and share the videos<span>How most players find it</span></a>",
+   "t": "<a href=\"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4\">▶ 영상 보고 공유하기<span>대부분의 연주자가 이렇게 알게 됩니다</span></a>"
+  },
+  "b3796b762535": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">💡 Report a bug or an idea<span>Decides what comes next</span></a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">💡 버그나 아이디어 알리기<span>다음에 무엇이 나올지 정합니다</span></a>"
+  },
+  "540404626cf2": {
+   "en": "What's the difference between donating and sponsoring?",
+   "t": "후원과 스폰서는 무엇이 다른가요?"
+  },
+  "52bf04379332": {
+   "en": "Donating is a one-time gift through Buy Me a Coffee, with no account needed. Sponsoring is ongoing support through GitHub Sponsors, and needs a GitHub account. Both go to the same place: GigChain Keys.",
+   "t": "후원은 Buy Me a Coffee를 통한 1회성 선물로, 계정이 필요 없습니다. 스폰서는 GitHub Sponsors를 통한 정기 후원으로, GitHub 계정이 필요합니다. 둘 다 같은 곳, GigChain Keys로 갑니다."
+  },
+  "e28f3a2b676f": {
+   "en": "Not using it yet? It's free on Windows, Mac and Linux.",
+   "t": "아직 안 써 보셨나요? Windows, Mac, Linux에서 무료입니다."
+  },
+  "f9e80c0a499e": {
+   "en": "<a class=\"btn\" href=\"./#download\">Download GigChain Keys</a>",
+   "t": "<a class=\"btn\" href=\"./#download\">GigChain Keys 다운로드</a>"
+  },
+  "29a0bdcbd621": {
+   "en": "Buy Me a Coffee and GitHub Sponsors are run by their own companies; payments go through them.",
+   "t": "Buy Me a Coffee와 GitHub Sponsors는 각자의 회사가 운영하며, 결제는 그쪽을 통해 이루어집니다."
+  },
+  "e3ca95abe18e": {
+   "en": "MainStage for Windows? What to Use Instead (Free) | GigChain Keys",
+   "t": "Windows용 MainStage? 대신 쓸 수 있는 것 (무료) | GigChain Keys"
+  },
+  "6df980db18c6": {
+   "en": "There is no MainStage for Windows. Here's how Windows keyboard players get the same setup: a setlist of sounds, layers and splits, VST plugins and one-press sound changes, free.",
+   "t": "Windows용 MainStage는 없습니다. Windows를 쓰는 키보디스트가 같은 환경을 만드는 방법을 소개합니다: 음색 셋리스트, 레이어와 스플릿, VST 플러그인, 한 번 눌러 음색 바꾸기. 모두 무료로."
+  },
+  "5629538f9c68": {
+   "en": "MainStage for Windows? What to use instead, free",
+   "t": "Windows용 MainStage? 대신 쓸 수 있는 것, 무료로"
+  },
+  "efb684e7d229": {
+   "en": "The same songs-and-sounds live setup as MainStage, on a Windows PC, for free.",
+   "t": "MainStage와 같은 곡·음색 중심의 라이브 환경을 Windows PC에서 무료로."
+  },
+  "b7eece52adf7": {
+   "en": "MainStage for Windows",
+   "t": "Windows용 MainStage"
+  },
+  "1240e202212f": {
+   "en": "Can I run MainStage on Windows?",
+   "t": "Windows에서 MainStage를 실행할 수 있나요?"
+  },
+  "a3f155443414": {
+   "en": "No. MainStage is made by Apple and only runs on macOS. There is no Windows version, and running it in a virtual machine isn't practical for live audio.",
+   "t": "아니요. MainStage는 Apple이 만들며 macOS에서만 실행됩니다. Windows 버전은 없고, 가상 머신에서 돌리는 것은 라이브 오디오에는 현실적이지 않습니다."
+  },
+  "3d7e960b2f24": {
+   "en": "What is the Windows equivalent of MainStage?",
+   "t": "Windows에서 MainStage에 해당하는 것은 무엇인가요?"
+  },
+  "61e9e09d0f3b": {
+   "en": "A live VST host with setlists. GigChain Keys is a free one built to work like MainStage: songs, sounds per song, layers and splits, chord charts, and one press to change sound on stage.",
+   "t": "셋리스트가 있는 라이브용 VST 호스트입니다. GigChain Keys는 MainStage처럼 작동하도록 만든 무료 호스트로, 곡, 곡별 음색, 레이어와 스플릿, 코드 차트, 그리고 무대에서 한 번 눌러 음색을 바꾸는 기능을 갖추고 있습니다."
+  },
+  "e0dc8e5c6e60": {
+   "en": "Do I need an audio interface?",
+   "t": "오디오 인터페이스가 필요한가요?"
+  },
+  "4fbe77473c13": {
+   "en": "Not to start: GigChain Keys plays through your computer's normal sound output (WASAPI). For the lowest latency on stage, an audio interface with an ASIO driver is better, and GigChain Keys supports ASIO too.",
+   "t": "처음에는 필요 없습니다. GigChain Keys는 컴퓨터의 기본 사운드 출력(WASAPI)으로 소리를 냅니다. 무대에서 가장 낮은 지연 시간을 원한다면 ASIO 드라이버가 있는 오디오 인터페이스가 더 좋고, GigChain Keys는 ASIO도 지원합니다."
+  },
+  "e7a7f8733139": {
+   "en": "<a href=\"./\">GigChain Keys</a> › Guides",
+   "t": "<a href=\"./\">GigChain Keys</a> › 가이드"
+  },
+  "fb7f2053a57a": {
+   "en": "MainStage for Windows? What to use instead",
+   "t": "Windows용 MainStage? 대신 쓸 수 있는 것"
+  },
+  "b92785259b4d": {
+   "en": "There is no MainStage for Windows: Apple only makes it for the Mac. But what MainStage does, a setlist of songs where each song has its sounds ready to play, works just as well on a Windows PC. Here's how to set it up, for free.",
+   "t": "Windows용 MainStage는 없습니다. Apple은 Mac용으로만 만들기 때문입니다. 하지만 MainStage가 하는 일, 즉 곡마다 음색이 바로 연주할 수 있게 준비된 셋리스트는 Windows PC에서도 똑같이 잘 됩니다. 무료로 설정하는 방법은 다음과 같습니다."
+  },
+  "b9b08eb13da1": {
+   "en": "What MainStage actually gives you",
+   "t": "MainStage가 실제로 해 주는 것"
+  },
+  "c7a423a191bf": {
+   "en": "Strip away the Apple branding and MainStage is four things:",
+   "t": "Apple 브랜드를 걷어 내면 MainStage는 네 가지입니다:"
+  },
+  "da1f9b0b6cae": {
+   "en": "<strong>A setlist</strong>: your songs in gig order.",
+   "t": "<strong>셋리스트</strong>: 공연 순서대로 정리한 곡들."
+  },
+  "179e4c77984b": {
+   "en": "<strong>Sounds per song</strong> (MainStage calls them patches): piano for the verse, pad plus strings for the chorus.",
+   "t": "<strong>곡별 음색</strong>(MainStage에서는 패치라고 부릅니다): 벌스에는 피아노, 코러스에는 패드와 스트링."
+  },
+  "da7a44b9ed4b": {
+   "en": "<strong>Layers and splits</strong>: several sounds at once, or bass on the left hand and piano on the right.",
+   "t": "<strong>레이어와 스플릿</strong>: 여러 음색을 한꺼번에, 또는 왼손은 베이스, 오른손은 피아노."
+  },
+  "952f3f575234": {
+   "en": "<strong>One press to change</strong>: a footswitch, pad or key moves to the next sound, with no gap in the audio.",
+   "t": "<strong>한 번 눌러 바꾸기</strong>: 풋스위치, 패드, 건반으로 다음 음색으로. 소리가 끊기지 않습니다."
+  },
+  "424cf64e8ca1": {
+   "en": "Any Windows program that does all four can replace it on stage.",
+   "t": "이 네 가지를 모두 하는 Windows 프로그램이라면 무대에서 MainStage를 대신할 수 있습니다."
+  },
+  "706a95a68e64": {
+   "en": "Doing it on Windows with GigChain Keys",
+   "t": "GigChain Keys로 Windows에서 하는 방법"
+  },
+  "fb4703bb3938": {
+   "en": "GigChain Keys is a free, open-source live rig built to work like MainStage, on Windows, Mac and Linux.",
+   "t": "GigChain Keys는 MainStage처럼 작동하도록 만든 무료 오픈소스 라이브 환경으로, Windows, Mac, Linux에서 실행됩니다."
+  },
+  "d45bae6258fa": {
+   "en": "GigChain Keys: a setlist of songs, each with its sounds, chord chart and mixer",
+   "t": "GigChain Keys: 곡마다 음색, 코드 차트, 믹서가 있는 셋리스트"
+  },
+  "64929c3462ee": {
+   "en": "<strong>Install it</strong> from the <a href=\"./#download\">download page</a> (Windows 10 or 11; installer or portable zip).",
+   "t": "<a href=\"./#download\">다운로드 페이지</a>에서 <strong>설치하세요</strong>(Windows 10 또는 11, 설치 프로그램 또는 포터블 zip)."
+  },
+  "cc5855c39313": {
+   "en": "<strong>Plug in your MIDI keyboard</strong>; it's found automatically.",
+   "t": "<strong>MIDI 키보드를 연결하세요</strong>. 자동으로 인식됩니다."
+  },
+  "420b7a97f1a6": {
+   "en": "<strong>Pick your audio</strong>: your normal Windows sound output works straight away. If you have an audio interface, choose its ASIO driver for the lowest latency.",
+   "t": "<strong>오디오를 선택하세요</strong>: Windows 기본 사운드 출력은 바로 작동합니다. 오디오 인터페이스가 있다면 가장 낮은 지연 시간을 위해 그 ASIO 드라이버를 선택하세요."
+  },
+  "84c531a6d129": {
+   "en": "<strong>Add your plugins</strong>: GigChain Keys scans your VST3 and VST2 folders. Kontakt, Arturia, Spitfire, Surge XT, Vital and the rest all work. No plugins yet? It comes with its own pianos, synths, pads and a SoundFont player.",
+   "t": "<strong>플러그인을 추가하세요</strong>: GigChain Keys가 VST3·VST2 폴더를 스캔합니다. Kontakt, Arturia, Spitfire, Surge XT, Vital 등 모두 작동합니다. 아직 플러그인이 없나요? 자체 피아노, 신스, 패드, SoundFont 플레이어가 들어 있습니다."
+  },
+  "d5e5e7af3c1e": {
+   "en": "<strong>Build your setlist</strong>: add a song, add sounds to it, layer or split them, and paste in the chords.",
+   "t": "<strong>셋리스트를 만드세요</strong>: 곡을 추가하고, 음색을 넣고, 레이어나 스플릿을 만든 뒤 코드를 붙여 넣으세요."
+  },
+  "83b4eff0f45e": {
+   "en": "<strong>Go to Perform mode</strong> on stage: big, clear, one press to the next sound.",
+   "t": "무대에서는 <strong>Perform 모드로 바꾸세요</strong>: 크고 선명하게, 한 번 눌러 다음 음색으로."
+  },
+  "34a951c02137": {
+   "en": "What's the same, and what's different",
+   "t": "같은 점과 다른 점"
+  },
+  "5703321d0ec8": {
+   "en": "Runs on",
+   "t": "지원 운영체제"
+  },
+  "858ac5dc2957": {
+   "en": "Mac only",
+   "t": "Mac 전용"
+  },
+  "3e8248e32edf": {
+   "en": "Price",
+   "t": "가격"
+  },
+  "dc9d4584a554": {
+   "en": "Paid",
+   "t": "유료"
+  },
+  "72de9496a57b": {
+   "en": "Free, open source",
+   "t": "무료, 오픈소스"
+  },
+  "3f3e6c352418": {
+   "en": "Setlists, sounds per song",
+   "t": "셋리스트, 곡별 음색"
+  },
+  "5397e0583f14": {
+   "en": "Yes",
+   "t": "있음"
+  },
+  "8df771bfd6fe": {
+   "en": "Layers and splits",
+   "t": "레이어와 스플릿"
+  },
+  "6291c403d715": {
+   "en": "Your plugins",
+   "t": "내 플러그인"
+  },
+  "0ec3cd34b7c7": {
+   "en": "VST3 and VST2",
+   "t": "VST3와 VST2"
+  },
+  "df2ca03160fe": {
+   "en": "Chord and lyric charts",
+   "t": "코드 차트와 가사"
+  },
+  "039ec17971be": {
+   "en": "Not built in",
+   "t": "내장 안 됨"
+  },
+  "d253ec78987e": {
+   "en": "Built-in sound library",
+   "t": "내장 사운드 라이브러리"
+  },
+  "7c8432f0894e": {
+   "en": "Large (Logic's)",
+   "t": "큼 (Logic의 라이브러리)"
+  },
+  "6264bf8d2dd4": {
+   "en": "Smaller: pianos, synths, pads, SoundFonts",
+   "t": "작음: 피아노, 신스, 패드, SoundFont"
+  },
+  "e87e70288825": {
+   "en": "Backing tracks, click, tempo",
+   "t": "반주 트랙, 클릭, 템포"
+  },
+  "8b6c540942e1": {
+   "en": "Yes (up to eight stems per song)",
+   "t": "있음 (곡당 최대 8개 스템)"
+  },
+  "9baea84d25fb": {
+   "en": "MainStage's big strength is Logic's huge sound library. On Windows you bring your own plugins (plenty are free: Spitfire LABS, Surge XT, Vital, Dexed, Pianobook instruments), plus GigChain's built-in sounds.",
+   "t": "MainStage의 가장 큰 강점은 Logic의 방대한 사운드 라이브러리입니다. Windows에서는 내 플러그인을 씁니다(무료도 많습니다: Spitfire LABS, Surge XT, Vital, Dexed, Pianobook 악기). 여기에 GigChain의 내장 음색이 더해집니다."
+  },
+  "4cbcacb10ceb": {
+   "en": "Free, no ads, no account. Windows 10 and 11.",
+   "t": "무료, 광고 없음, 계정 없음. Windows 10과 11."
+  },
+  "9cabeb0b4ade": {
+   "en": "No. It's Apple software for macOS only. Virtual machines aren't practical for live audio.",
+   "t": "아니요. macOS 전용 Apple 소프트웨어입니다. 가상 머신은 라이브 오디오에는 현실적이지 않습니다."
+  },
+  "940c195ee64c": {
+   "en": "A live VST host with setlists. GigChain Keys is a free one that works like MainStage. For every free option, see <a href=\"free-mainstage-alternatives.html\">free MainStage alternatives compared</a>.",
+   "t": "셋리스트가 있는 라이브용 VST 호스트입니다. GigChain Keys는 MainStage처럼 작동하는 무료 호스트입니다. 모든 무료 선택지는 <a href=\"free-mainstage-alternatives.html\">무료 MainStage 대안 비교</a>에서 확인하세요."
+  },
+  "04ca1667912b": {
+   "en": "Not to start. Your computer's sound output works. For stage, an interface with an ASIO driver gives the lowest latency, and GigChain Keys supports it.",
+   "t": "처음에는 필요 없습니다. 컴퓨터의 사운드 출력으로도 됩니다. 무대에서는 ASIO 드라이버가 있는 인터페이스가 가장 낮은 지연 시간을 내며, GigChain Keys는 이를 지원합니다."
+  },
+  "3be40669838b": {
+   "en": "More guides",
+   "t": "다른 가이드"
+  },
+  "0f2f2b09478f": {
+   "en": "<a href=\"free-mainstage-alternatives.html\">Free MainStage alternatives<span>Every free option, compared</span></a>",
+   "t": "<a href=\"free-mainstage-alternatives.html\">무료 MainStage 대안<span>모든 무료 선택지 비교</span></a>"
+  },
+  "ee3078064821": {
+   "en": "<a href=\"play-vst-plugins-live.html\">Play VST plugins live<span>No DAW, low latency, one press per song</span></a>",
+   "t": "<a href=\"play-vst-plugins-live.html\">VST 플러그인 라이브 연주<span>DAW 없이, 낮은 지연 시간, 곡마다 한 번 누르기</span></a>"
+  },
+  "b837e8d79ddc": {
+   "en": "MainStage is a trademark of Apple Inc. VST is a registered trademark of Steinberg Media Technologies GmbH. Other names belong to their owners. GigChain Keys is not affiliated with them.",
+   "t": "MainStage는 Apple Inc.의 상표입니다. VST는 Steinberg Media Technologies GmbH의 등록 상표입니다. 그 밖의 이름은 각 소유자의 것입니다. GigChain Keys는 이들과 관련이 없습니다."
+  },
+  "fc996fdec0e6": {
+   "en": "Free MainStage Alternatives for Windows, Mac &amp; Linux (2026) | GigChain Keys",
+   "t": "Windows, Mac, Linux용 무료 MainStage 대안 (2026) | GigChain Keys"
+  },
+  "53a497c6992e": {
+   "en": "Every free MainStage alternative compared: GigChain Keys, Cantabile Lite, Element and Carla. Which ones run on Windows, Mac and Linux, which have setlists, and which are really free.",
+   "t": "무료 MainStage 대안을 모두 비교: GigChain Keys, Cantabile Lite, Element, Carla. Windows, Mac, Linux에서 실행되는 것, 셋리스트가 있는 것, 정말 무료인 것은 무엇일까요."
+  },
+  "dda1fb9d3c5f": {
+   "en": "Free MainStage alternatives for Windows, Mac & Linux, compared",
+   "t": "Windows, Mac, Linux용 무료 MainStage 대안 비교"
+  },
+  "873414f7f384": {
+   "en": "Which free live VST hosts run on your computer, which have setlists, and which are really free.",
+   "t": "내 컴퓨터에서 실행되는 무료 라이브 VST 호스트는 무엇이고, 셋리스트가 있는 것은 무엇이며, 정말 무료인 것은 무엇인지."
+  },
+  "4a229b9ce1bd": {
+   "en": "Free MainStage alternatives",
+   "t": "무료 MainStage 대안"
+  },
+  "f7ec91b71ecf": {
+   "en": "What is the best free alternative to MainStage?",
+   "t": "MainStage를 대신할 가장 좋은 무료 앱은 무엇인가요?"
+  },
+  "d4a50080a13c": {
+   "en": "For keyboard players who want setlists, layers and splits, chord charts and instant sound changes for free on Windows, Mac or Linux, GigChain Keys is the closest free match to MainStage. Cantabile Lite is free on Windows but keeps setlists for its paid editions; Element and Carla are free plugin hosts built around patching rather than songs.",
+   "t": "셋리스트, 레이어와 스플릿, 코드 차트, 즉시 음색 전환을 Windows, Mac, Linux에서 무료로 쓰고 싶은 키보디스트에게는 GigChain Keys가 MainStage에 가장 가까운 무료 선택지입니다. Cantabile Lite는 Windows에서 무료이지만 셋리스트는 유료 에디션에만 있고, Element와 Carla는 곡이 아니라 패칭 중심으로 만든 무료 플러그인 호스트입니다."
+  },
+  "61134dcf9bbf": {
+   "en": "Is there a free MainStage for Windows?",
+   "t": "Windows용 무료 MainStage가 있나요?"
+  },
+  "95c487488e31": {
+   "en": "MainStage itself is Mac only. Free Windows programs that do the same job include GigChain Keys (setlists, layers, splits, chord charts), Cantabile Lite (setlists only in paid editions), Element and Carla.",
+   "t": "MainStage 자체는 Mac 전용입니다. 같은 일을 하는 Windows용 무료 프로그램으로는 GigChain Keys(셋리스트, 레이어, 스플릿, 코드 차트), Cantabile Lite(셋리스트는 유료 에디션에만), Element, Carla가 있습니다."
+  },
+  "76d946b7a682": {
+   "en": "Can I use my VST plugins live without a DAW?",
+   "t": "DAW 없이 VST 플러그인을 라이브로 쓸 수 있나요?"
+  },
+  "1e627384f9e2": {
+   "en": "Yes. A live VST host like GigChain Keys loads your VST3 and VST2 instruments and effects directly, plays them from your MIDI keyboard with low latency, and switches between sounds per song, with no DAW or timeline.",
+   "t": "네. GigChain Keys 같은 라이브용 VST 호스트는 VST3·VST2 악기와 이펙트를 바로 불러와 MIDI 키보드로 낮은 지연 시간에 연주하고, 곡마다 음색을 바꿉니다. DAW도 타임라인도 필요 없습니다."
+  },
+  "06519c547d12": {
+   "en": "Free MainStage alternatives for Windows, Mac &amp; Linux",
+   "t": "Windows, Mac, Linux용 무료 MainStage 대안"
+  },
+  "cc71283a5ba0": {
+   "en": "MainStage is Apple's live rig for keyboard players, and it only runs on a Mac. If you play on Windows or Linux, or just don't want to pay, here is every free option, what each one is good at, and where each one stops.",
+   "t": "MainStage는 키보디스트를 위한 Apple의 라이브 환경이며 Mac에서만 실행됩니다. Windows나 Linux에서 연주하거나 그냥 돈을 쓰고 싶지 않다면, 여기 모든 무료 선택지와 각각의 강점, 그리고 한계를 정리했습니다."
+  },
+  "cc835fe34912": {
+   "en": "The short answer",
+   "t": "간단히 말하면"
+  },
+  "502984b3e039": {
+   "en": "Free (source)",
+   "t": "무료 (소스 코드)"
+  },
+  "816c52fd2bdd": {
+   "en": "No",
+   "t": "없음"
+  },
+  "6cc3364a242c": {
+   "en": "Open source",
+   "t": "오픈소스"
+  },
+  "cb0eb824349e": {
+   "en": "Yes (GPL)",
+   "t": "예 (GPL)"
+  },
+  "3aa6224d1fc1": {
+   "en": "Setlist of songs",
+   "t": "곡 셋리스트"
+  },
+  "0783a58e724f": {
+   "en": "Paid editions",
+   "t": "유료 에디션"
+  },
+  "8f7088e6bd06": {
+   "en": "Layers &amp; splits",
+   "t": "레이어와 스플릿"
+  },
+  "46f4e74191d5": {
+   "en": "Layers (splits in paid editions)",
+   "t": "레이어 (스플릿은 유료 에디션)"
+  },
+  "2f9b83746a72": {
+   "en": "By patching",
+   "t": "패칭으로"
+  },
+  "2c8788a4a663": {
+   "en": "Chord &amp; lyric charts",
+   "t": "코드 차트와 가사"
+  },
+  "d81f2f3c835e": {
+   "en": "Built-in sounds",
+   "t": "내장 음색"
+  },
+  "b55826a38e9d": {
+   "en": "Pianos, synths, pads, SoundFonts",
+   "t": "피아노, 신스, 패드, SoundFont"
+  },
+  "8e3ee64d491f": {
+   "en": "Made for",
+   "t": "대상"
+  },
+  "418543c46ae9": {
+   "en": "Keyboard players on stage",
+   "t": "무대 위의 키보디스트"
+  },
+  "559db31c2345": {
+   "en": "Live players on Windows",
+   "t": "Windows 라이브 연주자"
+  },
+  "32686f4de06a": {
+   "en": "Building plugin chains",
+   "t": "플러그인 체인 구성"
+  },
+  "a5aa391ec8c2": {
+   "en": "Plugin hosting &amp; routing",
+   "t": "플러그인 호스팅과 라우팅"
+  },
+  "1fc5895b875a": {
+   "en": "Checked November 2026. Paid hosts (MainStage, Gig Performer, Cantabile's paid editions, Camelot) are left out: this page is about what you can use for nothing.",
+   "t": "2026년 11월 기준입니다. 유료 호스트(MainStage, Gig Performer, Cantabile 유료 에디션, Camelot)는 제외했습니다. 이 페이지는 돈을 들이지 않고 쓸 수 있는 것만 다룹니다."
+  },
+  "faef353dcd1f": {
+   "en": "A live rig made for keyboard players, built to work like MainStage on Windows, Mac and Linux. You build a setlist of songs, give each song its sounds (your VST3 and VST2 plugins, or the built-in pianos, synths, pads and SoundFont player), layer and split them across the keyboard, and in Perform mode one press moves to the next sound with no gap. Each song can carry its chord and lyric chart, shown big on stage. There's also a practice mode with daily warm-ups.",
+   "t": "키보디스트를 위해 만든 라이브 환경으로, Windows, Mac, Linux에서 MainStage처럼 작동하도록 설계했습니다. 곡 셋리스트를 만들고, 곡마다 음색(내 VST3·VST2 플러그인 또는 내장 피아노, 신스, 패드, SoundFont 플레이어)을 넣고, 건반에 레이어와 스플릿을 만들면, Perform 모드에서 한 번 누를 때마다 끊김 없이 다음 음색으로 넘어갑니다. 곡마다 코드 차트와 가사를 넣어 무대에서 크게 볼 수 있습니다. 매일 워밍업을 할 수 있는 연습 모드도 있습니다."
+  },
+  "5eadaf20854a": {
+   "en": "<strong>Good for:</strong> cover bands, function and wedding gigs, solo keys players, anyone who wants MainStage's songs-and-sounds way of working without a Mac. <strong>Not for:</strong> recording and editing tracks; it's a live tool, not a DAW.",
+   "t": "<strong>잘 맞는 경우:</strong> 커버 밴드, 행사와 결혼식 연주, 솔로 키보디스트, 그리고 Mac 없이 MainStage의 곡·음색 방식을 원하는 모든 분. <strong>맞지 않는 경우:</strong> 트랙 녹음과 편집. 라이브용 도구이지 DAW가 아닙니다."
+  },
+  "10f0884c0fae": {
+   "en": "A long-running, well-respected Windows live host. The Lite edition is free and hosts plugins with layers. Set lists and keyboard splits come with the paid Solo edition, song states with Performer, and it doesn't run on Mac or Linux.",
+   "t": "오래되고 평판 좋은 Windows용 라이브 호스트입니다. Lite 에디션은 무료이며 레이어로 플러그인을 쓸 수 있습니다. 셋리스트와 건반 스플릿은 유료 Solo 에디션에, 송 스테이트는 Performer에 있으며, Mac이나 Linux에서는 실행되지 않습니다."
+  },
+  "6c0119b063ab": {
+   "en": "An open-source plugin host for Windows, Mac and Linux. You connect plugins together in a graph, which makes it flexible for building effects chains and custom routing. It has no setlist of songs or charts; switching sounds between songs is up to you.",
+   "t": "Windows, Mac, Linux용 오픈소스 플러그인 호스트입니다. 플러그인을 그래프로 연결하기 때문에 이펙트 체인과 원하는 라우팅을 만들기에 유연합니다. 곡 셋리스트나 차트는 없고, 곡 사이의 음색 전환은 직접 해결해야 합니다."
+  },
+  "92bdd9e190b7": {
+   "en": "A free, open-source plugin host, strongest on Linux, with patchbay routing and support for many plugin formats. Like Element, it's a toolbox for hosting and routing rather than a set of songs to play through on stage.",
+   "t": "무료 오픈소스 플러그인 호스트로, 특히 Linux에서 강하며 패치베이 라우팅과 다양한 플러그인 형식을 지원합니다. Element처럼 플러그인 호스팅과 라우팅을 위한 도구 상자이지, 무대에서 차례로 연주할 곡 셋리스트가 아닙니다."
+  },
+  "74a286fce976": {
+   "en": "How to choose",
+   "t": "고르는 방법"
+  },
+  "47d7d8511e27": {
+   "en": "<strong>You want MainStage's way of working (songs, sounds, one press to change) on Windows or Linux, free:</strong> GigChain Keys.",
+   "t": "<strong>Windows나 Linux에서 MainStage 방식(곡, 음색, 한 번 눌러 바꾸기)을 무료로 원한다면:</strong> GigChain Keys."
+  },
+  "e84aa85527ac": {
+   "en": "<strong>You're on Windows and happy to pay later for a mature, Windows-only tool:</strong> try Cantabile Lite, then its paid editions.",
+   "t": "<strong>Windows를 쓰고, 나중에 성숙한 Windows 전용 도구에 돈을 써도 괜찮다면:</strong> Cantabile Lite를 먼저 써 보고, 그다음 유료 에디션을."
+  },
+  "e5f77a7e22e0": {
+   "en": "<strong>You want to wire up plugin chains yourself:</strong> Element or Carla.",
+   "t": "<strong>플러그인 체인을 직접 연결하고 싶다면:</strong> Element나 Carla."
+  },
+  "de4598e58199": {
+   "en": "GigChain Keys is free: no ads, no account, no licence key.",
+   "t": "GigChain Keys는 무료입니다. 광고 없음, 계정 없음, 라이선스 키 없음."
+  },
+  "baa552c59249": {
+   "en": "<a class=\"btn\" href=\"./#download\">Download for Windows, Mac or Linux</a>",
+   "t": "<a class=\"btn\" href=\"./#download\">Windows, Mac, Linux용 다운로드</a>"
+  },
+  "c592afcd0558": {
+   "en": "For keyboard players who want setlists, layers and splits, chord charts and instant sound changes for free, on any computer, GigChain Keys is the closest match. Cantabile Lite is free on Windows but keeps setlists for its paid editions.",
+   "t": "셋리스트, 레이어와 스플릿, 코드 차트, 즉시 음색 전환을 어떤 컴퓨터에서든 무료로 쓰고 싶은 키보디스트에게는 GigChain Keys가 가장 가깝습니다. Cantabile Lite는 Windows에서 무료이지만 셋리스트는 유료 에디션에만 있습니다."
+  },
+  "d9d534535e9c": {
+   "en": "MainStage itself is Mac only. On Windows you can use GigChain Keys, Cantabile Lite, Element or Carla, all free. See <a href=\"mainstage-for-windows.html\">MainStage for Windows: what to use instead</a>.",
+   "t": "MainStage 자체는 Mac 전용입니다. Windows에서는 GigChain Keys, Cantabile Lite, Element, Carla를 쓸 수 있으며 모두 무료입니다. <a href=\"mainstage-for-windows.html\">Windows용 MainStage: 대신 쓸 수 있는 것</a>을 참고하세요."
+  },
+  "9f68a0dbef5f": {
+   "en": "Yes, and it's usually better on stage: lower latency, fewer things to go wrong. See <a href=\"play-vst-plugins-live.html\">how to play VST plugins live without a DAW</a>.",
+   "t": "네, 그리고 무대에서는 보통 그쪽이 더 낫습니다. 지연 시간이 낮고 문제가 생길 일도 적습니다. <a href=\"play-vst-plugins-live.html\">DAW 없이 VST 플러그인을 라이브로 연주하는 방법</a>을 참고하세요."
+  },
+  "f828df1bfb00": {
+   "en": "<a href=\"mainstage-for-windows.html\">MainStage for Windows?<span>What Windows players use instead</span></a>",
+   "t": "<a href=\"mainstage-for-windows.html\">Windows용 MainStage?<span>Windows 연주자들이 대신 쓰는 것</span></a>"
+  },
+  "6d7c75066009": {
+   "en": "<a href=\"gig-performer-alternative.html\">Gig Performer alternative<span>A free live rig for keys</span></a>",
+   "t": "<a href=\"gig-performer-alternative.html\">Gig Performer 대안<span>키보드를 위한 무료 라이브 환경</span></a>"
+  },
+  "50390d48787f": {
+   "en": "<a href=\"cantabile-alternative.html\">Cantabile alternative<span>Setlists free, on any computer</span></a>",
+   "t": "<a href=\"cantabile-alternative.html\">Cantabile 대안<span>셋리스트 무료, 어떤 컴퓨터에서든</span></a>"
+  },
+  "a7d7451fd226": {
+   "en": "<a href=\"carla-vs-gigchain-keys.html\">Carla vs GigChain Keys<span>Plugin host or live rig?</span></a>",
+   "t": "<a href=\"carla-vs-gigchain-keys.html\">Carla vs GigChain Keys<span>플러그인 호스트일까, 라이브 환경일까?</span></a>"
+  },
+  "67bcc5276b68": {
+   "en": "How to Play VST Plugins Live Without a DAW (Free) | GigChain Keys",
+   "t": "DAW 없이 VST 플러그인을 라이브로 연주하는 방법 (무료) | GigChain Keys"
+  },
+  "fcff5d328ec1": {
+   "en": "Play Kontakt, Arturia, Spitfire LABS, Surge XT, Vital and any VST3 or VST2 plugin live on stage from your MIDI keyboard, without a DAW: low latency, sounds per song, one press to change. Free.",
+   "t": "Kontakt, Arturia, Spitfire LABS, Surge XT, Vital 등 모든 VST3·VST2 플러그인을 DAW 없이 MIDI 키보드로 무대에서 라이브 연주하세요. 낮은 지연 시간, 곡별 음색, 한 번 눌러 바꾸기. 무료."
+  },
+  "d944a7ae5c62": {
+   "en": "How to play VST plugins live without a DAW",
+   "t": "DAW 없이 VST 플러그인을 라이브로 연주하는 방법"
+  },
+  "eab965d0aaf6": {
+   "en": "Your plugins on stage from your MIDI keyboard: low latency, sounds per song, one press to change. Free.",
+   "t": "내 플러그인을 MIDI 키보드로 무대에서. 낮은 지연 시간, 곡별 음색, 한 번 눌러 바꾸기. 무료."
+  },
+  "6e43e7b909c6": {
+   "en": "Install a live VST host",
+   "t": "라이브용 VST 호스트 설치하기"
+  },
+  "a6842ed1d321": {
+   "en": "Download and install GigChain Keys for Windows, Mac or Linux.",
+   "t": "Windows, Mac, Linux용 GigChain Keys를 다운로드해 설치하세요."
+  },
+  "aae273083e3e": {
+   "en": "Choose low-latency audio",
+   "t": "지연 시간이 낮은 오디오 선택하기"
+  },
+  "90616972d76e": {
+   "en": "Pick your audio interface's ASIO driver on Windows (or Core Audio on Mac, JACK or PipeWire on Linux) and a buffer of 128 or 256 samples.",
+   "t": "Windows에서는 오디오 인터페이스의 ASIO 드라이버를(Mac에서는 Core Audio, Linux에서는 JACK이나 PipeWire를) 고르고, 버퍼는 128 또는 256 샘플로 하세요."
+  },
+  "9ec9822d5599": {
+   "en": "Scan your plugins",
+   "t": "플러그인 스캔하기"
+  },
+  "8f32b130d55b": {
+   "en": "Let it scan your VST3 and VST2 folders, or add your own folders in Settings.",
+   "t": "VST3·VST2 폴더를 스캔하게 두거나, 설정에서 내 폴더를 추가하세요."
+  },
+  "41635d946b50": {
+   "en": "Make a song and add sounds",
+   "t": "곡을 만들고 음색 추가하기"
+  },
+  "84c00d270569": {
+   "en": "Add a song, add your plugins to it as sounds, and layer or split them across the keyboard.",
+   "t": "곡을 추가하고, 플러그인을 음색으로 넣은 뒤, 건반에 레이어나 스플릿을 만드세요."
+  },
+  "70798c0fe1bc": {
+   "en": "Play in Perform mode",
+   "t": "Perform 모드로 연주하기"
+  },
+  "ec2a7c869635": {
+   "en": "Switch to Perform mode and change sounds with one press of a pad, footswitch or key.",
+   "t": "Perform 모드로 바꾸고 패드, 풋스위치, 건반을 한 번 눌러 음색을 바꾸세요."
+  },
+  "3bc09644a7ea": {
+   "en": "Play VST plugins live",
+   "t": "VST 플러그인 라이브 연주"
+  },
+  "ccc41ff17c22": {
+   "en": "A DAW is built for recording: timelines, tracks, arm buttons. On stage you just want to press a key and hear your sound, then press one button and hear the next song's. A live VST host does exactly that, with less to go wrong.",
+   "t": "DAW는 녹음을 위해 만들어졌습니다: 타임라인, 트랙, 녹음 대기 버튼. 무대에서는 건반을 누르면 내 음색이 나오고, 버튼 하나를 누르면 다음 곡의 음색이 나오면 그만입니다. 라이브용 VST 호스트는 바로 그 일을 하고, 문제가 생길 일도 더 적습니다."
+  },
+  "8682f51ea600": {
+   "en": "Why not just use your DAW on stage?",
+   "t": "무대에서 그냥 DAW를 쓰면 안 될까요?"
+  },
+  "149753d358f8": {
+   "en": "<strong>Changing sounds is slow</strong>: selecting tracks and arming them mid-song is fiddly with one hand.",
+   "t": "<strong>음색 전환이 느립니다</strong>: 곡 중간에 트랙을 고르고 녹음 대기로 바꾸는 건 한 손으로 하기 번거롭습니다."
+  },
+  "f3684e49ca46": {
+   "en": "<strong>Every sound is always loaded and running</strong>, so the computer works harder and latency goes up.",
+   "t": "<strong>모든 음색이 늘 불러와져 돌아갑니다</strong>. 그래서 컴퓨터 부담이 커지고 지연 시간이 늘어납니다."
+  },
+  "d43930e732e6": {
+   "en": "<strong>One wrong click</strong> (record, a moved region, a closed window) can stop the sound in the middle of a song.",
+   "t": "<strong>잘못된 클릭 한 번</strong>(녹음, 옮겨진 리전, 닫힌 창)으로 곡 중간에 소리가 멈출 수 있습니다."
+  },
+  "3b5e0733d7c7": {
+   "en": "A live host loads each song's sounds, switches between them with no gap, and shows a big, simple screen you can read from a stand.",
+   "t": "라이브 호스트는 곡마다 음색을 불러오고, 끊김 없이 전환하며, 보면대에서도 읽을 수 있는 크고 단순한 화면을 보여 줍니다."
+  },
+  "c16dfd1733eb": {
+   "en": "Step by step",
+   "t": "단계별 안내"
+  },
+  "5e0b4e6b19be": {
+   "en": "1. Install a live VST host",
+   "t": "1. 라이브용 VST 호스트 설치하기"
+  },
+  "4c879720b279": {
+   "en": "This guide uses <a href=\"./\">GigChain Keys</a>: free and open source, on Windows, Mac and Linux. Get it from the <a href=\"./#download\">download page</a>.",
+   "t": "이 가이드는 <a href=\"./\">GigChain Keys</a>를 사용합니다. 무료 오픈소스이며 Windows, Mac, Linux에서 실행됩니다. <a href=\"./#download\">다운로드 페이지</a>에서 받으세요."
+  },
+  "e0a813d77125": {
+   "en": "2. Choose low-latency audio",
+   "t": "2. 지연 시간이 낮은 오디오 선택하기"
+  },
+  "cf3aa7b2478e": {
+   "en": "Latency is the delay between pressing a key and hearing it. Under about 10 ms feels instant.",
+   "t": "지연 시간은 건반을 누르고 소리가 들리기까지의 시간입니다. 약 10ms 미만이면 즉시 나는 것처럼 느껴집니다."
+  },
+  "6d24ffd687a0": {
+   "en": "<strong>Windows:</strong> use your audio interface's <strong>ASIO</strong> driver if you have one. Without an interface, the normal Windows output works for practice.",
+   "t": "<strong>Windows:</strong> 오디오 인터페이스가 있다면 그 <strong>ASIO</strong> 드라이버를 쓰세요. 인터페이스가 없어도 연습에는 Windows 기본 출력으로 충분합니다."
+  },
+  "d1c7d4d6c004": {
+   "en": "<strong>Mac:</strong> Core Audio works well out of the box.",
+   "t": "<strong>Mac:</strong> Core Audio가 처음부터 잘 작동합니다."
+  },
+  "a55d30c70153": {
+   "en": "<strong>Linux:</strong> JACK or PipeWire.",
+   "t": "<strong>Linux:</strong> JACK이나 PipeWire."
+  },
+  "a97a4692dc94": {
+   "en": "<strong>Buffer size:</strong> start at 256 samples; try 128 if your computer copes without crackles.",
+   "t": "<strong>버퍼 크기:</strong> 256 샘플로 시작하고, 컴퓨터가 잡음 없이 버틴다면 128을 시도해 보세요."
+  },
+  "f0203e2e0d19": {
+   "en": "3. Scan your plugins",
+   "t": "3. 플러그인 스캔하기"
+  },
+  "ab228d70463a": {
+   "en": "GigChain Keys finds VST3 and VST2 plugins in the usual folders, and you can add your own folders and rescan in Settings. Popular choices that work well live:",
+   "t": "GigChain Keys는 일반 폴더에서 VST3·VST2 플러그인을 찾으며, 설정에서 내 폴더를 추가하고 다시 스캔할 수 있습니다. 라이브에서 잘 작동하는 인기 플러그인:"
+  },
+  "e8a8d3fc795c": {
+   "en": "<strong>Free:</strong> Spitfire LABS, Surge XT, Vital, Dexed, Decent Sampler (and Pianobook instruments), Arturia's free Analog Lab Intro.",
+   "t": "<strong>무료:</strong> Spitfire LABS, Surge XT, Vital, Dexed, Decent Sampler(와 Pianobook 악기), Arturia의 무료 Analog Lab Intro."
+  },
+  "5847327113b2": {
+   "en": "<strong>Paid:</strong> Kontakt, Arturia V Collection and Analog Lab, Keyscape, Omnisphere, Pianoteq.",
+   "t": "<strong>유료:</strong> Kontakt, Arturia V Collection과 Analog Lab, Keyscape, Omnisphere, Pianoteq."
+  },
+  "a8e2334fdfd3": {
+   "en": "No plugins at all? GigChain Keys comes with its own grand and electric pianos, a supersaw synth, pads and a SoundFont player.",
+   "t": "플러그인이 하나도 없나요? GigChain Keys에는 자체 그랜드 피아노와 일렉트릭 피아노, 슈퍼소 신스, 패드, SoundFont 플레이어가 들어 있습니다."
+  },
+  "4a46a1ae3c3a": {
+   "en": "4. Make a song and add its sounds",
+   "t": "4. 곡을 만들고 음색 추가하기"
+  },
+  "c8a7c9a12d5f": {
+   "en": "Add a song, then add sounds to it. Put two on together to <strong>layer</strong> them (piano plus pad), or give each a key range to <strong>split</strong> the keyboard (bass on the left, piano on the right). Each song keeps its own sounds, volumes and effects.",
+   "t": "곡을 추가한 뒤 음색을 넣으세요. 두 음색을 함께 켜면 <strong>레이어</strong>(피아노와 패드)가 되고, 각각에 건반 범위를 주면 건반을 <strong>스플릿</strong>(왼쪽은 베이스, 오른쪽은 피아노)할 수 있습니다. 곡마다 음색, 볼륨, 이펙트를 따로 저장합니다."
+  },
+  "5a527cbdc498": {
+   "en": "5. Play in Perform mode",
+   "t": "5. Perform 모드로 연주하기"
+  },
+  "23dc7723df64": {
+   "en": "GigChain Keys Perform mode: the song's sounds and chord chart, large for the stage",
+   "t": "GigChain Keys Perform 모드: 곡의 음색과 코드 차트를 무대용으로 크게"
+  },
+  "4e6ea5110880": {
+   "en": "Perform mode shows the song, its sounds and its chord chart large enough to read on stage. Move to the next sound or song with a pad, footswitch, key, or a tap on the screen. The sound you're holding keeps ringing while the next one comes in.",
+   "t": "Perform 모드는 곡, 음색, 코드 차트를 무대에서 읽을 수 있을 만큼 크게 보여 줍니다. 다음 음색이나 곡으로는 패드, 풋스위치, 건반, 또는 화면 탭으로 넘어갑니다. 누르고 있는 소리는 다음 음색이 들어오는 동안에도 계속 울립니다."
+  },
+  "26fefa33f9e4": {
+   "en": "Your plugins on stage, free. Windows, Mac and Linux.",
+   "t": "내 플러그인을 무대에서, 무료로. Windows, Mac, Linux."
+  },
+  "4bfef632b0ca": {
+   "en": "Tips for the gig",
+   "t": "공연을 위한 팁"
+  },
+  "ed6374938a50": {
+   "en": "<strong>Turn off Wi-Fi and updates</strong> during the show, and plug the laptop in.",
+   "t": "공연 중에는 <strong>Wi-Fi와 업데이트를 끄고</strong>, 노트북은 전원에 연결해 두세요."
+  },
+  "c11fe9dfe798": {
+   "en": "<strong>Use the Windows \"High performance\" power plan</strong> so the CPU doesn't slow down mid-song.",
+   "t": "<strong>Windows 전원 관리 옵션을 \"고성능\"으로 하세요</strong>. 그래야 곡 중간에 CPU가 느려지지 않습니다."
+  },
+  "7c0e3fb6b963": {
+   "en": "<strong>Heavy sample libraries</strong> (big Kontakt pianos) load faster from an SSD.",
+   "t": "<strong>무거운 샘플 라이브러리</strong>(큰 Kontakt 피아노)는 SSD에서 더 빨리 불러옵니다."
+  },
+  "21aceb1d91a3": {
+   "en": "<strong>Rehearse the changes</strong>: run the setlist in Perform mode once before the gig.",
+   "t": "<strong>전환을 리허설하세요</strong>: 공연 전에 Perform 모드에서 셋리스트를 한 번 끝까지 돌려 보세요."
+  }
+ }
+}

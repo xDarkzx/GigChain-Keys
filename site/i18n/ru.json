@@ -1,0 +1,1253 @@
+{
+ "language": "ru",
+ "phrases": {
+  "eb7b3611327e": {
+   "en": "Free MainStage Alternative for Windows, Mac &amp; Linux | GigChain Keys",
+   "t": "Бесплатная альтернатива MainStage для Windows, Mac и Linux | GigChain Keys"
+  },
+  "8c913a73e83e": {
+   "en": "MainStage is Mac only. GigChain Keys is a free, open-source MainStage alternative for Windows, Mac and Linux: your VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads, and a stage-ready Perform mode.",
+   "t": "MainStage работает только на Mac. GigChain Keys — бесплатная альтернатива MainStage с открытым исходным кодом для Windows, Mac и Linux: ваши плагины VST3 и VST2, сет-листы, аккордовые схемы, слои и сплиты, встроенные пианино, синтезаторы и пэды и готовый к сцене режим Perform."
+  },
+  "866170f94ee0": {
+   "en": "GigChain Keys: a free MainStage alternative for Windows, Mac & Linux",
+   "t": "GigChain Keys: бесплатная альтернатива MainStage для Windows, Mac и Linux"
+  },
+  "0f5870aefead": {
+   "en": "Your sounds, setlist, chord charts and practice in one free app. Windows, macOS and Linux.",
+   "t": "Ваши звуки, сет-лист, аккордовые схемы и занятия в одном бесплатном приложении. Windows, macOS и Linux."
+  },
+  "ecaffe3bf69c": {
+   "en": "Live performance VST host for keyboard players",
+   "t": "VST-хост для клавишников на сцене"
+  },
+  "d1396f6805ce": {
+   "en": "A free, open-source MainStage alternative for Windows, Mac and Linux: VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads.",
+   "t": "Бесплатная альтернатива MainStage с открытым исходным кодом для Windows, Mac и Linux: плагины VST3 и VST2, сет-листы, аккордовые схемы, слои и сплиты, встроенные пианино, синтезаторы и пэды."
+  },
+  "2b4d48210396": {
+   "en": "Is there MainStage for Windows?",
+   "t": "Есть ли MainStage для Windows?"
+  },
+  "ed07dad61ee9": {
+   "en": "No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux): it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches sounds instantly on stage. It's free.",
+   "t": "Нет: MainStage от Apple работает только на Mac. GigChain Keys делает то же самое на Windows (а также на Mac и Linux): загружает ваши VST-плагины, хранит сет-лист со звуками для каждой песни, делает слои и сплиты на клавиатуре и мгновенно переключает звуки на сцене. И он бесплатный."
+  },
+  "2abe0172cab2": {
+   "en": "Is GigChain Keys free?",
+   "t": "GigChain Keys бесплатный?"
+  },
+  "3d1f935ed096": {
+   "en": "Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL.",
+   "t": "Да. Без рекламы, без аккаунта, без лицензионного ключа, без подписки. Открытый исходный код под лицензией GPL."
+  },
+  "04a91be943fb": {
+   "en": "Which plugins work in GigChain Keys?",
+   "t": "Какие плагины работают в GigChain Keys?"
+  },
+  "ecffd7549d7a": {
+   "en": "VST3 and VST2 instruments and effects, such as Kontakt, Arturia, Spitfire, Surge XT and Vital.",
+   "t": "Инструменты и эффекты VST3 и VST2, например Kontakt, Arturia, Spitfire, Surge XT и Vital."
+  },
+  "024d86cdde10": {
+   "en": "Does GigChain Keys run on Linux?",
+   "t": "GigChain Keys работает на Linux?"
+  },
+  "a8f4326fad80": {
+   "en": "Yes: an AppImage for most distributions and a .deb for Ubuntu, Debian and Mint, with JACK, PipeWire and ALSA.",
+   "t": "Да: AppImage для большинства дистрибутивов и .deb для Ubuntu, Debian и Mint, с JACK, PipeWire и ALSA."
+  },
+  "9eb360f946c2": {
+   "en": "<a href=\"#watch\" class=\"hide-small\">Watch</a>",
+   "t": "<a href=\"#watch\" class=\"hide-small\">Видео</a>"
+  },
+  "75ce51101dce": {
+   "en": "<a href=\"#features\" class=\"hide-small\">Features</a>",
+   "t": "<a href=\"#features\" class=\"hide-small\">Возможности</a>"
+  },
+  "89a580f42a1e": {
+   "en": "<a href=\"#download\">Download</a>",
+   "t": "<a href=\"#download\">Скачать</a>"
+  },
+  "055f7269c6aa": {
+   "en": "<a href=\"support.html\">♥ Support</a>",
+   "t": "<a href=\"support.html\">♥ Поддержать</a>"
+  },
+  "c5d997af8729": {
+   "en": "A free MainStage alternative for Windows, Mac and Linux",
+   "t": "Бесплатная альтернатива MainStage для Windows, Mac и Linux"
+  },
+  "fc0225584c5c": {
+   "en": "Your whole keyboard rig on stage: your sounds, setlist, chord charts and practice in one free app.",
+   "t": "Весь ваш клавишный сетап на сцене: звуки, сет-лист, аккордовые схемы и занятия в одном бесплатном приложении."
+  },
+  "75f527181b57": {
+   "en": "Free",
+   "t": "Бесплатно"
+  },
+  "df76b5bc094a": {
+   "en": "No ads",
+   "t": "Без рекламы"
+  },
+  "685b04426605": {
+   "en": "No licence keys",
+   "t": "Без лицензионных ключей"
+  },
+  "d3123ff1f8e3": {
+   "en": "Open source (GPLv3)",
+   "t": "Открытый код (GPLv3)"
+  },
+  "b5edc4b33989": {
+   "en": "Plays your VST plugins",
+   "t": "Играет ваши VST-плагины"
+  },
+  "d52dd151cd77": {
+   "en": "<a class=\"btn\" id=\"main-download\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\"> Download<small id=\"main-detail\">Windows · macOS · Linux</small> </a>",
+   "t": "<a class=\"btn\" id=\"main-download\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\"> Скачать<small id=\"main-detail\">Windows · macOS · Linux</small> </a>"
+  },
+  "5abc01b2780c": {
+   "en": "<a href=\"#download\">Other systems and versions</a>",
+   "t": "<a href=\"#download\">Другие системы и версии</a>"
+  },
+  "3f1702b0a6ce": {
+   "en": "<b>Public alpha.</b> It works and is played on real rigs, but try it at home and in rehearsal before you trust it on a gig, and <a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">tell us what breaks</a>.",
+   "t": "<b>Публичная альфа-версия.</b> Она работает и уже используется в реальных сетапах, но сначала проверьте её дома и на репетиции, прежде чем доверять ей концерт, и <a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">сообщите нам, если что-то сломается</a>."
+  },
+  "e8bd86c9a348": {
+   "en": "GigChain Keys: a song's chord chart, its sections, the mixer and the keyboard",
+   "t": "GigChain Keys: аккордовая схема песни, её части, микшер и клавиатура"
+  },
+  "64ce9609c081": {
+   "en": "See it in two minutes",
+   "t": "Посмотрите за две минуты"
+  },
+  "10235504c37d": {
+   "en": "The whole app, start to finish.",
+   "t": "Всё приложение, от начала до конца."
+  },
+  "4363d082ec26": {
+   "en": "GigChain Keys: the overview",
+   "t": "GigChain Keys: обзор"
+  },
+  "95686bc07a9c": {
+   "en": "<a href=\"https://youtu.be/JhIZuH2CdhM\">Chord charts and lyrics</a>",
+   "t": "<a href=\"https://youtu.be/JhIZuH2CdhM\">Аккордовые схемы и тексты</a>"
+  },
+  "32b6b405c03d": {
+   "en": "<a href=\"https://youtu.be/UxjiNPtMoQw\">The 10-minute warm-up</a>",
+   "t": "<a href=\"https://youtu.be/UxjiNPtMoQw\">10-минутная разминка</a>"
+  },
+  "7bd922fd05bf": {
+   "en": "<a href=\"https://youtu.be/GbwlgxBf-Es\">Layers, splits and effects</a>",
+   "t": "<a href=\"https://youtu.be/GbwlgxBf-Es\">Слои, сплиты и эффекты</a>"
+  },
+  "a6abbf9e9e97": {
+   "en": "<a href=\"https://youtu.be/Wopcyn-vZmU\">Sounds on your pads</a>",
+   "t": "<a href=\"https://youtu.be/Wopcyn-vZmU\">Звуки на ваших пэдах</a>"
+  },
+  "c0d4e3b69d5e": {
+   "en": "<a href=\"https://youtu.be/BTiaUMiEjHo\">Pads Pro and Sustain Pads</a>",
+   "t": "<a href=\"https://youtu.be/BTiaUMiEjHo\">Pads Pro и Sustain Pads</a>"
+  },
+  "ce63beccffe2": {
+   "en": "<a href=\"https://youtu.be/laZV1BDlWCk\">The SoundFont Player</a>",
+   "t": "<a href=\"https://youtu.be/laZV1BDlWCk\">Проигрыватель SoundFont</a>"
+  },
+  "f4539c849138": {
+   "en": "<a href=\"https://youtu.be/8drCLZTLFHI\">The sound update (0.10)</a>",
+   "t": "<a href=\"https://youtu.be/8drCLZTLFHI\">Обновление звука (0.10)</a>"
+  },
+  "0d6fae79b36e": {
+   "en": "Everything a keys player needs on stage",
+   "t": "Всё, что нужно клавишнику на сцене"
+  },
+  "1289a15feda7": {
+   "en": "Load your sounds once, and the whole night is ready.",
+   "t": "Загрузите звуки один раз — и весь вечер готов."
+  },
+  "1ea4d96e623e": {
+   "en": "Plays your plugins",
+   "t": "Играет ваши плагины"
+  },
+  "8c5de7addcd7": {
+   "en": "Your VST3 and VST2 instruments and effects. Every sound in the setlist is loaded up front, so changing songs is instant and held notes ring on.",
+   "t": "Ваши инструменты и эффекты VST3 и VST2. Все звуки сет-листа загружаются заранее, поэтому песни переключаются мгновенно, а удерживаемые ноты продолжают звучать."
+  },
+  "40e6e85103b8": {
+   "en": "All the night's songs in one file, in order, each with its own sounds. Change songs from the keyboard, a pedal or a pad.",
+   "t": "Все песни вечера в одном файле, по порядку, у каждой свои звуки. Переключайте песни с клавиатуры, педалью или пэдом."
+  },
+  "4c5bd2266cf6": {
+   "en": "Chord charts",
+   "t": "Аккордовые схемы"
+  },
+  "b7929b0f90b3": {
+   "en": "Paste a song from any chord website and each chord lands on its word. Big enough to read from the keys.",
+   "t": "Вставьте песню с любого сайта с аккордами, и каждый аккорд встанет над своим словом. Крупно, чтобы читать прямо из-за клавиш."
+  },
+  "f9bdd3e4ae7f": {
+   "en": "Splits and layers",
+   "t": "Сплиты и слои"
+  },
+  "adf3bfa6135e": {
+   "en": "Key zones, transpose and velocity layers. Each part of the song (verse, chorus, solo) can switch which sounds play.",
+   "t": "Зоны клавиатуры, транспонирование и слои по силе нажатия. Каждая часть песни (куплет, припев, соло) может менять, какие звуки играют."
+  },
+  "67e6bb800180": {
+   "en": "Perform mode",
+   "t": "Режим Perform"
+  },
+  "693799ffee21": {
+   "en": "Full screen for the stage and touch screens: the chart, big Play, Next part and Loop part buttons that land on the bar line.",
+   "t": "Полный экран для сцены и сенсорных экранов: схема и большие кнопки Play, «Следующая часть» и «Зациклить часть», которые срабатывают точно на тактовой черте."
+  },
+  "ddbff60e260a": {
+   "en": "Its own instruments",
+   "t": "Собственные инструменты"
+  },
+  "c699332316ce": {
+   "en": "Piano Pro (recorded grand, upright, Rhodes, Wurlitzer and more), Saw Stack Pro (EDM supersaws), Pads Pro (ambient pads under the band) and a SoundFont player for any .sf2. Plus Squash, Enhance and Sidechain effects. No plugin to buy.",
+   "t": "Piano Pro (записанные рояль, пианино, Rhodes, Wurlitzer и другое), Saw Stack Pro (EDM-суперсо), Pads Pro (эмбиент-пэды под группой) и проигрыватель SoundFont для любого .sf2. Плюс эффекты Squash, Enhance и Sidechain. Покупать плагины не нужно."
+  },
+  "233264aa7b63": {
+   "en": "Set up like a pro rig",
+   "t": "Настроен как профессиональный сетап"
+  },
+  "89067c1a12fa": {
+   "en": "Each keyboard's touch, tuning (A4 415–466 Hz), transpose the whole rig in one tap, your own plugin folders, autosave with backups, and a warning if the audio ever drops out.",
+   "t": "Чувствительность каждой клавиатуры, строй (A4 от 415 до 466 Гц), транспонирование всего сетапа одним касанием, свои папки плагинов, автосохранение с резервными копиями и предупреждение, если звук прервётся."
+  },
+  "c1c10ea45b6a": {
+   "en": "Practice and warm-ups",
+   "t": "Занятия и разминки"
+  },
+  "cad5c8a88781": {
+   "en": "The song's chords fall onto a keyboard, YouTube-piano style. Daily warm-ups at your level, every run scored.",
+   "t": "Аккорды песни падают на клавиатуру, как в пиано-видео на YouTube. Ежедневные разминки под ваш уровень, каждый проход с оценкой."
+  },
+  "8f3a6c99d8a3": {
+   "en": "Record a loop of any instrument in time with the song and layer on top, street-performer style.",
+   "t": "Запишите луп любого инструмента в темп песни и наслаивайте поверх, как уличный музыкант."
+  },
+  "4908a68f7a24": {
+   "en": "Built not to fail",
+   "t": "Создан, чтобы не подводить"
+  },
+  "63cac030dd45": {
+   "en": "Plugins are scanned in a separate process, a crashing plugin is switched off, and an unplugged keyboard comes back by itself.",
+   "t": "Плагины сканируются в отдельном процессе, упавший плагин отключается, а отсоединённая клавиатура подключается сама."
+  },
+  "9df4fcc7a2bf": {
+   "en": "Perform mode: big Play, Next part and Loop part buttons, the song's parts as tiles and the chart",
+   "t": "Режим Perform: большие кнопки Play, «Следующая часть» и «Зациклить часть», части песни плитками и схема"
+  },
+  "b6254454b9e3": {
+   "en": "Perform mode: the song plays along its parts.",
+   "t": "Режим Perform: песня идёт по своим частям."
+  },
+  "a6d7910e9385": {
+   "en": "Practice mode: the chords falling onto a keyboard",
+   "t": "Режим занятий: аккорды падают на клавиатуру"
+  },
+  "117b5db0bdc6": {
+   "en": "Practice: the chords fall onto the keys.",
+   "t": "Занятия: аккорды падают на клавиши."
+  },
+  "a479c9c34e87": {
+   "en": "Download",
+   "t": "Скачать"
+  },
+  "7f3d5cf49f8e": {
+   "en": "Free, for Windows, macOS and Linux.",
+   "t": "Бесплатно, для Windows, macOS и Linux."
+  },
+  "d80009ee6bdf": {
+   "en": "Windows 10 or 11, 64-bit",
+   "t": "Windows 10 или 11, 64-бит"
+  },
+  "2cd44abe2ce1": {
+   "en": "<a class=\"file\" data-asset=\"win-setup\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Installer<span>Recommended</span></a>",
+   "t": "<a class=\"file\" data-asset=\"win-setup\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Установщик<span>Рекомендуется</span></a>"
+  },
+  "865d0ec30bd7": {
+   "en": "<a class=\"file\" data-asset=\"win-zip\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Portable zip<span>No install: unzip anywhere, even a USB stick</span></a>",
+   "t": "<a class=\"file\" data-asset=\"win-zip\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Портативный zip<span>Без установки: распакуйте куда угодно, даже на флешку</span></a>"
+  },
+  "da19310aa049": {
+   "en": "\"Windows protected your PC\"?",
+   "t": "«Система Windows защитила ваш компьютер»?"
+  },
+  "e854d518d956": {
+   "en": "The alpha isn't code-signed yet. Click <b>More info</b>, then <b>Run anyway</b>. This happens once.",
+   "t": "Альфа-версия пока не подписана. Нажмите <b>Подробнее</b>, затем <b>Выполнить в любом случае</b>. Это нужно только один раз."
+  },
+  "fad8b846a21d": {
+   "en": "macOS 13 or later, Apple Silicon (M1 or newer)",
+   "t": "macOS 13 или новее, Apple Silicon (M1 или новее)"
+  },
+  "39f7a3282a03": {
+   "en": "<a class=\"file\" data-asset=\"mac-dmg\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Disk image<span>Drag GigChain Keys to Applications</span></a>",
+   "t": "<a class=\"file\" data-asset=\"mac-dmg\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Образ диска<span>Перетащите GigChain Keys в «Программы»</span></a>"
+  },
+  "c48d280c0dcd": {
+   "en": "macOS won't open it?",
+   "t": "macOS не открывает его?"
+  },
+  "7c9b5e95fccf": {
+   "en": "The alpha isn't notarized by Apple yet. Open it once, then go to <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.",
+   "t": "Альфа-версия пока не нотариально заверена Apple. Откройте её один раз, затем перейдите в <b>Системные настройки → Конфиденциальность и безопасность</b> и нажмите <b>Все равно открыть</b>."
+  },
+  "f9d493d1c08f": {
+   "en": "64-bit: Ubuntu 22.04+, Fedora, Arch, Mint…",
+   "t": "64-бит: Ubuntu 22.04+, Fedora, Arch, Mint…"
+  },
+  "5350d3e4ea10": {
+   "en": "<a class=\"file\" data-asset=\"appimage\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">AppImage<span>One file for most distributions</span></a>",
+   "t": "<a class=\"file\" data-asset=\"appimage\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">AppImage<span>Один файл для большинства дистрибутивов</span></a>"
+  },
+  "475d0017db4e": {
+   "en": "How to run the AppImage",
+   "t": "Как запустить AppImage"
+  },
+  "f065f70a3ff6": {
+   "en": "Make it executable, then run it: <code>chmod +x GigChainKeys-*.AppImage</code>. If it says FUSE is missing, install <code>libfuse2</code>.",
+   "t": "Сделайте файл исполняемым и запустите: <code>chmod +x GigChainKeys-*.AppImage</code>. Если пишет, что нет FUSE, установите <code>libfuse2</code>."
+  },
+  "42c788694a56": {
+   "en": "You'll also want a MIDI keyboard. Pianos, synths and pads come built in, and <a href=\"https://github.com/xDarkzx/GigChain-Keys#what-you-need\">free ones</a> cover pianos, synths and pads. Every release lists checksums and notes on the <a href=\"https://github.com/xDarkzx/GigChain-Keys/releases\">releases page</a>.",
+   "t": "Вам также понадобится MIDI-клавиатура. Пианино, синтезаторы и пэды уже встроены, а для пианино, синтезаторов и пэдов есть <a href=\"https://github.com/xDarkzx/GigChain-Keys#what-you-need\">бесплатные варианты</a>. Контрольные суммы и заметки к каждому релизу — на <a href=\"https://github.com/xDarkzx/GigChain-Keys/releases\">странице релизов</a>."
+  },
+  "9a1fc1731f62": {
+   "en": "Questions",
+   "t": "Вопросы"
+  },
+  "0cefd2518ce5": {
+   "en": "No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux too): it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches sounds instantly on stage. It's free.",
+   "t": "Нет: MainStage от Apple работает только на Mac. GigChain Keys делает то же самое на Windows (а также на Mac и Linux): загружает ваши VST-плагины, хранит сет-лист со звуками для каждой песни, делает слои и сплиты на клавиатуре и мгновенно переключает звуки на сцене. И он бесплатный."
+  },
+  "f1f5ae24ffaa": {
+   "en": "Is it really free?",
+   "t": "Он правда бесплатный?"
+  },
+  "27847cda8417": {
+   "en": "Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL, paid for by donations.",
+   "t": "Да. Без рекламы, без аккаунта, без лицензионного ключа, без подписки. Открытый исходный код под лицензией GPL, проект живёт на пожертвования."
+  },
+  "f2323f6128b1": {
+   "en": "Which plugins work?",
+   "t": "Какие плагины работают?"
+  },
+  "7f61c0d0e840": {
+   "en": "VST3 and VST2 instruments and effects: Kontakt, Arturia, Spitfire, u-he, Surge XT, Vital and the free ones. Plugins on another drive? Add the folder in Settings and click Rescan.",
+   "t": "Инструменты и эффекты VST3 и VST2: Kontakt, Arturia, Spitfire, u-he, Surge XT, Vital и бесплатные. Плагины на другом диске? Добавьте папку в настройках и нажмите «Пересканировать»."
+  },
+  "c33018044e6e": {
+   "en": "Does it work with my MIDI keyboard?",
+   "t": "Работает ли он с моей MIDI-клавиатурой?"
+  },
+  "91c0cd9fc2d2": {
+   "en": "Any USB or MIDI keyboard. Its knobs, faders, pads and pedals can change songs, sounds and parts, and you can set how hard you have to play for full volume.",
+   "t": "С любой USB- или MIDI-клавиатурой. Её ручки, фейдеры, пэды и педали могут переключать песни, звуки и части, а ещё можно настроить, насколько сильно нужно играть для полной громкости."
+  },
+  "8f3316e143e1": {
+   "en": "How is it different from Gig Performer or Cantabile?",
+   "t": "Чем он отличается от Gig Performer или Cantabile?"
+  },
+  "9351d176380c": {
+   "en": "They're excellent paid hosts. GigChain Keys is free and open source, adds chord charts, practice and its own instruments, and runs on Linux too. It's newer (a public alpha), so try it at home before a gig.",
+   "t": "Это отличные платные хосты. GigChain Keys бесплатный и с открытым кодом, добавляет аккордовые схемы, занятия и собственные инструменты и работает ещё и на Linux. Он новее (публичная альфа-версия), так что проверьте его дома перед концертом."
+  },
+  "bab602553891": {
+   "en": "Does it run on Linux?",
+   "t": "Работает ли он на Linux?"
+  },
+  "929a28d26142": {
+   "en": "Guides",
+   "t": "Руководства"
+  },
+  "cefe7398a817": {
+   "en": "<a href=\"free-mainstage-alternatives.html\">Free MainStage alternatives, compared</a>",
+   "t": "<a href=\"free-mainstage-alternatives.html\">Бесплатные альтернативы MainStage: сравнение</a>"
+  },
+  "d5bbe9dddf2c": {
+   "en": "<a href=\"mainstage-for-windows.html\">MainStage for Windows? What to use instead</a>",
+   "t": "<a href=\"mainstage-for-windows.html\">MainStage для Windows? Чем заменить</a>"
+  },
+  "ecdbbd3bbaa0": {
+   "en": "<a href=\"play-vst-plugins-live.html\">How to play VST plugins live without a DAW</a>",
+   "t": "<a href=\"play-vst-plugins-live.html\">Как играть VST-плагины вживую без DAW</a>"
+  },
+  "74c9ce570929": {
+   "en": "Made with players",
+   "t": "Создаётся вместе с музыкантами"
+  },
+  "ec75d05348a5": {
+   "en": "Your feedback decides what gets fixed and built next.",
+   "t": "Ваши отзывы решают, что исправить и что сделать дальше."
+  },
+  "d41804736a6c": {
+   "en": "<a href=\"https://discord.gg/BGn8Ujh37m\">Join the Discord</a>",
+   "t": "<a href=\"https://discord.gg/BGn8Ujh37m\">Присоединяйтесь к Discord</a>"
+  },
+  "67a7b5a200e5": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md\">Getting started</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md\">С чего начать</a>"
+  },
+  "6bb83d968e51": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">Report a bug or idea</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">Сообщить об ошибке или идее</a>"
+  },
+  "b295b030d731": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">Star it on GitHub</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">Поставьте звезду на GitHub</a>"
+  },
+  "a45e282de1bb": {
+   "en": "<a href=\"support.html\">☕ Donate or ♥ Sponsor</a>",
+   "t": "<a href=\"support.html\">☕ Пожертвовать или ♥ Спонсировать</a>"
+  },
+  "87443a59149b": {
+   "en": "Thanks for downloading! 🎹",
+   "t": "Спасибо за скачивание! 🎹"
+  },
+  "f8b76191bf51": {
+   "en": "GigChain Keys is free and always will be: no ads, no account, no paid version. It's made by one keyboard player, with a new version every Monday. If it helps your gigs, a donation or a sponsorship keeps it going. First goal: code signing (and Apple's notarisation), so Windows and Mac warn less when you install it.",
+   "t": "GigChain Keys бесплатный и всегда будет бесплатным: без рекламы, без аккаунта, без платной версии. Его делает один клавишник, с новой версией каждый понедельник. Если он помогает вам на концертах, пожертвование или спонсорство поддерживают проект. Первая цель — подпись кода (и нотариальное заверение Apple), чтобы Windows и Mac реже предупреждали при установке."
+  },
+  "c03ceee0330b": {
+   "en": "<a class=\"give\" href=\"https://buymeacoffee.com/ddazomnike\">☕ Donate</a>",
+   "t": "<a class=\"give\" href=\"https://buymeacoffee.com/ddazomnike\">☕ Пожертвовать</a>"
+  },
+  "ecfa1249d02e": {
+   "en": "<a class=\"give sponsor\" href=\"https://github.com/sponsors/xDarkzx\">♥ Sponsor</a>",
+   "t": "<a class=\"give sponsor\" href=\"https://github.com/sponsors/xDarkzx\">♥ Спонсировать</a>"
+  },
+  "4546f3d0893d": {
+   "en": "<a href=\"support.html\">More ways to help</a>",
+   "t": "<a href=\"support.html\">Другие способы помочь</a>"
+  },
+  "e45714907316": {
+   "en": "Not now",
+   "t": "Не сейчас"
+  },
+  "35ec8d316d80": {
+   "en": "GigChain Keys is free software under the GNU GPL, version 3 or later.",
+   "t": "GigChain Keys — свободное программное обеспечение под лицензией GNU GPL версии 3 или более поздней."
+  },
+  "8e61794741d2": {
+   "en": "VST is a registered trademark of Steinberg Media Technologies GmbH. MainStage is a trademark of Apple Inc. GigChain Keys is not affiliated with them.",
+   "t": "VST — зарегистрированный товарный знак Steinberg Media Technologies GmbH. MainStage — товарный знак Apple Inc. GigChain Keys с ними не связан."
+  },
+  "6c48e6ef2373": {
+   "en": "Download for {os}",
+   "t": "Скачать для {os}"
+  },
+  "191664d92f7c": {
+   "en": "For Windows, macOS and Linux computers",
+   "t": "Для компьютеров с Windows, macOS и Linux"
+  },
+  "b95edd4018a7": {
+   "en": "Thanks for downloading. A panel at the bottom of the page offers a way to donate; Escape closes it.",
+   "t": "Спасибо за скачивание. Панель внизу страницы предлагает способ пожертвовать; Escape закрывает её."
+  },
+  "45275ecb4b21": {
+   "en": "Version {version}, free, for Windows, macOS and Linux.",
+   "t": "Версия {version}, бесплатно, для Windows, macOS и Linux."
+  },
+  "4e806fa145f8": {
+   "en": "Version {version} · {size} · free",
+   "t": "Версия {version} · {size} · бесплатно"
+  },
+  "bd4901dfd4a6": {
+   "en": "Support GigChain Keys: Donate or Sponsor | GigChain Keys",
+   "t": "Поддержите GigChain Keys: пожертвуйте или станьте спонсором | GigChain Keys"
+  },
+  "a6e03fa0b48c": {
+   "en": "GigChain Keys is free, with no ads and no paid version. Donate once with Buy Me a Coffee (card, Apple Pay or Google Pay, no account), or sponsor it monthly on GitHub.",
+   "t": "GigChain Keys бесплатный, без рекламы и без платной версии. Сделайте разовое пожертвование через Buy Me a Coffee (карта, Apple Pay или Google Pay, без аккаунта) или спонсируйте проект ежемесячно на GitHub."
+  },
+  "d4585d05f087": {
+   "en": "Support GigChain Keys: donate or sponsor",
+   "t": "Поддержите GigChain Keys: пожертвуйте или станьте спонсором"
+  },
+  "1a86e0a10dbb": {
+   "en": "Free for every keyboard player. Donate once, or sponsor it monthly.",
+   "t": "Бесплатно для каждого клавишника. Пожертвуйте один раз или спонсируйте ежемесячно."
+  },
+  "f32d5a3b17e6": {
+   "en": "Support",
+   "t": "Поддержка"
+  },
+  "9b3c871bc0ac": {
+   "en": "Yes, completely: no ads, no account, no licence key and no paid version. Donations and sponsors keep it that way.",
+   "t": "Да, полностью: без рекламы, без аккаунта, без лицензионного ключа и без платной версии. Пожертвования и спонсоры сохраняют это так."
+  },
+  "65893789e1a8": {
+   "en": "Do supporters get extra features?",
+   "t": "Получают ли спонсоры дополнительные функции?"
+  },
+  "20e5af105672": {
+   "en": "No. Everyone gets the same app, with every feature. Support pays for the work, not for access.",
+   "t": "Нет. Все получают одно и то же приложение со всеми функциями. Поддержка оплачивает работу, а не доступ."
+  },
+  "755067418d53": {
+   "en": "<a href=\"./#features\" class=\"hide-small\">Features</a>",
+   "t": "<a href=\"./#features\" class=\"hide-small\">Возможности</a>"
+  },
+  "8270535cb4ab": {
+   "en": "<a href=\"./#download\">Download</a>",
+   "t": "<a href=\"./#download\">Скачать</a>"
+  },
+  "ca6faa27a7a6": {
+   "en": "<a href=\"support.html\" aria-current=\"page\">♥ Support</a>",
+   "t": "<a href=\"support.html\" aria-current=\"page\">♥ Поддержать</a>"
+  },
+  "4efcf575e641": {
+   "en": "Support GigChain Keys",
+   "t": "Поддержите GigChain Keys"
+  },
+  "fcf2c8838853": {
+   "en": "GigChain Keys is free for every keyboard player: no ads, no account, no paid version. It's made by one keyboard player, with a new version every Monday. If it has earned a place in your rig, you can help keep it going.",
+   "t": "GigChain Keys бесплатный для каждого клавишника: без рекламы, без аккаунта, без платной версии. Его делает один клавишник, с новой версией каждый понедельник. Если он заслужил место в вашем сетапе, вы можете помочь ему развиваться."
+  },
+  "e9292906f52e": {
+   "en": "One-time",
+   "t": "Разово"
+  },
+  "f85f51c17dc3": {
+   "en": "☕ Donate",
+   "t": "☕ Пожертвовать"
+  },
+  "0762d7e67f6d": {
+   "en": "A thank-you of any amount, whenever you like.",
+   "t": "Благодарность на любую сумму, когда захотите."
+  },
+  "6f17b16c1553": {
+   "en": "Card, Apple Pay or Google Pay",
+   "t": "Карта, Apple Pay или Google Pay"
+  },
+  "997fb14df751": {
+   "en": "No account needed",
+   "t": "Аккаунт не нужен"
+  },
+  "89868ff402a6": {
+   "en": "Through Buy Me a Coffee",
+   "t": "Через Buy Me a Coffee"
+  },
+  "35ebe3e85031": {
+   "en": "<a class=\"go\" href=\"https://buymeacoffee.com/ddazomnike\">Donate with Buy Me a Coffee</a>",
+   "t": "<a class=\"go\" href=\"https://buymeacoffee.com/ddazomnike\">Пожертвовать через Buy Me a Coffee</a>"
+  },
+  "d31edb7b8a94": {
+   "en": "Monthly",
+   "t": "Ежемесячно"
+  },
+  "8300dedca8dd": {
+   "en": "♥ Sponsor",
+   "t": "♥ Спонсировать"
+  },
+  "099384fb5d8d": {
+   "en": "A small amount each month: the steady support that keeps the weekly releases coming.",
+   "t": "Небольшая сумма каждый месяц: постоянная поддержка, благодаря которой выходят еженедельные релизы."
+  },
+  "7856b16ce109": {
+   "en": "Ongoing, cancel any time",
+   "t": "Постоянно, отмена в любой момент"
+  },
+  "8b1b4c4bf1cb": {
+   "en": "With your GitHub account",
+   "t": "С вашим аккаунтом GitHub"
+  },
+  "548826723901": {
+   "en": "Through GitHub Sponsors",
+   "t": "Через GitHub Sponsors"
+  },
+  "310699272a6b": {
+   "en": "<a class=\"go\" href=\"https://github.com/sponsors/xDarkzx\">Sponsor on GitHub</a>",
+   "t": "<a class=\"go\" href=\"https://github.com/sponsors/xDarkzx\">Спонсировать на GitHub</a>"
+  },
+  "5535db6b88da": {
+   "en": "Everyone gets the same app, with every feature. Support pays for the work, never for access.",
+   "t": "Все получают одно и то же приложение со всеми функциями. Поддержка оплачивает работу, но никогда не доступ."
+  },
+  "a889a0abe7e4": {
+   "en": "Where your support goes",
+   "t": "На что идёт ваша поддержка"
+  },
+  "ea7f7f6781c5": {
+   "en": "<strong>Fewer install warnings</strong>",
+   "t": "<strong>Меньше предупреждений при установке</strong>"
+  },
+  "8ec6b28774a8": {
+   "en": "<span>Code signing for Windows, and Apple's signing and notarisation for the Mac, so installing it feels safe.</span>",
+   "t": "<span>Подпись кода для Windows, а также подпись и нотариальное заверение Apple для Mac, чтобы установка внушала доверие.</span>"
+  },
+  "205ead700236": {
+   "en": "<strong>A release every Monday</strong>",
+   "t": "<strong>Релиз каждый понедельник</strong>"
+  },
+  "2f2fac6b997b": {
+   "en": "<span>The time to fix what players report and ship it the same week.</span>",
+   "t": "<span>Время, чтобы исправить то, о чём сообщают музыканты, и выпустить исправление на той же неделе.</span>"
+  },
+  "7f221fcb5a52": {
+   "en": "<strong>New instruments and features</strong>",
+   "t": "<strong>Новые инструменты и функции</strong>"
+  },
+  "f31293670677": {
+   "en": "<span>Built from what keyboard players ask for on GitHub and Discord.</span>",
+   "t": "<span>Создаются по запросам клавишников на GitHub и в Discord.</span>"
+  },
+  "590721fed556": {
+   "en": "Other ways to help, free",
+   "t": "Другие способы помочь, бесплатно"
+  },
+  "f9c05cb52423": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">⭐ Star it on GitHub<span>Helps other players find it</span></a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">⭐ Поставьте звезду на GitHub<span>Помогает другим музыкантам найти проект</span></a>"
+  },
+  "dc828b35f900": {
+   "en": "<a href=\"https://discord.gg/BGn8Ujh37m\">💬 Join the Discord<span>Show your rig, ask, suggest</span></a>",
+   "t": "<a href=\"https://discord.gg/BGn8Ujh37m\">💬 Присоединяйтесь к Discord<span>Покажите свой сетап, спросите, предложите</span></a>"
+  },
+  "69ae2de3ac33": {
+   "en": "<a href=\"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4\">▶ Watch and share the videos<span>How most players find it</span></a>",
+   "t": "<a href=\"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4\">▶ Смотрите и делитесь видео<span>Так большинство музыкантов его находит</span></a>"
+  },
+  "b3796b762535": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">💡 Report a bug or an idea<span>Decides what comes next</span></a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">💡 Сообщите об ошибке или идее<span>Это решает, что будет дальше</span></a>"
+  },
+  "540404626cf2": {
+   "en": "What's the difference between donating and sponsoring?",
+   "t": "В чём разница между пожертвованием и спонсорством?"
+  },
+  "52bf04379332": {
+   "en": "Donating is a one-time gift through Buy Me a Coffee, with no account needed. Sponsoring is ongoing support through GitHub Sponsors, and needs a GitHub account. Both go to the same place: GigChain Keys.",
+   "t": "Пожертвование — это разовый вклад через Buy Me a Coffee, аккаунт не нужен. Спонсорство — постоянная поддержка через GitHub Sponsors, для неё нужен аккаунт GitHub. И то и другое идёт на одно и то же: GigChain Keys."
+  },
+  "e28f3a2b676f": {
+   "en": "Not using it yet? It's free on Windows, Mac and Linux.",
+   "t": "Ещё не пользуетесь? Он бесплатный для Windows, Mac и Linux."
+  },
+  "f9e80c0a499e": {
+   "en": "<a class=\"btn\" href=\"./#download\">Download GigChain Keys</a>",
+   "t": "<a class=\"btn\" href=\"./#download\">Скачать GigChain Keys</a>"
+  },
+  "29a0bdcbd621": {
+   "en": "Buy Me a Coffee and GitHub Sponsors are run by their own companies; payments go through them.",
+   "t": "Buy Me a Coffee и GitHub Sponsors принадлежат своим компаниям; платежи проходят через них."
+  },
+  "e3ca95abe18e": {
+   "en": "MainStage for Windows? What to Use Instead (Free) | GigChain Keys",
+   "t": "MainStage для Windows? Чем заменить (бесплатно) | GigChain Keys"
+  },
+  "6df980db18c6": {
+   "en": "There is no MainStage for Windows. Here's how Windows keyboard players get the same setup: a setlist of sounds, layers and splits, VST plugins and one-press sound changes, free.",
+   "t": "MainStage для Windows не существует. Вот как клавишники на Windows получают такой же сетап: сет-лист звуков, слои и сплиты, VST-плагины и смену звука одним нажатием, бесплатно."
+  },
+  "5629538f9c68": {
+   "en": "MainStage for Windows? What to use instead, free",
+   "t": "MainStage для Windows? Чем заменить, бесплатно"
+  },
+  "efb684e7d229": {
+   "en": "The same songs-and-sounds live setup as MainStage, on a Windows PC, for free.",
+   "t": "Такой же концертный сетап из песен и звуков, как в MainStage, на ПК с Windows, бесплатно."
+  },
+  "b7eece52adf7": {
+   "en": "MainStage for Windows",
+   "t": "MainStage для Windows"
+  },
+  "1240e202212f": {
+   "en": "Can I run MainStage on Windows?",
+   "t": "Можно ли запустить MainStage на Windows?"
+  },
+  "a3f155443414": {
+   "en": "No. MainStage is made by Apple and only runs on macOS. There is no Windows version, and running it in a virtual machine isn't practical for live audio.",
+   "t": "Нет. MainStage делает Apple, и он работает только на macOS. Версии для Windows нет, а виртуальная машина непригодна для живого звука."
+  },
+  "3d7e960b2f24": {
+   "en": "What is the Windows equivalent of MainStage?",
+   "t": "Что на Windows заменяет MainStage?"
+  },
+  "61e9e09d0f3b": {
+   "en": "A live VST host with setlists. GigChain Keys is a free one built to work like MainStage: songs, sounds per song, layers and splits, chord charts, and one press to change sound on stage.",
+   "t": "Концертный VST-хост с сет-листами. GigChain Keys — бесплатный хост, сделанный так, чтобы работать как MainStage: песни, звуки для каждой песни, слои и сплиты, аккордовые схемы и одно нажатие для смены звука на сцене."
+  },
+  "e0dc8e5c6e60": {
+   "en": "Do I need an audio interface?",
+   "t": "Нужен ли мне аудиоинтерфейс?"
+  },
+  "4fbe77473c13": {
+   "en": "Not to start: GigChain Keys plays through your computer's normal sound output (WASAPI). For the lowest latency on stage, an audio interface with an ASIO driver is better, and GigChain Keys supports ASIO too.",
+   "t": "Для начала нет: GigChain Keys играет через обычный звуковой выход компьютера (WASAPI). Для минимальной задержки на сцене лучше аудиоинтерфейс с драйвером ASIO, и GigChain Keys тоже поддерживает ASIO."
+  },
+  "e7a7f8733139": {
+   "en": "<a href=\"./\">GigChain Keys</a> › Guides",
+   "t": "<a href=\"./\">GigChain Keys</a> › Руководства"
+  },
+  "fb7f2053a57a": {
+   "en": "MainStage for Windows? What to use instead",
+   "t": "MainStage для Windows? Чем заменить"
+  },
+  "b92785259b4d": {
+   "en": "There is no MainStage for Windows: Apple only makes it for the Mac. But what MainStage does, a setlist of songs where each song has its sounds ready to play, works just as well on a Windows PC. Here's how to set it up, for free.",
+   "t": "MainStage для Windows не существует: Apple делает его только для Mac. Но то, что делает MainStage, — сет-лист песен, где у каждой песни готовы свои звуки, — так же хорошо работает на ПК с Windows. Вот как это настроить бесплатно."
+  },
+  "b9b08eb13da1": {
+   "en": "What MainStage actually gives you",
+   "t": "Что на самом деле даёт MainStage"
+  },
+  "c7a423a191bf": {
+   "en": "Strip away the Apple branding and MainStage is four things:",
+   "t": "Если убрать брендинг Apple, MainStage — это четыре вещи:"
+  },
+  "da1f9b0b6cae": {
+   "en": "<strong>A setlist</strong>: your songs in gig order.",
+   "t": "<strong>Сет-лист</strong>: ваши песни в порядке концерта."
+  },
+  "179e4c77984b": {
+   "en": "<strong>Sounds per song</strong> (MainStage calls them patches): piano for the verse, pad plus strings for the chorus.",
+   "t": "<strong>Звуки для каждой песни</strong> (в MainStage они называются патчами): пианино в куплете, пэд со струнными в припеве."
+  },
+  "da7a44b9ed4b": {
+   "en": "<strong>Layers and splits</strong>: several sounds at once, or bass on the left hand and piano on the right.",
+   "t": "<strong>Слои и сплиты</strong>: несколько звуков сразу или бас в левой руке и пианино в правой."
+  },
+  "952f3f575234": {
+   "en": "<strong>One press to change</strong>: a footswitch, pad or key moves to the next sound, with no gap in the audio.",
+   "t": "<strong>Одно нажатие для смены</strong>: футсвич, пэд или клавиша переключает на следующий звук без пауз в звуке."
+  },
+  "424cf64e8ca1": {
+   "en": "Any Windows program that does all four can replace it on stage.",
+   "t": "Любая программа для Windows, которая умеет все четыре вещи, может заменить его на сцене."
+  },
+  "706a95a68e64": {
+   "en": "Doing it on Windows with GigChain Keys",
+   "t": "Как это сделать на Windows с GigChain Keys"
+  },
+  "fb4703bb3938": {
+   "en": "GigChain Keys is a free, open-source live rig built to work like MainStage, on Windows, Mac and Linux.",
+   "t": "GigChain Keys — бесплатный концертный сетап с открытым исходным кодом, сделанный так, чтобы работать как MainStage, на Windows, Mac и Linux."
+  },
+  "d45bae6258fa": {
+   "en": "GigChain Keys: a setlist of songs, each with its sounds, chord chart and mixer",
+   "t": "GigChain Keys: сет-лист песен, у каждой свои звуки, аккордовая схема и микшер"
+  },
+  "64929c3462ee": {
+   "en": "<strong>Install it</strong> from the <a href=\"./#download\">download page</a> (Windows 10 or 11; installer or portable zip).",
+   "t": "<strong>Установите его</strong> со <a href=\"./#download\">страницы загрузки</a> (Windows 10 или 11; установщик или портативный zip)."
+  },
+  "cc5855c39313": {
+   "en": "<strong>Plug in your MIDI keyboard</strong>; it's found automatically.",
+   "t": "<strong>Подключите MIDI-клавиатуру</strong>; она определится автоматически."
+  },
+  "420b7a97f1a6": {
+   "en": "<strong>Pick your audio</strong>: your normal Windows sound output works straight away. If you have an audio interface, choose its ASIO driver for the lowest latency.",
+   "t": "<strong>Выберите звук</strong>: обычный звуковой выход Windows работает сразу. Если у вас есть аудиоинтерфейс, выберите его драйвер ASIO для минимальной задержки."
+  },
+  "84c531a6d129": {
+   "en": "<strong>Add your plugins</strong>: GigChain Keys scans your VST3 and VST2 folders. Kontakt, Arturia, Spitfire, Surge XT, Vital and the rest all work. No plugins yet? It comes with its own pianos, synths, pads and a SoundFont player.",
+   "t": "<strong>Добавьте свои плагины</strong>: GigChain Keys сканирует ваши папки VST3 и VST2. Kontakt, Arturia, Spitfire, Surge XT, Vital и остальные работают. Плагинов пока нет? В нём есть свои пианино, синтезаторы, пэды и проигрыватель SoundFont."
+  },
+  "d5e5e7af3c1e": {
+   "en": "<strong>Build your setlist</strong>: add a song, add sounds to it, layer or split them, and paste in the chords.",
+   "t": "<strong>Соберите сет-лист</strong>: добавьте песню, назначьте ей звуки, сделайте слои или сплиты и вставьте аккорды."
+  },
+  "83b4eff0f45e": {
+   "en": "<strong>Go to Perform mode</strong> on stage: big, clear, one press to the next sound.",
+   "t": "<strong>Переходите в режим Perform</strong> на сцене: крупно, понятно, одно нажатие до следующего звука."
+  },
+  "34a951c02137": {
+   "en": "What's the same, and what's different",
+   "t": "Что одинаково, а что отличается"
+  },
+  "5703321d0ec8": {
+   "en": "Runs on",
+   "t": "Работает на"
+  },
+  "858ac5dc2957": {
+   "en": "Mac only",
+   "t": "Только Mac"
+  },
+  "3e8248e32edf": {
+   "en": "Price",
+   "t": "Цена"
+  },
+  "dc9d4584a554": {
+   "en": "Paid",
+   "t": "Платно"
+  },
+  "72de9496a57b": {
+   "en": "Free, open source",
+   "t": "Бесплатно, открытый код"
+  },
+  "3f3e6c352418": {
+   "en": "Setlists, sounds per song",
+   "t": "Сет-листы, звуки для каждой песни"
+  },
+  "5397e0583f14": {
+   "en": "Yes",
+   "t": "Да"
+  },
+  "8df771bfd6fe": {
+   "en": "Layers and splits",
+   "t": "Слои и сплиты"
+  },
+  "6291c403d715": {
+   "en": "Your plugins",
+   "t": "Ваши плагины"
+  },
+  "0ec3cd34b7c7": {
+   "en": "VST3 and VST2",
+   "t": "VST3 и VST2"
+  },
+  "df2ca03160fe": {
+   "en": "Chord and lyric charts",
+   "t": "Аккордовые схемы и тексты"
+  },
+  "039ec17971be": {
+   "en": "Not built in",
+   "t": "Не встроены"
+  },
+  "d253ec78987e": {
+   "en": "Built-in sound library",
+   "t": "Встроенная библиотека звуков"
+  },
+  "7c8432f0894e": {
+   "en": "Large (Logic's)",
+   "t": "Большая (из Logic)"
+  },
+  "6264bf8d2dd4": {
+   "en": "Smaller: pianos, synths, pads, SoundFonts",
+   "t": "Поменьше: пианино, синтезаторы, пэды, SoundFont"
+  },
+  "e87e70288825": {
+   "en": "Backing tracks, click, tempo",
+   "t": "Минусовки, метроном, темп"
+  },
+  "8b6c540942e1": {
+   "en": "Yes (up to eight stems per song)",
+   "t": "Да (до восьми стемов на песню)"
+  },
+  "9baea84d25fb": {
+   "en": "MainStage's big strength is Logic's huge sound library. On Windows you bring your own plugins (plenty are free: Spitfire LABS, Surge XT, Vital, Dexed, Pianobook instruments), plus GigChain's built-in sounds.",
+   "t": "Главная сила MainStage — огромная библиотека звуков Logic. На Windows вы используете свои плагины (многие бесплатны: Spitfire LABS, Surge XT, Vital, Dexed, инструменты Pianobook) плюс встроенные звуки GigChain."
+  },
+  "4cbcacb10ceb": {
+   "en": "Free, no ads, no account. Windows 10 and 11.",
+   "t": "Бесплатно, без рекламы, без аккаунта. Windows 10 и 11."
+  },
+  "9cabeb0b4ade": {
+   "en": "No. It's Apple software for macOS only. Virtual machines aren't practical for live audio.",
+   "t": "Нет. Это программа Apple только для macOS. Виртуальные машины непригодны для живого звука."
+  },
+  "940c195ee64c": {
+   "en": "A live VST host with setlists. GigChain Keys is a free one that works like MainStage. For every free option, see <a href=\"free-mainstage-alternatives.html\">free MainStage alternatives compared</a>.",
+   "t": "Концертный VST-хост с сет-листами. GigChain Keys — бесплатный хост, который работает как MainStage. Все бесплатные варианты — в материале <a href=\"free-mainstage-alternatives.html\">бесплатные альтернативы MainStage: сравнение</a>."
+  },
+  "04ca1667912b": {
+   "en": "Not to start. Your computer's sound output works. For stage, an interface with an ASIO driver gives the lowest latency, and GigChain Keys supports it.",
+   "t": "Для начала нет. Звуковой выход компьютера работает. Для сцены интерфейс с драйвером ASIO даёт минимальную задержку, и GigChain Keys его поддерживает."
+  },
+  "3be40669838b": {
+   "en": "More guides",
+   "t": "Другие руководства"
+  },
+  "0f2f2b09478f": {
+   "en": "<a href=\"free-mainstage-alternatives.html\">Free MainStage alternatives<span>Every free option, compared</span></a>",
+   "t": "<a href=\"free-mainstage-alternatives.html\">Бесплатные альтернативы MainStage<span>Все бесплатные варианты в сравнении</span></a>"
+  },
+  "ee3078064821": {
+   "en": "<a href=\"play-vst-plugins-live.html\">Play VST plugins live<span>No DAW, low latency, one press per song</span></a>",
+   "t": "<a href=\"play-vst-plugins-live.html\">Играйте VST-плагины вживую<span>Без DAW, с малой задержкой, одно нажатие на песню</span></a>"
+  },
+  "b837e8d79ddc": {
+   "en": "MainStage is a trademark of Apple Inc. VST is a registered trademark of Steinberg Media Technologies GmbH. Other names belong to their owners. GigChain Keys is not affiliated with them.",
+   "t": "MainStage — товарный знак Apple Inc. VST — зарегистрированный товарный знак Steinberg Media Technologies GmbH. Прочие названия принадлежат их владельцам. GigChain Keys с ними не связан."
+  },
+  "fc996fdec0e6": {
+   "en": "Free MainStage Alternatives for Windows, Mac &amp; Linux (2026) | GigChain Keys",
+   "t": "Бесплатные альтернативы MainStage для Windows, Mac и Linux (2026) | GigChain Keys"
+  },
+  "53a497c6992e": {
+   "en": "Every free MainStage alternative compared: GigChain Keys, Cantabile Lite, Element and Carla. Which ones run on Windows, Mac and Linux, which have setlists, and which are really free.",
+   "t": "Все бесплатные альтернативы MainStage в сравнении: GigChain Keys, Cantabile Lite, Element и Carla. Какие работают на Windows, Mac и Linux, в каких есть сет-листы и какие действительно бесплатны."
+  },
+  "dda1fb9d3c5f": {
+   "en": "Free MainStage alternatives for Windows, Mac & Linux, compared",
+   "t": "Бесплатные альтернативы MainStage для Windows, Mac и Linux: сравнение"
+  },
+  "873414f7f384": {
+   "en": "Which free live VST hosts run on your computer, which have setlists, and which are really free.",
+   "t": "Какие бесплатные концертные VST-хосты работают на вашем компьютере, в каких есть сет-листы и какие действительно бесплатны."
+  },
+  "4a229b9ce1bd": {
+   "en": "Free MainStage alternatives",
+   "t": "Бесплатные альтернативы MainStage"
+  },
+  "f7ec91b71ecf": {
+   "en": "What is the best free alternative to MainStage?",
+   "t": "Какая лучшая бесплатная альтернатива MainStage?"
+  },
+  "d4a50080a13c": {
+   "en": "For keyboard players who want setlists, layers and splits, chord charts and instant sound changes for free on Windows, Mac or Linux, GigChain Keys is the closest free match to MainStage. Cantabile Lite is free on Windows but keeps setlists for its paid editions; Element and Carla are free plugin hosts built around patching rather than songs.",
+   "t": "Для клавишников, которым нужны сет-листы, слои и сплиты, аккордовые схемы и мгновенная смена звуков бесплатно на Windows, Mac или Linux, GigChain Keys — самый близкий к MainStage бесплатный вариант. Cantabile Lite бесплатен на Windows, но сет-листы оставляет для платных редакций; Element и Carla — бесплатные хосты плагинов, рассчитанные на коммутацию, а не на песни."
+  },
+  "61134dcf9bbf": {
+   "en": "Is there a free MainStage for Windows?",
+   "t": "Есть ли бесплатный MainStage для Windows?"
+  },
+  "95c487488e31": {
+   "en": "MainStage itself is Mac only. Free Windows programs that do the same job include GigChain Keys (setlists, layers, splits, chord charts), Cantabile Lite (setlists only in paid editions), Element and Carla.",
+   "t": "Сам MainStage работает только на Mac. Среди бесплатных программ для Windows, которые делают то же самое: GigChain Keys (сет-листы, слои, сплиты, аккордовые схемы), Cantabile Lite (сет-листы только в платных редакциях), Element и Carla."
+  },
+  "76d946b7a682": {
+   "en": "Can I use my VST plugins live without a DAW?",
+   "t": "Можно ли играть мои VST-плагины вживую без DAW?"
+  },
+  "1e627384f9e2": {
+   "en": "Yes. A live VST host like GigChain Keys loads your VST3 and VST2 instruments and effects directly, plays them from your MIDI keyboard with low latency, and switches between sounds per song, with no DAW or timeline.",
+   "t": "Да. Концертный VST-хост, такой как GigChain Keys, напрямую загружает ваши инструменты и эффекты VST3 и VST2, играет их с вашей MIDI-клавиатуры с малой задержкой и переключает звуки для каждой песни, без DAW и таймлайна."
+  },
+  "06519c547d12": {
+   "en": "Free MainStage alternatives for Windows, Mac &amp; Linux",
+   "t": "Бесплатные альтернативы MainStage для Windows, Mac и Linux"
+  },
+  "cc71283a5ba0": {
+   "en": "MainStage is Apple's live rig for keyboard players, and it only runs on a Mac. If you play on Windows or Linux, or just don't want to pay, here is every free option, what each one is good at, and where each one stops.",
+   "t": "MainStage — концертный сетап Apple для клавишников, и он работает только на Mac. Если вы играете на Windows или Linux или просто не хотите платить, здесь все бесплатные варианты: в чём каждый хорош и где его возможности заканчиваются."
+  },
+  "cc835fe34912": {
+   "en": "The short answer",
+   "t": "Коротко"
+  },
+  "502984b3e039": {
+   "en": "Free (source)",
+   "t": "Бесплатно (исходный код)"
+  },
+  "816c52fd2bdd": {
+   "en": "No",
+   "t": "Нет"
+  },
+  "6cc3364a242c": {
+   "en": "Open source",
+   "t": "Открытый код"
+  },
+  "cb0eb824349e": {
+   "en": "Yes (GPL)",
+   "t": "Да (GPL)"
+  },
+  "3aa6224d1fc1": {
+   "en": "Setlist of songs",
+   "t": "Сет-лист песен"
+  },
+  "0783a58e724f": {
+   "en": "Paid editions",
+   "t": "Платные редакции"
+  },
+  "8f7088e6bd06": {
+   "en": "Layers &amp; splits",
+   "t": "Слои и сплиты"
+  },
+  "46f4e74191d5": {
+   "en": "Layers (splits in paid editions)",
+   "t": "Слои (сплиты в платных редакциях)"
+  },
+  "2f9b83746a72": {
+   "en": "By patching",
+   "t": "Через коммутацию"
+  },
+  "2c8788a4a663": {
+   "en": "Chord &amp; lyric charts",
+   "t": "Аккордовые схемы и тексты"
+  },
+  "d81f2f3c835e": {
+   "en": "Built-in sounds",
+   "t": "Встроенные звуки"
+  },
+  "b55826a38e9d": {
+   "en": "Pianos, synths, pads, SoundFonts",
+   "t": "Пианино, синтезаторы, пэды, SoundFont"
+  },
+  "8e3ee64d491f": {
+   "en": "Made for",
+   "t": "Для кого"
+  },
+  "418543c46ae9": {
+   "en": "Keyboard players on stage",
+   "t": "Клавишники на сцене"
+  },
+  "559db31c2345": {
+   "en": "Live players on Windows",
+   "t": "Концертные музыканты на Windows"
+  },
+  "32686f4de06a": {
+   "en": "Building plugin chains",
+   "t": "Сборка цепочек плагинов"
+  },
+  "a5aa391ec8c2": {
+   "en": "Plugin hosting &amp; routing",
+   "t": "Хостинг и маршрутизация плагинов"
+  },
+  "1fc5895b875a": {
+   "en": "Checked November 2026. Paid hosts (MainStage, Gig Performer, Cantabile's paid editions, Camelot) are left out: this page is about what you can use for nothing.",
+   "t": "Проверено в ноябре 2026 года. Платные хосты (MainStage, Gig Performer, платные редакции Cantabile, Camelot) не рассматриваются: эта страница о том, чем можно пользоваться бесплатно."
+  },
+  "faef353dcd1f": {
+   "en": "A live rig made for keyboard players, built to work like MainStage on Windows, Mac and Linux. You build a setlist of songs, give each song its sounds (your VST3 and VST2 plugins, or the built-in pianos, synths, pads and SoundFont player), layer and split them across the keyboard, and in Perform mode one press moves to the next sound with no gap. Each song can carry its chord and lyric chart, shown big on stage. There's also a practice mode with daily warm-ups.",
+   "t": "Концертный сетап для клавишников, сделанный так, чтобы работать как MainStage на Windows, Mac и Linux. Вы собираете сет-лист песен, назначаете каждой песне её звуки (ваши плагины VST3 и VST2 или встроенные пианино, синтезаторы, пэды и проигрыватель SoundFont), делаете слои и сплиты на клавиатуре, а в режиме Perform одно нажатие без паузы переключает на следующий звук. У каждой песни может быть своя аккордовая схема с текстом, крупно на сцене. Есть и режим занятий с ежедневными разминками."
+  },
+  "5eadaf20854a": {
+   "en": "<strong>Good for:</strong> cover bands, function and wedding gigs, solo keys players, anyone who wants MainStage's songs-and-sounds way of working without a Mac. <strong>Not for:</strong> recording and editing tracks; it's a live tool, not a DAW.",
+   "t": "<strong>Подходит для:</strong> кавер-групп, корпоративов и свадеб, клавишников-солистов и всех, кому нужен подход MainStage с песнями и звуками, но без Mac. <strong>Не подходит для:</strong> записи и редактирования дорожек; это инструмент для сцены, а не DAW."
+  },
+  "10f0884c0fae": {
+   "en": "A long-running, well-respected Windows live host. The Lite edition is free and hosts plugins with layers. Set lists and keyboard splits come with the paid Solo edition, song states with Performer, and it doesn't run on Mac or Linux.",
+   "t": "Давно существующий и уважаемый концертный хост для Windows. Редакция Lite бесплатна и загружает плагины со слоями. Сет-листы и сплиты клавиатуры есть в платной редакции Solo, состояния песен — в Performer, и он не работает на Mac и Linux."
+  },
+  "6c0119b063ab": {
+   "en": "An open-source plugin host for Windows, Mac and Linux. You connect plugins together in a graph, which makes it flexible for building effects chains and custom routing. It has no setlist of songs or charts; switching sounds between songs is up to you.",
+   "t": "Хост плагинов с открытым кодом для Windows, Mac и Linux. Вы соединяете плагины в граф, поэтому он гибок для цепочек эффектов и своей маршрутизации. Сет-листа песен и схем нет; переключение звуков между песнями — ваша забота."
+  },
+  "92bdd9e190b7": {
+   "en": "A free, open-source plugin host, strongest on Linux, with patchbay routing and support for many plugin formats. Like Element, it's a toolbox for hosting and routing rather than a set of songs to play through on stage.",
+   "t": "Бесплатный хост плагинов с открытым кодом, сильнее всего на Linux, с коммутацией в стиле патчбея и поддержкой многих форматов плагинов. Как и Element, это набор инструментов для хостинга и маршрутизации, а не сет-лист песен для игры на сцене."
+  },
+  "74a286fce976": {
+   "en": "How to choose",
+   "t": "Как выбрать"
+  },
+  "47d7d8511e27": {
+   "en": "<strong>You want MainStage's way of working (songs, sounds, one press to change) on Windows or Linux, free:</strong> GigChain Keys.",
+   "t": "<strong>Вам нужен подход MainStage (песни, звуки, одно нажатие для смены) на Windows или Linux, бесплатно:</strong> GigChain Keys."
+  },
+  "e84aa85527ac": {
+   "en": "<strong>You're on Windows and happy to pay later for a mature, Windows-only tool:</strong> try Cantabile Lite, then its paid editions.",
+   "t": "<strong>Вы на Windows и готовы позже заплатить за зрелый инструмент только для Windows:</strong> попробуйте Cantabile Lite, а потом его платные редакции."
+  },
+  "e5f77a7e22e0": {
+   "en": "<strong>You want to wire up plugin chains yourself:</strong> Element or Carla.",
+   "t": "<strong>Вы хотите сами коммутировать цепочки плагинов:</strong> Element или Carla."
+  },
+  "de4598e58199": {
+   "en": "GigChain Keys is free: no ads, no account, no licence key.",
+   "t": "GigChain Keys бесплатный: без рекламы, без аккаунта, без лицензионного ключа."
+  },
+  "baa552c59249": {
+   "en": "<a class=\"btn\" href=\"./#download\">Download for Windows, Mac or Linux</a>",
+   "t": "<a class=\"btn\" href=\"./#download\">Скачать для Windows, Mac или Linux</a>"
+  },
+  "c592afcd0558": {
+   "en": "For keyboard players who want setlists, layers and splits, chord charts and instant sound changes for free, on any computer, GigChain Keys is the closest match. Cantabile Lite is free on Windows but keeps setlists for its paid editions.",
+   "t": "Для клавишников, которым бесплатно нужны сет-листы, слои и сплиты, аккордовые схемы и мгновенная смена звуков на любом компьютере, GigChain Keys — самый близкий вариант. Cantabile Lite бесплатен на Windows, но сет-листы оставляет для платных редакций."
+  },
+  "d9d534535e9c": {
+   "en": "MainStage itself is Mac only. On Windows you can use GigChain Keys, Cantabile Lite, Element or Carla, all free. See <a href=\"mainstage-for-windows.html\">MainStage for Windows: what to use instead</a>.",
+   "t": "Сам MainStage работает только на Mac. На Windows можно использовать GigChain Keys, Cantabile Lite, Element или Carla — все бесплатные. Смотрите <a href=\"mainstage-for-windows.html\">MainStage для Windows: чем заменить</a>."
+  },
+  "9f68a0dbef5f": {
+   "en": "Yes, and it's usually better on stage: lower latency, fewer things to go wrong. See <a href=\"play-vst-plugins-live.html\">how to play VST plugins live without a DAW</a>.",
+   "t": "Да, и на сцене это обычно даже лучше: меньше задержка, меньше того, что может пойти не так. Смотрите <a href=\"play-vst-plugins-live.html\">как играть VST-плагины вживую без DAW</a>."
+  },
+  "f828df1bfb00": {
+   "en": "<a href=\"mainstage-for-windows.html\">MainStage for Windows?<span>What Windows players use instead</span></a>",
+   "t": "<a href=\"mainstage-for-windows.html\">MainStage для Windows?<span>Чем пользуются музыканты на Windows</span></a>"
+  },
+  "6d7c75066009": {
+   "en": "<a href=\"gig-performer-alternative.html\">Gig Performer alternative<span>A free live rig for keys</span></a>",
+   "t": "<a href=\"gig-performer-alternative.html\">Альтернатива Gig Performer<span>Бесплатный концертный сетап для клавишных</span></a>"
+  },
+  "50390d48787f": {
+   "en": "<a href=\"cantabile-alternative.html\">Cantabile alternative<span>Setlists free, on any computer</span></a>",
+   "t": "<a href=\"cantabile-alternative.html\">Альтернатива Cantabile<span>Сет-листы бесплатно, на любом компьютере</span></a>"
+  },
+  "a7d7451fd226": {
+   "en": "<a href=\"carla-vs-gigchain-keys.html\">Carla vs GigChain Keys<span>Plugin host or live rig?</span></a>",
+   "t": "<a href=\"carla-vs-gigchain-keys.html\">Carla или GigChain Keys<span>Хост плагинов или концертный сетап?</span></a>"
+  },
+  "67bcc5276b68": {
+   "en": "How to Play VST Plugins Live Without a DAW (Free) | GigChain Keys",
+   "t": "Как играть VST-плагины вживую без DAW (бесплатно) | GigChain Keys"
+  },
+  "fcff5d328ec1": {
+   "en": "Play Kontakt, Arturia, Spitfire LABS, Surge XT, Vital and any VST3 or VST2 plugin live on stage from your MIDI keyboard, without a DAW: low latency, sounds per song, one press to change. Free.",
+   "t": "Играйте Kontakt, Arturia, Spitfire LABS, Surge XT, Vital и любые плагины VST3 или VST2 вживую на сцене с MIDI-клавиатуры, без DAW: малая задержка, звуки для каждой песни, одно нажатие для смены. Бесплатно."
+  },
+  "d944a7ae5c62": {
+   "en": "How to play VST plugins live without a DAW",
+   "t": "Как играть VST-плагины вживую без DAW"
+  },
+  "eab965d0aaf6": {
+   "en": "Your plugins on stage from your MIDI keyboard: low latency, sounds per song, one press to change. Free.",
+   "t": "Ваши плагины на сцене с вашей MIDI-клавиатуры: малая задержка, звуки для каждой песни, одно нажатие для смены. Бесплатно."
+  },
+  "6e43e7b909c6": {
+   "en": "Install a live VST host",
+   "t": "Установите концертный VST-хост"
+  },
+  "a6842ed1d321": {
+   "en": "Download and install GigChain Keys for Windows, Mac or Linux.",
+   "t": "Скачайте и установите GigChain Keys для Windows, Mac или Linux."
+  },
+  "aae273083e3e": {
+   "en": "Choose low-latency audio",
+   "t": "Выберите звук с малой задержкой"
+  },
+  "90616972d76e": {
+   "en": "Pick your audio interface's ASIO driver on Windows (or Core Audio on Mac, JACK or PipeWire on Linux) and a buffer of 128 or 256 samples.",
+   "t": "Выберите драйвер ASIO вашего аудиоинтерфейса на Windows (или Core Audio на Mac, JACK или PipeWire на Linux) и буфер 128 или 256 сэмплов."
+  },
+  "9ec9822d5599": {
+   "en": "Scan your plugins",
+   "t": "Просканируйте плагины"
+  },
+  "8f32b130d55b": {
+   "en": "Let it scan your VST3 and VST2 folders, or add your own folders in Settings.",
+   "t": "Пусть программа просканирует ваши папки VST3 и VST2, или добавьте свои папки в настройках."
+  },
+  "41635d946b50": {
+   "en": "Make a song and add sounds",
+   "t": "Создайте песню и добавьте звуки"
+  },
+  "84c00d270569": {
+   "en": "Add a song, add your plugins to it as sounds, and layer or split them across the keyboard.",
+   "t": "Добавьте песню, назначьте ей свои плагины как звуки и сделайте слои или сплиты на клавиатуре."
+  },
+  "70798c0fe1bc": {
+   "en": "Play in Perform mode",
+   "t": "Играйте в режиме Perform"
+  },
+  "ec2a7c869635": {
+   "en": "Switch to Perform mode and change sounds with one press of a pad, footswitch or key.",
+   "t": "Переключитесь в режим Perform и меняйте звуки одним нажатием пэда, футсвича или клавиши."
+  },
+  "3bc09644a7ea": {
+   "en": "Play VST plugins live",
+   "t": "Играйте VST-плагины вживую"
+  },
+  "ccc41ff17c22": {
+   "en": "A DAW is built for recording: timelines, tracks, arm buttons. On stage you just want to press a key and hear your sound, then press one button and hear the next song's. A live VST host does exactly that, with less to go wrong.",
+   "t": "DAW создана для записи: таймлайны, дорожки, кнопки готовности к записи. На сцене вы просто хотите нажать клавишу и услышать свой звук, а потом нажать одну кнопку и услышать звук следующей песни. Концертный VST-хост делает именно это, и в нём меньше того, что может сломаться."
+  },
+  "8682f51ea600": {
+   "en": "Why not just use your DAW on stage?",
+   "t": "Почему бы просто не взять DAW на сцену?"
+  },
+  "149753d358f8": {
+   "en": "<strong>Changing sounds is slow</strong>: selecting tracks and arming them mid-song is fiddly with one hand.",
+   "t": "<strong>Смена звуков медленная</strong>: выбирать дорожки и включать их посреди песни одной рукой неудобно."
+  },
+  "f3684e49ca46": {
+   "en": "<strong>Every sound is always loaded and running</strong>, so the computer works harder and latency goes up.",
+   "t": "<strong>Все звуки всегда загружены и работают</strong>, поэтому компьютер нагружается сильнее и задержка растёт."
+  },
+  "d43930e732e6": {
+   "en": "<strong>One wrong click</strong> (record, a moved region, a closed window) can stop the sound in the middle of a song.",
+   "t": "<strong>Один неверный щелчок</strong> (запись, сдвинутый регион, закрытое окно) может оборвать звук посреди песни."
+  },
+  "3b5e0733d7c7": {
+   "en": "A live host loads each song's sounds, switches between them with no gap, and shows a big, simple screen you can read from a stand.",
+   "t": "Концертный хост загружает звуки каждой песни, переключается между ними без пауз и показывает большой простой экран, который видно с пюпитра."
+  },
+  "c16dfd1733eb": {
+   "en": "Step by step",
+   "t": "Пошагово"
+  },
+  "5e0b4e6b19be": {
+   "en": "1. Install a live VST host",
+   "t": "1. Установите концертный VST-хост"
+  },
+  "4c879720b279": {
+   "en": "This guide uses <a href=\"./\">GigChain Keys</a>: free and open source, on Windows, Mac and Linux. Get it from the <a href=\"./#download\">download page</a>.",
+   "t": "В этом руководстве используется <a href=\"./\">GigChain Keys</a>: бесплатный и с открытым кодом, для Windows, Mac и Linux. Скачайте его на <a href=\"./#download\">странице загрузки</a>."
+  },
+  "e0a813d77125": {
+   "en": "2. Choose low-latency audio",
+   "t": "2. Выберите звук с малой задержкой"
+  },
+  "cf3aa7b2478e": {
+   "en": "Latency is the delay between pressing a key and hearing it. Under about 10 ms feels instant.",
+   "t": "Задержка — это пауза между нажатием клавиши и звуком. Меньше примерно 10 мс ощущается как мгновенно."
+  },
+  "6d24ffd687a0": {
+   "en": "<strong>Windows:</strong> use your audio interface's <strong>ASIO</strong> driver if you have one. Without an interface, the normal Windows output works for practice.",
+   "t": "<strong>Windows:</strong> используйте драйвер <strong>ASIO</strong> вашего аудиоинтерфейса, если он есть. Без интерфейса обычного выхода Windows хватит для занятий."
+  },
+  "d1c7d4d6c004": {
+   "en": "<strong>Mac:</strong> Core Audio works well out of the box.",
+   "t": "<strong>Mac:</strong> Core Audio хорошо работает сразу."
+  },
+  "a55d30c70153": {
+   "en": "<strong>Linux:</strong> JACK or PipeWire.",
+   "t": "<strong>Linux:</strong> JACK или PipeWire."
+  },
+  "a97a4692dc94": {
+   "en": "<strong>Buffer size:</strong> start at 256 samples; try 128 if your computer copes without crackles.",
+   "t": "<strong>Размер буфера:</strong> начните с 256 сэмплов; попробуйте 128, если компьютер справляется без треска."
+  },
+  "f0203e2e0d19": {
+   "en": "3. Scan your plugins",
+   "t": "3. Просканируйте плагины"
+  },
+  "ab228d70463a": {
+   "en": "GigChain Keys finds VST3 and VST2 plugins in the usual folders, and you can add your own folders and rescan in Settings. Popular choices that work well live:",
+   "t": "GigChain Keys находит плагины VST3 и VST2 в стандартных папках, а в настройках можно добавить свои папки и пересканировать. Популярные варианты, которые хорошо работают вживую:"
+  },
+  "e8a8d3fc795c": {
+   "en": "<strong>Free:</strong> Spitfire LABS, Surge XT, Vital, Dexed, Decent Sampler (and Pianobook instruments), Arturia's free Analog Lab Intro.",
+   "t": "<strong>Бесплатные:</strong> Spitfire LABS, Surge XT, Vital, Dexed, Decent Sampler (и инструменты Pianobook), бесплатный Analog Lab Intro от Arturia."
+  },
+  "5847327113b2": {
+   "en": "<strong>Paid:</strong> Kontakt, Arturia V Collection and Analog Lab, Keyscape, Omnisphere, Pianoteq.",
+   "t": "<strong>Платные:</strong> Kontakt, Arturia V Collection и Analog Lab, Keyscape, Omnisphere, Pianoteq."
+  },
+  "a8e2334fdfd3": {
+   "en": "No plugins at all? GigChain Keys comes with its own grand and electric pianos, a supersaw synth, pads and a SoundFont player.",
+   "t": "Совсем нет плагинов? В GigChain Keys есть свои рояли и электропиано, синтезатор суперсо, пэды и проигрыватель SoundFont."
+  },
+  "4a46a1ae3c3a": {
+   "en": "4. Make a song and add its sounds",
+   "t": "4. Создайте песню и добавьте её звуки"
+  },
+  "c8a7c9a12d5f": {
+   "en": "Add a song, then add sounds to it. Put two on together to <strong>layer</strong> them (piano plus pad), or give each a key range to <strong>split</strong> the keyboard (bass on the left, piano on the right). Each song keeps its own sounds, volumes and effects.",
+   "t": "Добавьте песню, затем назначьте ей звуки. Включите два одновременно, чтобы сделать <strong>слой</strong> (пианино плюс пэд), или дайте каждому свой диапазон клавиш, чтобы сделать <strong>сплит</strong> клавиатуры (бас слева, пианино справа). Каждая песня хранит свои звуки, громкости и эффекты."
+  },
+  "5a527cbdc498": {
+   "en": "5. Play in Perform mode",
+   "t": "5. Играйте в режиме Perform"
+  },
+  "23dc7723df64": {
+   "en": "GigChain Keys Perform mode: the song's sounds and chord chart, large for the stage",
+   "t": "Режим Perform в GigChain Keys: звуки песни и аккордовая схема, крупно для сцены"
+  },
+  "4e6ea5110880": {
+   "en": "Perform mode shows the song, its sounds and its chord chart large enough to read on stage. Move to the next sound or song with a pad, footswitch, key, or a tap on the screen. The sound you're holding keeps ringing while the next one comes in.",
+   "t": "Режим Perform показывает песню, её звуки и аккордовую схему достаточно крупно, чтобы читать на сцене. Переходите к следующему звуку или песне пэдом, футсвичем, клавишей или касанием экрана. Звук, который вы держите, продолжает звучать, пока вступает следующий."
+  },
+  "26fefa33f9e4": {
+   "en": "Your plugins on stage, free. Windows, Mac and Linux.",
+   "t": "Ваши плагины на сцене, бесплатно. Windows, Mac и Linux."
+  },
+  "4bfef632b0ca": {
+   "en": "Tips for the gig",
+   "t": "Советы для концерта"
+  },
+  "ed6374938a50": {
+   "en": "<strong>Turn off Wi-Fi and updates</strong> during the show, and plug the laptop in.",
+   "t": "<strong>Отключите Wi-Fi и обновления</strong> на время концерта и подключите ноутбук к сети."
+  },
+  "c11fe9dfe798": {
+   "en": "<strong>Use the Windows \"High performance\" power plan</strong> so the CPU doesn't slow down mid-song.",
+   "t": "<strong>Включите в Windows схему питания «Высокая производительность»</strong>, чтобы процессор не замедлялся посреди песни."
+  },
+  "7c0e3fb6b963": {
+   "en": "<strong>Heavy sample libraries</strong> (big Kontakt pianos) load faster from an SSD.",
+   "t": "<strong>Тяжёлые библиотеки сэмплов</strong> (большие пианино Kontakt) быстрее загружаются с SSD."
+  },
+  "21aceb1d91a3": {
+   "en": "<strong>Rehearse the changes</strong>: run the setlist in Perform mode once before the gig.",
+   "t": "<strong>Отрепетируйте переключения</strong>: прогоните сет-лист в режиме Perform один раз перед концертом."
+  }
+ }
+}

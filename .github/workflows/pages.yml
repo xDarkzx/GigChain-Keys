@@ -1,44 +1,71 @@
 name: Pages
 
-# The download page (site/), on GitHub Pages: built from site/index.html and
-# the screenshots in docs/images. Its buttons read the latest release's files
-# from the GitHub API when the page opens, so a new release needs no new page.
+# The download site (site/), on GitHub Pages, in English and every language
+# with translations (docs/i18n/website.md): tools/site_i18n.py writes each
+# page in each language from site/i18n/<language>.json. The download
+# buttons read the latest release's files from the GitHub API when a page
+# opens, so a new release needs no new pages.
 "on":
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["site/**", "docs/images/**", "branding/app-icon.png", ".github/workflows/pages.yml"]
+    paths: ["site/**", "docs/images/**", "branding/app-icon.png", "tools/site_i18n*.py", ".github/workflows/pages.yml"]
+  # (A pull request: the same tests, checks and build; nothing published.)
+  pull_request:
+    branches: [main]
+    paths: ["site/**", "tools/site_i18n*.py", ".github/workflows/pages.yml"]
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  pages:
+  # Never published with a phrase missing, out of date or broken.
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Test and check the translations
+        run: |
+          python3 tools/site_i18n_test.py
+          python3 tools/site_i18n.py check
+
+      - name: Put the site together
+        run: |
+          mkdir -p _site/images
+          cp site/*.css site/*.txt _site/
+          cp site/images/* _site/images/
+          cp docs/images/edit.png docs/images/perform.png docs/images/practice.png _site/images/
+          cp branding/app-icon.png _site/images/
+          python3 tools/site_i18n.py build _site
+
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
+        with:
+          path: _site
+
+  pages:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # (One publish at a time, whatever started it: Pages refuses a second
+    # while one is under way. Never cancelled midway.)
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v7
-
-      - name: Put the page together
-        run: |
-          mkdir -p _site/images
-          cp site/*.html site/*.css site/*.txt site/sitemap.xml _site/
-          cp site/images/* _site/images/
-          cp docs/images/edit.png docs/images/perform.png docs/images/practice.png _site/images/
-          cp branding/app-icon.png _site/images/
-
       - uses: actions/configure-pages@v6
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: _site
       - id: deploy
         uses: actions/deploy-pages@v5
