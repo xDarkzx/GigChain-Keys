@@ -180,6 +180,11 @@ class Building(unittest.TestCase):
         self.assertIn('<a href="../support.html" hreflang="en" lang="en">English</a>', header)
         self.assertIn('<a href="../de/support.html" hreflang="de" lang="de">Deutsch</a>', header)
         self.assertIn('hreflang="es" lang="es" aria-current="true">Español</a>', header)
+        # A wording that reads wrong: reported in a click, titled with its language and page.
+        self.assertIn('labels=translation&amp;title=Translation%20%28es%2C%20support.html%29%3A%20">✎ Informar un error de traducción</a>',
+                      header)
+        english_header = s.build_page(PAGE, "support.html", None, {}).split("<header>")[1].split("</header>")[0]
+        self.assertNotIn('class="lang-report"', english_header)  # (English is the source: nothing to report)
 
     def test_structured_data_and_script_words_stay_valid_json(self):
         blocks = re.findall(r'<script type="application/(?:ld\+)?json"[^>]*>(.*?)</script>', self.out, re.S)

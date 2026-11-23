@@ -1,0 +1,1253 @@
+{
+ "language": "zh-cn",
+ "phrases": {
+  "eb7b3611327e": {
+   "en": "Free MainStage Alternative for Windows, Mac &amp; Linux | GigChain Keys",
+   "t": "适用于 Windows、Mac 和 Linux 的免费 MainStage 替代软件 | GigChain Keys"
+  },
+  "8c913a73e83e": {
+   "en": "MainStage is Mac only. GigChain Keys is a free, open-source MainStage alternative for Windows, Mac and Linux: your VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads, and a stage-ready Perform mode.",
+   "t": "MainStage 只能在 Mac 上运行。GigChain Keys 是一款免费、开源的 MainStage 替代软件，支持 Windows、Mac 和 Linux：可以加载你的 VST3 和 VST2 插件，提供歌单、和弦谱、叠层与分区、内置钢琴、合成器和铺底音色，以及专为舞台打造的 Perform 模式。"
+  },
+  "866170f94ee0": {
+   "en": "GigChain Keys: a free MainStage alternative for Windows, Mac & Linux",
+   "t": "GigChain Keys：适用于 Windows、Mac 和 Linux 的免费 MainStage 替代软件"
+  },
+  "0f5870aefead": {
+   "en": "Your sounds, setlist, chord charts and practice in one free app. Windows, macOS and Linux.",
+   "t": "你的音色、歌单、和弦谱和练习，都在一个免费应用里。支持 Windows、macOS 和 Linux。"
+  },
+  "ecaffe3bf69c": {
+   "en": "Live performance VST host for keyboard players",
+   "t": "为现场键盘手打造的 VST 宿主"
+  },
+  "d1396f6805ce": {
+   "en": "A free, open-source MainStage alternative for Windows, Mac and Linux: VST3 and VST2 plugins, setlists, chord charts, layers and splits, built-in pianos, synths and pads.",
+   "t": "一款免费、开源的 MainStage 替代软件，支持 Windows、Mac 和 Linux：VST3 和 VST2 插件、歌单、和弦谱、叠层与分区，以及内置钢琴、合成器和铺底音色。"
+  },
+  "2b4d48210396": {
+   "en": "Is there MainStage for Windows?",
+   "t": "有 Windows 版的 MainStage 吗？"
+  },
+  "ed07dad61ee9": {
+   "en": "No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux): it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches sounds instantly on stage. It's free.",
+   "t": "没有：苹果的 MainStage 只能在 Mac 上运行。GigChain Keys 在 Windows 上（也在 Mac 和 Linux 上）做同样的事：加载你的 VST 插件，为每首歌保存一套音色歌单，在键盘上做叠层和分区，并在舞台上瞬间切换音色。而且完全免费。"
+  },
+  "2abe0172cab2": {
+   "en": "Is GigChain Keys free?",
+   "t": "GigChain Keys 免费吗？"
+  },
+  "3d1f935ed096": {
+   "en": "Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL.",
+   "t": "免费。没有广告，无需账号，没有许可证密钥，没有订阅。它基于 GPL 协议开源。"
+  },
+  "04a91be943fb": {
+   "en": "Which plugins work in GigChain Keys?",
+   "t": "GigChain Keys 支持哪些插件？"
+  },
+  "ecffd7549d7a": {
+   "en": "VST3 and VST2 instruments and effects, such as Kontakt, Arturia, Spitfire, Surge XT and Vital.",
+   "t": "VST3 和 VST2 的乐器和效果器，例如 Kontakt、Arturia、Spitfire、Surge XT 和 Vital。"
+  },
+  "024d86cdde10": {
+   "en": "Does GigChain Keys run on Linux?",
+   "t": "GigChain Keys 能在 Linux 上运行吗？"
+  },
+  "a8f4326fad80": {
+   "en": "Yes: an AppImage for most distributions and a .deb for Ubuntu, Debian and Mint, with JACK, PipeWire and ALSA.",
+   "t": "可以：提供适用于大多数发行版的 AppImage，以及适用于 Ubuntu、Debian 和 Mint 的 .deb，支持 JACK、PipeWire 和 ALSA。"
+  },
+  "9eb360f946c2": {
+   "en": "<a href=\"#watch\" class=\"hide-small\">Watch</a>",
+   "t": "<a href=\"#watch\" class=\"hide-small\">视频</a>"
+  },
+  "75ce51101dce": {
+   "en": "<a href=\"#features\" class=\"hide-small\">Features</a>",
+   "t": "<a href=\"#features\" class=\"hide-small\">功能</a>"
+  },
+  "89a580f42a1e": {
+   "en": "<a href=\"#download\">Download</a>",
+   "t": "<a href=\"#download\">下载</a>"
+  },
+  "055f7269c6aa": {
+   "en": "<a href=\"support.html\">♥ Support</a>",
+   "t": "<a href=\"support.html\">♥ 支持我们</a>"
+  },
+  "c5d997af8729": {
+   "en": "A free MainStage alternative for Windows, Mac and Linux",
+   "t": "适用于 Windows、Mac 和 Linux 的免费 MainStage 替代软件"
+  },
+  "fc0225584c5c": {
+   "en": "Your whole keyboard rig on stage: your sounds, setlist, chord charts and practice in one free app.",
+   "t": "把整套键盘设备搬上舞台：你的音色、歌单、和弦谱和练习，都在一个免费应用里。"
+  },
+  "75f527181b57": {
+   "en": "Free",
+   "t": "免费"
+  },
+  "df76b5bc094a": {
+   "en": "No ads",
+   "t": "无广告"
+  },
+  "685b04426605": {
+   "en": "No licence keys",
+   "t": "无需许可证密钥"
+  },
+  "d3123ff1f8e3": {
+   "en": "Open source (GPLv3)",
+   "t": "开源（GPLv3）"
+  },
+  "b5edc4b33989": {
+   "en": "Plays your VST plugins",
+   "t": "加载你的 VST 插件"
+  },
+  "d52dd151cd77": {
+   "en": "<a class=\"btn\" id=\"main-download\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\"> Download<small id=\"main-detail\">Windows · macOS · Linux</small> </a>",
+   "t": "<a class=\"btn\" id=\"main-download\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\"> 下载<small id=\"main-detail\">Windows · macOS · Linux</small> </a>"
+  },
+  "5abc01b2780c": {
+   "en": "<a href=\"#download\">Other systems and versions</a>",
+   "t": "<a href=\"#download\">其他系统和版本</a>"
+  },
+  "3f1702b0a6ce": {
+   "en": "<b>Public alpha.</b> It works and is played on real rigs, but try it at home and in rehearsal before you trust it on a gig, and <a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">tell us what breaks</a>.",
+   "t": "<b>公开测试版（Alpha）。</b>它已经可以使用，也已在真实的演出设备上演奏过，但在把演出交给它之前，请先在家里和排练中试一试，并<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">告诉我们哪里出了问题</a>。"
+  },
+  "e8bd86c9a348": {
+   "en": "GigChain Keys: a song's chord chart, its sections, the mixer and the keyboard",
+   "t": "GigChain Keys：一首歌的和弦谱、段落、调音台和键盘"
+  },
+  "64ce9609c081": {
+   "en": "See it in two minutes",
+   "t": "两分钟了解它"
+  },
+  "10235504c37d": {
+   "en": "The whole app, start to finish.",
+   "t": "整个应用，从头到尾。"
+  },
+  "4363d082ec26": {
+   "en": "GigChain Keys: the overview",
+   "t": "GigChain Keys：概览"
+  },
+  "95686bc07a9c": {
+   "en": "<a href=\"https://youtu.be/JhIZuH2CdhM\">Chord charts and lyrics</a>",
+   "t": "<a href=\"https://youtu.be/JhIZuH2CdhM\">和弦谱与歌词</a>"
+  },
+  "32b6b405c03d": {
+   "en": "<a href=\"https://youtu.be/UxjiNPtMoQw\">The 10-minute warm-up</a>",
+   "t": "<a href=\"https://youtu.be/UxjiNPtMoQw\">10 分钟热身</a>"
+  },
+  "7bd922fd05bf": {
+   "en": "<a href=\"https://youtu.be/GbwlgxBf-Es\">Layers, splits and effects</a>",
+   "t": "<a href=\"https://youtu.be/GbwlgxBf-Es\">叠层、分区和效果器</a>"
+  },
+  "a6abbf9e9e97": {
+   "en": "<a href=\"https://youtu.be/Wopcyn-vZmU\">Sounds on your pads</a>",
+   "t": "<a href=\"https://youtu.be/Wopcyn-vZmU\">把音色放到打击垫上</a>"
+  },
+  "c0d4e3b69d5e": {
+   "en": "<a href=\"https://youtu.be/BTiaUMiEjHo\">Pads Pro and Sustain Pads</a>",
+   "t": "<a href=\"https://youtu.be/BTiaUMiEjHo\">Pads Pro 和 Sustain Pads</a>"
+  },
+  "ce63beccffe2": {
+   "en": "<a href=\"https://youtu.be/laZV1BDlWCk\">The SoundFont Player</a>",
+   "t": "<a href=\"https://youtu.be/laZV1BDlWCk\">SoundFont 播放器</a>"
+  },
+  "f4539c849138": {
+   "en": "<a href=\"https://youtu.be/8drCLZTLFHI\">The sound update (0.10)</a>",
+   "t": "<a href=\"https://youtu.be/8drCLZTLFHI\">音色更新（0.10）</a>"
+  },
+  "0d6fae79b36e": {
+   "en": "Everything a keys player needs on stage",
+   "t": "键盘手在舞台上需要的一切"
+  },
+  "1289a15feda7": {
+   "en": "Load your sounds once, and the whole night is ready.",
+   "t": "音色加载一次，整晚的演出就准备好了。"
+  },
+  "1ea4d96e623e": {
+   "en": "Plays your plugins",
+   "t": "加载你的插件"
+  },
+  "8c5de7addcd7": {
+   "en": "Your VST3 and VST2 instruments and effects. Every sound in the setlist is loaded up front, so changing songs is instant and held notes ring on.",
+   "t": "你的 VST3 和 VST2 乐器与效果器。歌单里的所有音色都会预先加载，所以切歌是瞬间完成的，按住的音也会继续发声。"
+  },
+  "40e6e85103b8": {
+   "en": "All the night's songs in one file, in order, each with its own sounds. Change songs from the keyboard, a pedal or a pad.",
+   "t": "整晚的所有歌曲都在一个文件里，按顺序排列，每首都有自己的音色。用键盘、踏板或打击垫切换歌曲。"
+  },
+  "4c5bd2266cf6": {
+   "en": "Chord charts",
+   "t": "和弦谱"
+  },
+  "b7929b0f90b3": {
+   "en": "Paste a song from any chord website and each chord lands on its word. Big enough to read from the keys.",
+   "t": "从任何和弦网站粘贴一首歌，每个和弦都会落在对应的歌词上。字够大，在键盘前也能看清。"
+  },
+  "f9bdd3e4ae7f": {
+   "en": "Splits and layers",
+   "t": "分区与叠层"
+  },
+  "adf3bfa6135e": {
+   "en": "Key zones, transpose and velocity layers. Each part of the song (verse, chorus, solo) can switch which sounds play.",
+   "t": "键区、移调和力度分层。歌曲的每个段落（主歌、副歌、独奏）都可以切换要发声的音色。"
+  },
+  "67e6bb800180": {
+   "en": "Perform mode",
+   "t": "Perform 模式"
+  },
+  "693799ffee21": {
+   "en": "Full screen for the stage and touch screens: the chart, big Play, Next part and Loop part buttons that land on the bar line.",
+   "t": "为舞台和触摸屏设计的全屏界面：和弦谱，以及正好落在小节线上的大号播放、下一段和循环本段按钮。"
+  },
+  "ddbff60e260a": {
+   "en": "Its own instruments",
+   "t": "自带乐器"
+  },
+  "c699332316ce": {
+   "en": "Piano Pro (recorded grand, upright, Rhodes, Wurlitzer and more), Saw Stack Pro (EDM supersaws), Pads Pro (ambient pads under the band) and a SoundFont player for any .sf2. Plus Squash, Enhance and Sidechain effects. No plugin to buy.",
+   "t": "Piano Pro（采样录制的三角钢琴、立式钢琴、Rhodes、Wurlitzer 等）、Saw Stack Pro（EDM 超级锯齿波）、Pads Pro（垫在乐队下面的氛围铺底）以及可播放任意 .sf2 的 SoundFont 播放器。另有 Squash、Enhance 和 Sidechain 效果器。无需购买任何插件。"
+  },
+  "233264aa7b63": {
+   "en": "Set up like a pro rig",
+   "t": "像专业设备一样配置"
+  },
+  "89067c1a12fa": {
+   "en": "Each keyboard's touch, tuning (A4 415–466 Hz), transpose the whole rig in one tap, your own plugin folders, autosave with backups, and a warning if the audio ever drops out.",
+   "t": "每台键盘的触感、调音（A4 从 415 到 466 Hz）、一键移调整套设备、自定义插件文件夹、带备份的自动保存，以及音频中断时的提醒。"
+  },
+  "c1c10ea45b6a": {
+   "en": "Practice and warm-ups",
+   "t": "练习与热身"
+  },
+  "cad5c8a88781": {
+   "en": "The song's chords fall onto a keyboard, YouTube-piano style. Daily warm-ups at your level, every run scored.",
+   "t": "歌曲的和弦落到键盘上，就像 YouTube 上的钢琴教学视频。每天按你的水平热身，每一轮都有评分。"
+  },
+  "8f3a6c99d8a3": {
+   "en": "Record a loop of any instrument in time with the song and layer on top, street-performer style.",
+   "t": "按歌曲的节拍录下任何乐器的循环，并在上面一层层叠加，就像街头艺人那样。"
+  },
+  "4908a68f7a24": {
+   "en": "Built not to fail",
+   "t": "为稳定而生"
+  },
+  "63cac030dd45": {
+   "en": "Plugins are scanned in a separate process, a crashing plugin is switched off, and an unplugged keyboard comes back by itself.",
+   "t": "插件在独立进程中扫描，崩溃的插件会被关闭，拔掉的键盘重新插上后会自动恢复。"
+  },
+  "9df4fcc7a2bf": {
+   "en": "Perform mode: big Play, Next part and Loop part buttons, the song's parts as tiles and the chart",
+   "t": "Perform 模式：大号播放、下一段和循环本段按钮，歌曲段落以方块显示，以及和弦谱"
+  },
+  "b6254454b9e3": {
+   "en": "Perform mode: the song plays along its parts.",
+   "t": "Perform 模式：歌曲按段落依次进行。"
+  },
+  "a6d7910e9385": {
+   "en": "Practice mode: the chords falling onto a keyboard",
+   "t": "练习模式：和弦落到键盘上"
+  },
+  "117b5db0bdc6": {
+   "en": "Practice: the chords fall onto the keys.",
+   "t": "练习：和弦落到琴键上。"
+  },
+  "a479c9c34e87": {
+   "en": "Download",
+   "t": "下载"
+  },
+  "7f3d5cf49f8e": {
+   "en": "Free, for Windows, macOS and Linux.",
+   "t": "免费，支持 Windows、macOS 和 Linux。"
+  },
+  "d80009ee6bdf": {
+   "en": "Windows 10 or 11, 64-bit",
+   "t": "Windows 10 或 11，64 位"
+  },
+  "2cd44abe2ce1": {
+   "en": "<a class=\"file\" data-asset=\"win-setup\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Installer<span>Recommended</span></a>",
+   "t": "<a class=\"file\" data-asset=\"win-setup\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">安装程序<span>推荐</span></a>"
+  },
+  "865d0ec30bd7": {
+   "en": "<a class=\"file\" data-asset=\"win-zip\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Portable zip<span>No install: unzip anywhere, even a USB stick</span></a>",
+   "t": "<a class=\"file\" data-asset=\"win-zip\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">便携版 zip<span>无需安装：解压到任何地方，U 盘也可以</span></a>"
+  },
+  "da19310aa049": {
+   "en": "\"Windows protected your PC\"?",
+   "t": "出现“Windows 已保护你的电脑”？"
+  },
+  "e854d518d956": {
+   "en": "The alpha isn't code-signed yet. Click <b>More info</b>, then <b>Run anyway</b>. This happens once.",
+   "t": "测试版还没有代码签名。点击<b>更多信息</b>，然后点击<b>仍要运行</b>。只需要这一次。"
+  },
+  "fad8b846a21d": {
+   "en": "macOS 13 or later, Apple Silicon (M1 or newer)",
+   "t": "macOS 13 或更高版本，Apple 芯片（M1 或更新）"
+  },
+  "39f7a3282a03": {
+   "en": "<a class=\"file\" data-asset=\"mac-dmg\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">Disk image<span>Drag GigChain Keys to Applications</span></a>",
+   "t": "<a class=\"file\" data-asset=\"mac-dmg\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">磁盘映像<span>把 GigChain Keys 拖到“应用程序”</span></a>"
+  },
+  "c48d280c0dcd": {
+   "en": "macOS won't open it?",
+   "t": "macOS 打不开？"
+  },
+  "7c9b5e95fccf": {
+   "en": "The alpha isn't notarized by Apple yet. Open it once, then go to <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.",
+   "t": "测试版还没有经过苹果公证。先打开一次，然后前往<b>系统设置 → 隐私与安全性</b>，点击<b>仍要打开</b>。"
+  },
+  "f9d493d1c08f": {
+   "en": "64-bit: Ubuntu 22.04+, Fedora, Arch, Mint…",
+   "t": "64 位：Ubuntu 22.04 及以上、Fedora、Arch、Mint 等"
+  },
+  "5350d3e4ea10": {
+   "en": "<a class=\"file\" data-asset=\"appimage\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">AppImage<span>One file for most distributions</span></a>",
+   "t": "<a class=\"file\" data-asset=\"appimage\" href=\"https://github.com/xDarkzx/GigChain-Keys/releases/latest\">AppImage<span>一个文件适用于大多数发行版</span></a>"
+  },
+  "475d0017db4e": {
+   "en": "How to run the AppImage",
+   "t": "如何运行 AppImage"
+  },
+  "f065f70a3ff6": {
+   "en": "Make it executable, then run it: <code>chmod +x GigChainKeys-*.AppImage</code>. If it says FUSE is missing, install <code>libfuse2</code>.",
+   "t": "先赋予可执行权限，再运行：<code>chmod +x GigChainKeys-*.AppImage</code>。如果提示缺少 FUSE，请安装 <code>libfuse2</code>。"
+  },
+  "42c788694a56": {
+   "en": "You'll also want a MIDI keyboard. Pianos, synths and pads come built in, and <a href=\"https://github.com/xDarkzx/GigChain-Keys#what-you-need\">free ones</a> cover pianos, synths and pads. Every release lists checksums and notes on the <a href=\"https://github.com/xDarkzx/GigChain-Keys/releases\">releases page</a>.",
+   "t": "你还需要一台 MIDI 键盘。钢琴、合成器和铺底音色已经内置，钢琴、合成器和铺底音色也有<a href=\"https://github.com/xDarkzx/GigChain-Keys#what-you-need\">免费的插件</a>可选。每个版本的校验值和更新说明都在<a href=\"https://github.com/xDarkzx/GigChain-Keys/releases\">发布页面</a>上。"
+  },
+  "9a1fc1731f62": {
+   "en": "Questions",
+   "t": "常见问题"
+  },
+  "0cefd2518ce5": {
+   "en": "No: Apple's MainStage only runs on a Mac. GigChain Keys does the same job on Windows (and on Mac and Linux too): it hosts your VST plugins, keeps a setlist of sounds for every song, layers and splits the keyboard, and switches sounds instantly on stage. It's free.",
+   "t": "没有：苹果的 MainStage 只能在 Mac 上运行。GigChain Keys 在 Windows 上（也在 Mac 和 Linux 上）做同样的事：加载你的 VST 插件，为每首歌保存一套音色歌单，在键盘上做叠层和分区，并在舞台上瞬间切换音色。而且完全免费。"
+  },
+  "f1f5ae24ffaa": {
+   "en": "Is it really free?",
+   "t": "真的免费吗？"
+  },
+  "27847cda8417": {
+   "en": "Yes. No ads, no account, no licence key, no subscription. It's open source under the GPL, paid for by donations.",
+   "t": "是的。没有广告，无需账号，没有许可证密钥，没有订阅。它基于 GPL 协议开源，靠捐助维持。"
+  },
+  "f2323f6128b1": {
+   "en": "Which plugins work?",
+   "t": "支持哪些插件？"
+  },
+  "7f61c0d0e840": {
+   "en": "VST3 and VST2 instruments and effects: Kontakt, Arturia, Spitfire, u-he, Surge XT, Vital and the free ones. Plugins on another drive? Add the folder in Settings and click Rescan.",
+   "t": "VST3 和 VST2 的乐器与效果器：Kontakt、Arturia、Spitfire、u-he、Surge XT、Vital，以及各种免费插件。插件装在别的硬盘上？在设置里添加那个文件夹，然后点击重新扫描。"
+  },
+  "c33018044e6e": {
+   "en": "Does it work with my MIDI keyboard?",
+   "t": "能用我的 MIDI 键盘吗？"
+  },
+  "91c0cd9fc2d2": {
+   "en": "Any USB or MIDI keyboard. Its knobs, faders, pads and pedals can change songs, sounds and parts, and you can set how hard you have to play for full volume.",
+   "t": "任何 USB 或 MIDI 键盘都可以。它的旋钮、推子、打击垫和踏板都能用来切换歌曲、音色和段落，你还可以设置弹多重才能达到最大音量。"
+  },
+  "8f3316e143e1": {
+   "en": "How is it different from Gig Performer or Cantabile?",
+   "t": "它和 Gig Performer 或 Cantabile 有什么不同？"
+  },
+  "9351d176380c": {
+   "en": "They're excellent paid hosts. GigChain Keys is free and open source, adds chord charts, practice and its own instruments, and runs on Linux too. It's newer (a public alpha), so try it at home before a gig.",
+   "t": "它们都是出色的付费宿主。GigChain Keys 免费且开源，增加了和弦谱、练习功能和自带乐器，还能在 Linux 上运行。它比较新（公开测试版），所以演出前请先在家里试用。"
+  },
+  "bab602553891": {
+   "en": "Does it run on Linux?",
+   "t": "能在 Linux 上运行吗？"
+  },
+  "929a28d26142": {
+   "en": "Guides",
+   "t": "指南"
+  },
+  "cefe7398a817": {
+   "en": "<a href=\"free-mainstage-alternatives.html\">Free MainStage alternatives, compared</a>",
+   "t": "<a href=\"free-mainstage-alternatives.html\">免费 MainStage 替代软件对比</a>"
+  },
+  "d5bbe9dddf2c": {
+   "en": "<a href=\"mainstage-for-windows.html\">MainStage for Windows? What to use instead</a>",
+   "t": "<a href=\"mainstage-for-windows.html\">Windows 版 MainStage？用什么来代替</a>"
+  },
+  "ecdbbd3bbaa0": {
+   "en": "<a href=\"play-vst-plugins-live.html\">How to play VST plugins live without a DAW</a>",
+   "t": "<a href=\"play-vst-plugins-live.html\">不用 DAW，如何现场演奏 VST 插件</a>"
+  },
+  "74c9ce570929": {
+   "en": "Made with players",
+   "t": "和乐手一起打造"
+  },
+  "ec75d05348a5": {
+   "en": "Your feedback decides what gets fixed and built next.",
+   "t": "你的反馈决定接下来修什么、做什么。"
+  },
+  "d41804736a6c": {
+   "en": "<a href=\"https://discord.gg/BGn8Ujh37m\">Join the Discord</a>",
+   "t": "<a href=\"https://discord.gg/BGn8Ujh37m\">加入 Discord</a>"
+  },
+  "67a7b5a200e5": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md\">Getting started</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/blob/main/docs/help/getting-started.md\">快速上手</a>"
+  },
+  "6bb83d968e51": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">Report a bug or idea</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">报告问题或提出想法</a>"
+  },
+  "b295b030d731": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">Star it on GitHub</a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">在 GitHub 上点个星</a>"
+  },
+  "a45e282de1bb": {
+   "en": "<a href=\"support.html\">☕ Donate or ♥ Sponsor</a>",
+   "t": "<a href=\"support.html\">☕ 捐助或 ♥ 赞助</a>"
+  },
+  "87443a59149b": {
+   "en": "Thanks for downloading! 🎹",
+   "t": "感谢下载！🎹"
+  },
+  "f8b76191bf51": {
+   "en": "GigChain Keys is free and always will be: no ads, no account, no paid version. It's made by one keyboard player, with a new version every Monday. If it helps your gigs, a donation or a sponsorship keeps it going. First goal: code signing (and Apple's notarisation), so Windows and Mac warn less when you install it.",
+   "t": "GigChain Keys 是免费的，并且永远免费：没有广告，无需账号，没有付费版。它由一位键盘手开发，每周一发布新版本。如果它对你的演出有帮助，一次捐助或一份赞助就能让它持续下去。第一个目标：代码签名（以及苹果公证），让 Windows 和 Mac 安装时少弹警告。"
+  },
+  "c03ceee0330b": {
+   "en": "<a class=\"give\" href=\"https://buymeacoffee.com/ddazomnike\">☕ Donate</a>",
+   "t": "<a class=\"give\" href=\"https://buymeacoffee.com/ddazomnike\">☕ 捐助</a>"
+  },
+  "ecfa1249d02e": {
+   "en": "<a class=\"give sponsor\" href=\"https://github.com/sponsors/xDarkzx\">♥ Sponsor</a>",
+   "t": "<a class=\"give sponsor\" href=\"https://github.com/sponsors/xDarkzx\">♥ 赞助</a>"
+  },
+  "4546f3d0893d": {
+   "en": "<a href=\"support.html\">More ways to help</a>",
+   "t": "<a href=\"support.html\">更多支持方式</a>"
+  },
+  "e45714907316": {
+   "en": "Not now",
+   "t": "以后再说"
+  },
+  "35ec8d316d80": {
+   "en": "GigChain Keys is free software under the GNU GPL, version 3 or later.",
+   "t": "GigChain Keys 是自由软件，采用 GNU GPL 第 3 版或更高版本授权。"
+  },
+  "8e61794741d2": {
+   "en": "VST is a registered trademark of Steinberg Media Technologies GmbH. MainStage is a trademark of Apple Inc. GigChain Keys is not affiliated with them.",
+   "t": "VST 是 Steinberg Media Technologies GmbH 的注册商标。MainStage 是 Apple Inc. 的商标。GigChain Keys 与它们没有关联。"
+  },
+  "6c48e6ef2373": {
+   "en": "Download for {os}",
+   "t": "下载 {os} 版"
+  },
+  "191664d92f7c": {
+   "en": "For Windows, macOS and Linux computers",
+   "t": "适用于 Windows、macOS 和 Linux 电脑"
+  },
+  "b95edd4018a7": {
+   "en": "Thanks for downloading. A panel at the bottom of the page offers a way to donate; Escape closes it.",
+   "t": "感谢下载。页面底部的面板提供了捐助方式；按 Esc 键可以关闭。"
+  },
+  "45275ecb4b21": {
+   "en": "Version {version}, free, for Windows, macOS and Linux.",
+   "t": "版本 {version}，免费，支持 Windows、macOS 和 Linux。"
+  },
+  "4e806fa145f8": {
+   "en": "Version {version} · {size} · free",
+   "t": "版本 {version} · {size} · 免费"
+  },
+  "bd4901dfd4a6": {
+   "en": "Support GigChain Keys: Donate or Sponsor | GigChain Keys",
+   "t": "支持 GigChain Keys：捐助或赞助 | GigChain Keys"
+  },
+  "a6e03fa0b48c": {
+   "en": "GigChain Keys is free, with no ads and no paid version. Donate once with Buy Me a Coffee (card, Apple Pay or Google Pay, no account), or sponsor it monthly on GitHub.",
+   "t": "GigChain Keys 免费，没有广告，也没有付费版。你可以通过 Buy Me a Coffee 一次性捐助（银行卡、Apple Pay 或 Google Pay，无需账号），也可以在 GitHub 上按月赞助。"
+  },
+  "d4585d05f087": {
+   "en": "Support GigChain Keys: donate or sponsor",
+   "t": "支持 GigChain Keys：捐助或赞助"
+  },
+  "1a86e0a10dbb": {
+   "en": "Free for every keyboard player. Donate once, or sponsor it monthly.",
+   "t": "对每一位键盘手免费。可以一次性捐助，也可以按月赞助。"
+  },
+  "f32d5a3b17e6": {
+   "en": "Support",
+   "t": "支持"
+  },
+  "9b3c871bc0ac": {
+   "en": "Yes, completely: no ads, no account, no licence key and no paid version. Donations and sponsors keep it that way.",
+   "t": "是的，完全免费：没有广告，无需账号，没有许可证密钥，也没有付费版。正是捐助和赞助让它保持这样。"
+  },
+  "65893789e1a8": {
+   "en": "Do supporters get extra features?",
+   "t": "支持者会获得额外功能吗？"
+  },
+  "20e5af105672": {
+   "en": "No. Everyone gets the same app, with every feature. Support pays for the work, not for access.",
+   "t": "不会。每个人用的都是同一个应用，功能全都有。支持是为开发工作付费，而不是为使用权付费。"
+  },
+  "755067418d53": {
+   "en": "<a href=\"./#features\" class=\"hide-small\">Features</a>",
+   "t": "<a href=\"./#features\" class=\"hide-small\">功能</a>"
+  },
+  "8270535cb4ab": {
+   "en": "<a href=\"./#download\">Download</a>",
+   "t": "<a href=\"./#download\">下载</a>"
+  },
+  "ca6faa27a7a6": {
+   "en": "<a href=\"support.html\" aria-current=\"page\">♥ Support</a>",
+   "t": "<a href=\"support.html\" aria-current=\"page\">♥ 支持我们</a>"
+  },
+  "4efcf575e641": {
+   "en": "Support GigChain Keys",
+   "t": "支持 GigChain Keys"
+  },
+  "fcf2c8838853": {
+   "en": "GigChain Keys is free for every keyboard player: no ads, no account, no paid version. It's made by one keyboard player, with a new version every Monday. If it has earned a place in your rig, you can help keep it going.",
+   "t": "GigChain Keys 对每一位键盘手免费：没有广告，无需账号，没有付费版。它由一位键盘手开发，每周一发布新版本。如果它已经在你的设备里占有一席之地，你可以帮它继续走下去。"
+  },
+  "e9292906f52e": {
+   "en": "One-time",
+   "t": "一次性"
+  },
+  "f85f51c17dc3": {
+   "en": "☕ Donate",
+   "t": "☕ 捐助"
+  },
+  "0762d7e67f6d": {
+   "en": "A thank-you of any amount, whenever you like.",
+   "t": "任意金额，随时都可以，表达一份感谢。"
+  },
+  "6f17b16c1553": {
+   "en": "Card, Apple Pay or Google Pay",
+   "t": "银行卡、Apple Pay 或 Google Pay"
+  },
+  "997fb14df751": {
+   "en": "No account needed",
+   "t": "无需账号"
+  },
+  "89868ff402a6": {
+   "en": "Through Buy Me a Coffee",
+   "t": "通过 Buy Me a Coffee"
+  },
+  "35ebe3e85031": {
+   "en": "<a class=\"go\" href=\"https://buymeacoffee.com/ddazomnike\">Donate with Buy Me a Coffee</a>",
+   "t": "<a class=\"go\" href=\"https://buymeacoffee.com/ddazomnike\">通过 Buy Me a Coffee 捐助</a>"
+  },
+  "d31edb7b8a94": {
+   "en": "Monthly",
+   "t": "每月"
+  },
+  "8300dedca8dd": {
+   "en": "♥ Sponsor",
+   "t": "♥ 赞助"
+  },
+  "099384fb5d8d": {
+   "en": "A small amount each month: the steady support that keeps the weekly releases coming.",
+   "t": "每月一小笔：稳定的支持，让每周的新版本持续发布。"
+  },
+  "7856b16ce109": {
+   "en": "Ongoing, cancel any time",
+   "t": "持续支持，随时可以取消"
+  },
+  "8b1b4c4bf1cb": {
+   "en": "With your GitHub account",
+   "t": "使用你的 GitHub 账号"
+  },
+  "548826723901": {
+   "en": "Through GitHub Sponsors",
+   "t": "通过 GitHub Sponsors"
+  },
+  "310699272a6b": {
+   "en": "<a class=\"go\" href=\"https://github.com/sponsors/xDarkzx\">Sponsor on GitHub</a>",
+   "t": "<a class=\"go\" href=\"https://github.com/sponsors/xDarkzx\">在 GitHub 上赞助</a>"
+  },
+  "5535db6b88da": {
+   "en": "Everyone gets the same app, with every feature. Support pays for the work, never for access.",
+   "t": "每个人用的都是同一个应用，功能全都有。支持是为开发工作付费，绝不是为使用权付费。"
+  },
+  "a889a0abe7e4": {
+   "en": "Where your support goes",
+   "t": "你的支持用在哪里"
+  },
+  "ea7f7f6781c5": {
+   "en": "<strong>Fewer install warnings</strong>",
+   "t": "<strong>减少安装时的警告</strong>"
+  },
+  "8ec6b28774a8": {
+   "en": "<span>Code signing for Windows, and Apple's signing and notarisation for the Mac, so installing it feels safe.</span>",
+   "t": "<span>为 Windows 做代码签名，为 Mac 做苹果的签名和公证，让安装更安心。</span>"
+  },
+  "205ead700236": {
+   "en": "<strong>A release every Monday</strong>",
+   "t": "<strong>每周一发布新版本</strong>"
+  },
+  "2f2fac6b997b": {
+   "en": "<span>The time to fix what players report and ship it the same week.</span>",
+   "t": "<span>有时间修复乐手报告的问题，并在当周发布。</span>"
+  },
+  "7f221fcb5a52": {
+   "en": "<strong>New instruments and features</strong>",
+   "t": "<strong>新的乐器和功能</strong>"
+  },
+  "f31293670677": {
+   "en": "<span>Built from what keyboard players ask for on GitHub and Discord.</span>",
+   "t": "<span>根据键盘手在 GitHub 和 Discord 上提出的需求来打造。</span>"
+  },
+  "590721fed556": {
+   "en": "Other ways to help, free",
+   "t": "其他免费的支持方式"
+  },
+  "f9c05cb52423": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">⭐ Star it on GitHub<span>Helps other players find it</span></a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys\">⭐ 在 GitHub 上点个星<span>帮助其他乐手发现它</span></a>"
+  },
+  "dc828b35f900": {
+   "en": "<a href=\"https://discord.gg/BGn8Ujh37m\">💬 Join the Discord<span>Show your rig, ask, suggest</span></a>",
+   "t": "<a href=\"https://discord.gg/BGn8Ujh37m\">💬 加入 Discord<span>晒设备、提问、提建议</span></a>"
+  },
+  "69ae2de3ac33": {
+   "en": "<a href=\"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4\">▶ Watch and share the videos<span>How most players find it</span></a>",
+   "t": "<a href=\"https://www.youtube.com/playlist?list=PLQp8ULNqWrb4\">▶ 观看并分享视频<span>大多数乐手都是这样发现它的</span></a>"
+  },
+  "b3796b762535": {
+   "en": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">💡 Report a bug or an idea<span>Decides what comes next</span></a>",
+   "t": "<a href=\"https://github.com/xDarkzx/GigChain-Keys/issues/new/choose\">💡 报告问题或提出想法<span>决定下一步做什么</span></a>"
+  },
+  "540404626cf2": {
+   "en": "What's the difference between donating and sponsoring?",
+   "t": "捐助和赞助有什么区别？"
+  },
+  "52bf04379332": {
+   "en": "Donating is a one-time gift through Buy Me a Coffee, with no account needed. Sponsoring is ongoing support through GitHub Sponsors, and needs a GitHub account. Both go to the same place: GigChain Keys.",
+   "t": "捐助是通过 Buy Me a Coffee 的一次性心意，无需账号。赞助是通过 GitHub Sponsors 的持续支持，需要一个 GitHub 账号。两者都用在同一个地方：GigChain Keys。"
+  },
+  "e28f3a2b676f": {
+   "en": "Not using it yet? It's free on Windows, Mac and Linux.",
+   "t": "还没用过？它在 Windows、Mac 和 Linux 上都免费。"
+  },
+  "f9e80c0a499e": {
+   "en": "<a class=\"btn\" href=\"./#download\">Download GigChain Keys</a>",
+   "t": "<a class=\"btn\" href=\"./#download\">下载 GigChain Keys</a>"
+  },
+  "29a0bdcbd621": {
+   "en": "Buy Me a Coffee and GitHub Sponsors are run by their own companies; payments go through them.",
+   "t": "Buy Me a Coffee 和 GitHub Sponsors 由各自的公司运营；付款通过它们完成。"
+  },
+  "e3ca95abe18e": {
+   "en": "MainStage for Windows? What to Use Instead (Free) | GigChain Keys",
+   "t": "Windows 版 MainStage？用什么来代替（免费） | GigChain Keys"
+  },
+  "6df980db18c6": {
+   "en": "There is no MainStage for Windows. Here's how Windows keyboard players get the same setup: a setlist of sounds, layers and splits, VST plugins and one-press sound changes, free.",
+   "t": "MainStage 没有 Windows 版。下面介绍 Windows 键盘手如何搭出同样的配置：音色歌单、叠层与分区、VST 插件，以及一键切换音色，全部免费。"
+  },
+  "5629538f9c68": {
+   "en": "MainStage for Windows? What to use instead, free",
+   "t": "Windows 版 MainStage？用什么来代替，免费"
+  },
+  "efb684e7d229": {
+   "en": "The same songs-and-sounds live setup as MainStage, on a Windows PC, for free.",
+   "t": "和 MainStage 一样以歌曲和音色为核心的现场配置，在 Windows 电脑上免费实现。"
+  },
+  "b7eece52adf7": {
+   "en": "MainStage for Windows",
+   "t": "Windows 版 MainStage"
+  },
+  "1240e202212f": {
+   "en": "Can I run MainStage on Windows?",
+   "t": "能在 Windows 上运行 MainStage 吗？"
+  },
+  "a3f155443414": {
+   "en": "No. MainStage is made by Apple and only runs on macOS. There is no Windows version, and running it in a virtual machine isn't practical for live audio.",
+   "t": "不能。MainStage 是苹果出品，只能在 macOS 上运行。它没有 Windows 版，用虚拟机运行也不适合现场音频。"
+  },
+  "3d7e960b2f24": {
+   "en": "What is the Windows equivalent of MainStage?",
+   "t": "Windows 上和 MainStage 相当的软件是什么？"
+  },
+  "61e9e09d0f3b": {
+   "en": "A live VST host with setlists. GigChain Keys is a free one built to work like MainStage: songs, sounds per song, layers and splits, chord charts, and one press to change sound on stage.",
+   "t": "一款带歌单功能的现场 VST 宿主。GigChain Keys 就是这样一款免费软件，按照 MainStage 的方式设计：歌曲、每首歌的音色、叠层与分区、和弦谱，以及在舞台上一键切换音色。"
+  },
+  "e0dc8e5c6e60": {
+   "en": "Do I need an audio interface?",
+   "t": "我需要声卡吗？"
+  },
+  "4fbe77473c13": {
+   "en": "Not to start: GigChain Keys plays through your computer's normal sound output (WASAPI). For the lowest latency on stage, an audio interface with an ASIO driver is better, and GigChain Keys supports ASIO too.",
+   "t": "刚开始不需要：GigChain Keys 通过电脑自带的声音输出（WASAPI）发声。想在舞台上获得最低延迟，最好用带 ASIO 驱动的声卡，GigChain Keys 也支持 ASIO。"
+  },
+  "e7a7f8733139": {
+   "en": "<a href=\"./\">GigChain Keys</a> › Guides",
+   "t": "<a href=\"./\">GigChain Keys</a> › 指南"
+  },
+  "fb7f2053a57a": {
+   "en": "MainStage for Windows? What to use instead",
+   "t": "Windows 版 MainStage？用什么来代替"
+  },
+  "b92785259b4d": {
+   "en": "There is no MainStage for Windows: Apple only makes it for the Mac. But what MainStage does, a setlist of songs where each song has its sounds ready to play, works just as well on a Windows PC. Here's how to set it up, for free.",
+   "t": "MainStage 没有 Windows 版：苹果只为 Mac 开发它。但 MainStage 所做的事情，也就是一份歌单里每首歌都准备好了要用的音色，在 Windows 电脑上同样能做得很好。下面介绍如何免费搭建。"
+  },
+  "b9b08eb13da1": {
+   "en": "What MainStage actually gives you",
+   "t": "MainStage 真正给你的是什么"
+  },
+  "c7a423a191bf": {
+   "en": "Strip away the Apple branding and MainStage is four things:",
+   "t": "去掉苹果的品牌，MainStage 就是四样东西："
+  },
+  "da1f9b0b6cae": {
+   "en": "<strong>A setlist</strong>: your songs in gig order.",
+   "t": "<strong>歌单</strong>：按演出顺序排列的歌曲。"
+  },
+  "179e4c77984b": {
+   "en": "<strong>Sounds per song</strong> (MainStage calls them patches): piano for the verse, pad plus strings for the chorus.",
+   "t": "<strong>每首歌的音色</strong>（MainStage 叫它们 patch）：主歌用钢琴，副歌用铺底加弦乐。"
+  },
+  "da7a44b9ed4b": {
+   "en": "<strong>Layers and splits</strong>: several sounds at once, or bass on the left hand and piano on the right.",
+   "t": "<strong>叠层与分区</strong>：同时发出多个音色，或者左手贝斯、右手钢琴。"
+  },
+  "952f3f575234": {
+   "en": "<strong>One press to change</strong>: a footswitch, pad or key moves to the next sound, with no gap in the audio.",
+   "t": "<strong>一键切换</strong>：用踏板开关、打击垫或琴键切到下一个音色，声音不中断。"
+  },
+  "424cf64e8ca1": {
+   "en": "Any Windows program that does all four can replace it on stage.",
+   "t": "任何能做到这四点的 Windows 软件，都能在舞台上替代它。"
+  },
+  "706a95a68e64": {
+   "en": "Doing it on Windows with GigChain Keys",
+   "t": "在 Windows 上用 GigChain Keys 实现"
+  },
+  "fb4703bb3938": {
+   "en": "GigChain Keys is a free, open-source live rig built to work like MainStage, on Windows, Mac and Linux.",
+   "t": "GigChain Keys 是一款免费、开源的现场演出软件，按照 MainStage 的方式设计，支持 Windows、Mac 和 Linux。"
+  },
+  "d45bae6258fa": {
+   "en": "GigChain Keys: a setlist of songs, each with its sounds, chord chart and mixer",
+   "t": "GigChain Keys：一份歌单，每首歌都有自己的音色、和弦谱和调音台"
+  },
+  "64929c3462ee": {
+   "en": "<strong>Install it</strong> from the <a href=\"./#download\">download page</a> (Windows 10 or 11; installer or portable zip).",
+   "t": "从<a href=\"./#download\">下载页面</a><strong>安装它</strong>（Windows 10 或 11；安装程序或便携版 zip）。"
+  },
+  "cc5855c39313": {
+   "en": "<strong>Plug in your MIDI keyboard</strong>; it's found automatically.",
+   "t": "<strong>接上你的 MIDI 键盘</strong>；它会被自动识别。"
+  },
+  "420b7a97f1a6": {
+   "en": "<strong>Pick your audio</strong>: your normal Windows sound output works straight away. If you have an audio interface, choose its ASIO driver for the lowest latency.",
+   "t": "<strong>选择音频</strong>：Windows 自带的声音输出马上就能用。如果你有声卡，为了最低延迟，请选择它的 ASIO 驱动。"
+  },
+  "84c531a6d129": {
+   "en": "<strong>Add your plugins</strong>: GigChain Keys scans your VST3 and VST2 folders. Kontakt, Arturia, Spitfire, Surge XT, Vital and the rest all work. No plugins yet? It comes with its own pianos, synths, pads and a SoundFont player.",
+   "t": "<strong>添加插件</strong>：GigChain Keys 会扫描你的 VST3 和 VST2 文件夹。Kontakt、Arturia、Spitfire、Surge XT、Vital 等都能用。还没有插件？它自带钢琴、合成器、铺底音色和 SoundFont 播放器。"
+  },
+  "d5e5e7af3c1e": {
+   "en": "<strong>Build your setlist</strong>: add a song, add sounds to it, layer or split them, and paste in the chords.",
+   "t": "<strong>建立歌单</strong>：添加一首歌，为它加入音色，做叠层或分区，再粘贴和弦。"
+  },
+  "83b4eff0f45e": {
+   "en": "<strong>Go to Perform mode</strong> on stage: big, clear, one press to the next sound.",
+   "t": "上台时<strong>切换到 Perform 模式</strong>：大字、清晰，一键切到下一个音色。"
+  },
+  "34a951c02137": {
+   "en": "What's the same, and what's different",
+   "t": "哪些一样，哪些不同"
+  },
+  "5703321d0ec8": {
+   "en": "Runs on",
+   "t": "运行平台"
+  },
+  "858ac5dc2957": {
+   "en": "Mac only",
+   "t": "仅限 Mac"
+  },
+  "3e8248e32edf": {
+   "en": "Price",
+   "t": "价格"
+  },
+  "dc9d4584a554": {
+   "en": "Paid",
+   "t": "付费"
+  },
+  "72de9496a57b": {
+   "en": "Free, open source",
+   "t": "免费、开源"
+  },
+  "3f3e6c352418": {
+   "en": "Setlists, sounds per song",
+   "t": "歌单、每首歌的音色"
+  },
+  "5397e0583f14": {
+   "en": "Yes",
+   "t": "有"
+  },
+  "8df771bfd6fe": {
+   "en": "Layers and splits",
+   "t": "叠层与分区"
+  },
+  "6291c403d715": {
+   "en": "Your plugins",
+   "t": "你的插件"
+  },
+  "0ec3cd34b7c7": {
+   "en": "VST3 and VST2",
+   "t": "VST3 和 VST2"
+  },
+  "df2ca03160fe": {
+   "en": "Chord and lyric charts",
+   "t": "和弦谱与歌词"
+  },
+  "039ec17971be": {
+   "en": "Not built in",
+   "t": "未内置"
+  },
+  "d253ec78987e": {
+   "en": "Built-in sound library",
+   "t": "内置音色库"
+  },
+  "7c8432f0894e": {
+   "en": "Large (Logic's)",
+   "t": "大（Logic 的音色库）"
+  },
+  "6264bf8d2dd4": {
+   "en": "Smaller: pianos, synths, pads, SoundFonts",
+   "t": "较小：钢琴、合成器、铺底音色、SoundFont"
+  },
+  "e87e70288825": {
+   "en": "Backing tracks, click, tempo",
+   "t": "伴奏音轨、节拍器、速度"
+  },
+  "8b6c540942e1": {
+   "en": "Yes (up to eight stems per song)",
+   "t": "有（每首歌最多八个分轨）"
+  },
+  "9baea84d25fb": {
+   "en": "MainStage's big strength is Logic's huge sound library. On Windows you bring your own plugins (plenty are free: Spitfire LABS, Surge XT, Vital, Dexed, Pianobook instruments), plus GigChain's built-in sounds.",
+   "t": "MainStage 最大的优势是 Logic 庞大的音色库。在 Windows 上你用自己的插件（很多是免费的：Spitfire LABS、Surge XT、Vital、Dexed、Pianobook 的乐器），再加上 GigChain 的内置音色。"
+  },
+  "4cbcacb10ceb": {
+   "en": "Free, no ads, no account. Windows 10 and 11.",
+   "t": "免费，无广告，无需账号。支持 Windows 10 和 11。"
+  },
+  "9cabeb0b4ade": {
+   "en": "No. It's Apple software for macOS only. Virtual machines aren't practical for live audio.",
+   "t": "不能。它是苹果仅限 macOS 的软件。虚拟机不适合现场音频。"
+  },
+  "940c195ee64c": {
+   "en": "A live VST host with setlists. GigChain Keys is a free one that works like MainStage. For every free option, see <a href=\"free-mainstage-alternatives.html\">free MainStage alternatives compared</a>.",
+   "t": "一款带歌单功能的现场 VST 宿主。GigChain Keys 是一款按照 MainStage 方式工作的免费软件。想了解所有免费选择，请看<a href=\"free-mainstage-alternatives.html\">免费 MainStage 替代软件对比</a>。"
+  },
+  "04ca1667912b": {
+   "en": "Not to start. Your computer's sound output works. For stage, an interface with an ASIO driver gives the lowest latency, and GigChain Keys supports it.",
+   "t": "刚开始不需要。电脑的声音输出就能用。上台演出时，带 ASIO 驱动的声卡延迟最低，GigChain Keys 也支持。"
+  },
+  "3be40669838b": {
+   "en": "More guides",
+   "t": "更多指南"
+  },
+  "0f2f2b09478f": {
+   "en": "<a href=\"free-mainstage-alternatives.html\">Free MainStage alternatives<span>Every free option, compared</span></a>",
+   "t": "<a href=\"free-mainstage-alternatives.html\">免费 MainStage 替代软件<span>所有免费选择对比</span></a>"
+  },
+  "ee3078064821": {
+   "en": "<a href=\"play-vst-plugins-live.html\">Play VST plugins live<span>No DAW, low latency, one press per song</span></a>",
+   "t": "<a href=\"play-vst-plugins-live.html\">现场演奏 VST 插件<span>无需 DAW，低延迟，每首歌一键切换</span></a>"
+  },
+  "b837e8d79ddc": {
+   "en": "MainStage is a trademark of Apple Inc. VST is a registered trademark of Steinberg Media Technologies GmbH. Other names belong to their owners. GigChain Keys is not affiliated with them.",
+   "t": "MainStage 是 Apple Inc. 的商标。VST 是 Steinberg Media Technologies GmbH 的注册商标。其他名称归各自所有者所有。GigChain Keys 与它们没有关联。"
+  },
+  "fc996fdec0e6": {
+   "en": "Free MainStage Alternatives for Windows, Mac &amp; Linux (2026) | GigChain Keys",
+   "t": "适用于 Windows、Mac 和 Linux 的免费 MainStage 替代软件（2026） | GigChain Keys"
+  },
+  "53a497c6992e": {
+   "en": "Every free MainStage alternative compared: GigChain Keys, Cantabile Lite, Element and Carla. Which ones run on Windows, Mac and Linux, which have setlists, and which are really free.",
+   "t": "所有免费 MainStage 替代软件对比：GigChain Keys、Cantabile Lite、Element 和 Carla。哪些能在 Windows、Mac 和 Linux 上运行，哪些有歌单，哪些是真正免费的。"
+  },
+  "dda1fb9d3c5f": {
+   "en": "Free MainStage alternatives for Windows, Mac & Linux, compared",
+   "t": "适用于 Windows、Mac 和 Linux 的免费 MainStage 替代软件对比"
+  },
+  "873414f7f384": {
+   "en": "Which free live VST hosts run on your computer, which have setlists, and which are really free.",
+   "t": "哪些免费的现场 VST 宿主能在你的电脑上运行，哪些有歌单，哪些是真正免费的。"
+  },
+  "4a229b9ce1bd": {
+   "en": "Free MainStage alternatives",
+   "t": "免费 MainStage 替代软件"
+  },
+  "f7ec91b71ecf": {
+   "en": "What is the best free alternative to MainStage?",
+   "t": "最好的免费 MainStage 替代软件是什么？"
+  },
+  "d4a50080a13c": {
+   "en": "For keyboard players who want setlists, layers and splits, chord charts and instant sound changes for free on Windows, Mac or Linux, GigChain Keys is the closest free match to MainStage. Cantabile Lite is free on Windows but keeps setlists for its paid editions; Element and Carla are free plugin hosts built around patching rather than songs.",
+   "t": "对于想在 Windows、Mac 或 Linux 上免费使用歌单、叠层与分区、和弦谱和即时切换音色的键盘手来说，GigChain Keys 是最接近 MainStage 的免费选择。Cantabile Lite 在 Windows 上免费，但歌单功能只在付费版里；Element 和 Carla 是免费的插件宿主，围绕连线路由而不是歌曲来设计。"
+  },
+  "61134dcf9bbf": {
+   "en": "Is there a free MainStage for Windows?",
+   "t": "有免费的 Windows 版 MainStage 吗？"
+  },
+  "95c487488e31": {
+   "en": "MainStage itself is Mac only. Free Windows programs that do the same job include GigChain Keys (setlists, layers, splits, chord charts), Cantabile Lite (setlists only in paid editions), Element and Carla.",
+   "t": "MainStage 本身只能在 Mac 上运行。能做同样事情的免费 Windows 软件包括 GigChain Keys（歌单、叠层、分区、和弦谱）、Cantabile Lite（歌单仅限付费版）、Element 和 Carla。"
+  },
+  "76d946b7a682": {
+   "en": "Can I use my VST plugins live without a DAW?",
+   "t": "不用 DAW 能现场使用我的 VST 插件吗？"
+  },
+  "1e627384f9e2": {
+   "en": "Yes. A live VST host like GigChain Keys loads your VST3 and VST2 instruments and effects directly, plays them from your MIDI keyboard with low latency, and switches between sounds per song, with no DAW or timeline.",
+   "t": "可以。像 GigChain Keys 这样的现场 VST 宿主会直接加载你的 VST3 和 VST2 乐器与效果器，用你的 MIDI 键盘以低延迟演奏，并按歌曲切换音色，不需要 DAW 或时间线。"
+  },
+  "06519c547d12": {
+   "en": "Free MainStage alternatives for Windows, Mac &amp; Linux",
+   "t": "适用于 Windows、Mac 和 Linux 的免费 MainStage 替代软件"
+  },
+  "cc71283a5ba0": {
+   "en": "MainStage is Apple's live rig for keyboard players, and it only runs on a Mac. If you play on Windows or Linux, or just don't want to pay, here is every free option, what each one is good at, and where each one stops.",
+   "t": "MainStage 是苹果为键盘手打造的现场演出软件，只能在 Mac 上运行。如果你用 Windows 或 Linux 演奏，或者只是不想花钱，这里列出了所有免费选择，各自擅长什么，以及做不到什么。"
+  },
+  "cc835fe34912": {
+   "en": "The short answer",
+   "t": "简短回答"
+  },
+  "502984b3e039": {
+   "en": "Free (source)",
+   "t": "免费（源代码）"
+  },
+  "816c52fd2bdd": {
+   "en": "No",
+   "t": "没有"
+  },
+  "6cc3364a242c": {
+   "en": "Open source",
+   "t": "开源"
+  },
+  "cb0eb824349e": {
+   "en": "Yes (GPL)",
+   "t": "是（GPL）"
+  },
+  "3aa6224d1fc1": {
+   "en": "Setlist of songs",
+   "t": "歌曲歌单"
+  },
+  "0783a58e724f": {
+   "en": "Paid editions",
+   "t": "付费版"
+  },
+  "8f7088e6bd06": {
+   "en": "Layers &amp; splits",
+   "t": "叠层与分区"
+  },
+  "46f4e74191d5": {
+   "en": "Layers (splits in paid editions)",
+   "t": "叠层（分区在付费版）"
+  },
+  "2f9b83746a72": {
+   "en": "By patching",
+   "t": "通过连线路由"
+  },
+  "2c8788a4a663": {
+   "en": "Chord &amp; lyric charts",
+   "t": "和弦谱与歌词"
+  },
+  "d81f2f3c835e": {
+   "en": "Built-in sounds",
+   "t": "内置音色"
+  },
+  "b55826a38e9d": {
+   "en": "Pianos, synths, pads, SoundFonts",
+   "t": "钢琴、合成器、铺底音色、SoundFont"
+  },
+  "8e3ee64d491f": {
+   "en": "Made for",
+   "t": "适合人群"
+  },
+  "418543c46ae9": {
+   "en": "Keyboard players on stage",
+   "t": "舞台上的键盘手"
+  },
+  "559db31c2345": {
+   "en": "Live players on Windows",
+   "t": "在 Windows 上做现场演出的乐手"
+  },
+  "32686f4de06a": {
+   "en": "Building plugin chains",
+   "t": "搭建插件链"
+  },
+  "a5aa391ec8c2": {
+   "en": "Plugin hosting &amp; routing",
+   "t": "插件宿主与路由"
+  },
+  "1fc5895b875a": {
+   "en": "Checked November 2026. Paid hosts (MainStage, Gig Performer, Cantabile's paid editions, Camelot) are left out: this page is about what you can use for nothing.",
+   "t": "2026 年 11 月核实。付费宿主（MainStage、Gig Performer、Cantabile 付费版、Camelot）不在此列：本页只介绍不花钱就能用的软件。"
+  },
+  "faef353dcd1f": {
+   "en": "A live rig made for keyboard players, built to work like MainStage on Windows, Mac and Linux. You build a setlist of songs, give each song its sounds (your VST3 and VST2 plugins, or the built-in pianos, synths, pads and SoundFont player), layer and split them across the keyboard, and in Perform mode one press moves to the next sound with no gap. Each song can carry its chord and lyric chart, shown big on stage. There's also a practice mode with daily warm-ups.",
+   "t": "一款为键盘手打造的现场演出软件，设计目标是在 Windows、Mac 和 Linux 上像 MainStage 一样工作。你建立一份歌单，为每首歌配上音色（你的 VST3 和 VST2 插件，或内置的钢琴、合成器、铺底音色和 SoundFont 播放器），在键盘上做叠层和分区，在 Perform 模式下一键无缝切换到下一个音色。每首歌都可以带上和弦谱和歌词，在舞台上大字显示。它还有带每日热身的练习模式。"
+  },
+  "5eadaf20854a": {
+   "en": "<strong>Good for:</strong> cover bands, function and wedding gigs, solo keys players, anyone who wants MainStage's songs-and-sounds way of working without a Mac. <strong>Not for:</strong> recording and editing tracks; it's a live tool, not a DAW.",
+   "t": "<strong>适合：</strong>翻唱乐队、商演和婚礼演出、独奏键盘手，以及任何想不用 Mac 就获得 MainStage 那种以歌曲和音色为核心的工作方式的人。<strong>不适合：</strong>录制和编辑音轨；它是现场工具，不是 DAW。"
+  },
+  "10f0884c0fae": {
+   "en": "A long-running, well-respected Windows live host. The Lite edition is free and hosts plugins with layers. Set lists and keyboard splits come with the paid Solo edition, song states with Performer, and it doesn't run on Mac or Linux.",
+   "t": "一款历史悠久、口碑很好的 Windows 现场宿主。Lite 版免费，可以用叠层加载插件。歌单和键盘分区要付费的 Solo 版才有，歌曲状态要 Performer 版才有，而且它不能在 Mac 或 Linux 上运行。"
+  },
+  "6c0119b063ab": {
+   "en": "An open-source plugin host for Windows, Mac and Linux. You connect plugins together in a graph, which makes it flexible for building effects chains and custom routing. It has no setlist of songs or charts; switching sounds between songs is up to you.",
+   "t": "一款开源插件宿主，支持 Windows、Mac 和 Linux。你在图形界面里把插件连起来，非常适合搭建效果器链和自定义路由。它没有歌曲歌单，也没有和弦谱；歌曲之间如何切换音色，得靠你自己安排。"
+  },
+  "92bdd9e190b7": {
+   "en": "A free, open-source plugin host, strongest on Linux, with patchbay routing and support for many plugin formats. Like Element, it's a toolbox for hosting and routing rather than a set of songs to play through on stage.",
+   "t": "一款免费、开源的插件宿主，在 Linux 上最强，提供跳线盘式路由，支持多种插件格式。和 Element 一样，它是加载和路由插件的工具箱，而不是在舞台上按顺序演奏的歌曲歌单。"
+  },
+  "74a286fce976": {
+   "en": "How to choose",
+   "t": "怎么选"
+  },
+  "47d7d8511e27": {
+   "en": "<strong>You want MainStage's way of working (songs, sounds, one press to change) on Windows or Linux, free:</strong> GigChain Keys.",
+   "t": "<strong>你想在 Windows 或 Linux 上免费使用 MainStage 的工作方式（歌曲、音色、一键切换）：</strong>GigChain Keys。"
+  },
+  "e84aa85527ac": {
+   "en": "<strong>You're on Windows and happy to pay later for a mature, Windows-only tool:</strong> try Cantabile Lite, then its paid editions.",
+   "t": "<strong>你用 Windows，并且不介意以后为一款成熟的、仅限 Windows 的工具付费：</strong>先试试 Cantabile Lite，再考虑它的付费版。"
+  },
+  "e5f77a7e22e0": {
+   "en": "<strong>You want to wire up plugin chains yourself:</strong> Element or Carla.",
+   "t": "<strong>你想自己连接插件链：</strong>Element 或 Carla。"
+  },
+  "de4598e58199": {
+   "en": "GigChain Keys is free: no ads, no account, no licence key.",
+   "t": "GigChain Keys 免费：没有广告，无需账号，没有许可证密钥。"
+  },
+  "baa552c59249": {
+   "en": "<a class=\"btn\" href=\"./#download\">Download for Windows, Mac or Linux</a>",
+   "t": "<a class=\"btn\" href=\"./#download\">下载 Windows、Mac 或 Linux 版</a>"
+  },
+  "c592afcd0558": {
+   "en": "For keyboard players who want setlists, layers and splits, chord charts and instant sound changes for free, on any computer, GigChain Keys is the closest match. Cantabile Lite is free on Windows but keeps setlists for its paid editions.",
+   "t": "对于想在任何电脑上免费使用歌单、叠层与分区、和弦谱和即时切换音色的键盘手来说，GigChain Keys 是最接近的选择。Cantabile Lite 在 Windows 上免费，但歌单功能只在付费版里。"
+  },
+  "d9d534535e9c": {
+   "en": "MainStage itself is Mac only. On Windows you can use GigChain Keys, Cantabile Lite, Element or Carla, all free. See <a href=\"mainstage-for-windows.html\">MainStage for Windows: what to use instead</a>.",
+   "t": "MainStage 本身只能在 Mac 上运行。在 Windows 上，你可以用 GigChain Keys、Cantabile Lite、Element 或 Carla，全部免费。请看<a href=\"mainstage-for-windows.html\">Windows 版 MainStage：用什么来代替</a>。"
+  },
+  "9f68a0dbef5f": {
+   "en": "Yes, and it's usually better on stage: lower latency, fewer things to go wrong. See <a href=\"play-vst-plugins-live.html\">how to play VST plugins live without a DAW</a>.",
+   "t": "可以，而且在舞台上通常更好：延迟更低，出问题的地方更少。请看<a href=\"play-vst-plugins-live.html\">不用 DAW，如何现场演奏 VST 插件</a>。"
+  },
+  "f828df1bfb00": {
+   "en": "<a href=\"mainstage-for-windows.html\">MainStage for Windows?<span>What Windows players use instead</span></a>",
+   "t": "<a href=\"mainstage-for-windows.html\">Windows 版 MainStage？<span>Windows 乐手用什么来代替</span></a>"
+  },
+  "6d7c75066009": {
+   "en": "<a href=\"gig-performer-alternative.html\">Gig Performer alternative<span>A free live rig for keys</span></a>",
+   "t": "<a href=\"gig-performer-alternative.html\">Gig Performer 替代软件<span>为键盘打造的免费现场软件</span></a>"
+  },
+  "50390d48787f": {
+   "en": "<a href=\"cantabile-alternative.html\">Cantabile alternative<span>Setlists free, on any computer</span></a>",
+   "t": "<a href=\"cantabile-alternative.html\">Cantabile 替代软件<span>歌单免费，任何电脑都能用</span></a>"
+  },
+  "a7d7451fd226": {
+   "en": "<a href=\"carla-vs-gigchain-keys.html\">Carla vs GigChain Keys<span>Plugin host or live rig?</span></a>",
+   "t": "<a href=\"carla-vs-gigchain-keys.html\">Carla 与 GigChain Keys 对比<span>插件宿主还是现场演出软件？</span></a>"
+  },
+  "67bcc5276b68": {
+   "en": "How to Play VST Plugins Live Without a DAW (Free) | GigChain Keys",
+   "t": "不用 DAW，如何现场演奏 VST 插件（免费） | GigChain Keys"
+  },
+  "fcff5d328ec1": {
+   "en": "Play Kontakt, Arturia, Spitfire LABS, Surge XT, Vital and any VST3 or VST2 plugin live on stage from your MIDI keyboard, without a DAW: low latency, sounds per song, one press to change. Free.",
+   "t": "用你的 MIDI 键盘在舞台上现场演奏 Kontakt、Arturia、Spitfire LABS、Surge XT、Vital 以及任何 VST3 或 VST2 插件，无需 DAW：低延迟，每首歌的音色，一键切换。免费。"
+  },
+  "d944a7ae5c62": {
+   "en": "How to play VST plugins live without a DAW",
+   "t": "不用 DAW，如何现场演奏 VST 插件"
+  },
+  "eab965d0aaf6": {
+   "en": "Your plugins on stage from your MIDI keyboard: low latency, sounds per song, one press to change. Free.",
+   "t": "用你的 MIDI 键盘把插件带上舞台：低延迟，每首歌的音色，一键切换。免费。"
+  },
+  "6e43e7b909c6": {
+   "en": "Install a live VST host",
+   "t": "安装一款现场 VST 宿主"
+  },
+  "a6842ed1d321": {
+   "en": "Download and install GigChain Keys for Windows, Mac or Linux.",
+   "t": "下载并安装适用于 Windows、Mac 或 Linux 的 GigChain Keys。"
+  },
+  "aae273083e3e": {
+   "en": "Choose low-latency audio",
+   "t": "选择低延迟音频"
+  },
+  "90616972d76e": {
+   "en": "Pick your audio interface's ASIO driver on Windows (or Core Audio on Mac, JACK or PipeWire on Linux) and a buffer of 128 or 256 samples.",
+   "t": "在 Windows 上选择声卡的 ASIO 驱动（Mac 上用 Core Audio，Linux 上用 JACK 或 PipeWire），缓冲区设为 128 或 256 个采样。"
+  },
+  "9ec9822d5599": {
+   "en": "Scan your plugins",
+   "t": "扫描你的插件"
+  },
+  "8f32b130d55b": {
+   "en": "Let it scan your VST3 and VST2 folders, or add your own folders in Settings.",
+   "t": "让它扫描你的 VST3 和 VST2 文件夹，或者在设置里添加你自己的文件夹。"
+  },
+  "41635d946b50": {
+   "en": "Make a song and add sounds",
+   "t": "创建歌曲并添加音色"
+  },
+  "84c00d270569": {
+   "en": "Add a song, add your plugins to it as sounds, and layer or split them across the keyboard.",
+   "t": "添加一首歌，把你的插件作为音色加进去，然后在键盘上做叠层或分区。"
+  },
+  "70798c0fe1bc": {
+   "en": "Play in Perform mode",
+   "t": "在 Perform 模式下演奏"
+  },
+  "ec2a7c869635": {
+   "en": "Switch to Perform mode and change sounds with one press of a pad, footswitch or key.",
+   "t": "切换到 Perform 模式，用打击垫、踏板开关或琴键一键切换音色。"
+  },
+  "3bc09644a7ea": {
+   "en": "Play VST plugins live",
+   "t": "现场演奏 VST 插件"
+  },
+  "ccc41ff17c22": {
+   "en": "A DAW is built for recording: timelines, tracks, arm buttons. On stage you just want to press a key and hear your sound, then press one button and hear the next song's. A live VST host does exactly that, with less to go wrong.",
+   "t": "DAW 是为录音设计的：时间线、音轨、录音待命按钮。在舞台上，你只想按下琴键就听到自己的音色，再按一个按钮就听到下一首歌的音色。现场 VST 宿主做的正是这件事，而且出问题的地方更少。"
+  },
+  "8682f51ea600": {
+   "en": "Why not just use your DAW on stage?",
+   "t": "为什么不直接在舞台上用 DAW？"
+  },
+  "149753d358f8": {
+   "en": "<strong>Changing sounds is slow</strong>: selecting tracks and arming them mid-song is fiddly with one hand.",
+   "t": "<strong>切换音色很慢</strong>：在歌曲中途选音轨、开启录音待命，单手操作很麻烦。"
+  },
+  "f3684e49ca46": {
+   "en": "<strong>Every sound is always loaded and running</strong>, so the computer works harder and latency goes up.",
+   "t": "<strong>所有音色一直加载并运行着</strong>，所以电脑负担更重，延迟也会升高。"
+  },
+  "d43930e732e6": {
+   "en": "<strong>One wrong click</strong> (record, a moved region, a closed window) can stop the sound in the middle of a song.",
+   "t": "<strong>点错一下</strong>（录音、移动了片段、关掉了窗口）就可能在歌曲中途让声音停掉。"
+  },
+  "3b5e0733d7c7": {
+   "en": "A live host loads each song's sounds, switches between them with no gap, and shows a big, simple screen you can read from a stand.",
+   "t": "现场宿主会加载每首歌的音色，在它们之间无缝切换，并显示一个在谱架上也能看清的大而简洁的界面。"
+  },
+  "c16dfd1733eb": {
+   "en": "Step by step",
+   "t": "分步操作"
+  },
+  "5e0b4e6b19be": {
+   "en": "1. Install a live VST host",
+   "t": "1. 安装一款现场 VST 宿主"
+  },
+  "4c879720b279": {
+   "en": "This guide uses <a href=\"./\">GigChain Keys</a>: free and open source, on Windows, Mac and Linux. Get it from the <a href=\"./#download\">download page</a>.",
+   "t": "本指南使用 <a href=\"./\">GigChain Keys</a>：免费且开源，支持 Windows、Mac 和 Linux。请从<a href=\"./#download\">下载页面</a>获取。"
+  },
+  "e0a813d77125": {
+   "en": "2. Choose low-latency audio",
+   "t": "2. 选择低延迟音频"
+  },
+  "cf3aa7b2478e": {
+   "en": "Latency is the delay between pressing a key and hearing it. Under about 10 ms feels instant.",
+   "t": "延迟是指从按下琴键到听到声音之间的时间差。低于大约 10 毫秒，感觉就是即时的。"
+  },
+  "6d24ffd687a0": {
+   "en": "<strong>Windows:</strong> use your audio interface's <strong>ASIO</strong> driver if you have one. Without an interface, the normal Windows output works for practice.",
+   "t": "<strong>Windows：</strong>如果你有声卡，请使用它的 <strong>ASIO</strong> 驱动。没有声卡的话，Windows 自带的输出用来练习就够了。"
+  },
+  "d1c7d4d6c004": {
+   "en": "<strong>Mac:</strong> Core Audio works well out of the box.",
+   "t": "<strong>Mac：</strong>Core Audio 开箱即用，效果很好。"
+  },
+  "a55d30c70153": {
+   "en": "<strong>Linux:</strong> JACK or PipeWire.",
+   "t": "<strong>Linux：</strong>JACK 或 PipeWire。"
+  },
+  "a97a4692dc94": {
+   "en": "<strong>Buffer size:</strong> start at 256 samples; try 128 if your computer copes without crackles.",
+   "t": "<strong>缓冲区大小：</strong>从 256 个采样开始；如果电脑能不出爆音地应付，可以试试 128。"
+  },
+  "f0203e2e0d19": {
+   "en": "3. Scan your plugins",
+   "t": "3. 扫描你的插件"
+  },
+  "ab228d70463a": {
+   "en": "GigChain Keys finds VST3 and VST2 plugins in the usual folders, and you can add your own folders and rescan in Settings. Popular choices that work well live:",
+   "t": "GigChain Keys 会在常用文件夹里找到 VST3 和 VST2 插件，你也可以在设置里添加自己的文件夹并重新扫描。适合现场使用的热门插件："
+  },
+  "e8a8d3fc795c": {
+   "en": "<strong>Free:</strong> Spitfire LABS, Surge XT, Vital, Dexed, Decent Sampler (and Pianobook instruments), Arturia's free Analog Lab Intro.",
+   "t": "<strong>免费：</strong>Spitfire LABS、Surge XT、Vital、Dexed、Decent Sampler（以及 Pianobook 的乐器）、Arturia 的免费 Analog Lab Intro。"
+  },
+  "5847327113b2": {
+   "en": "<strong>Paid:</strong> Kontakt, Arturia V Collection and Analog Lab, Keyscape, Omnisphere, Pianoteq.",
+   "t": "<strong>付费：</strong>Kontakt、Arturia V Collection 和 Analog Lab、Keyscape、Omnisphere、Pianoteq。"
+  },
+  "a8e2334fdfd3": {
+   "en": "No plugins at all? GigChain Keys comes with its own grand and electric pianos, a supersaw synth, pads and a SoundFont player.",
+   "t": "一个插件都没有？GigChain Keys 自带三角钢琴和电钢琴、一个超级锯齿波合成器、铺底音色和 SoundFont 播放器。"
+  },
+  "4a46a1ae3c3a": {
+   "en": "4. Make a song and add its sounds",
+   "t": "4. 创建歌曲并添加它的音色"
+  },
+  "c8a7c9a12d5f": {
+   "en": "Add a song, then add sounds to it. Put two on together to <strong>layer</strong> them (piano plus pad), or give each a key range to <strong>split</strong> the keyboard (bass on the left, piano on the right). Each song keeps its own sounds, volumes and effects.",
+   "t": "添加一首歌，然后为它加入音色。同时打开两个音色就能<strong>叠层</strong>（钢琴加铺底），给每个音色分配一段琴键范围就能把键盘<strong>分区</strong>（左手贝斯，右手钢琴）。每首歌都会保存自己的音色、音量和效果器。"
+  },
+  "5a527cbdc498": {
+   "en": "5. Play in Perform mode",
+   "t": "5. 在 Perform 模式下演奏"
+  },
+  "23dc7723df64": {
+   "en": "GigChain Keys Perform mode: the song's sounds and chord chart, large for the stage",
+   "t": "GigChain Keys 的 Perform 模式：歌曲的音色和和弦谱，为舞台放大显示"
+  },
+  "4e6ea5110880": {
+   "en": "Perform mode shows the song, its sounds and its chord chart large enough to read on stage. Move to the next sound or song with a pad, footswitch, key, or a tap on the screen. The sound you're holding keeps ringing while the next one comes in.",
+   "t": "Perform 模式会把歌曲、它的音色和和弦谱显示得足够大，在舞台上也能看清。用打击垫、踏板开关、琴键或点一下屏幕，就能切到下一个音色或下一首歌。你按住的声音会一直延续，直到下一个音色进来。"
+  },
+  "26fefa33f9e4": {
+   "en": "Your plugins on stage, free. Windows, Mac and Linux.",
+   "t": "把你的插件免费带上舞台。支持 Windows、Mac 和 Linux。"
+  },
+  "4bfef632b0ca": {
+   "en": "Tips for the gig",
+   "t": "演出小贴士"
+  },
+  "ed6374938a50": {
+   "en": "<strong>Turn off Wi-Fi and updates</strong> during the show, and plug the laptop in.",
+   "t": "演出期间<strong>关掉 Wi-Fi 和系统更新</strong>，并给笔记本插上电源。"
+  },
+  "c11fe9dfe798": {
+   "en": "<strong>Use the Windows \"High performance\" power plan</strong> so the CPU doesn't slow down mid-song.",
+   "t": "<strong>使用 Windows 的“高性能”电源计划</strong>，这样处理器不会在歌曲中途降速。"
+  },
+  "7c0e3fb6b963": {
+   "en": "<strong>Heavy sample libraries</strong> (big Kontakt pianos) load faster from an SSD.",
+   "t": "<strong>体积大的采样音色库</strong>（大型 Kontakt 钢琴）从 SSD 加载更快。"
+  },
+  "21aceb1d91a3": {
+   "en": "<strong>Rehearse the changes</strong>: run the setlist in Perform mode once before the gig.",
+   "t": "<strong>排练切换</strong>：演出前在 Perform 模式下把歌单完整走一遍。"
+  }
+ }
+}

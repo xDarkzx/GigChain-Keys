@@ -21,6 +21,7 @@ import html
 import json
 import re
 import sys
+import urllib.parse
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
@@ -45,6 +46,14 @@ LANGUAGES = [
     ("zh-cn", "zh-Hans", "简体中文", "本页面也有简体中文版。", "查看中文版", "关闭"),
 ]
 FOLDERS = [lang[0] for lang in LANGUAGES]
+# The language menu's last item on a translated page: a wording that reads
+# wrong is reported as an issue, titled with its language.
+REPORT = {
+    "hi": "अनुवाद में गलती बताएँ", "pt-br": "Informar um erro de tradução", "es": "Informar un error de traducción",
+    "id": "Laporkan kesalahan terjemahan", "de": "Übersetzungsfehler melden", "fr": "Signaler une erreur de traduction",
+    "ru": "Сообщить об ошибке перевода", "ja": "翻訳の誤りを報告", "ko": "번역 오류 신고", "zh-cn": "报告翻译问题",
+}
+ISSUES = "https://github.com/xDarkzx/GigChain-Keys/issues/new"
 # The pages that are translated; the others (comparisons with other hosts,
 # for English searches) stay English, and translated pages link to them.
 TRANSLATED = ["index.html", "support.html", "mainstage-for-windows.html", "free-mainstage-alternatives.html",
@@ -470,6 +479,9 @@ def language_menu(page: str, folder: str | None) -> str:
             target = f"{up}{f}/{'' if page == 'index.html' else page}"
             current_attr = ' aria-current="true"' if f == folder else ""
             items.append(f'<li><a href="{target}" hreflang="{code}" lang="{code}"{current_attr}>{name}</a></li>')
+    if folder is not None:
+        title = urllib.parse.quote(f"Translation ({folder}, {page}): ")
+        items.append(f'<li class="lang-report"><a href="{ISSUES}?labels=translation&amp;title={title}">✎ {REPORT[folder]}</a></li>')
     return ('<details class="lang-menu"><summary aria-label="Language">🌐 <span>' + current + "</span></summary>"
             '<ul>' + "".join(items) + "</ul></details>")
 
@@ -524,6 +536,7 @@ STYLE = """<style id="lang-style">
 .lang-menu li a { display: block; padding: 7px 14px; text-decoration: none; color: inherit; }
 .lang-menu li a:hover, .lang-menu li a:focus-visible { background: rgba(255,255,255,.07); }
 .lang-menu li a[aria-current] { font-weight: 700; }
+.lang-menu li.lang-report { border-top: 1px solid var(--border, #33333a); margin-top: 4px; padding-top: 4px; font-size: 14px; opacity: .85; }
 .lang-offer { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; padding: 9px 16px;
   background: var(--panel, #1c1c20); border-bottom: 1px solid var(--border, #33333a); font-size: 15px; }
 .lang-offer a { font-weight: 700; }

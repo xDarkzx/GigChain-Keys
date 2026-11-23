@@ -74,11 +74,15 @@ English page.
 Written for the reader, not word for word, following
 [glossary.md](glossary.md): what stays in English (the terms keyboard
 players use as they are, in every country: VST, MIDI, setlist, plugin
-names), how each language addresses the reader, and its tone. Each
-translation is read back into English and compared with the original's
-meaning; a phrase whose meaning drifted is rewritten. Players can report
-a wording that reads wrong through the issue tracker ("Report a
-translation").
+names), how each language addresses the reader, and its tone.
+
+The first translations (November 2026) were written by the project's
+AI assistant to that glossary, and pass every check above. They have not
+yet been reviewed by a native speaker of each language. Until they are,
+every translated page's language menu ends with a link to report a
+wording that reads wrong (an issue labelled `translation`, titled with the
+language and the page). A fix changes that phrase in
+`site/i18n/<folder>.json` (`tools/site_i18n.py merge`) and nothing else.
 
 ## Not now
 
