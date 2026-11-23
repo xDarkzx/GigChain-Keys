@@ -10,6 +10,7 @@
 #include <crtdbg.h>
 #include <cstdlib>
 #include <initializer_list>
+#include <utility>
 
 using namespace Qt::StringLiterals;
 
@@ -66,6 +67,16 @@ void endQuietlyOnCrash()
         _CrtSetReportFile(type, _CRTDBG_FILE_STDERR);
     }
 #endif
+}
+
+bool processRunning(qint64 pid)
+{
+    if (pid <= 0 || std::cmp_greater(pid, MAXDWORD)) return false;
+    HANDLE process = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, static_cast<DWORD>(pid));
+    if (process == nullptr) return GetLastError() == ERROR_ACCESS_DENIED; // (there, but not ours to open)
+    const bool running = WaitForSingleObject(process, 0) == WAIT_TIMEOUT; // (signalled once it has ended)
+    CloseHandle(process);
+    return running;
 }
 
 QString programFileName(const QString& base)

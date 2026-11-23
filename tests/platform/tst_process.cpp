@@ -84,6 +84,26 @@ private slots:
         const int code = child.exitCode();
         QVERIFY2(code != 0 && code != 2 && code != 3, qPrintable(QString::number(code)));
     }
+
+    // Whether a process is still there (gck-ctl waits for the app's to end:
+    // an app still closing holds its single-instance lock, and the next start
+    // would hand over to it and end).
+    void aProcessIsRunningUntilItEnds()
+    {
+        QProcess child;
+        child.setProgram(QCoreApplication::applicationFilePath());
+        child.setArguments({u"--wait-a-while"_s});
+        child.start();
+        QVERIFY(child.waitForStarted(10'000));
+        const qint64 pid = child.processId();
+        QVERIFY(platform::processRunning(pid));
+        child.kill();
+        QVERIFY(child.waitForFinished(10'000));
+        QVERIFY(!platform::processRunning(pid));
+        QVERIFY(platform::processRunning(QCoreApplication::applicationPid()));
+        QVERIFY(!platform::processRunning(0));
+        QVERIFY(!platform::processRunning(-1));
+    }
 };
 
 int main(int argc, char** argv)
@@ -94,6 +114,10 @@ int main(int argc, char** argv)
         volatile std::uintptr_t nowhere = 0;
         // cppcheck-suppress nullPointer ; the crash is the point
         *reinterpret_cast<volatile int*>(nowhere) = 1; // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): the crash is the point
+        return 0;
+    }
+    if (std::ranges::any_of(arguments, [](const char* argument) { return std::string_view(argument) == "--wait-a-while"; })) {
+        QThread::sleep(60); // (ended by the test long before)
         return 0;
     }
     QCoreApplication app(argc, argv);

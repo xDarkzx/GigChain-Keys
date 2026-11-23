@@ -15,7 +15,8 @@ QString realtimePriorityAdvice(std::optional<int> limit)
     // (Short enough to be read whole in a message; the user guide says more.)
     return QCoreApplication::translate(
         "Audio", "This session's realtime priority limit is 0, so the audio (and Wine plugins above all) can drop "
-                 "out more often. Fix: sudo usermod -aG pipewire $USER (or -aG audio), then log in again");
+                 "out more often. Fix: sudo usermod -aG pipewire $USER (-aG audio if no pipewire group), "
+                 "then log in again");
 }
 
 } // namespace gigchain::platform

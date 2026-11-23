@@ -64,8 +64,10 @@ A version ships **every Monday** (New Zealand time). The week before it:
    **Unreleased** to the version and the date, `## [0.1.0] - 2026-10-20`, and
    start a new empty **Unreleased** above it. Write it for players: what they
    will notice, not how it was done.
-2. **Set the version** in `branding.cmake` (`PRODUCT_VERSION`) and commit both
-   files: `release: 0.1.0`.
+2. **Set the version** in `branding.cmake` (`PRODUCT_VERSION`), and in
+   [`CITATION.cff`](../CITATION.cff) set `version` to the same and
+   `date-released` to the release's date (the `citation_matches_version` test
+   fails until they match). Commit the three files: `release: 0.1.0`.
 3. **Build the Windows downloads** from that commit:
 
    ```powershell

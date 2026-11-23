@@ -96,8 +96,21 @@ void addMeasureCommands(DevControl& control)
     }
     const QString logFile = control.context().logFile;
 
-    control.add(u"mark"_s, u"mark: a place in the log and the messages shown (log, notices and wait take it)"_s,
-                [logFile, notices](const DevRequest&, const Reply& reply) {
+    control.add(u"mark"_s,
+                u"mark [launch]: a place in the log and the messages shown (log, notices and wait take it); "
+                u"launch: where this launch's lines begin (the log keeps earlier launches')"_s,
+                [logFile, notices](const DevRequest& request, const Reply& reply) {
+        if (argText(request, 0) == u"launch"_s) {
+            // The last start line ("<name> <version> starting; log: ...", main.cpp) is this launch's.
+            QFile file(logFile);
+            if (!file.open(QIODevice::ReadOnly)) return reply.fail(u"Could not read the log %1: %2"_s.arg(logFile, file.errorString()));
+            const QByteArray text = file.readAll();
+            const qsizetype at = text.lastIndexOf(" starting; log: ");
+            if (at < 0) return reply.fail(u"No launch in the log %1 (no \"starting; log:\" line)"_s.arg(logFile));
+            const qsizetype lineStart = text.lastIndexOf('\n', at) + 1; // (0 when it is the first line)
+            return reply.ok({{u"mark"_s, u"%1:0"_s.arg(lineStart)}}); // (the messages shown: all of this launch's)
+        }
+        if (!argText(request, 0).isEmpty()) return reply.fail(u"mark [launch]: not %1"_s.arg(argText(request, 0)));
         reply.ok({{u"mark"_s, u"%1:%2"_s.arg(QFileInfo(logFile).size()).arg(notices->size())}});
     });
     control.add(u"log"_s, u"log [mark] [pattern]: the log lines written since (those matching)"_s, [logFile](const DevRequest& request, const Reply& reply) {
@@ -106,7 +119,10 @@ void addMeasureCommands(DevControl& control)
         const QRegularExpression pattern(argText(request, 1));
         if (!pattern.isValid()) return reply.fail(u"Not a pattern: %1"_s.arg(pattern.errorString()));
         QStringList lines = logSince(logFile, mark->log);
-        lines.removeIf([&pattern](const QString& line) { return !pattern.match(line).hasMatch(); });
+        // (As wait: never the requests themselves, which quote this one's pattern.)
+        lines.removeIf([&pattern](const QString& line) {
+            return line.contains(u"Dev control: {"_s) || !pattern.match(line).hasMatch();
+        });
         constexpr qsizetype kMost = 2000;
         if (lines.size() > kMost) lines = lines.mid(lines.size() - kMost);
         reply.ok({{u"lines"_s, QJsonArray::fromStringList(lines)}});

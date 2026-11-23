@@ -102,7 +102,8 @@ Window {
                 running: toasts.visible && !hover.hovered
                 onTriggered: toasts.notifications.dismiss(toast.notificationId)
             }
-            onRepeatsChanged: lifetime.restart() // said again: its time starts over
+            // Said again: its time starts over (if it is counting: unseen, it still waits).
+            onRepeatsChanged: if (lifetime.running) lifetime.restart()
         }
     }
 }

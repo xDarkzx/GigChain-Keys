@@ -1601,6 +1601,8 @@ Window {
         auto* toasts = made->property("toasts").value<QQuickWindow*>();
         QVERIFY(owner != nullptr && toasts != nullptr);
         QVERIFY(!owner->isVisible());
+        QTest::qWait(ui::Notifications::shownFor(ui::Notifications::Info) / 2);
+        n.post(u"Said behind the splash"_s, ui::Notifications::Info); // said again: counted, still unseen
         QTest::qWait(ui::Notifications::shownFor(ui::Notifications::Info) + 1500);
         QCOMPARE(n.rowCount(), 1); // still owed: never seen
         QVERIFY(!toasts->isVisible());

@@ -173,6 +173,8 @@ private slots:
         QVERIFY2(advice.contains(u"limit"_s) && advice.contains(u"can drop out"_s), qPrintable(advice));
         QVERIFY2(!advice.contains(u"has no realtime priority"_s), qPrintable(advice));
         QVERIFY2(advice.contains(u"usermod -aG pipewire $USER"_s) && advice.contains(u"-aG audio"_s), qPrintable(advice));
+        // (audio only where there is no pipewire group: elsewhere, NixOS among them, it may grant nothing)
+        QVERIFY2(advice.contains(u"no pipewire group"_s), qPrintable(advice));
         // Read in a message at the window's corner: short enough to be whole there.
         QVERIFY2(advice.size() <= 200, qPrintable(u"%1 characters"_s.arg(advice.size())));
         QVERIFY2(advice.contains(u"pipewire"_s) && advice.contains(u"audio"_s), qPrintable(advice)); // the groups
