@@ -202,6 +202,14 @@ class Building(unittest.TestCase):
         self.assertIn('class="lang-menu"', english)
         self.assertIn('<a href="es/support.html" hreflang="es" lang="es">Español</a>', english)
 
+    def test_the_language_switch_runs_before_the_page_shows(self):
+        english = s.build_page(PAGE, "support.html", None, {})
+        head = english.split("</head>")[0]
+        self.assertIn("location.replace", head)  # (an English page takes a reader to their language)
+        self.assertIn('"pt-BR": {"url": "pt-br/support.html"', head)
+        self.assertIn('localStorage.getItem("gck-lang")', head)  # (a language they chose is kept)
+        self.assertNotIn("location.replace", english.split("</head>")[1])
+
     def test_a_page_only_in_english_gets_no_other_languages(self):
         english = s.build_page(PAGE, "cantabile-alternative.html", None, {})
         self.assertNotIn('hreflang="es"', english)

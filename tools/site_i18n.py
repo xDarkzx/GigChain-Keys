@@ -497,31 +497,52 @@ def offer_script(page: str, folder: str | None) -> str:
     offers["en"] = {"url": up + ("" if page == "index.html" else page) or "./", "text": "This page is also in English.",
                     "go": "Read in English", "close": "Close"}
     here = "en" if folder is None else next(l[1] for l in LANGUAGES if l[0] == folder)
+    # In <head>, so a reader taken to their language never sees the English first.
+    # - A language chosen in the menu (or the offer) is remembered and always kept.
+    # - No choice yet: an English page goes straight to the reader's own
+    #   language (the browser's first one the site has); a page in another
+    #   language (a link someone shared) stays, and offers theirs instead.
+    # Search engines read the English pages as they are (their browser is English).
     return (
         "<script>\n(function () {\n"
         f"  var offers = {json.dumps(offers, ensure_ascii=False)};\n"
         f"  var here = {json.dumps(here)};\n"
+        "  function main(tag) { return String(tag).toLowerCase().split(\"-\")[0]; }\n"
+        "  var chosen = null;\n"
+        "  try { chosen = localStorage.getItem(\"gck-lang\"); } catch (e) {}\n"
+        "  // (Every language link a reader clicks is their choice from then on.)\n"
+        "  document.addEventListener(\"click\", function (e) {\n"
+        "    var link = e.target.closest && e.target.closest(\".lang-menu a[hreflang], .lang-offer a[hreflang]\");\n"
+        "    if (link) try { localStorage.setItem(\"gck-lang\", link.getAttribute(\"hreflang\")); } catch (err) {}\n"
+        "  });\n"
+        "  if (chosen) {\n"
+        "    if (chosen !== here && offers[chosen]) location.replace(offers[chosen].url);\n"
+        "    return;\n"
+        "  }\n"
         "  var asked = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || \"\"]);\n"
         "  var want = null;\n"
         "  for (var i = 0; i < asked.length && !want; i++) {\n"
-        "    var tag = String(asked[i]).toLowerCase(), main = tag.split(\"-\")[0];\n"
-        "    if (main === here.toLowerCase().split(\"-\")[0]) return; // already in a language they read\n"
-        "    if (main === \"zh\") want = (tag.indexOf(\"tw\") < 0 && tag.indexOf(\"hk\") < 0 && tag.indexOf(\"hant\") < 0) ? \"zh-Hans\" : null;\n"
-        "    else if (main === \"pt\") want = \"pt-BR\";\n"
-        "    else for (var code in offers) if (code.toLowerCase().split(\"-\")[0] === main) want = code;\n"
+        "    var tag = String(asked[i]).toLowerCase(), m = main(tag);\n"
+        "    if (m === main(here)) return; // already in a language they read\n"
+        "    if (m === \"zh\") want = (tag.indexOf(\"tw\") < 0 && tag.indexOf(\"hk\") < 0 && tag.indexOf(\"hant\") < 0) ? \"zh-Hans\" : null;\n"
+        "    else if (m === \"pt\") want = \"pt-BR\";\n"
+        "    else for (var code in offers) if (main(code) === m) want = code;\n"
         "  }\n"
         "  if (!want || want === here) return;\n"
+        "  if (here === \"en\") { location.replace(offers[want].url); return; }\n"
         "  try { if (localStorage.getItem(\"gck-lang-offer\") === \"no\") return; } catch (e) {}\n"
-        "  var o = offers[want], bar = document.createElement(\"div\");\n"
-        "  bar.className = \"lang-offer\"; bar.setAttribute(\"lang\", want); bar.setAttribute(\"role\", \"region\");\n"
-        "  bar.setAttribute(\"aria-label\", o.text);\n"
-        "  var text = document.createElement(\"span\"); text.textContent = o.text;\n"
-        "  var go = document.createElement(\"a\"); go.href = o.url; go.textContent = o.go; go.hreflang = want;\n"
-        "  var close = document.createElement(\"button\"); close.type = \"button\"; close.textContent = \"×\";\n"
-        "  close.setAttribute(\"aria-label\", o.close);\n"
-        "  close.onclick = function () { bar.remove(); try { localStorage.setItem(\"gck-lang-offer\", \"no\"); } catch (e) {} };\n"
-        "  bar.appendChild(text); bar.appendChild(go); bar.appendChild(close);\n"
-        "  document.body.insertBefore(bar, document.body.firstChild);\n"
+        "  document.addEventListener(\"DOMContentLoaded\", function () {\n"
+        "    var o = offers[want], bar = document.createElement(\"div\");\n"
+        "    bar.className = \"lang-offer\"; bar.setAttribute(\"lang\", want); bar.setAttribute(\"role\", \"region\");\n"
+        "    bar.setAttribute(\"aria-label\", o.text);\n"
+        "    var text = document.createElement(\"span\"); text.textContent = o.text;\n"
+        "    var go = document.createElement(\"a\"); go.href = o.url; go.textContent = o.go; go.hreflang = want;\n"
+        "    var close = document.createElement(\"button\"); close.type = \"button\"; close.textContent = \"×\";\n"
+        "    close.setAttribute(\"aria-label\", o.close);\n"
+        "    close.onclick = function () { bar.remove(); try { localStorage.setItem(\"gck-lang-offer\", \"no\"); } catch (e) {} };\n"
+        "    bar.appendChild(text); bar.appendChild(go); bar.appendChild(close);\n"
+        "    document.body.insertBefore(bar, document.body.firstChild);\n"
+        "  });\n"
         "})();\n</script>\n"
     )
 
@@ -578,7 +599,7 @@ def build_page(source: str, page: str, folder: str | None, phrases: dict) -> str
     out = out.replace("</head>", head_extras(page, folder) + "\n</head>", 1)
     out = re.sub(r"(<header\b[^>]*>.*?)(</nav>)", lambda m: m.group(1) + language_menu(page, folder) + m.group(2), out,
                  count=1, flags=re.S)
-    out = out.replace("</body>", offer_script(page, folder) + "</body>", 1)
+    out = out.replace("</head>", offer_script(page, folder) + "</head>", 1)  # (before anything shows)
     return out
 
 
