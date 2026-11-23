@@ -279,6 +279,11 @@ def phrases_of(source: str) -> list[Phrase]:
                 scripts(child)
 
     scripts(tree.root)
+    # An attribute inside a phrase (a link's title in a sentence) is translated
+    # with that phrase: replaced once, never twice (overlapping replacements
+    # would shift the text after them).
+    blocks = [(p.start, p.end) for p in found if p.kind == "html"]
+    found = [p for p in found if p.kind != "attr" or not any(s <= p.start and p.end <= e for s, e in blocks)]
     found.sort(key=lambda p: p.start)
     return found
 

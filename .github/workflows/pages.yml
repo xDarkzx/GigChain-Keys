@@ -54,6 +54,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # (One publish at a time, whatever started it: Pages refuses a second
+    # while one is under way. Never cancelled midway.)
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write

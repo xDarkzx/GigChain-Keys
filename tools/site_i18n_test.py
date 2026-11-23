@@ -215,6 +215,20 @@ class Building(unittest.TestCase):
         self.assertNotIn('hreflang="es"', english)
         self.assertIn('hreflang="en"', english)
 
+    def test_an_attribute_inside_a_phrase_is_translated_with_it(self):
+        # (Its text is part of the sentence's translation: replaced once, never twice.)
+        page = PAGE.replace("<h1>Support the app</h1>",
+                            '<h1>Support the app</h1>\n<p>See <a href="support.html" title="Help">support</a>.</p>')
+        texts = s.page_phrases(page)
+        self.assertIn('See <a href="support.html" title="Help">support</a>.', texts)
+        self.assertNotIn("Help", texts)  # (not a phrase of its own)
+        phrases = phrases_for(page)
+        key = s.key_of('See <a href="support.html" title="Help">support</a>.')
+        phrases[key] = dict(phrases[key], t='Mira <a href="support.html" title="Ayuda de la app">el soporte</a>.')
+        self.assertEqual(s.problems_of("es", {s.key_of(t): s.tidy(t) for t in texts if not s.names_only(t)}, phrases), [])
+        out = s.build_page(page, "support.html", "es", phrases)
+        self.assertIn('<p>Mira <a href="support.html" title="Ayuda de la app">el soporte</a>.</p>', out)
+
     def test_a_missing_translation_stops_the_build(self):
         phrases = phrases_for(PAGE)
         phrases.pop(s.key_of("Support the app"))
