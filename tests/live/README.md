@@ -14,3 +14,11 @@ build\dev\gck-ctl run tests\live\issue-53-repeated-note.txt
 ```
 
 A file stops at the first command or check that fails, and says which.
+
+`tools\live-checks.ps1` runs every file here on Windows. Checks of what only
+Linux does are in [linux/](linux), run from the Linux dev build
+(`cmake --preset linux-dev`, then `cmake --build --preset linux-dev`):
+
+```bash
+~/.cache/gigchain/build/linux-dev/gck-ctl run tests/live/linux/issue-71-realtime-limit.txt
+```

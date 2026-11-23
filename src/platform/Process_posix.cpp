@@ -5,8 +5,11 @@
 #include <QProcess>
 #include <QUrl>
 
+#include <cerrno>
 #include <csignal>
 #include <initializer_list>
+#include <limits>
+#include <sys/types.h>
 #include <unistd.h>
 
 using namespace Qt::StringLiterals;
@@ -38,6 +41,13 @@ void endQuietlyOnCrash()
     action.sa_handler = &endNow;
     sigemptyset(&action.sa_mask);
     for (const int signal : {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT}) sigaction(signal, &action, nullptr);
+}
+
+bool processRunning(qint64 pid)
+{
+    if (pid <= 0 || pid > std::numeric_limits<pid_t>::max()) return false;
+    // Signal 0 only asks whether it is there (EPERM: there, but another user's).
+    return kill(static_cast<pid_t>(pid), 0) == 0 || errno == EPERM;
 }
 
 QString programFileName(const QString& base)

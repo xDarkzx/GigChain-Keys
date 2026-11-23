@@ -12,11 +12,11 @@ QString realtimePriorityAdvice(std::optional<int> limit)
     // before the user joined the group had none, and nothing said so).
     // (A risk, not a measurement: PipeWire can still get realtime threads
     // through RTKit; plugins running through Wine inherit the limit.)
+    // (Short enough to be read whole in a message; the user guide says more.)
     return QCoreApplication::translate(
-        "Audio", "This session's realtime priority limit is 0, so the audio, and plugins running through Wine "
-                 "(yabridge) above all, can drop out more often. Add your user to the pipewire group "
-                 "(sudo usermod -aG pipewire $USER), or, where there is no pipewire group, to the audio group "
-                 "(sudo usermod -aG audio $USER), then log out and log in again");
+        "Audio", "This session's realtime priority limit is 0, so the audio (and Wine plugins above all) can drop "
+                 "out more often. Fix: sudo usermod -aG pipewire $USER (-aG audio if no pipewire group), "
+                 "then log in again");
 }
 
 } // namespace gigchain::platform

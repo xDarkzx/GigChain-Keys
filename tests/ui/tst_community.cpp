@@ -75,6 +75,24 @@ private slots:
         QVERIFY(CommunityController::changesFor(kChangelog, u"9.9.9"_s).isEmpty());
     }
 
+    // Past twelve changes, the rest are counted, not left out without a word
+    // (0.12 has fifteen: the last fixes would not be seen).
+    void manyChangesSayHowManyMore()
+    {
+        const auto changelogOf = [](int count) {
+            QString changelog = u"## [1.0.0] - 2027-01-01 (alpha)\n\n### Fixed\n\n"_s;
+            for (int i = 1; i <= count; ++i) changelog += u"- Change %1.\n"_s.arg(i);
+            return changelog;
+        };
+        const QStringList many = CommunityController::changesFor(changelogOf(15), u"1.0.0"_s);
+        QCOMPARE(many.size(), 13);
+        QCOMPARE(many.at(11), u"Change 12."_s);
+        QVERIFY2(many.last().contains(u"3 more"_s) && many.last().contains(u"release notes"_s), qPrintable(many.last()));
+        const QStringList twelve = CommunityController::changesFor(changelogOf(12), u"1.0.0"_s);
+        QCOMPARE(twelve.size(), 12);
+        QCOMPARE(twelve.last(), u"Change 12."_s);
+    }
+
     // The app's own CHANGELOG is bundled and has this version's changes.
     void theBundledChangelogIsRead()
     {

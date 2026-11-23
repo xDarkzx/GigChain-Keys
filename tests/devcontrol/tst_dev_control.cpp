@@ -345,6 +345,25 @@ private slots:
         QVERIFY(never.value(u"error"_s).toString().contains(u"200 ms"_s));
     }
 
+    // `mark launch`: where this launch's lines begin (the log keeps earlier
+    // launches'), so a check reads only what this start wrote.
+    void aLaunchMarkLeavesOutEarlierLaunches()
+    {
+        qInfo("GigChain Keys 0.0.1 starting; log: an earlier launch");
+        qWarning("Earlier launch: a warning not to be found");
+        qInfo("GigChain Keys 0.0.2 starting; log: this launch");
+        qWarning("This launch: a warning to be found");
+        DevClient client(m_name);
+        const QJsonObject launch = client.ask(u"mark"_s, {u"launch"_s});
+        QVERIFY2(launch.value(u"ok"_s).toBool(), qPrintable(launch.value(u"error"_s).toString()));
+        const QString mark = launch.value(u"mark"_s).toString();
+        // (The control's own record of each request, which quotes the pattern, is never matched.)
+        QVERIFY(client.ask(u"log"_s, {mark, u"a warning not to be found"_s}).value(u"lines"_s).toArray().isEmpty());
+        QCOMPARE(client.ask(u"log"_s, {mark, u"a warning to be found"_s}).value(u"lines"_s).toArray().size(), 1);
+        QVERIFY(!client.ask(u"wait"_s, {u"a warning not to be found"_s, 200, mark}).value(u"ok"_s).toBool());
+        QVERIFY(client.ask(u"wait"_s, {u"a warning to be found"_s, 200, mark}).value(u"ok"_s).toBool());
+    }
+
     void noticesShowWhatThePlayerSaw()
     {
         DevClient client(m_name);

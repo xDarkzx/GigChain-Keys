@@ -84,7 +84,10 @@ function Save-Result([bool]$nothingToCheck) {
     if ($passed) { exit 0 } else { exit 1 }
 }
 
-if ($sources.Count -eq 0) {
+# (-Full always builds and runs every test: the release candidate is a clean
+# checkout of the release commit, with nothing uncommitted, and it once
+# passed here without building or testing anything.)
+if ($sources.Count -eq 0 -and -not $Full) {
     Add-Check 'changes' $true 'no source changes to check'
     Save-Result $true
 }

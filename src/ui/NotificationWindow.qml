@@ -5,8 +5,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // Messages for the user, at the bottom right of the main window, each in its
-// level's colour. Each goes by itself after its level's time (paused while
-// the mouse is on it), or with its close button. A window of its own, owned
+// level's colour. Each goes by itself after its level's time on screen
+// (paused while the mouse is on it), or with its close button. A window of its own, owned
 // by the main window: it shows above a plugin's window, and only above this
 // app.
 Window {
@@ -26,6 +26,10 @@ Window {
     // Shown while there is something to say (the model's count: the list's
     // own does not update while this window is hidden).
     visible: owner.visible && notifications.count > 0
+    // Above the main window when it shows up with a message waiting (at
+    // start, the main window is brought to the front after this one shows;
+    // not every Linux window manager keeps an owned window above its owner).
+    onVisibleChanged: if (visible) Qt.callLater(raise)
 
     ListView {
         id: list
@@ -70,12 +74,13 @@ Window {
 
                 Label {
                     id: message
+                    objectName: "notificationText"
                     Layout.fillWidth: true
                     text: toast.repeats > 1 ? qsTr("%1  (×%2)").arg(toast.text).arg(toast.repeats) : toast.text
                     color: Theme.text
                     font.pixelSize: Theme.fontSize
                     wrapMode: Text.Wrap
-                    maximumLineCount: 3
+                    maximumLineCount: 5 // (a message with what to do about it, read whole)
                     elide: Text.ElideRight
                 }
                 StageButton {
@@ -91,10 +96,14 @@ Window {
             Timer {
                 id: lifetime
                 interval: toasts.notifications.shownFor(toast.level)
-                running: !hover.hovered // read at leisure; starts over when the mouse leaves
+                // Read at leisure: starts over when the mouse leaves, and
+                // counts only once it can be seen (a message said at start,
+                // behind the splash, waits for the main window).
+                running: toasts.visible && !hover.hovered
                 onTriggered: toasts.notifications.dismiss(toast.notificationId)
             }
-            onRepeatsChanged: lifetime.restart() // said again: its time starts over
+            // Said again: its time starts over (if it is counting: unseen, it still waits).
+            onRepeatsChanged: if (lifetime.running) lifetime.restart()
         }
     }
 }

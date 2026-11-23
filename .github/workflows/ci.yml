@@ -6,6 +6,10 @@ name: CI
   pull_request:
     branches: [main]
 
+# Reads the code only (caches and artifacts use their own tokens).
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     # GigChain Keys is Windows-first (WASAPI/ASIO, VST3 HWND editors); the Mac

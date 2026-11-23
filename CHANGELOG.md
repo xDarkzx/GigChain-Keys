@@ -55,6 +55,10 @@ Downloads for every version are on the
 
 ### Fixed
 
+- **Messages from the start are seen.** What the app had to say while it was
+  starting (no audio output, a crash last time) went by behind the splash
+  screen, unseen. Each message now stays its full time once the main window
+  is up.
 - **Linux, JACK: the app no longer hangs at start** (or on a panic, or when
   a keyboard is plugged in) when PipeWire runs at another buffer size than
   the one asked for. The audio now stops at once instead of waiting for

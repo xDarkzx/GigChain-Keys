@@ -8,6 +8,10 @@ name: Mac
   push:
     tags: ["v*"]
 
+# Reads the code only (caches and artifacts use their own tokens).
+permissions:
+  contents: read
+
 jobs:
   mac:
     runs-on: macos-15

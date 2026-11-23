@@ -164,8 +164,8 @@ plugin. Needs one engine call added: inject a raw message with its source.
 
 | Command | Answers |
 | --- | --- |
-| `mark` | a position in the log and the messages shown |
-| `log [since mark] [match]` | the log lines written since, optionally only those matching |
+| `mark [launch]` | a position in the log and the messages shown; `launch`: where this launch's lines begin (the log keeps earlier launches') |
+| `log [since mark] [match]` | the log lines written since, optionally only those matching (never the control's own record of a request) |
 | `notices [since mark]` | the messages and warnings the player saw (toasts, banners) |
 | `wait <match> <ms>` | waits until a log line or notice matches, or says it never came |
 

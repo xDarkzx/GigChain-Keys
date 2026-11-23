@@ -44,6 +44,11 @@ void quietChildProcess(QProcess& process);
 // with no error dialog and no debugger offered (nobody would answer them).
 void endQuietlyOnCrash();
 
+// Whether process `pid` is still running (false for 0 or less). An app that
+// has said goodbye may still be closing: what is waited on before starting it
+// again.
+[[nodiscard]] bool processRunning(qint64 pid);
+
 // A program's file name here ("<base>.exe" on Windows, "<base>" elsewhere).
 [[nodiscard]] QString programFileName(const QString& base);
 

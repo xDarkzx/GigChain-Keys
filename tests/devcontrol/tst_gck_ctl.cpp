@@ -152,6 +152,29 @@ private slots:
         QVERIFY(!quitAsked);
     }
 
+    // quit returns once the app's process has ended, not when it answers: an
+    // app still closing holds its single-instance lock, so a start right
+    // after would hand over to it and end (seen in #71's live checks).
+    void quitWaitsForTheProcessToEnd()
+    {
+        QProcess app; // (stands in for the app: ended a while after it answers quit)
+#ifdef Q_OS_WIN
+        app.start(u"ping"_s, {u"-n"_s, u"60"_s, u"127.0.0.1"_s});
+#else
+        app.start(u"sleep"_s, {u"60"_s});
+#endif
+        QVERIFY(app.waitForStarted(5000));
+        const qint64 pid = app.processId();
+        m_control->add(u"pid"_s, u"pid"_s, [pid](const DevRequest&, const Reply& reply) { reply.ok({{u"pid"_s, pid}}); });
+        m_control->add(u"quit"_s, u"quit"_s, [&app](const DevRequest&, const Reply& reply) {
+            reply.ok();
+            QTimer::singleShot(1500, &app, [&app] { app.kill(); });
+        });
+        const Run quit = run({u"--socket"_s, m_name, u"quit"_s, u"discard"_s});
+        QVERIFY2(quit.code == 0, qPrintable(quit.output));
+        QVERIFY2(!platform::processRunning(pid), "gck-ctl quit returned while the app's process was still running");
+    }
+
     // A file that cannot be read says why.
     void aMissingCommandFileSaysWhy()
     {

@@ -4,6 +4,7 @@
 //   gck-ctl run <file>                               one command a line (# comments); stops at the first error
 //   gck-ctl start [setlist]                          starts the dev app next to it with --dev-control
 //                                                    (start and restart: the app's own socket only, no --socket)
+//   gck-ctl quit [discard]                           the app's quit, returning once its process has ended
 //   gck-ctl kill                                     ends the app at once (as a player's force quit)
 //   gck-ctl kill-at <pattern> [ms]                   ends it the moment its log shows a matching line
 //   gck-ctl restart [setlist]                        quits it (unsaved changes dropped; else kills it) and starts it again
@@ -203,13 +204,33 @@ int start(const QString& socket, const QString& setlist)
     return print(Answer{.code = kDone, .json = QJsonObject{{u"ok"_s, true}, {u"pid"_s, pid}}});
 }
 
+// Until process `pid` has ended: an app that stopped answering may still be
+// closing, holding its single-instance lock (a start then hands over to it).
+bool waitForEnd(qint64 pid, int ms)
+{
+    return waitUntil([pid] { return !platform::processRunning(pid); }, ms);
+}
+
 int kill(const QString& socket)
 {
     const Answer pid = ask(socket, u"pid"_s);
     if (pid.code != kDone) return print(pid);
-    if (!killProcess(pid.json.value(u"pid"_s).toInteger())) return said(kFailed, u"Could not end process %1"_s.arg(pid.json.value(u"pid"_s).toInteger()));
-    waitUntil([&socket] { return !running(socket); }, 10'000);
-    return said(kDone, u"Ended process %1"_s.arg(pid.json.value(u"pid"_s).toInteger()));
+    const qint64 process = pid.json.value(u"pid"_s).toInteger();
+    if (!killProcess(process)) return said(kFailed, u"Could not end process %1"_s.arg(process));
+    if (!waitForEnd(process, 10'000)) return said(kFailed, u"Process %1 was ended but is still there after 10 s"_s.arg(process));
+    return said(kDone, u"Ended process %1"_s.arg(process));
+}
+
+// The app's quit, returning once its process has ended.
+int quit(const QString& socket, const QJsonArray& args)
+{
+    const Answer pid = ask(socket, u"pid"_s);
+    if (pid.code != kDone) return print(pid);
+    const qint64 process = pid.json.value(u"pid"_s).toInteger();
+    const Answer quitting = ask(socket, u"quit"_s, args);
+    if (quitting.code != kDone) return print(quitting); // (unsaved changes, say: it stays)
+    if (!waitForEnd(process, 15'000)) return said(kFailed, u"The app said it would quit, but process %1 is still running after 15 s"_s.arg(process));
+    return print(quitting);
 }
 
 // Ends the app the moment its log shows a line matching `pattern` (a plugin
@@ -262,9 +283,10 @@ int restart(const QString& socket, const QString& setlist)
         if (pid.code != kDone) return print(pid);
         const qint64 process = pid.json.value(u"pid"_s).toInteger();
         (void)ask(socket, u"quit"_s, QJsonArray{u"discard"_s}, kQuick); // (unsaved changes dropped, as ending it would)
-        if (!waitUntil([&socket] { return !running(socket); }, 15'000)) {
+        // (Its process gone, not only its control: still closing, it holds the single-instance lock.)
+        if (!waitForEnd(process, 15'000)) {
             if (!killProcess(process)) return said(kFailed, u"The app did not quit, and process %1 could not be ended"_s.arg(process));
-            if (!waitUntil([&socket] { return !running(socket); }, 5'000)) return said(kFailed, u"Process %1 was ended but its control still answers"_s.arg(process));
+            if (!waitForEnd(process, 5'000)) return said(kFailed, u"Process %1 was ended but is still there after 5 s"_s.arg(process));
         }
     }
     return start(socket, setlist);
@@ -319,6 +341,11 @@ int perform(const QString& socket, const QStringList& words)
     if (cmd == u"kill-at"_s) return killAt(socket, first, words.size() > 2 ? words.at(2).toInt() : 60'000, words.mid(3));
     if (cmd == u"expect"_s) return expect(words);
     if (cmd == u"restart"_s) return restart(socket, first);
+    if (cmd == u"quit"_s) {
+        QJsonArray args;
+        for (qsizetype i = 1; i < words.size(); ++i) args.append(jsonArg(words.at(i)));
+        return quit(socket, args);
+    }
     if (cmd == u"sleep"_s) {
         QThread::msleep(static_cast<unsigned long>(std::clamp(first.toInt(), 0, 600'000)));
         return kDone;
