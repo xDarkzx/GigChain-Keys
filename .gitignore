@@ -6,3 +6,5 @@ CMakeUserPresets.json
 *.user
 # Mac disk images downloaded from CI (tools/package-mac.sh makes them)
 *.dmg
+# Python's compiled copies (tools/site_i18n.py and its tests)
+__pycache__/
