@@ -394,7 +394,8 @@ def problems_of(folder: str, wanted: dict[str, str], phrases: dict) -> list[str]
         for name in KEEP:
             if name in _plain(english) and name not in _plain(translated):
                 problems.append(f"{folder}: '{name}' is missing: {english[:60]} -> {translated[:60]}")
-        if tidy(translated) == english and LETTER.search(_only_words(english)):
+        # (Marked "same": the same word in that language on purpose, Spanish "No".)
+        if tidy(translated) == english and LETTER.search(_only_words(english)) and not entry.get("same"):
             problems.append(f"{folder}: left in English: {english[:90]}")
     for key, entry in phrases.items():
         if key not in wanted:
@@ -405,11 +406,15 @@ def problems_of(folder: str, wanted: dict[str, str], phrases: dict) -> list[str]
 def _only_words(text: str) -> str:
     """What is left of a phrase without the names that are never translated."""
     plain = _plain(text)
+    names: list[str] = []
     for name in KEEP + ["VST", "VST2", "Rhodes", "Wurlitzer", "OTT", "Squash", "Enhance", "Sustain Pads", "AppImage",
                         "Surge XT", "Vital", "Dexed", "Arturia", "Analog Lab", "Kontakt", "Keyscape", "SF2",
                         "SoundFont", "PipeWire", "JACK", "ASIO", "WASAPI", "REAPER", "Ableton Live", "Logic",
                         "Gig Performer", "Cantabile", "Carla", "Camelot", "GitHub Sponsors", "Apple Silicon",
-                        "Ubuntu", "Debian", "Mint", "Fedora", "Arch", "MB", "GB", "Mac"]:
+                        "Ubuntu", "Debian", "Mint", "Fedora", "Arch", "MB", "GB", "Mac", "Pop!_OS", "Audio Units",
+                        "Cantabile Lite", "Element", "SoundFonts", "Loop station", "Setlists", ".deb"]:
+        names.append(name)
+    for name in sorted(names, key=len, reverse=True):  # (longest first: "Cantabile Lite" before "Cantabile")
         plain = plain.replace(name, " ")
     return plain
 
@@ -620,13 +625,19 @@ def merge(folder: str, translations_file: Path) -> int:
     phrases = load(folder)
     unknown = [k for k in given if k not in wanted]
     if unknown:
-        raise SystemExit(f"{folder}: {len(unknown)} key(s) belong to no phrase: {unknown[:5]}")
+        print(f"{folder}: left out {len(unknown)} key(s) no phrase needs: {unknown[:8]}")
     for key, text in given.items():
-        phrases[key] = {"en": wanted[key], "t": text}
+        if key not in wanted:
+            continue
+        # (A translation given as {"t": ..., "same": true}: the same as the English on purpose.)
+        if isinstance(text, dict):
+            phrases[key] = {"en": wanted[key], "t": text["t"], **({"same": True} if text.get("same") else {})}
+        else:
+            phrases[key] = {"en": wanted[key], "t": text}
     ordered = {k: phrases[k] for k in wanted if k in phrases}
     I18N.mkdir(exist_ok=True)
-    (I18N / f"{folder}.json").write_text(
-        json.dumps({"language": folder, "phrases": ordered}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    with open(I18N / f"{folder}.json", "w", encoding="utf-8", newline="\n") as out:  # (\n on Windows too)
+        out.write(json.dumps({"language": folder, "phrases": ordered}, ensure_ascii=False, indent=1) + "\n")
     return len(given)
 
 
