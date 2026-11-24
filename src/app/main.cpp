@@ -4,6 +4,7 @@
 #include "SettingsController.h"
 #include "CrashReports.h"
 #include "FreezeWatchdog.h"
+#include "Language.h"
 #include "SettingsMigration.h"
 #include "SingleInstance.h"
 #include "StageQuips.h"
@@ -24,6 +25,7 @@
 
 #include <QElapsedTimer>
 #include <QGuiApplication>
+#include <QLocale>
 #include <QLoggingCategory>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
@@ -127,6 +129,18 @@ int runApp(int argc, char** argv)
     for (const QString& report : lastCrash) qCWarning(lcApp).noquote() << "The last run crashed; report:" << report;
     const ui::FreezeWatchdog watchdog; // logs any moment the window stops responding
     ui::carryOverPreviousSettings(settings); // after a rename: nothing to set up again
+
+    // The language, before any text is shown (the splash's included): the
+    // player's choice in Settings > General, else the computer's (docs/i18n/app.md).
+    // It stays for the whole run; a failure is logged and the app speaks English.
+    ui::Language language;
+    if (const QString code = ui::Language::resolve(settings.value(ui::Language::kSettingKey).toString(),
+                                                   QLocale().uiLanguages());
+        !code.isEmpty()) {
+        if (auto installed = language.install(code); !installed) {
+            qCWarning(lcApp).noquote() << installed.error().message; // (installed: Language logs it)
+        }
+    }
 
     // Splash first: opening audio, scanning plugins and loading the last
     // setlist's sounds all happen before the main window appears.

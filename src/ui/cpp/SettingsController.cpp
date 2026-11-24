@@ -2,6 +2,7 @@
 
 #include "DocumentController.h"
 #include "KeyboardTeaching.h"
+#include "Language.h"
 
 #include "gigchain/core/Limits.h"
 #include "gigchain/engine/IEngine.h"
@@ -12,6 +13,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
+#include <QLocale>
 #include <QLoggingCategory>
 #include <QPointer>
 #include <QSettings>
@@ -199,7 +201,8 @@ QString driverTitle(engine::AudioDriver driver)
 
 SettingsController::SettingsController(engine::IEngine& engine, DocumentController& document, QSettings& settings,
                                        QObject* parent)
-    : QObject(parent), m_engine(engine), m_document(document), m_settings(settings)
+    : QObject(parent), m_engine(engine), m_document(document), m_settings(settings),
+      m_language(settings.value(Language::kSettingKey).toString()), m_languageAtStart(m_language)
 {
     // Pedals and pads work from the first song.
     m_engine.setControlTriggers(savedControls(m_settings));
@@ -281,6 +284,7 @@ void SettingsController::load()
     m_error.clear();
     m_reopenLast = m_settings.value(DocumentController::reopenLastSetlistKey(), false).toBool();
     m_startInPerform = m_settings.value(kStartInPerformKey, false).toBool();
+    m_language = m_settings.value(Language::kSettingKey).toString();
     m_tuningHz = savedTuning(m_settings);
     m_globalTranspose = m_engine.globalTranspose();
     m_autosaveMinutes = savedAutosave(m_settings);
@@ -617,6 +621,30 @@ void SettingsController::setStartInPerformMode(bool perform)
     if (m_startInPerform == perform) return;
     m_startInPerform = perform;
     emit changed();
+}
+
+void SettingsController::setLanguage(const QString& code)
+{
+    const bool known = code.isEmpty() || code == u"en"_s
+                       || std::ranges::any_of(Language::available(), [&code](const Language::Info& l) { return l.code == code; });
+    if (!known || code == m_language) return;
+    m_language = code;
+    emit changed();
+}
+
+QVariantList SettingsController::languages()
+{
+    // The computer's first, then English, then each language named in itself.
+    QVariantList list{QVariantMap{{u"code"_s, QString()}, {u"name"_s, tr("The computer's language")}},
+                      QVariantMap{{u"code"_s, u"en"_s}, {u"name"_s, u"English"_s}}};
+    for (const Language::Info& l : Language::available()) list << QVariantMap{{u"code"_s, l.code}, {u"name"_s, l.name}};
+    return list;
+}
+
+bool SettingsController::languageNeedsRestart() const
+{
+    const QStringList computer = QLocale().uiLanguages();
+    return Language::resolve(m_language, computer) != Language::resolve(m_languageAtStart, computer);
 }
 
 void SettingsController::setTuningHz(double hz)
@@ -984,6 +1012,7 @@ void SettingsController::resetToDefaults()
     m_midiTouched = true;
     m_reopenLast = false;
     m_startInPerform = false;
+    m_language.clear(); // the computer's
     m_tuningHz = kDefaultTuningHz;
     m_autosaveMinutes = kDefaultAutosave;
     m_dropoutWarnings = true;
@@ -1064,6 +1093,7 @@ bool SettingsController::apply()
 
     m_settings.setValue(DocumentController::reopenLastSetlistKey(), m_reopenLast);
     m_settings.setValue(kStartInPerformKey, m_startInPerform);
+    m_settings.setValue(Language::kSettingKey, m_language); // ("" kept too: the installer leaves a choice alone)
     m_engine.setTuning(m_tuningHz);
     m_settings.setValue(kTuningKey, m_tuningHz);
     m_document.setAutosaveMinutes(m_autosaveMinutes);

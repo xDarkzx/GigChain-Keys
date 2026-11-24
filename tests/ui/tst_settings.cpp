@@ -1,5 +1,6 @@
 #include "DocumentController.h"
 #include "InputPermission.h"
+#include "Language.h"
 #include "SettingsController.h"
 #include "SettingsMigration.h"
 
@@ -249,6 +250,37 @@ private slots:
         QVERIFY(again.reopenLastSetlist());
         again.resetToDefaults();
         QVERIFY(!again.reopenLastSetlist());
+    }
+
+    void theLanguageIsChosenForTheNextStart()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QCOMPARE(settings.language(), QString()); // the computer's, until chosen
+        const QVariantList choices = SettingsController::languages();
+        QCOMPARE(choices.size(), 2 + static_cast<qsizetype>(Language::available().size()));
+        QCOMPARE(choices.at(0).toMap().value(u"code"_s).toString(), QString());
+        QCOMPARE(choices.at(1).toMap().value(u"code"_s).toString(), u"en"_s);
+        QCOMPARE(choices.at(2).toMap().value(u"code"_s).toString(), Language::available().front().code);
+        settings.setLanguage(u"xx"_s);
+        QCOMPARE(settings.language(), QString()); // not one the app has: ignored
+        settings.setLanguage(u"de"_s);
+        QVERIFY(!m_settings->contains(Language::kSettingKey)); // nothing before OK
+        QVERIFY(settings.apply());
+        QCOMPARE(m_settings->value(Language::kSettingKey).toString(), u"de"_s);
+
+        // Started in English: choosing German shows at the next start, choosing English again does not.
+        m_settings->setValue(Language::kSettingKey, u"en"_s);
+        SettingsController english(*m_engine, *m_doc, *m_settings);
+        english.load();
+        QCOMPARE(english.language(), u"en"_s);
+        QVERIFY(!english.languageNeedsRestart());
+        english.setLanguage(u"de"_s);
+        QVERIFY(english.languageNeedsRestart());
+        english.setLanguage(u"en"_s);
+        QVERIFY(!english.languageNeedsRestart());
+        english.resetToDefaults();
+        QCOMPARE(english.language(), QString());
     }
 
     void safetyLimiterIsOnAtMinusOneUntilChanged()
@@ -545,6 +577,19 @@ private slots:
         previous.setValue(u"audio/bufferFrames"_s, 512);
         QVERIFY(!carryOverSettings(previous, *m_settings));
         QCOMPARE(m_settings->value(u"audio/bufferFrames"_s).toInt(), 128);
+    }
+
+    // The installer writes only the language it spoke: the earlier name's
+    // settings still come across, and the language stays.
+    void previousSettingsComeAcrossTheInstallersLanguage()
+    {
+        QSettings previous(m_dir->filePath(u"previous.ini"_s), QSettings::IniFormat);
+        previous.setValue(u"audio/bufferFrames"_s, 128);
+        m_settings->setValue(Language::kSettingKey, u"de"_s);
+
+        QVERIFY(carryOverSettings(previous, *m_settings));
+        QCOMPARE(m_settings->value(u"audio/bufferFrames"_s).toInt(), 128);
+        QCOMPARE(m_settings->value(Language::kSettingKey).toString(), u"de"_s);
     }
 
     // The Perform view's chart size (A−/A+): kept at once, remembered at the
