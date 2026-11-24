@@ -2586,6 +2586,14 @@ Tapez-les ou collez-les dans l’onglet Grille.</translation>
         <translation>…et passer directement en Live</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>Langue</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>La nouvelle langue s’affiche au prochain démarrage de %1.</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>Enregistrement</translation>
     </message>
@@ -4913,6 +4921,10 @@ Tapez-les ou collez-les dans l’onglet Grille.</translation>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>Impossible d’ouvrir le dossier de sauvegarde %1</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>La langue de l’ordinateur</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

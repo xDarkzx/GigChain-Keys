@@ -2552,6 +2552,14 @@ Type or paste them in the Chart tab.</source>
         <translation>…и сразу в режим «Сцена»</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>Язык</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>Новый язык появится при следующем запуске %1.</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>Сохранение</translation>
     </message>
@@ -4846,6 +4854,10 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>Не удалось открыть папку резервных копий %1</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>Язык компьютера</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

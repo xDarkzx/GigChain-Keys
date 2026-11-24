@@ -2560,6 +2560,14 @@ Type or paste them in the Chart tab.</source>
         <translation>…そのままパフォームへ</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>言語</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>新しい言語は次回 %1 を起動したときに表示されます。</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>保存</translation>
     </message>
@@ -4852,6 +4860,10 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>バックアップ・フォルダー %1 を開けませんでした</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>コンピューターの言語</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

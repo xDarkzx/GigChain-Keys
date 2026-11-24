@@ -117,6 +117,27 @@ StageDialog {
                             onToggled: dialog.settings.startInPerformMode = checked
                             focusPolicy: Qt.NoFocus
                         }
+                        SettingsRow {
+                            label: qsTr("Language")
+                            StageComboBox {
+                                objectName: "languageBox"
+                                implicitWidth: 260
+                                // [{code, name}]: the computer's, English, then each language in its own words.
+                                model: dialog.settings.languages
+                                textRole: "name"
+                                currentIndex: dialog.settings.languages.findIndex(l => l.code === dialog.settings.language)
+                                onActivated: (i) => dialog.settings.language = dialog.settings.languages[i].code
+                            }
+                        }
+                        Label {
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            visible: dialog.settings.languageNeedsRestart
+                            text: qsTr("The new language shows the next time %1 starts.").arg(Branding.name)
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
 
                         SettingsSection { title: qsTr("Saving") }
                         SettingsRow {

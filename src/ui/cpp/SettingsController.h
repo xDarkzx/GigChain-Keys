@@ -59,6 +59,12 @@ class SettingsController : public QObject
     Q_PROPERTY(bool reopenLastSetlist READ reopenLastSetlist WRITE setReopenLastSetlist NOTIFY changed)
     // ... and go straight into Perform with it (MainStage's "in Perform mode").
     Q_PROPERTY(bool startInPerformMode READ startInPerformMode WRITE setStartInPerformMode NOTIFY changed)
+    // General: the language the app speaks ("" the computer's, "en" English,
+    // or a Language code), from the next start; the choices: [{code, name}].
+    Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY changed)
+    Q_PROPERTY(QVariantList languages READ languages CONSTANT)
+    // The language chosen is not the one the app speaks now: it shows at the next start.
+    Q_PROPERTY(bool languageNeedsRestart READ languageNeedsRestart NOTIFY changed)
     // General: A4 for the app's own instruments, 415.3-466.2 Hz (440: standard).
     Q_PROPERTY(double tuningHz READ tuningHz WRITE setTuningHz NOTIFY changed)
     // The whole rig's transpose, -24..24 semitones on top of each channel's
@@ -146,6 +152,10 @@ public:
     void setStartInPerformMode(bool perform);
     // Saved: the last setlist opens straight into Perform (main.cpp asks at start).
     [[nodiscard]] static bool startInPerform(const QSettings& settings);
+    [[nodiscard]] QString language() const { return m_language; }
+    void setLanguage(const QString& code); // not one of `languages`: ignored
+    [[nodiscard]] static QVariantList languages();
+    [[nodiscard]] bool languageNeedsRestart() const;
     [[nodiscard]] double tuningHz() const { return m_tuningHz; }
     void setTuningHz(double hz);
     [[nodiscard]] int globalTranspose() const { return m_globalTranspose; }
@@ -271,6 +281,8 @@ private:
     bool m_midiTouched = false;           // changed on this page since load()
     bool m_reopenLast = false;
     bool m_startInPerform = false;
+    QString m_language;        // as chosen on the page
+    QString m_languageAtStart; // the saved choice the app started with
     double m_tuningHz = 440.0;
     int m_globalTranspose = 0;
     int m_autosaveMinutes = 5;

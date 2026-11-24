@@ -2603,6 +2603,14 @@ Tipp sie im Tab Chart ein oder füge sie ein.</translation>
         <translation>…und direkt in den Live-Modus</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>Sprache</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>Die neue Sprache erscheint beim nächsten Start von %1.</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>Speichern</translation>
     </message>
@@ -4939,6 +4947,10 @@ Tipp sie im Tab Chart ein oder füge sie ein.</translation>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>Der Backup-Ordner %1 konnte nicht geöffnet werden</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>Die Sprache des Computers</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

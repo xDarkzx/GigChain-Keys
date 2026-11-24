@@ -2677,6 +2677,14 @@ Type or paste them in the Chart tab.</source>
         <translation>…और सीधे Perform में</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>भाषा</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>नई भाषा अगली बार %1 शुरू होने पर दिखेगी।</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>सहेजना</translation>
     </message>
@@ -5076,6 +5084,10 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>Backup folder %1 नहीं खुल सका</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>कंप्यूटर की भाषा</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

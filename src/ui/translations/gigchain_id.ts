@@ -2618,6 +2618,14 @@ Ketik atau tempel di tab Chart.</translation>
         <translation>…dan langsung ke Tampil</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>Bahasa</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>Bahasa baru muncul saat %1 dibuka lagi.</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>Penyimpanan</translation>
     </message>
@@ -4960,6 +4968,10 @@ Ketik atau tempel di tab Chart.</translation>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>Tidak bisa membuka folder cadangan %1</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>Bahasa komputer</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

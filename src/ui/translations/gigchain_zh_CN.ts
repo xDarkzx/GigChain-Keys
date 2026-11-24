@@ -2550,6 +2550,14 @@ Type or paste them in the Chart tab.</source>
         <translation>…并直接进入演出模式</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>语言</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>新语言将在下次启动 %1 时显示。</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>保存</translation>
     </message>
@@ -4842,6 +4850,10 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>无法打开备份文件夹 %1</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>电脑的语言</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

@@ -2550,6 +2550,14 @@ Type or paste them in the Chart tab.</source>
         <translation>…그리고 바로 공연 모드로</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>언어</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>새 언어는 다음에 %1을(를) 시작할 때 표시됩니다.</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>저장</translation>
     </message>
@@ -4842,6 +4850,10 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>백업 폴더 %1을(를) 열 수 없습니다</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>컴퓨터 언어</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

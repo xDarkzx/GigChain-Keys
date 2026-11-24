@@ -2570,6 +2570,14 @@ Escríbelos o pégalos en la pestaña Chart.</translation>
         <translation>…e ir directo a En vivo</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>Idioma</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>El nuevo idioma aparece la próxima vez que se abra %1.</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>Guardado</translation>
     </message>
@@ -4885,6 +4893,10 @@ Escríbelos o pégalos en la pestaña Chart.</translation>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>No se pudo abrir la carpeta de copias de seguridad %1</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>El idioma del ordenador</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

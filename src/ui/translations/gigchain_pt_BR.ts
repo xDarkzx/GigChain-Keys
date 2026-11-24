@@ -2572,6 +2572,14 @@ Digite ou cole na aba Cifra.</translation>
         <translation>…e ir direto para Ao vivo</translation>
     </message>
     <message>
+        <source>Language</source>
+        <translation>Idioma</translation>
+    </message>
+    <message>
+        <source>The new language shows the next time %1 starts.</source>
+        <translation>O novo idioma aparece na próxima vez que o %1 abrir.</translation>
+    </message>
+    <message>
         <source>Saving</source>
         <translation>Salvamento</translation>
     </message>
@@ -4892,6 +4900,10 @@ Digite ou cole na aba Cifra.</translation>
     <message>
         <source>Could not open the backup folder %1</source>
         <translation>Não foi possível abrir a pasta de backup %1</translation>
+    </message>
+    <message>
+        <source>The computer&apos;s language</source>
+        <translation>O idioma do computador</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>
