@@ -588,7 +588,9 @@ void Player::setFile(const QString& path, int bank, int program)
     m_failedReported = false;
     m_adopted = nullptr;
     m_font = path.isEmpty() ? nullptr : FontLibrary::instance().request(path);
-    if (!path.isEmpty() && !m_font) say(u"The SoundFont %1 was not read: the app is closing"_s.arg(QFileInfo(path).fileName()));
+    if (!path.isEmpty() && !m_font) {
+        say(QCoreApplication::translate("Engine", "The SoundFont %1 was not read: the app is closing").arg(QFileInfo(path).fileName()));
+    }
     service();
 }
 
@@ -622,7 +624,7 @@ void Player::choosePreset(int bank, int program)
     const std::vector<PresetInfo>& list = m_font->presets();
     auto found = std::ranges::find_if(list, [&](const PresetInfo& p) { return p.bank == bank && p.program == program; });
     if (found == list.end() && bank >= 0) {
-        say(u"%1 has no preset %2:%3: its first plays"_s.arg(QFileInfo(m_path).fileName()).arg(bank).arg(program));
+        say(QCoreApplication::translate("Engine", "%1 has no preset %2:%3: its first plays").arg(QFileInfo(m_path).fileName()).arg(bank).arg(program));
     }
     if (found == list.end()) found = list.begin();
     setParam(paramId(Param::Preset), stepValue(static_cast<int>(found - list.begin()), static_cast<int>(list.size())));
@@ -634,7 +636,7 @@ void Player::service()
 
     if (m_font && m_font->state() == Font::State::Failed && !m_failedReported) {
         m_failedReported = true;
-        say(u"The SoundFont %1 could not be read: %2"_s.arg(QFileInfo(m_path).fileName(), m_font->problem()));
+        say(QCoreApplication::translate("Engine", "The SoundFont %1 could not be read: %2").arg(QFileInfo(m_path).fileName(), m_font->problem()));
     }
     const bool ready = m_font && m_font->state() == Font::State::Ready;
     if (ready && m_adopted != m_font.get()) {

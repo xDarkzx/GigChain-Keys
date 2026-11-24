@@ -821,6 +821,18 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>Не удалось завершить запись %1: %2</translation>
     </message>
     <message>
+        <source>it could not be decoded</source>
+        <translation>его не удалось декодировать</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>чтение было отменено</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>декодер перестал отвечать</translation>
+    </message>
+    <message>
         <source>Backing track not found: %1</source>
         <translation>Минусовка не найдена: %1</translation>
     </message>
@@ -835,6 +847,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Cannot play %1: %2</source>
         <translation>Нельзя воспроизвести %1: %2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>он вышел в неожиданном формате сэмплов</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>он длиннее %1 минут</translation>
     </message>
     <message>
         <source>Sample not found: %1</source>
@@ -1125,6 +1145,50 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>Не удалось перезапустить %1: %2</translation>
     </message>
     <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>Звук прерывался (%1 раз): компьютер не успевал. Обычно помогает буфер побольше в Настройки &gt; Аудио, а также закрытие других программ</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 снова заработал после остановки</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 остановился: теперь звук идёт через %2</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 остановился (отключён?): звук идёт через %2, без входов, пока он не вернётся</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 остановился (отключён?): звук идёт через %2, пока он не вернётся</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>Нет доступного аудиовыхода (%1): звук вернётся, когда какой-нибудь подключат</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>Звук идёт через %1, пока не вернётся %2</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 вернулся: звук снова идёт через него</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>Звук идёт через %1</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>Нет доступного аудиовыхода: %1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Выход Windows по умолчанию сменился: теперь звук идёт через %1</translation>
+    </message>
+    <message>
         <source>The saved Saw Stack Pro settings are damaged (%1)</source>
         <translation>Сохранённые настройки Saw Stack Pro повреждены (%1)</translation>
     </message>
@@ -1209,12 +1273,40 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>Плеер SoundFont не смог запуститься (%1)</translation>
     </message>
     <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>SoundFont %1 не прочитан: приложение закрывается</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>В %1 нет пресета %2:%3: играет первый</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>Не удалось прочитать SoundFont %1: %2</translation>
+    </message>
+    <message>
         <source>There is no SoundFont at %1</source>
         <translation>По пути %1 нет SoundFont</translation>
     </message>
     <message>
         <source>The saved SoundFont Player settings are damaged (%1)</source>
         <translation>Сохранённые настройки плеера SoundFont повреждены (%1)</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>С PipeWire запускайте приложение через pw-jack, чтобы использовать JACK</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>Сохранённую настройку звука не удалось использовать (%1); пока её нет, используется системный звук</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>%1 не удалось использовать (%2); пока его нет, используется системный звук</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 обрушил приложение при прошлой загрузке, поэтому он выключен (Настройки &gt; Плагины, чтобы попробовать снова)</translation>
     </message>
     <message>
         <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
@@ -1229,6 +1321,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 нет среди установленных плагинов (%2): не загружен. Установите его в %3 или выберите другой плагин</translation>
     </message>
     <message>
+        <source>Could not load %1: %2</source>
+        <translation>Не удалось загрузить %1: %2</translation>
+    </message>
+    <message>
         <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
         <translation>%1 не смог принять сохранённые настройки (%2); он играет с настройками по умолчанию</translation>
     </message>
@@ -1239,6 +1335,30 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Choose an ASIO device</source>
         <translation>Выберите ASIO-устройство</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>Вернуться к %1 тоже не удалось: %2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>MIDI-клок на %1 снова идёт</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>MIDI-вход подключён: %1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>MIDI-вход отключён: %1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>MIDI-клок на %1 остановился: выход перестал работать</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>Запись остановлена: не удалось записать файл (диск заполнен?): %1</translation>
     </message>
     <message>
         <source>That effect is no longer in this patch</source>
@@ -1253,6 +1373,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 не загружен (причина — в сообщении об этом)</translation>
     </message>
     <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>Не удалось сохранить настройки %1: %2</translation>
+    </message>
+    <message>
         <source>%1 crashed the app while loading before, so it is switched off</source>
         <translation>%1 раньше обрушил приложение при загрузке, поэтому он выключен</translation>
     </message>
@@ -1261,8 +1385,56 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 — эффект, а не инструмент: Sustain Pads нужен инструмент</translation>
     </message>
     <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads: не удалось восстановить настройки %1 (%2): он играет так, как загрузился</translation>
+    </message>
+    <message>
         <source>That %1 effect is no longer there</source>
         <translation>Этого эффекта %1 больше нет</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>Нет места для ещё одного лупа: не больше %1 лупов (сначала очистите один)</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>Не хватает памяти, чтобы записать луп (нужно %1 МБ)</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>Слишком много нажатий лупов сразу: одно отброшено</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>Луп достиг предельной длины (2 минуты или 64 такта) и закрылся на ней</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>У этого лупа уже все слои, какие он может принять: отмените один, чтобы записать другой</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>Запись лупа не поместилась в его память, поэтому он заглушён: очистите его и запишите заново</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>Луп закрылся без своей записи в памяти (%1 из %2 кадров): он играет, без слоёв</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>Не хватает памяти для слоёв на этом лупе: он играет, без слоёв</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>Темп %1 BPM взят из первого лупа</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>Темп из первого лупа не взят: он не длиной 1, 2 или 4 такта при 60–180 BPM</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>Не хватает памяти, чтобы записать ещё один слой на этом лупе</translation>
     </message>
     <message>
         <source>That plugin is not loaded</source>
@@ -1271,6 +1443,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>That instrument is not loaded</source>
         <translation>Этот инструмент не загружен</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>Играют только первые %1 стемов</translation>
     </message>
     <message>
         <source>The backing tracks could not be read: %1</source>
@@ -1287,6 +1463,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Could not open Explorer for %1</source>
         <translation>Не удалось открыть Проводник для %1</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>Аппаратный синтезатор на %1 не может играть: %2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>Не удалось открыть MIDI-вход %1: %2</translation>
     </message>
 </context>
 <context>

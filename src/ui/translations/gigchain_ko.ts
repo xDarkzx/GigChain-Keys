@@ -821,6 +821,18 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>녹음 %1을(를) 마무리할 수 없습니다: %2</translation>
     </message>
     <message>
+        <source>it could not be decoded</source>
+        <translation>디코딩할 수 없습니다</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>읽기가 취소되었습니다</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>디코더가 응답하지 않습니다</translation>
+    </message>
+    <message>
         <source>Backing track not found: %1</source>
         <translation>반주 트랙을 찾을 수 없습니다: %1</translation>
     </message>
@@ -835,6 +847,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Cannot play %1: %2</source>
         <translation>%1을(를) 재생할 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>예상하지 못한 샘플 형식으로 나왔습니다</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>%1분보다 깁니다</translation>
     </message>
     <message>
         <source>Sample not found: %1</source>
@@ -1125,6 +1145,50 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1을(를) 다시 시작할 수 없습니다: %2</translation>
     </message>
     <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>오디오가 끊겼습니다(%1회): 컴퓨터가 따라가지 못했습니다. 설정 &gt; 오디오에서 버퍼를 키우면 대개 멈춥니다. 다른 프로그램을 닫아도 됩니다</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1이(가) 멈췄다가 다시 시작되었습니다</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1이(가) 멈췄습니다: 이제 %2(으)로 소리가 납니다</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1이(가) 멈췄습니다(뽑혔나요?): 돌아올 때까지 입력 없이 %2(으)로 소리가 납니다</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1이(가) 멈췄습니다(뽑혔나요?): 돌아올 때까지 %2(으)로 소리가 납니다</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>사용할 수 있는 오디오 출력이 없습니다(%1): 출력을 연결하면 소리가 돌아옵니다</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>%2이(가) 돌아올 때까지 %1(으)로 소리가 납니다</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1이(가) 돌아왔습니다: 다시 이쪽으로 소리가 납니다</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>%1(으)로 소리가 납니다</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>사용할 수 있는 오디오 출력이 없습니다: %1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Windows 기본 출력이 바뀌었습니다: 이제 %1(으)로 소리가 납니다</translation>
+    </message>
+    <message>
         <source>The saved Saw Stack Pro settings are damaged (%1)</source>
         <translation>Saw Stack Pro의 저장된 설정이 손상되었습니다(%1)</translation>
     </message>
@@ -1209,12 +1273,40 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>SoundFont Player를 시작할 수 없습니다(%1)</translation>
     </message>
     <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>SoundFont %1을(를) 읽지 않았습니다: 앱을 닫는 중입니다</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1에는 프리셋 %2:%3이(가) 없습니다: 첫 번째 프리셋이 연주됩니다</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>SoundFont %1을(를) 읽을 수 없습니다: %2</translation>
+    </message>
+    <message>
         <source>There is no SoundFont at %1</source>
         <translation>%1에 SoundFont가 없습니다</translation>
     </message>
     <message>
         <source>The saved SoundFont Player settings are damaged (%1)</source>
         <translation>SoundFont Player의 저장된 설정이 손상되었습니다(%1)</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>PipeWire에서 JACK을 쓰려면 pw-jack으로 앱을 시작하세요</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>저장된 오디오 설정을 쓸 수 없습니다(%1). 돌아올 때까지 시스템 오디오를 씁니다</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>%1을(를) 쓸 수 없습니다(%2). 돌아올 때까지 시스템 오디오를 씁니다</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1이(가) 지난번 불러오는 중 앱을 멈추게 해서 꺼져 있습니다(다시 시도하려면 설정 &gt; 플러그인)</translation>
     </message>
     <message>
         <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
@@ -1229,6 +1321,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1은(는) 설치된 플러그인이 아닙니다(%2): 불러오지 않았습니다. %3에 설치하거나 다른 플러그인을 고르세요</translation>
     </message>
     <message>
+        <source>Could not load %1: %2</source>
+        <translation>%1을(를) 불러올 수 없습니다: %2</translation>
+    </message>
+    <message>
         <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
         <translation>%1이(가) 저장된 설정을 받지 못했습니다(%2). 기본 설정으로 소리 납니다</translation>
     </message>
@@ -1239,6 +1335,30 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Choose an ASIO device</source>
         <translation>ASIO 장치를 고르세요</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>%1(으)로 되돌아갈 수도 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>%1(으)로 가는 MIDI 클럭이 다시 시작되었습니다</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>MIDI 입력 연결됨: %1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>MIDI 입력 연결 끊김: %1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>%1(으)로 가는 MIDI 클럭이 멈췄습니다: 출력이 작동하지 않습니다</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>녹음이 멈췄습니다: 녹음을 쓸 수 없습니다(디스크가 가득 찼나요?): %1</translation>
     </message>
     <message>
         <source>That effect is no longer in this patch</source>
@@ -1253,6 +1373,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1이(가) 불러와지지 않았습니다(이유는 해당 메시지를 보세요)</translation>
     </message>
     <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>%1의 설정을 저장할 수 없습니다: %2</translation>
+    </message>
+    <message>
         <source>%1 crashed the app while loading before, so it is switched off</source>
         <translation>%1이(가) 이전에 불러오는 중 앱을 멈추게 해서 꺼져 있습니다</translation>
     </message>
@@ -1261,8 +1385,56 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1은(는) 이펙트이지 악기가 아닙니다: Sustain Pads에는 악기가 필요합니다</translation>
     </message>
     <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads: %1의 설정을 복원할 수 없습니다(%2). 불러온 그대로 연주됩니다</translation>
+    </message>
+    <message>
         <source>That %1 effect is no longer there</source>
         <translation>그 %1 이펙트는 이제 없습니다</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>루프를 더 만들 수 없습니다: 루프는 최대 %1개입니다(먼저 하나를 지우세요)</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>루프를 녹음할 메모리가 부족합니다(%1 MB 필요)</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>루프 버튼이 한꺼번에 너무 많이 눌렸습니다: 하나는 무시되었습니다</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>루프가 최대 길이(2분 또는 64마디)에 도달해 거기서 닫혔습니다</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>그 루프에는 더 이상 레이어를 넣을 수 없습니다: 다른 레이어를 녹음하려면 하나를 실행 취소하세요</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>루프 녹음이 메모리에 들어가지 않아 음소거되었습니다: 지우고 다시 녹음하세요</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>루프가 녹음을 메모리에 두지 못한 채 닫혔습니다(%2프레임 중 %1): 레이어 없이 연주됩니다</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>그 루프의 레이어를 위한 메모리가 부족합니다: 레이어 없이 연주됩니다</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>첫 번째 루프에서 템포 %1 BPM을 가져왔습니다</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>첫 번째 루프에서 템포를 가져오지 않았습니다: 60-180 BPM에서 1, 2, 4마디 길이가 아닙니다</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>그 루프에 레이어를 하나 더 녹음할 메모리가 부족합니다</translation>
     </message>
     <message>
         <source>That plugin is not loaded</source>
@@ -1271,6 +1443,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>That instrument is not loaded</source>
         <translation>그 악기는 불러와져 있지 않습니다</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>처음 %1개의 스템만 재생됩니다</translation>
     </message>
     <message>
         <source>The backing tracks could not be read: %1</source>
@@ -1287,6 +1463,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Could not open Explorer for %1</source>
         <translation>%1의 파일 탐색기를 열 수 없습니다</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>%1의 하드웨어 신스를 연주할 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>MIDI 입력 %1을(를) 열 수 없습니다: %2</translation>
     </message>
 </context>
 <context>

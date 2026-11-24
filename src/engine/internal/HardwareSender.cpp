@@ -5,6 +5,8 @@
 
 #include "gigchain/platform/Timing.h"
 
+#include <QCoreApplication>
+
 #include <array>
 #include <numeric>
 #include <span>
@@ -115,7 +117,8 @@ void HardwareSender::sendFrom(HardwareOut& out)
             m_restingUntil[out.port()] = now + kRest;
             if (!saidAlready) {
                 const std::scoped_lock lock(m_mutex);
-                m_problems.push_back(u"The hardware synth on %1 cannot be played: %2"_s.arg(out.port(), sent.error().message));
+                m_problems.push_back(
+                    QCoreApplication::translate("Engine", "The hardware synth on %1 cannot be played: %2").arg(out.port(), sent.error().message));
             }
             return;
         }

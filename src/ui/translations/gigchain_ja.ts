@@ -825,6 +825,18 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>録音 %1 を完了できませんでした：%2</translation>
     </message>
     <message>
+        <source>it could not be decoded</source>
+        <translation>デコードできませんでした</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>読み込みは取り消されました</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>デコーダーが応答しなくなりました</translation>
+    </message>
+    <message>
         <source>Backing track not found: %1</source>
         <translation>バッキング・トラックが見つかりません：%1</translation>
     </message>
@@ -839,6 +851,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Cannot play %1: %2</source>
         <translation>%1 を再生できません：%2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>予期しないサンプル形式で出力されました</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>%1 分より長くなっています</translation>
     </message>
     <message>
         <source>Sample not found: %1</source>
@@ -1129,6 +1149,50 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 を再起動できませんでした：%2</translation>
     </message>
     <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>オーディオが途切れました（%1 回）：コンピューターの処理が追いつきませんでした。設定 &gt; オーディオでバッファーを大きくすると、たいてい止まります。ほかのプログラムを閉じるのも効果があります</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 は停止後に再び動き始めました</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 が停止しました：今は %2 から鳴っています</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 が停止しました（抜けた？）：戻るまで %2 から、入力なしで鳴っています</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 が停止しました（抜けた？）：戻るまで %2 から鳴っています</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>使えるオーディオ出力がありません（%1）：出力をつなぐと音が戻ります</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>%2 が戻るまで %1 から鳴っています</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 が戻りました：再びこちらから鳴っています</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>%1 から鳴っています</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>使えるオーディオ出力がありません：%1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Windows の既定の出力が変わりました：今は %1 から鳴っています</translation>
+    </message>
+    <message>
         <source>The saved Saw Stack Pro settings are damaged (%1)</source>
         <translation>Saw Stack Pro の保存された設定が壊れています（%1）</translation>
     </message>
@@ -1213,12 +1277,40 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>SoundFont プレーヤーを起動できませんでした（%1）</translation>
     </message>
     <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>SoundFont %1 は読み込まれませんでした：アプリを終了中です</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1 にはプリセット %2:%3 がありません：最初のプリセットが鳴ります</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>SoundFont %1 を読み込めませんでした：%2</translation>
+    </message>
+    <message>
         <source>There is no SoundFont at %1</source>
         <translation>%1 に SoundFont はありません</translation>
     </message>
     <message>
         <source>The saved SoundFont Player settings are damaged (%1)</source>
         <translation>SoundFont プレーヤーの保存された設定が壊れています（%1）</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>PipeWire で JACK を使うには、pw-jack を付けてアプリを起動してください</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>保存されたオーディオ設定を使えませんでした（%1）。戻るまではシステムのオーディオを使います</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>%1 を使えませんでした（%2）。戻るまではシステムのオーディオを使います</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 は前回の読み込み中にアプリをクラッシュさせたため、オフになっています（もう一度試すには 設定 &gt; プラグイン）</translation>
     </message>
     <message>
         <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
@@ -1233,6 +1325,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 はインストール済みのプラグインにありません（%2）：読み込んでいません。%3 にインストールするか、別のプラグインを選んでください</translation>
     </message>
     <message>
+        <source>Could not load %1: %2</source>
+        <translation>%1 を読み込めませんでした：%2</translation>
+    </message>
+    <message>
         <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
         <translation>%1 は保存された設定を受け取れませんでした（%2）。既定の設定で鳴っています</translation>
     </message>
@@ -1243,6 +1339,30 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Choose an ASIO device</source>
         <translation>ASIO デバイスを選んでください</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>%1 に戻すこともできませんでした：%2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>%1 への MIDI クロックが再び動き始めました</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>MIDI 入力が接続されました：%1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>MIDI 入力が切断されました：%1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>%1 への MIDI クロックが止まりました：出力が動かなくなりました</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>録音を停止しました：録音を書き込めませんでした（ディスクがいっぱい？）：%1</translation>
     </message>
     <message>
         <source>That effect is no longer in this patch</source>
@@ -1257,6 +1377,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 は読み込まれていません（理由はそのメッセージを見てください）</translation>
     </message>
     <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>%1 の設定を保存できませんでした：%2</translation>
+    </message>
+    <message>
         <source>%1 crashed the app while loading before, so it is switched off</source>
         <translation>%1 は以前読み込み中にアプリをクラッシュさせたため、オフになっています</translation>
     </message>
@@ -1265,8 +1389,56 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 はエフェクトで、インストゥルメントではありません：Sustain Pads にはインストゥルメントが必要です</translation>
     </message>
     <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads：%1 の設定を復元できませんでした（%2）。読み込まれた状態で鳴ります</translation>
+    </message>
+    <message>
         <source>That %1 effect is no longer there</source>
         <translation>その %1 エフェクトはもうありません</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>これ以上ループを作れません：ループは最大 %1 個です（先に 1 つクリアしてください）</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>ループを録音するメモリーが足りません（%1 MB 必要）</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>ループのボタンが一度に押されすぎました：1 つは無視されました</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>ループが最大の長さ（2 分または 64 小節）に達し、そこで閉じました</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>そのループにはもうレイヤーを追加できません：別のレイヤーを録るには 1 つ取り消してください</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>ループの録音がメモリーに収まらなかったため、ミュートしました：クリアして録り直してください</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>ループが録音をメモリーに持たないまま閉じました（%2 フレーム中 %1）：レイヤーなしで鳴ります</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>そのループのレイヤー用のメモリーが足りません：レイヤーなしで鳴ります</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>最初のループからテンポ %1 BPM を取得しました</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>最初のループからテンポを取得しませんでした：60〜180 BPM で 1、2、4 小節の長さではありません</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>そのループに別のレイヤーを録音するメモリーが足りません</translation>
     </message>
     <message>
         <source>That plugin is not loaded</source>
@@ -1275,6 +1447,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>That instrument is not loaded</source>
         <translation>そのインストゥルメントは読み込まれていません</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>最初の %1 本のステムだけが鳴ります</translation>
     </message>
     <message>
         <source>The backing tracks could not be read: %1</source>
@@ -1291,6 +1467,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Could not open Explorer for %1</source>
         <translation>%1 のエクスプローラーを開けませんでした</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>%1 のハードウェア・シンセを鳴らせません：%2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>MIDI 入力 %1 を開けませんでした：%2</translation>
     </message>
 </context>
 <context>

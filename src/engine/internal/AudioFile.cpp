@@ -58,7 +58,7 @@ DecodeEnd runDecoder(QAudioDecoder& decoder, const QString& path, const std::ato
     });
     QObject::connect(&decoder, &QAudioDecoder::finished, &loop, &QEventLoop::quit);
     QObject::connect(&decoder, qOverload<QAudioDecoder::Error>(&QAudioDecoder::error), &loop, [&](QAudioDecoder::Error) {
-        problem = decoder.errorString().isEmpty() ? u"it could not be decoded"_s : decoder.errorString();
+        problem = decoder.errorString().isEmpty() ? QCoreApplication::translate("Engine", "it could not be decoded") : decoder.errorString();
         loop.quit();
     });
     QTimer watch;
@@ -68,7 +68,8 @@ DecodeEnd runDecoder(QAudioDecoder& decoder, const QString& path, const std::ato
         if (!cancelled && !quiet.hasExpired(kSilentLimitMs)) return;
         decoder.stop();
         // (after stop(), which may say an error of its own: this is the cause)
-        problem = cancelled ? u"reading it was cancelled"_s : u"the decoder stopped answering"_s;
+        problem = cancelled ? QCoreApplication::translate("Engine", "reading it was cancelled")
+                            : QCoreApplication::translate("Engine", "the decoder stopped answering");
         end.stalled = !cancelled;
         loop.quit();
     });
@@ -134,7 +135,7 @@ core::Result<AudioClip> decodeAudioFileOnce(const QString& path, double sampleRa
     decoder.setAudioFormat(format);
     const DecodeEnd decoded = runDecoder(decoder, path, cancel, [&](const QAudioBuffer& buffer) {
         if (buffer.format().sampleFormat() != QAudioFormat::Float || buffer.format().channelCount() != channels) {
-            stopped = u"it came out in an unexpected sample format"_s;
+            stopped = QCoreApplication::translate("Engine", "it came out in an unexpected sample format");
             return false;
         }
         const std::span<const float> samples(buffer.constData<float>(), static_cast<std::size_t>(buffer.sampleCount()));
@@ -145,11 +146,11 @@ core::Result<AudioClip> decodeAudioFileOnce(const QString& path, double sampleRa
             clip.right.push_back(channels == 2 ? samples.subspan(i + 1).front() : left); // mono: both sides
         }
         if (clip.left.size() > maxFrames) {
-            stopped = u"it is longer than %1 minutes"_s.arg(kMaxClipSeconds / 60.0);
+            stopped = QCoreApplication::translate("Engine", "it is longer than %1 minutes").arg(kMaxClipSeconds / 60.0);
             return false;
         }
         if (cancel != nullptr && cancel->load(std::memory_order_relaxed)) {
-            stopped = u"reading it was cancelled"_s;
+            stopped = QCoreApplication::translate("Engine", "reading it was cancelled");
             return false;
         }
         return true;
@@ -216,7 +217,7 @@ core::Result<SampleClip> decodeSampleFileOnce(const QString& path, double sample
     decoder.setAudioFormat(format);
     const DecodeEnd decoded = runDecoder(decoder, path, cancel, [&](const QAudioBuffer& buffer) {
         if (buffer.format().sampleFormat() != QAudioFormat::Float || buffer.format().channelCount() != channels) {
-            stopped = u"it came out in an unexpected sample format"_s;
+            stopped = QCoreApplication::translate("Engine", "it came out in an unexpected sample format");
             return false;
         }
         const std::span<const float> samples(buffer.constData<float>(), static_cast<std::size_t>(buffer.sampleCount()));
@@ -227,7 +228,7 @@ core::Result<SampleClip> decodeSampleFileOnce(const QString& path, double sample
             read.clip.right.push_back(channels == 2 ? samples.subspan(i + 1).front() : left);
         }
         if (cancel != nullptr && cancel->load(std::memory_order_relaxed)) {
-            stopped = u"reading it was cancelled"_s;
+            stopped = QCoreApplication::translate("Engine", "reading it was cancelled");
             return false;
         }
         return read.clip.left.size() < keepFrames; // enough: the rest is never decoded

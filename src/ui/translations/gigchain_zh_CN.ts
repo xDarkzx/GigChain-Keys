@@ -821,6 +821,18 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>无法完成录音 %1：%2</translation>
     </message>
     <message>
+        <source>it could not be decoded</source>
+        <translation>无法解码</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>读取已取消</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>解码器不再响应</translation>
+    </message>
+    <message>
         <source>Backing track not found: %1</source>
         <translation>找不到伴奏音轨：%1</translation>
     </message>
@@ -835,6 +847,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Cannot play %1: %2</source>
         <translation>无法播放 %1：%2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>输出的采样格式出乎意料</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>长度超过 %1 分钟</translation>
     </message>
     <message>
         <source>Sample not found: %1</source>
@@ -1125,6 +1145,50 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>无法重新启动 %1：%2</translation>
     </message>
     <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>音频断了（%1 次）：电脑跟不上。在 设置 &gt; 音频 中调大缓冲区通常能解决；关闭其他程序也有帮助</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 停止后又恢复了</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 停止了：现在通过 %2 发声</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 停止了（被拔掉了？）：在它回来之前通过 %2 发声，没有输入</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 停止了（被拔掉了？）：在它回来之前通过 %2 发声</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>没有可用的音频输出（%1）：接上一个后声音就会回来</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>在 %2 回来之前通过 %1 发声</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 回来了：重新通过它发声</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>通过 %1 发声</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>没有可用的音频输出：%1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Windows 的默认输出变了：现在通过 %1 发声</translation>
+    </message>
+    <message>
         <source>The saved Saw Stack Pro settings are damaged (%1)</source>
         <translation>Saw Stack Pro 保存的设置已损坏（%1）</translation>
     </message>
@@ -1209,12 +1273,40 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>SoundFont Player 无法启动（%1）</translation>
     </message>
     <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>未读取 SoundFont %1：应用正在关闭</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1 没有音色 %2:%3：播放它的第一个音色</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>无法读取 SoundFont %1：%2</translation>
+    </message>
+    <message>
         <source>There is no SoundFont at %1</source>
         <translation>%1 处没有 SoundFont</translation>
     </message>
     <message>
         <source>The saved SoundFont Player settings are damaged (%1)</source>
         <translation>SoundFont Player 保存的设置已损坏（%1）</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>使用 PipeWire 时，请用 pw-jack 启动本应用来使用 JACK</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>无法使用保存的音频设置（%1）；在它回来之前使用系统音频</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>无法使用 %1（%2）；在它回来之前使用系统音频</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 上次加载时让应用崩溃了，所以已被关闭（想再试一次请到 设置 &gt; 插件）</translation>
     </message>
     <message>
         <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
@@ -1229,6 +1321,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 不在已安装的插件中（%2）：未加载。请把它安装到 %3，或选择别的插件</translation>
     </message>
     <message>
+        <source>Could not load %1: %2</source>
+        <translation>无法加载 %1：%2</translation>
+    </message>
+    <message>
         <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
         <translation>%1 无法接收保存的设置（%2）；它以默认设置发声</translation>
     </message>
@@ -1239,6 +1335,30 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Choose an ASIO device</source>
         <translation>请选择一个 ASIO 设备</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>也无法回到 %1：%2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>发往 %1 的 MIDI 时钟恢复了</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>MIDI 输入已连接：%1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>MIDI 输入已断开：%1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>发往 %1 的 MIDI 时钟停止了：输出不再工作</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>录音已停止：无法写入录音（磁盘满了吗？）：%1</translation>
     </message>
     <message>
         <source>That effect is no longer in this patch</source>
@@ -1253,6 +1373,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 没有加载（原因见相关消息）</translation>
     </message>
     <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>无法保存 %1 的设置：%2</translation>
+    </message>
+    <message>
         <source>%1 crashed the app while loading before, so it is switched off</source>
         <translation>%1 之前加载时让应用崩溃了，所以已被关闭</translation>
     </message>
@@ -1261,8 +1385,56 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>%1 是效果器，不是乐器：Sustain Pads 需要乐器</translation>
     </message>
     <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads：无法恢复 %1 的设置（%2）：它按加载时的样子发声</translation>
+    </message>
+    <message>
         <source>That %1 effect is no longer there</source>
         <translation>那个 %1 效果器已经不在了</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>没有空间再加一个循环：最多 %1 个循环（请先清除一个）</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>内存不够录制循环（需要 %1 MB）</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>同时按下的循环按钮太多：丢弃了一次</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>一个循环达到了最大长度（2 分钟或 64 小节），并在那里闭合</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>那个循环已经有了能容纳的全部层：撤销一层才能录制另一层</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>一个循环的录音放不进它的内存，所以已被静音：请清除它并重新录制</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>一个循环闭合时录音不在内存中（%2 帧中的 %1 帧）：它会播放，但没有层</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>那个循环没有足够内存放层：它会播放，但没有层</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>已从第一个循环取得速度 %1 BPM</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>没有从第一个循环取得速度：它不是 60-180 BPM 下 1、2 或 4 小节长</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>内存不够在那个循环上再录一层</translation>
     </message>
     <message>
         <source>That plugin is not loaded</source>
@@ -1271,6 +1443,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>That instrument is not loaded</source>
         <translation>那个乐器没有加载</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>只有前 %1 个分轨会播放</translation>
     </message>
     <message>
         <source>The backing tracks could not be read: %1</source>
@@ -1287,6 +1463,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Could not open Explorer for %1</source>
         <translation>无法为 %1 打开资源管理器</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>无法演奏 %1 上的硬件合成器：%2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>无法打开 MIDI 输入 %1：%2</translation>
     </message>
 </context>
 <context>

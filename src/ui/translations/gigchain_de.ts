@@ -838,6 +838,18 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
         <translation>Die Aufnahme %1 konnte nicht abgeschlossen werden: %2</translation>
     </message>
     <message>
+        <source>it could not be decoded</source>
+        <translation>sie konnte nicht dekodiert werden</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>das Einlesen wurde abgebrochen</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>der Decoder hat nicht mehr geantwortet</translation>
+    </message>
+    <message>
         <source>Backing track not found: %1</source>
         <translation>Backing-Track nicht gefunden: %1</translation>
     </message>
@@ -852,6 +864,14 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
     <message>
         <source>Cannot play %1: %2</source>
         <translation>%1 kann nicht abgespielt werden: %2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>sie kam in einem unerwarteten Sample-Format heraus</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>sie ist länger als %1 Minuten</translation>
     </message>
     <message>
         <source>Sample not found: %1</source>
@@ -1142,6 +1162,50 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
         <translation>%1 konnte nicht neu gestartet werden: %2</translation>
     </message>
     <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>Das Audio ist ausgesetzt (%1 Mal): Der Computer kam nicht hinterher. Ein größerer Puffer unter Einstellungen &gt; Audio behebt das meist, ebenso das Schließen anderer Programme</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 läuft wieder, nachdem es angehalten hatte</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 ist ausgefallen: Die Wiedergabe läuft jetzt über %2</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 ist ausgefallen (ausgesteckt?): Die Wiedergabe läuft über %2, ohne Eingänge, bis es wieder da ist</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 ist ausgefallen (ausgesteckt?): Die Wiedergabe läuft über %2, bis es wieder da ist</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>Kein Audioausgang verfügbar (%1): Der Klang kommt zurück, sobald einer angeschlossen wird</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>Wiedergabe über %1, bis %2 wieder da ist</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 ist wieder da: Die Wiedergabe läuft wieder darüber</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>Wiedergabe über %1</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>Kein Audioausgang verfügbar: %1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Der Standardausgang von Windows hat sich geändert: Die Wiedergabe läuft jetzt über %1</translation>
+    </message>
+    <message>
         <source>The saved Saw Stack Pro settings are damaged (%1)</source>
         <translation>Die gespeicherten Einstellungen von Saw Stack Pro sind beschädigt (%1)</translation>
     </message>
@@ -1226,12 +1290,40 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
         <translation>Der SoundFont-Player konnte nicht starten (%1)</translation>
     </message>
     <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>Die SoundFont %1 wurde nicht gelesen: Die App wird beendet</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1 hat kein Preset %2:%3: Das erste wird gespielt</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>Die SoundFont %1 konnte nicht gelesen werden: %2</translation>
+    </message>
+    <message>
         <source>There is no SoundFont at %1</source>
         <translation>Unter %1 gibt es keine SoundFont</translation>
     </message>
     <message>
         <source>The saved SoundFont Player settings are damaged (%1)</source>
         <translation>Die gespeicherten Einstellungen des SoundFont-Players sind beschädigt (%1)</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>Mit PipeWire starte die App mit pw-jack, um JACK zu nutzen</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>Das gespeicherte Audio-Setup konnte nicht verwendet werden (%1); bis es wieder da ist, wird das System-Audio verwendet</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>%1 konnte nicht verwendet werden (%2); bis es wieder da ist, wird das System-Audio verwendet</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 hat die App beim letzten Laden abstürzen lassen und ist deshalb ausgeschaltet (Einstellungen &gt; Plugins, um es erneut zu versuchen)</translation>
     </message>
     <message>
         <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
@@ -1246,6 +1338,10 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
         <translation>%1 ist keines der installierten Plugins (%2): nicht geladen. Installiere es in %3 oder wähle ein anderes Plugin</translation>
     </message>
     <message>
+        <source>Could not load %1: %2</source>
+        <translation>%1 konnte nicht geladen werden: %2</translation>
+    </message>
+    <message>
         <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
         <translation>%1 konnte seine gespeicherten Einstellungen nicht übernehmen (%2); es spielt mit seinen Standardwerten</translation>
     </message>
@@ -1256,6 +1352,30 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
     <message>
         <source>Choose an ASIO device</source>
         <translation>Wähle ein ASIO-Gerät</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>Auch die Rückkehr zu %1 ist fehlgeschlagen: %2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>Die MIDI-Clock an %1 läuft wieder</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>MIDI-Eingang verbunden: %1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>MIDI-Eingang getrennt: %1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>Die MIDI-Clock an %1 hat aufgehört: Der Ausgang funktioniert nicht mehr</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>Aufnahme gestoppt: Die Aufnahme konnte nicht geschrieben werden (ist die Festplatte voll?): %1</translation>
     </message>
     <message>
         <source>That effect is no longer in this patch</source>
@@ -1270,6 +1390,10 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
         <translation>%1 ist nicht geladen (siehe die Meldung zum Grund)</translation>
     </message>
     <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>Die Einstellungen von %1 konnten nicht gespeichert werden: %2</translation>
+    </message>
+    <message>
         <source>%1 crashed the app while loading before, so it is switched off</source>
         <translation>%1 hat die App früher beim Laden abstürzen lassen und ist deshalb ausgeschaltet</translation>
     </message>
@@ -1278,8 +1402,56 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
         <translation>%1 ist ein Effekt, kein Instrument: Sustain Pads brauchen ein Instrument</translation>
     </message>
     <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads: Die Einstellungen von %1 konnten nicht wiederhergestellt werden (%2): Es spielt so, wie es lädt</translation>
+    </message>
+    <message>
         <source>That %1 effect is no longer there</source>
         <translation>Dieser %1-Effekt ist nicht mehr vorhanden</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>Kein Platz für einen weiteren Loop: höchstens %1 Loops (lösche zuerst einen)</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>Nicht genug Speicher, um einen Loop aufzunehmen (%1 MB nötig)</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>Zu viele Loop-Tastendrücke auf einmal: Einer wurde verworfen</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>Ein Loop hat seine Höchstlänge erreicht (2 Minuten oder 64 Takte) und wurde dort geschlossen</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>Dieser Loop hat so viele Schichten, wie er aufnehmen kann: Mach eine rückgängig, um eine weitere aufzunehmen</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>Die Aufnahme eines Loops passte nicht in seinen Speicher und wurde stummgeschaltet: Lösche ihn und nimm ihn neu auf</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>Ein Loop wurde ohne seine Aufnahme im Speicher geschlossen (%1 von %2 Frames): Er spielt, ohne Schichten</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>Nicht genug Speicher für Schichten auf diesem Loop: Er spielt, ohne Schichten</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>Tempo %1 BPM vom ersten Loop übernommen</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>Kein Tempo vom ersten Loop übernommen: Er ist nicht 1, 2 oder 4 Takte bei 60–180 BPM lang</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>Nicht genug Speicher, um eine weitere Schicht auf diesem Loop aufzunehmen</translation>
     </message>
     <message>
         <source>That plugin is not loaded</source>
@@ -1288,6 +1460,10 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
     <message>
         <source>That instrument is not loaded</source>
         <translation>Dieses Instrument ist nicht geladen</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>Nur die ersten %1 Stems spielen</translation>
     </message>
     <message>
         <source>The backing tracks could not be read: %1</source>
@@ -1304,6 +1480,14 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
     <message>
         <source>Could not open Explorer for %1</source>
         <translation>Der Explorer konnte für %1 nicht geöffnet werden</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>Der Hardware-Synth an %1 kann nicht gespielt werden: %2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>Der MIDI-Eingang %1 konnte nicht geöffnet werden: %2</translation>
     </message>
 </context>
 <context>

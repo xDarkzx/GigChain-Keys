@@ -831,6 +831,18 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
         <translation>Não foi possível concluir a gravação %1: %2</translation>
     </message>
     <message>
+        <source>it could not be decoded</source>
+        <translation>não foi possível decodificá-lo</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>a leitura foi cancelada</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>o decodificador parou de responder</translation>
+    </message>
+    <message>
         <source>Backing track not found: %1</source>
         <translation>Playback não encontrado: %1</translation>
     </message>
@@ -845,6 +857,14 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
     <message>
         <source>Cannot play %1: %2</source>
         <translation>Não é possível tocar %1: %2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>ele saiu num formato de amostra inesperado</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>ele tem mais de %1 minutos</translation>
     </message>
     <message>
         <source>Sample not found: %1</source>
@@ -1135,6 +1155,50 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
         <translation>Não foi possível reiniciar %1: %2</translation>
     </message>
     <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>O áudio falhou (%1 vez(es)): o computador não deu conta. Um buffer maior em Configurações &gt; Áudio costuma resolver; fechar outros programas também</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 voltou a funcionar depois de parar</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 parou: agora o som sai por %2</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 parou (desconectado?): o som sai por %2, sem entradas, até ele voltar</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 parou (desconectado?): o som sai por %2 até ele voltar</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>Nenhuma saída de áudio disponível (%1): o som volta quando uma for conectada</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>Tocando por %1 até %2 voltar</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 voltou: o som sai por ele de novo</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>Tocando por %1</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>Nenhuma saída de áudio disponível: %1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>A saída padrão do Windows mudou: agora o som sai por %1</translation>
+    </message>
+    <message>
         <source>The saved Saw Stack Pro settings are damaged (%1)</source>
         <translation>As configurações salvas do Saw Stack Pro estão danificadas (%1)</translation>
     </message>
@@ -1219,12 +1283,40 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
         <translation>O player de SoundFont não conseguiu iniciar (%1)</translation>
     </message>
     <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>O SoundFont %1 não foi lido: o app está fechando</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1 não tem o preset %2:%3: o primeiro toca</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>Não foi possível ler o SoundFont %1: %2</translation>
+    </message>
+    <message>
         <source>There is no SoundFont at %1</source>
         <translation>Não há nenhum SoundFont em %1</translation>
     </message>
     <message>
         <source>The saved SoundFont Player settings are damaged (%1)</source>
         <translation>As configurações salvas do player de SoundFont estão danificadas (%1)</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>Com PipeWire, inicie o app com pw-jack para usar o JACK</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>Não foi possível usar a configuração de áudio salva (%1); o áudio do sistema é usado até ela voltar</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>Não foi possível usar %1 (%2); o áudio do sistema é usado até ele voltar</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 travou o app da última vez que carregou, por isso está desligado (Configurações &gt; Plugins para tentar de novo)</translation>
     </message>
     <message>
         <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
@@ -1239,6 +1331,10 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
         <translation>%1 não é um dos plugins instalados (%2): não carregado. Instale-o em %3, ou escolha outro plugin</translation>
     </message>
     <message>
+        <source>Could not load %1: %2</source>
+        <translation>Não foi possível carregar %1: %2</translation>
+    </message>
+    <message>
         <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
         <translation>%1 não conseguiu receber suas configurações salvas (%2); ele toca com os valores padrão</translation>
     </message>
@@ -1249,6 +1345,30 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
     <message>
         <source>Choose an ASIO device</source>
         <translation>Escolha um dispositivo ASIO</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>Também não foi possível voltar para %1: %2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>O clock MIDI para %1 voltou a funcionar</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>Entrada MIDI conectada: %1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>Entrada MIDI desconectada: %1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>O clock MIDI para %1 parou: a saída deixou de funcionar</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>Gravação parada: não foi possível gravar o arquivo (o disco está cheio?): %1</translation>
     </message>
     <message>
         <source>That effect is no longer in this patch</source>
@@ -1263,6 +1383,10 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
         <translation>%1 não está carregado (veja a mensagem que explica o motivo)</translation>
     </message>
     <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>Não foi possível salvar as configurações de %1: %2</translation>
+    </message>
+    <message>
         <source>%1 crashed the app while loading before, so it is switched off</source>
         <translation>%1 travou o app ao carregar antes, por isso está desligado</translation>
     </message>
@@ -1271,8 +1395,56 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
         <translation>%1 é um efeito, não um instrumento: os Sustain Pads precisam de um instrumento</translation>
     </message>
     <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads: não foi possível restaurar as configurações de %1 (%2): ele toca como carrega</translation>
+    </message>
+    <message>
         <source>That %1 effect is no longer there</source>
         <translation>Esse efeito de %1 não existe mais</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>Não há espaço para outro loop: no máximo %1 loops (apague um primeiro)</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>Memória insuficiente para gravar um loop (são necessários %1 MB)</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>Muitos toques de loop ao mesmo tempo: um foi descartado</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>Um loop chegou ao seu tamanho máximo (2 minutos ou 64 compassos) e foi fechado ali</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>Esse loop já tem todas as camadas que aceita: desfaça uma para gravar outra</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>A gravação de um loop não coube na memória dele, por isso foi silenciada: apague-o e grave de novo</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>Um loop fechou sem a gravação na memória (%1 de %2 frames): ele toca, sem camadas</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>Memória insuficiente para camadas nesse loop: ele toca, sem camadas</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>Andamento de %1 BPM tirado do primeiro loop</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>Nenhum andamento tirado do primeiro loop: ele não tem 1, 2 ou 4 compassos entre 60 e 180 BPM</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>Memória insuficiente para gravar outra camada nesse loop</translation>
     </message>
     <message>
         <source>That plugin is not loaded</source>
@@ -1281,6 +1453,10 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
     <message>
         <source>That instrument is not loaded</source>
         <translation>Esse instrumento não está carregado</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>Só os primeiros %1 stems tocam</translation>
     </message>
     <message>
         <source>The backing tracks could not be read: %1</source>
@@ -1297,6 +1473,14 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
     <message>
         <source>Could not open Explorer for %1</source>
         <translation>Não foi possível abrir o Explorador para %1</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>O sintetizador de hardware em %1 não pode ser tocado: %2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>Não foi possível abrir a entrada MIDI %1: %2</translation>
     </message>
 </context>
 <context>

@@ -849,6 +849,18 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
         <translation>Rekaman %1 tidak bisa diselesaikan: %2</translation>
     </message>
     <message>
+        <source>it could not be decoded</source>
+        <translation>tidak bisa didekode</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>pembacaannya dibatalkan</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>decoder berhenti merespons</translation>
+    </message>
+    <message>
         <source>Backing track not found: %1</source>
         <translation>Backing track tidak ditemukan: %1</translation>
     </message>
@@ -863,6 +875,14 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
     <message>
         <source>Cannot play %1: %2</source>
         <translation>%1 tidak bisa diputar: %2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>hasilnya keluar dalam format sampel yang tidak terduga</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>panjangnya lebih dari %1 menit</translation>
     </message>
     <message>
         <source>Sample not found: %1</source>
@@ -1153,6 +1173,50 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
         <translation>%1 tidak bisa dimulai ulang: %2</translation>
     </message>
     <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>Audio putus (%1 kali): komputer tidak sanggup mengejar. Buffer yang lebih besar di Pengaturan &gt; Audio biasanya mengatasinya; begitu juga menutup program lain</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 berjalan lagi setelah berhenti</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 berhenti: sekarang suara keluar lewat %2</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 berhenti (dicabut?): suara keluar lewat %2, tanpa input, sampai ia kembali</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 berhenti (dicabut?): suara keluar lewat %2 sampai ia kembali</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>Tidak ada output audio yang tersedia (%1): suara kembali begitu ada yang dicolokkan</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>Suara keluar lewat %1 sampai %2 kembali</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 sudah kembali: suara keluar lewat situ lagi</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>Suara keluar lewat %1</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>Tidak ada output audio yang tersedia: %1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Output default Windows berubah: sekarang suara keluar lewat %1</translation>
+    </message>
+    <message>
         <source>The saved Saw Stack Pro settings are damaged (%1)</source>
         <translation>Pengaturan Saw Stack Pro yang tersimpan rusak (%1)</translation>
     </message>
@@ -1237,12 +1301,40 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
         <translation>Pemutar SoundFont tidak bisa mulai (%1)</translation>
     </message>
     <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>SoundFont %1 tidak dibaca: aplikasi sedang ditutup</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1 tidak punya preset %2:%3: preset pertamanya yang dimainkan</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>SoundFont %1 tidak bisa dibaca: %2</translation>
+    </message>
+    <message>
         <source>There is no SoundFont at %1</source>
         <translation>Tidak ada SoundFont di %1</translation>
     </message>
     <message>
         <source>The saved SoundFont Player settings are damaged (%1)</source>
         <translation>Pengaturan pemutar SoundFont yang tersimpan rusak (%1)</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>Dengan PipeWire, jalankan aplikasi dengan pw-jack untuk memakai JACK</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>Pengaturan audio yang tersimpan tidak bisa dipakai (%1); audio sistem dipakai sampai ia kembali</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>%1 tidak bisa dipakai (%2); audio sistem dipakai sampai ia kembali</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 membuat aplikasi crash saat terakhir dimuat, jadi dimatikan (Pengaturan &gt; Plugin untuk mencobanya lagi)</translation>
     </message>
     <message>
         <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
@@ -1257,6 +1349,10 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
         <translation>%1 bukan salah satu plugin yang terpasang (%2): tidak dimuat. Pasang di %3, atau pilih plugin lain</translation>
     </message>
     <message>
+        <source>Could not load %1: %2</source>
+        <translation>%1 tidak bisa dimuat: %2</translation>
+    </message>
+    <message>
         <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
         <translation>%1 tidak bisa menerima pengaturan tersimpannya (%2); ia bermain dengan nilai default</translation>
     </message>
@@ -1267,6 +1363,30 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
     <message>
         <source>Choose an ASIO device</source>
         <translation>Pilih perangkat ASIO</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>Kembali ke %1 juga gagal: %2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>Clock MIDI ke %1 berjalan lagi</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>Input MIDI tersambung: %1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>Input MIDI terputus: %1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>Clock MIDI ke %1 berhenti: output-nya tidak bekerja lagi</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>Rekaman berhenti: rekaman tidak bisa ditulis (disk penuh?): %1</translation>
     </message>
     <message>
         <source>That effect is no longer in this patch</source>
@@ -1281,6 +1401,10 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
         <translation>%1 tidak dimuat (lihat pesan yang menjelaskan alasannya)</translation>
     </message>
     <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>Pengaturan %1 tidak bisa disimpan: %2</translation>
+    </message>
+    <message>
         <source>%1 crashed the app while loading before, so it is switched off</source>
         <translation>%1 pernah membuat aplikasi crash saat dimuat, jadi dimatikan</translation>
     </message>
@@ -1289,8 +1413,56 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
         <translation>%1 adalah efek, bukan instrumen: Sustain Pads butuh instrumen</translation>
     </message>
     <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads: pengaturan %1 tidak bisa dipulihkan (%2): ia bermain seperti saat dimuat</translation>
+    </message>
+    <message>
         <source>That %1 effect is no longer there</source>
         <translation>Efek %1 itu sudah tidak ada</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>Tidak ada tempat untuk loop lain: paling banyak %1 loop (hapus satu dulu)</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>Memori tidak cukup untuk merekam loop (butuh %1 MB)</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>Terlalu banyak tekanan loop sekaligus: satu dibuang</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>Sebuah loop mencapai panjang maksimumnya (2 menit atau 64 bar) dan ditutup di situ</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>Loop itu sudah punya semua layer yang bisa ditampungnya: urungkan satu untuk merekam yang lain</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>Rekaman sebuah loop tidak muat di memorinya, jadi dibisukan: hapus dan rekam lagi</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>Sebuah loop ditutup tanpa rekamannya di memori (%1 dari %2 frame): ia bermain, tanpa layer</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>Memori tidak cukup untuk layer pada loop itu: ia bermain, tanpa layer</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>Tempo %1 BPM diambil dari loop pertama</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>Tidak ada tempo yang diambil dari loop pertama: panjangnya bukan 1, 2 atau 4 bar pada 60-180 BPM</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>Memori tidak cukup untuk merekam layer lain pada loop itu</translation>
     </message>
     <message>
         <source>That plugin is not loaded</source>
@@ -1299,6 +1471,10 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
     <message>
         <source>That instrument is not loaded</source>
         <translation>Instrumen itu tidak dimuat</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>Hanya %1 stem pertama yang bermain</translation>
     </message>
     <message>
         <source>The backing tracks could not be read: %1</source>
@@ -1315,6 +1491,14 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
     <message>
         <source>Could not open Explorer for %1</source>
         <translation>Explorer untuk %1 tidak bisa dibuka</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>Synth hardware di %1 tidak bisa dimainkan: %2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>Input MIDI %1 tidak bisa dibuka: %2</translation>
     </message>
 </context>
 <context>

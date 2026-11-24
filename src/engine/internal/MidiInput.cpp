@@ -10,6 +10,8 @@
 
 #include <rtmidi/RtMidi.h>
 
+#include <QCoreApplication>
+
 #include <chrono>
 #include <exception>
 #include <span>
@@ -227,7 +229,7 @@ std::vector<QString> MidiInput::openAll(const std::vector<MidiPort>& ports)
             port->in->ignoreTypes(false, false, true);
             port->in->setCallback(&MidiInput::callback, port.get());
         } catch (const std::exception& e) {
-            notices.push_back(u"Could not open MIDI input %1: %2"_s.arg(name, QString::fromUtf8(e.what())));
+            notices.push_back(QCoreApplication::translate("Engine", "Could not open MIDI input %1: %2").arg(name, QString::fromUtf8(e.what())));
             qCWarning(lcEngine).noquote() << notices.back();
             continue;
         }

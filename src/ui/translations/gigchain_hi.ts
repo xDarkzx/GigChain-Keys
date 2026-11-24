@@ -871,6 +871,18 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <translation>Recording %1 पूरी नहीं हो सकी: %2</translation>
     </message>
     <message>
+        <source>it could not be decoded</source>
+        <translation>इसे decode नहीं किया जा सका</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>इसे पढ़ना रद्द कर दिया गया</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>decoder ने जवाब देना बंद कर दिया</translation>
+    </message>
+    <message>
         <source>Backing track not found: %1</source>
         <translation>Backing track नहीं मिला: %1</translation>
     </message>
@@ -885,6 +897,14 @@ Chord को [brackets] में ठीक उस शब्द से पहल
     <message>
         <source>Cannot play %1: %2</source>
         <translation>%1 नहीं बजाया जा सकता: %2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>यह अनपेक्षित sample format में निकला</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>यह %1 मिनट से लंबा है</translation>
     </message>
     <message>
         <source>Sample not found: %1</source>
@@ -1175,6 +1195,50 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <translation>%1 फिर से शुरू नहीं हो सका: %2</translation>
     </message>
     <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>Audio कटा (%1 बार): computer साथ नहीं दे पाया। सेटिंग्स &gt; Audio में बड़ा buffer आमतौर पर इसे रोक देता है; दूसरे programs बंद करने से भी</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 रुकने के बाद फिर से चल पड़ा</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 रुक गया: अब %2 से बज रहा है</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 रुक गया (निकल गया?): वापस आने तक %2 से, बिना inputs के, बज रहा है</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 रुक गया (निकल गया?): वापस आने तक %2 से बज रहा है</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>कोई audio output उपलब्ध नहीं (%1): कोई लगाते ही आवाज़ लौट आएगी</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>%2 वापस आने तक %1 से बज रहा है</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 वापस आ गया: फिर से इसी से बज रहा है</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>%1 से बज रहा है</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>कोई audio output उपलब्ध नहीं: %1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Windows का default output बदल गया: अब %1 से बज रहा है</translation>
+    </message>
+    <message>
         <source>The saved Saw Stack Pro settings are damaged (%1)</source>
         <translation>Saw Stack Pro की saved settings खराब हैं (%1)</translation>
     </message>
@@ -1259,12 +1323,40 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <translation>SoundFont Player शुरू नहीं हो सका (%1)</translation>
     </message>
     <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>SoundFont %1 पढ़ा नहीं गया: app बंद हो रहा है</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1 में preset %2:%3 नहीं है: इसका पहला preset बजता है</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>SoundFont %1 पढ़ा नहीं जा सका: %2</translation>
+    </message>
+    <message>
         <source>There is no SoundFont at %1</source>
         <translation>%1 पर कोई SoundFont नहीं है</translation>
     </message>
     <message>
         <source>The saved SoundFont Player settings are damaged (%1)</source>
         <translation>SoundFont Player की saved settings खराब हैं (%1)</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>PipeWire के साथ JACK इस्तेमाल करने के लिए app को pw-jack से शुरू करें</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>Saved audio setup इस्तेमाल नहीं हो सका (%1); उसके लौटने तक system audio इस्तेमाल हो रहा है</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>%1 इस्तेमाल नहीं हो सका (%2); उसके लौटने तक system audio इस्तेमाल हो रहा है</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 ने पिछली बार load होते समय app crash कर दिया था, इसलिए यह बंद है (फिर आज़माने के लिए सेटिंग्स &gt; Plugins)</translation>
     </message>
     <message>
         <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
@@ -1279,6 +1371,10 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <translation>%1 installed plugins में से नहीं है (%2): load नहीं हुआ। इसे %3 में install करें, या कोई और plugin चुनें</translation>
     </message>
     <message>
+        <source>Could not load %1: %2</source>
+        <translation>%1 load नहीं हो सका: %2</translation>
+    </message>
+    <message>
         <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
         <translation>%1 अपनी saved settings नहीं ले सका (%2); यह अपनी default settings से बज रहा है</translation>
     </message>
@@ -1289,6 +1385,30 @@ Chord को [brackets] में ठीक उस शब्द से पहल
     <message>
         <source>Choose an ASIO device</source>
         <translation>कोई ASIO device चुनें</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>%1 पर वापस जाना भी नहीं हो सका: %2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>%1 पर MIDI clock फिर से चल पड़ा</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>MIDI input जुड़ा: %1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>MIDI input हटा: %1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>%1 पर MIDI clock रुक गया: output ने काम करना बंद कर दिया</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>Recording रुक गई: recording लिखी नहीं जा सकी (क्या disk भर गई है?): %1</translation>
     </message>
     <message>
         <source>That effect is no longer in this patch</source>
@@ -1303,6 +1423,10 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <translation>%1 load नहीं हुआ (वजह वाला message देखें)</translation>
     </message>
     <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>%1 की settings save नहीं हो सकीं: %2</translation>
+    </message>
+    <message>
         <source>%1 crashed the app while loading before, so it is switched off</source>
         <translation>%1 ने पहले load होते समय app crash कर दिया था, इसलिए यह बंद है</translation>
     </message>
@@ -1311,8 +1435,56 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <translation>%1 effect है, instrument नहीं: Sustain Pads को instrument चाहिए</translation>
     </message>
     <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads: %1 की settings वापस नहीं आ सकीं (%2): यह जैसे load होता है वैसे बजता है</translation>
+    </message>
+    <message>
         <source>That %1 effect is no longer there</source>
         <translation>वह %1 effect अब वहाँ नहीं है</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>एक और loop की जगह नहीं: ज़्यादा से ज़्यादा %1 loops (पहले एक clear करें)</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>Loop record करने के लिए memory काफ़ी नहीं (%1 MB चाहिए)</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>एक साथ बहुत ज़्यादा loop presses: एक छोड़ दिया गया</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>एक loop अपनी सबसे लंबी हद (2 मिनट या 64 bars) तक पहुँचा और वहीं बंद हो गया</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>उस loop में जितनी layers आ सकती हैं, सब हैं: दूसरी record करने के लिए एक undo करें</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>एक loop की recording उसकी memory में नहीं समाई, इसलिए उसे mute कर दिया गया: इसे clear करके फिर record करें</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>एक loop अपनी recording memory में होने के बिना बंद हुआ (%2 में से %1 frames): यह बजता है, बिना layers के</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>उस loop पर layers के लिए memory काफ़ी नहीं: यह बजता है, बिना layers के</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>Tempo %1 BPM पहले loop से लिया गया</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>पहले loop से कोई tempo नहीं लिया गया: यह 60-180 BPM पर 1, 2 या 4 bars का नहीं है</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>उस loop पर एक और layer record करने के लिए memory काफ़ी नहीं</translation>
     </message>
     <message>
         <source>That plugin is not loaded</source>
@@ -1321,6 +1493,10 @@ Chord को [brackets] में ठीक उस शब्द से पहल
     <message>
         <source>That instrument is not loaded</source>
         <translation>वह instrument load नहीं है</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>सिर्फ़ पहले %1 stems बजते हैं</translation>
     </message>
     <message>
         <source>The backing tracks could not be read: %1</source>
@@ -1337,6 +1513,14 @@ Chord को [brackets] में ठीक उस शब्द से पहल
     <message>
         <source>Could not open Explorer for %1</source>
         <translation>%1 के लिए Explorer नहीं खुल सका</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>%1 पर hardware synth नहीं बजाया जा सकता: %2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>MIDI input %1 नहीं खुल सका: %2</translation>
     </message>
 </context>
 <context>
