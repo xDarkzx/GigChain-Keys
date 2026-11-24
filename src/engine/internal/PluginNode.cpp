@@ -11,6 +11,8 @@
 
 #include "gigchain/platform/PluginFolders.h"
 
+#include <QCoreApplication>
+
 using namespace Qt::StringLiterals;
 
 namespace gigchain::engine {
@@ -55,13 +57,15 @@ core::Result<std::shared_ptr<PluginNode>> PluginNode::load(const QString& plugin
         if (pluginId == QLatin1StringView(SidechainEffectNode::kPluginId)) {
             return std::shared_ptr<PluginNode>(SidechainEffectNode::create(sampleRate, maxBlock));
         }
-        const QString why = u"%1 is not one of the app's own instruments (a newer version's, maybe)"_s.arg(pluginId);
+        const QString why =
+            QCoreApplication::translate("Engine", "%1 is not one of the app's own instruments (a newer version's, maybe)").arg(pluginId);
         qCWarning(lcEngine).noquote() << why;
         return core::fail(core::ErrorCode::InvalidData, why);
     }
     // Only this system's plugin files: anything else is refused, never loaded.
     if (isVst2(pluginId) && !platform::isVst2PluginFile(pluginId)) {
-        const QString why = u"%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)"_s.arg(pluginId);
+        const QString why =
+            QCoreApplication::translate("Engine", "%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)").arg(pluginId);
         qCWarning(lcEngine).noquote() << why;
         return core::fail(core::ErrorCode::InvalidData, why);
     }
@@ -77,7 +81,7 @@ core::Result<std::shared_ptr<PluginNode>> PluginNode::load(const QString& plugin
 
 core::Result<std::unique_ptr<IPluginEditor>> PluginNode::createEditor(const std::shared_ptr<PluginNode>& node)
 {
-    if (!node) return core::fail(core::ErrorCode::InvalidData, u"No plugin to open an editor for"_s);
+    if (!node) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "No plugin to open an editor for"));
     return node->makeEditor(node);
 }
 

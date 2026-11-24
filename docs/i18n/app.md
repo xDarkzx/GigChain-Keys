@@ -16,12 +16,18 @@ program: readable and natural first, perfect later.
 - **Settings > General > Language**: *The computer's language* (the
   default), or any of the eleven. A change shows after a restart, and the
   app says so.
-- Every screen, dialog, menu, tooltip and message. Not translated: the
-  engine's own messages (a plugin that did not load, no audio: next), the
-  user guide (after that), the What's new list (it is the changelog's
+- Every screen, dialog, menu, tooltip and message, the engine's too (a
+  plugin that did not load, no audio output, a file it cannot read). Not
+  translated: the user guide (next), the What's new list (it is the changelog's
   words), plugin and instrument names, preset names, and the knob labels
   on the app's own instruments (LOW, RATE, ENHANCE...: like a hardware
-  synth's panel, they stay English everywhere).
+  synth's panel, they stay English everywhere). Also English on purpose:
+  what a plugin, the audio driver or the system says (quoted after the
+  app's own words, as in "Could not open X: <the driver's words>"), the
+  technical detail in brackets after "settings are damaged", the plugin
+  scan's reasons (kept in the scan's cache, so a later language change
+  would leave old ones), the developer test control's messages, and
+  messages only a programming mistake can show ("has no parameter 7").
 - The translations are AI-written and not yet reviewed by native
   speakers: readable, not perfect. A player can report a wording from the
   issues page.
@@ -30,8 +36,10 @@ program: readable and natural first, perfect later.
 
 - **Qt's own translation system.** The text is already marked (`qsTr` in
   QML, `tr` in C++); the engine's messages are marked too
-  (`QCoreApplication::translate("Engine", ...)`). `lupdate` collects every
-  marked text into `src/ui/translations/gigchain_<language>.ts`;
+  (`QCoreApplication::translate("Engine", ...)`, whole sentences, never
+  pieces put together). `lupdate` collects every marked text, the UI's
+  and the engine's (`SOURCE_TARGETS gigchain_ui gigchain_engine`), into
+  `src/ui/translations/gigchain_<language>.ts`;
   `qt_add_translations` compiles them (`lrelease`) into the app's
   resources at build time, so nothing extra is shipped or installed.
 - **Startup** (`main.cpp`, before the first window): the language is read
@@ -62,20 +70,24 @@ program: readable and natural first, perfect later.
   - has the wrong number of plural forms for the language;
   - lost or changed a placeholder (`%1`, `%n`, `%L1`) or a tag;
   - left a text in English that is not marked as kept on purpose;
-  - differs from the other languages' texts, or is not as lupdate writes it.
-  A new text in the source is found by running the `update_translations`
-  target (lupdate), which adds it to every file as untranslated: the check
-  then fails until it is translated.
+  - differs from the other languages' texts, or is not as lupdate writes it;
+  - is behind the source: the check runs lupdate on a copy, so a text new
+    in the source (or gone from it) fails it until the
+    `update_translations` target is built and the text translated.
 - `tst_language`: the language chosen from the setting and the computer's
-  languages, and every language's translations bundled and loading.
+  languages, every language's translations bundled and loading, and an
+  engine message coming out in the language.
 - `tst_qml_smoke`: the main window loads in German, Russian, Hindi and
   Japanese with no QML warnings and shows the language (in its own script);
   Settings > General offers every language.
 
 ## Not now
 
-- The engine's messages (`QCoreApplication::translate("Engine", ...)` in
-  src/engine, src/core and src/platform, about 210): the next step.
-- The user guide (`docs/help`) in other languages: after that.
+- The user guide (`docs/help`) in other languages: the next step.
+- The system code's log-only messages (src/platform: crash reports,
+  memory use, the single-instance lock): the player never sees them. Its
+  texts the player does see (the audio driver names, "Could not open
+  Explorer for...") are translated, and every system's files are
+  scanned on every system, so Windows and Linux check the same texts.
 - Right-to-left languages.
 - Changing language without a restart.

@@ -1,5 +1,6 @@
 #include "gigchain/platform/Process.h"
 
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QProcess>
@@ -60,7 +61,8 @@ core::Result<void> showInFileManager(const QString& path)
     // The folder, in the desktop's own file manager (xdg-open; Finder on macOS).
     const QString folder = QFileInfo(path).isDir() && !path.endsWith(u".vst3"_s) ? path : QFileInfo(path).absolutePath();
     if (!QDesktopServices::openUrl(QUrl::fromLocalFile(folder))) {
-        return core::fail(core::ErrorCode::SystemRefused, u"Could not open the file manager at %1"_s.arg(folder));
+        return core::fail(core::ErrorCode::SystemRefused,
+                          QCoreApplication::translate("Engine", "Could not open the file manager at %1").arg(folder));
     }
     return {};
 }

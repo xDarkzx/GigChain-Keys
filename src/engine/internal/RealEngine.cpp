@@ -9,6 +9,7 @@
 #include "gigchain/core/Limits.h"
 #include "gigchain/platform/PluginFolders.h"
 
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QElapsedTimer>
 #include <QDir>
@@ -81,10 +82,17 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
         // The saved setup failed: fall back to system audio (logged by open()).
         // (On PipeWire, JACK's devices are there only for an app started
         // with pw-jack: the usual reason a JACK device is missing.)
-        const QString jackHint =
-            options.audio.driver == AudioDriver::Jack ? u". With PipeWire, start the app with pw-jack to use JACK"_s : QString();
-        engine->m_pendingNotices.push_back(Notice::warning(u"%1 could not be used (%2); using system audio until it is there%3"_s.arg(
-            options.audio.device.isEmpty() ? u"The saved audio setup"_s : options.audio.device, opened.error().message, jackHint)));
+        const QString jackHint = options.audio.driver == AudioDriver::Jack
+                                     ? QCoreApplication::translate("Engine", "With PipeWire, start the app with pw-jack to use JACK")
+                                     : QString();
+        QString fallback = options.audio.device.isEmpty()
+                               ? QCoreApplication::translate("Engine", "The saved audio setup could not be used (%1); using system audio "
+                                                                       "until it is there")
+                                     .arg(opened.error().message)
+                               : QCoreApplication::translate("Engine", "%1 could not be used (%2); using system audio until it is there")
+                                     .arg(options.audio.device, opened.error().message);
+        if (!jackHint.isEmpty()) fallback += u". "_s + jackHint;
+        engine->m_pendingNotices.push_back(Notice::warning(fallback));
         opened = engine->openAudio(systemAudio);
         // The saved device (unplugged when the app started) is taken back
         // when it is plugged in.
@@ -121,8 +129,9 @@ core::Result<std::unique_ptr<RealEngine>> RealEngine::create(const RealEngineOpt
     engine->m_guard = PluginLoadGuard(options.pluginGuardFolder);
     for (const QString& crashed : engine->m_guard.takeCrashed(options.lastRunCrashed)) {
         engine->m_pendingNotices.push_back(Notice::warning(
-            u"%1 crashed the app while loading last time, so it is switched off (Settings > Plugins to try it again)"_s.arg(
-                QFileInfo(crashed).completeBaseName())));
+            QCoreApplication::translate("Engine", "%1 crashed the app while loading last time, so it is switched off (Settings > "
+                                                  "Plugins to try it again)")
+                .arg(QFileInfo(crashed).completeBaseName())));
     }
     PluginCatalog::Progress scanProgress;
     if (options.progress) {
@@ -423,7 +432,8 @@ core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QSt
     // The app's own instruments run no outside code: always there.
     if (PluginNode::isBuiltin(pluginId)) {
         if (std::ranges::any_of(PluginNode::builtins(), [&](const PluginInfo& p) { return p.id == pluginId; })) return {};
-        const QString problem = u"%1 (%2) is not one of this version's own instruments: not loaded"_s.arg(name, pluginId);
+        const QString problem =
+            QCoreApplication::translate("Engine", "%1 (%2) is not one of this version's own instruments: not loaded").arg(name, pluginId);
         qCWarning(lcEngine).noquote() << problem;
         return core::fail(core::ErrorCode::InvalidData, problem);
     }
@@ -437,13 +447,15 @@ core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QSt
                    && QString::compare(QDir::cleanPath(QFileInfo(p.id).absoluteFilePath()), file, platform::fileNameCase()) == 0;
         });
         if (scanned) return {};
-        const QString problem = u"%1 (%2) is not a VST2 plugin the scan found: not loaded"_s.arg(name, pluginId);
+        const QString problem =
+            QCoreApplication::translate("Engine", "%1 (%2) is not a VST2 plugin the scan found: not loaded").arg(name, pluginId);
         qCWarning(lcEngine).noquote() << problem;
         return core::fail(core::ErrorCode::InvalidData, problem);
     }
     if (isInstalledPlugin(pluginId)) return {};
-    const QString problem = u"%1 is not one of the installed plugins (%2): not loaded. Install it in %3, "
-                            u"or choose another plugin"_s.arg(name, pluginId, QDir::toNativeSeparators(m_pluginFolder));
+    const QString problem = QCoreApplication::translate("Engine", "%1 is not one of the installed plugins (%2): not loaded. "
+                                                                  "Install it in %3, or choose another plugin")
+                                .arg(name, pluginId, QDir::toNativeSeparators(m_pluginFolder));
     qCWarning(lcEngine).noquote() << problem;
     return core::fail(core::ErrorCode::InvalidData, problem);
 }
@@ -473,15 +485,16 @@ std::shared_ptr<PluginNode> RealEngine::loadWithSettings(const core::PluginSlot&
     auto node = PluginNode::load(slot.pluginId, m_audio.sampleRate(), m_audio.maxBlock());
     if (!node) {
         // Already logged by the plugin's load; tell the user too.
-        m_pendingNotices.push_back(Notice::error(u"Could not load %1: %2"_s.arg(slot.displayName, node.error().message)));
+        m_pendingNotices.push_back(
+            Notice::error(QCoreApplication::translate("Engine", "Could not load %1: %2").arg(slot.displayName, node.error().message)));
         return nullptr;
     }
     if (!slot.state.isEmpty()) {
         auto restored = (*node)->restoreEncodedState(slot.state);
         if (!restored) {
             // It still plays, at its defaults; the user needs to know.
-            const QString problem = u"%1 could not take its saved settings (%2); it plays with its defaults"_s.arg(
-                slot.displayName, restored.error().message);
+            const QString problem = QCoreApplication::translate("Engine", "%1 could not take its saved settings (%2); it plays with its defaults")
+                                        .arg(slot.displayName, restored.error().message);
             qCWarning(lcEngine).noquote() << problem;
             m_pendingNotices.push_back(Notice::warning(problem));
         }
@@ -496,7 +509,7 @@ core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
     const AudioApi api = setup.driver;
     // A setup from another system (ASIO on Linux, JACK on Windows).
     if (const auto here = systemAudioDrivers(); std::ranges::find(here, api) == here.end()) {
-        const QString problem = u"%1 is not available on this system"_s.arg(apiName(api));
+        const QString problem = QCoreApplication::translate("Engine", "%1 is not available on this system").arg(apiName(api));
         qCWarning(lcEngine).noquote() << problem;
         return core::fail(core::ErrorCode::DeviceUnavailable, problem);
     }
@@ -504,7 +517,7 @@ core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
     if (!setup.device.isEmpty()) {
         choice = DeviceChoice{.api = api, .name = setup.device};
     } else if (setup.driver == AudioDriver::Asio) {
-        return core::fail(core::ErrorCode::InvalidData, u"Choose an ASIO device"_s);
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "Choose an ASIO device"));
     }
     std::optional<DeviceChoice> input;
     if (!setup.inputDevice.isEmpty()) input = DeviceChoice{.api = api, .name = setup.inputDevice};
@@ -572,7 +585,7 @@ core::Result<void> RealEngine::setAudioSetup(const AudioSetup& setup)
         // Logged by open(). Put the working setup back.
         if (auto restored = openAudio(previous); !restored) {
             m_pendingNotices.push_back(
-                Notice::error(u"Could not go back to %1 either: %2"_s.arg(before.device, restored.error().message)));
+                Notice::error(QCoreApplication::translate("Engine", "Could not go back to %1 either: %2").arg(before.device, restored.error().message)));
             qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         }
         syncPluginsToDevice();
@@ -685,7 +698,7 @@ void RealEngine::watchMidiPorts(std::vector<Notice>& notices)
         m_clockOut.portName().isEmpty() && outputs.contains(m_midiSetup.clockOutput)) {
         const std::vector<QString> problems = applyClockSetup(); // each logged
         if (problems.empty()) {
-            notices.push_back(Notice::info(u"MIDI clock to %1 started again"_s.arg(m_midiSetup.clockOutput)));
+            notices.push_back(Notice::info(QCoreApplication::translate("Engine", "MIDI clock to %1 started again").arg(m_midiSetup.clockOutput)));
             qCInfo(lcEngine).noquote() << notices.back().text;
         }
         std::ranges::transform(problems, std::back_inserter(notices), &Notice::warning);
@@ -696,10 +709,10 @@ void RealEngine::watchMidiPorts(std::vector<Notice>& notices)
 
     std::vector<QString> changes;
     for (const QString& name : present) {
-        if (!m_midiPorts.contains(name)) changes.push_back(u"MIDI input connected: %1"_s.arg(name));
+        if (!m_midiPorts.contains(name)) changes.push_back(QCoreApplication::translate("Engine", "MIDI input connected: %1").arg(name));
     }
     for (const QString& name : m_midiPorts) {
-        if (!present.contains(name)) changes.push_back(u"MIDI input disconnected: %1"_s.arg(name));
+        if (!present.contains(name)) changes.push_back(QCoreApplication::translate("Engine", "MIDI input disconnected: %1").arg(name));
     }
     for (const QString& change : changes) qCInfo(lcEngine).noquote() << change;
     std::ranges::transform(changes, std::back_inserter(notices), &Notice::info); // news, not a problem
@@ -1038,12 +1051,15 @@ std::vector<Notice> RealEngine::poll()
     serviceLoops(notices);
     m_clockOut.setTempo(tempo());
     if (m_clockOut.takeFailed()) {
-        notices.push_back(Notice::warning(u"The MIDI clock to %1 stopped: the output stopped working"_s.arg(m_clockOut.portName())));
+        notices.push_back(Notice::warning(
+            QCoreApplication::translate("Engine", "The MIDI clock to %1 stopped: the output stopped working").arg(m_clockOut.portName())));
         qCWarning(lcEngine).noquote() << notices.back().text;
         m_clockOut.close(); // choosing the output again in Settings restarts it
     }
     if (m_recorder.takeFailed()) {
-        notices.push_back(Notice::error(u"Recording stopped: the recording could not be written (is the disk full?): %1"_s.arg(m_recorder.filePath())));
+        notices.push_back(Notice::error(
+            QCoreApplication::translate("Engine", "Recording stopped: the recording could not be written (is the disk full?): %1")
+                .arg(m_recorder.filePath())));
         (void)m_recorder.stop(); // finishes what was written; its problem is in the notice above
     }
     // Knobs mapped to parameters: shown in the plugins' own windows, and
@@ -1111,16 +1127,18 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(cons
         if (c.id == id) channel = &c;
     }
     if (channel == nullptr || effect < 0 || static_cast<std::size_t>(effect) >= channel->effects.size()) {
-        return core::fail(core::ErrorCode::OutOfRange, u"That effect is no longer in this patch"_s);
+        return core::fail(core::ErrorCode::OutOfRange, QCoreApplication::translate("Engine", "That effect is no longer in this patch"));
     }
     const core::PluginSlot& slot = channel->effects.at(static_cast<std::size_t>(effect));
     if (slot.bypass) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is switched off: switch it on to open its window").arg(slot.displayName));
     }
     const auto effects = m_currentEffects.find(id.value());
     if (effects == m_currentEffects.end() || static_cast<std::size_t>(effect) >= effects->second.size()
         || !effects->second.at(static_cast<std::size_t>(effect))) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is not loaded (see the message about why)").arg(slot.displayName));
     }
     return PluginNode::createEditor(effects->second.at(static_cast<std::size_t>(effect)));
 }
@@ -1205,7 +1223,8 @@ std::vector<QString> RealEngine::storeBusEffectStates(EffectsBus& bus, std::vect
         if (node == bus.nodes.end() || effect.pluginId != bus.effects.at(i).pluginId) continue;
         auto state = node->second->saveEncodedState();
         if (!state) {
-            problems.push_back(u"The settings of %1 could not be saved: %2"_s.arg(effect.displayName, state.error().message));
+            problems.push_back(
+                QCoreApplication::translate("Engine", "The settings of %1 could not be saved: %2").arg(effect.displayName, state.error().message));
             qCWarning(lcEngine).noquote() << problems.back();
             continue;
         }
@@ -1235,21 +1254,24 @@ core::Result<void> RealEngine::setSustainPadsInstrument(const QString& pluginId,
     }
     const QString name = QFileInfo(pluginId).completeBaseName();
     if (m_guard.isBlocked(pluginId)) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 crashed the app while loading before, so it is switched off"_s.arg(name));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 crashed the app while loading before, so it is switched off").arg(name));
     }
     if (auto installed = checkInstalled(pluginId, name); !installed) return tl::unexpected(installed.error());
     const auto loading = m_guard.loading(pluginId);
     auto node = PluginNode::load(pluginId, m_audio.sampleRate(), m_audio.maxBlock());
     if (!node) return tl::unexpected(node.error()); // logged by the plugin's load
     if (!(*node)->isInstrument()) {
-        const QString why = u"%1 is an effect, not an instrument: Sustain Pads need an instrument"_s.arg((*node)->name());
+        const QString why =
+            QCoreApplication::translate("Engine", "%1 is an effect, not an instrument: Sustain Pads need an instrument").arg((*node)->name());
         qCWarning(lcEngine).noquote() << why;
         return core::fail(core::ErrorCode::InvalidData, why);
     }
     if (!state.isEmpty()) {
         if (auto restored = (*node)->restoreEncodedState(state); !restored) {
-            m_pendingNotices.push_back(Notice::warning(u"Sustain Pads: %1's settings could not be restored (%2): it plays as it loads"_s
-                                                           .arg((*node)->name(), restored.error().message)));
+            m_pendingNotices.push_back(Notice::warning(
+                QCoreApplication::translate("Engine", "Sustain Pads: %1's settings could not be restored (%2): it plays as it loads")
+                    .arg((*node)->name(), restored.error().message)));
             qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
         }
     }
@@ -1282,15 +1304,17 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createBusEffectEditor(E
     GC_ONLY_MAIN_THREAD();
     const std::vector<QString> keys = busKeys(bus);
     if (effect < 0 || static_cast<std::size_t>(effect) >= keys.size()) {
-        return core::fail(core::ErrorCode::OutOfRange, u"That %1 effect is no longer there"_s.arg(bus.name));
+        return core::fail(core::ErrorCode::OutOfRange, QCoreApplication::translate("Engine", "That %1 effect is no longer there").arg(bus.name));
     }
     const core::PluginSlot& slot = bus.effects.at(static_cast<std::size_t>(effect));
     if (slot.bypass) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is switched off: switch it on to open its window").arg(slot.displayName));
     }
     const auto node = bus.nodes.find(keys.at(static_cast<std::size_t>(effect)));
     if (node == bus.nodes.end()) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is not loaded (see the message about why)").arg(slot.displayName));
     }
     return PluginNode::createEditor(node->second);
 }
@@ -1899,7 +1923,7 @@ void RealEngine::loopCommand(const core::ChannelId& channel, LoopCommand command
         if (command != LoopCommand::Record || channel.isNull()) return; // no loop to act on
         const auto free = std::ranges::find_if(m_loopOwners, [](const core::ChannelId& id) { return id.isNull(); });
         if (free == m_loopOwners.end()) {
-            report(u"No room for another loop: %1 loops at most (clear one first)"_s.arg(LoopStation::kSlots));
+            report(QCoreApplication::translate("Engine", "No room for another loop: %1 loops at most (clear one first)").arg(LoopStation::kSlots));
             return;
         }
         slot = static_cast<int>(free - m_loopOwners.begin());
@@ -1917,13 +1941,14 @@ void RealEngine::loopCommand(const core::ChannelId& channel, LoopCommand command
             data = std::make_shared<LoopData>();
             data->base = std::make_shared<LoopTake>(frames);
         } catch (const std::bad_alloc&) {
-            report(u"Not enough memory to record a loop (%1 MB needed)"_s.arg(frames * int64_t{8} / (int64_t{1024} * 1024)));
+            report(QCoreApplication::translate("Engine", "Not enough memory to record a loop (%1 MB needed)")
+                       .arg(frames * int64_t{8} / (int64_t{1024} * 1024)));
             m_loopOwners.at(index) = {};
             return;
         }
         m_loops.setData(slot, std::move(data));
     }
-    if (!m_loops.post(slot, command)) report(u"Too many loop presses at once: one was dropped"_s);
+    if (!m_loops.post(slot, command)) report(QCoreApplication::translate("Engine", "Too many loop presses at once: one was dropped"));
 }
 
 void RealEngine::stopAllLoops()
@@ -1955,13 +1980,14 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
         const auto index = static_cast<std::size_t>(slot);
         if (m_loopOwners.at(index).isNull()) continue;
         if (m_loops.takeFull(slot)) {
-            tell(Notice::warning(u"A loop reached its longest (2 minutes or 64 bars) and closed there"_s));
+            tell(Notice::warning(QCoreApplication::translate("Engine", "A loop reached its longest (2 minutes or 64 bars) and closed there")));
         }
         if (m_loops.takeNoLayerLeft(slot)) {
-            tell(Notice::warning(u"That loop has all the layers it can take: undo one to record another"_s));
+            tell(Notice::warning(QCoreApplication::translate("Engine", "That loop has all the layers it can take: undo one to record another")));
         }
         if (m_loops.takeFault(slot)) {
-            tell(Notice::warning(u"A loop's recording did not fit its memory, so it was silenced: clear it and record it again"_s));
+            tell(Notice::warning(QCoreApplication::translate("Engine", "A loop's recording did not fit its memory, so it was silenced: clear "
+                                                                       "it and record it again")));
         }
         // (Read after the ask: what it publishes with it, not what was there before.)
         if (const LoopReading closed = m_loops.takeNeedsLayers(slot) ? m_loops.read(slot) : LoopReading{}; closed.length > 0) {
@@ -1969,7 +1995,8 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
             const LoopData* now = m_loops.data(slot);
             const int64_t kept = closed.take + closed.tail;
             if (now == nullptr || !now->base || closed.take <= 0 || now->base->frames() < kept) {
-                tell(Notice::warning(u"A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers"_s
+                tell(Notice::warning(QCoreApplication::translate("Engine", "A loop closed without its recording in memory (%1 of %2 "
+                                                                           "frames): it plays, without layers")
                                          .arg(now != nullptr && now->base ? now->base->frames() : 0)
                                          .arg(kept)));
             } else {
@@ -1984,7 +2011,7 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
                     for (int64_t i = 0; i < layers; ++i) data->layers.push_back(std::make_shared<LoopTake>(closed.length));
                     m_loops.setData(slot, std::move(data));
                 } catch (const std::bad_alloc&) {
-                    tell(Notice::warning(u"Not enough memory for layers on that loop: it plays, without layers"_s));
+                    tell(Notice::warning(QCoreApplication::translate("Engine", "Not enough memory for layers on that loop: it plays, without layers")));
                 }
             }
             // Free: the first loop sets the tempo, bar 1 on it.
@@ -2000,9 +2027,10 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
                 if (best > 0.0) {
                     setTempo(best);
                     m_barOriginAt.store(m_loops.freeGrid().origin, std::memory_order_release);
-                    tell(Notice::info(u"Tempo %1 BPM taken from the first loop"_s.arg(best, 0, 'f', 1)));
+                    tell(Notice::info(QCoreApplication::translate("Engine", "Tempo %1 BPM taken from the first loop").arg(best, 0, 'f', 1)));
                 } else {
-                    tell(Notice::warning(u"No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM"_s));
+                    tell(Notice::warning(
+                        QCoreApplication::translate("Engine", "No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM")));
                 }
             }
         }
@@ -2020,7 +2048,7 @@ void RealEngine::serviceLoops(std::vector<Notice>& notices)
                 m_loops.setData(slot, std::move(fresh));
                 m_loopFreshSent.at(index) = dirty;
             } catch (const std::bad_alloc&) {
-                tell(Notice::warning(u"Not enough memory to record another layer on that loop"_s));
+                tell(Notice::warning(QCoreApplication::translate("Engine", "Not enough memory to record another layer on that loop")));
             }
         }
         // Cleared (and no press on its way): its room is given back. (Nothing
@@ -2155,7 +2183,7 @@ core::Result<void> RealEngine::setPluginParameter(const core::ChannelId& id, int
 {
     GC_ONLY_MAIN_THREAD();
     const auto node = currentNode(id, target);
-    if (!node) return core::fail(core::ErrorCode::InvalidData, u"That plugin is not loaded"_s);
+    if (!node) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "That plugin is not loaded"));
     auto set = node->setParameter(parameter, value);
     if (!set) qCWarning(lcEngine).noquote() << "Setting a parameter:" << set.error().message;
     return set;
@@ -2172,7 +2200,7 @@ core::Result<void> RealEngine::setInstrumentFile(const core::ChannelId& id, cons
 {
     GC_ONLY_MAIN_THREAD();
     const auto node = currentNode(id, -1);
-    if (!node) return core::fail(core::ErrorCode::InvalidData, u"That instrument is not loaded"_s);
+    if (!node) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "That instrument is not loaded"));
     auto set = node->setFile(path);
     if (!set) qCWarning(lcEngine).noquote() << "Choosing a file:" << set.error().message;
     else qCInfo(lcEngine).noquote() << node->name() << "plays" << (path.isEmpty() ? u"no file"_s : path);
@@ -2217,7 +2245,7 @@ void RealEngine::setBackingStems(const std::vector<BackingStemFile>& stems)
     paths.reserve(count);
     for (std::size_t i = 0; i < count; ++i) paths.push_back(stems.at(i).path);
     if (stems.size() > m_stemGains.size()) {
-        m_pendingNotices.push_back(Notice::warning(u"Only the first %1 stems play"_s.arg(m_stemGains.size())));
+        m_pendingNotices.push_back(Notice::warning(QCoreApplication::translate("Engine", "Only the first %1 stems play").arg(m_stemGains.size())));
         qCWarning(lcEngine).noquote() << m_pendingNotices.back().text;
     }
     // Other files: the old set stops first, so no stem of it plays at the
@@ -2301,7 +2329,7 @@ void RealEngine::collectBackingTrack(std::vector<Notice>& notices)
             read.swap(m_trackRead);
         }
         if (m_trackReadBroke.exchange(false, std::memory_order_acquire)) {
-            const QString why = u"The backing tracks could not be read: %1"_s.arg(QString::fromUtf8(m_trackReadWhy.data()));
+            const QString why = QCoreApplication::translate("Engine", "The backing tracks could not be read: %1").arg(QString::fromUtf8(m_trackReadWhy.data()));
             qCWarning(lcEngine).noquote() << why;
             notices.push_back(Notice::error(why));
             m_trackFailed = paths; // not tried again until asked for again
@@ -2357,7 +2385,8 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(c
     GC_ONLY_MAIN_THREAD();
     // A separate instance, not in the audio graph; the editor keeps it alive.
     if (m_guard.isBlocked(pluginId)) {
-        return core::fail(core::ErrorCode::InvalidData, u"This plugin crashed the app while loading before, so it is switched off"_s);
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "This plugin crashed the app while loading before, so it is switched off"));
     }
     if (auto installed = checkInstalled(pluginId, QFileInfo(pluginId).completeBaseName()); !installed) {
         return tl::unexpected(installed.error());

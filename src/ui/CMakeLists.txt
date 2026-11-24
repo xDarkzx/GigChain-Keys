@@ -280,12 +280,16 @@ qt_add_resources(gigchain_ui "help" PREFIX "/help" BASE "${PROJECT_SOURCE_DIR}/d
 set(GIGCHAIN_LANGUAGES hi pt_BR es id de fr ru ja ko zh_CN)
 list(TRANSFORM GIGCHAIN_LANGUAGES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/translations/gigchain_" OUTPUT_VARIABLE _gigchain_ts)
 list(TRANSFORM _gigchain_ts APPEND ".ts")
+# The system code's files, every system's (not only this one's): the same
+# texts collected, and checked, on Windows, Linux and macOS.
+file(GLOB _gigchain_platform_sources CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/platform/*.cpp")
 qt_add_translations(gigchain_ui
     TS_FILES ${_gigchain_ts}
     RESOURCE_PREFIX "/i18n"
     LUPDATE_OPTIONS -no-obsolete -locations none
-    SOURCE_TARGETS gigchain_ui
-    SOURCES "${PROJECT_SOURCE_DIR}/src/app/main.cpp") # (the app is defined after this module)
+    SOURCE_TARGETS gigchain_ui gigchain_engine # (the engine's messages the player sees, context "Engine")
+    SOURCES "${PROJECT_SOURCE_DIR}/src/app/main.cpp" # (the app is defined after this module)
+            ${_gigchain_platform_sources})
 
 # Qt's own translations (the standard dialogs' buttons), where Qt has the
 # language, at :/i18n/qtbase_<code>.qm.

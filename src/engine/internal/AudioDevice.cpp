@@ -9,6 +9,8 @@
 
 #include <RtAudio.h>
 
+#include <QCoreApplication>
+
 #include <algorithm>
 #include <chrono>
 #include <span>
@@ -144,8 +146,8 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     }
     if (!deviceId) {
         return core::fail(core::ErrorCode::InvalidData,
-                          choice ? u"No audio output named \"%1\" (%2)"_s.arg(choice->name, apiName(driver))
-                                 : u"This computer has no default audio output"_s);
+                          choice ? QCoreApplication::translate("Engine", "No audio output named \"%1\" (%2)").arg(choice->name, apiName(driver))
+                                 : QCoreApplication::translate("Engine", "This computer has no default audio output"));
     }
     const RtAudio::DeviceInfo info = rt->getDeviceInfo(*deviceId);
 
@@ -162,8 +164,9 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     const unsigned int rate = askedRate != 0 ? askedRate : ownRate;
     if (askedRate != 0 && askedRate != info.preferredSampleRate &&
         std::ranges::find(info.sampleRates, askedRate) == info.sampleRates.end()) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 (%2) cannot run at %3 Hz"_s.arg(
-                                                            QString::fromStdString(info.name), apiName(driver)).arg(askedRate));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 (%2) cannot run at %3 Hz")
+                                                            .arg(QString::fromStdString(info.name), apiName(driver))
+                                                            .arg(askedRate));
     }
     unsigned int frames = bufferFrames;
 
@@ -173,8 +176,8 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     if (input) {
         if (input->api != driver) {
             return core::fail(core::ErrorCode::InvalidData,
-                              u"The input %1 (%2) and the output %3 (%4) must use the same driver"_s.arg(
-                                  input->name, apiName(input->api), QString::fromStdString(info.name), apiName(driver)));
+                              QCoreApplication::translate("Engine", "The input %1 (%2) and the output %3 (%4) must use the same driver")
+                                  .arg(input->name, apiName(input->api), QString::fromStdString(info.name), apiName(driver)));
         }
         std::optional<unsigned int> inputId;
         for (const unsigned int id : rt->getDeviceIds()) {
@@ -187,7 +190,7 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
         }
         if (!inputId) {
             return core::fail(core::ErrorCode::InvalidData,
-                              u"No audio input named \"%1\" (%2)"_s.arg(input->name, apiName(driver)));
+                              QCoreApplication::translate("Engine", "No audio input named \"%1\" (%2)").arg(input->name, apiName(driver)));
         }
         inputParameters.deviceId = *inputId;
         inputParameters.nChannels = static_cast<unsigned int>(openInputs);
@@ -216,9 +219,12 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     if (!opened) {
         m_outputChannels = 2;
         return core::fail(core::ErrorCode::DeviceUnavailable,
-                          u"Could not open %1%2 (%3): %4"_s.arg(QString::fromStdString(info.name),
-                                                                input ? u" with the inputs of "_s + input->name : QString(),
-                                                                apiName(driver), takeLastError(u"unknown error"_s)));
+                          input ? QCoreApplication::translate("Engine", "Could not open %1 with the inputs of %2 (%3): %4")
+                                      .arg(QString::fromStdString(info.name), input->name, apiName(driver),
+                                           takeLastError(QCoreApplication::translate("Engine", "unknown error")))
+                                : QCoreApplication::translate("Engine", "Could not open %1 (%2): %3")
+                                      .arg(QString::fromStdString(info.name), apiName(driver),
+                                           takeLastError(QCoreApplication::translate("Engine", "unknown error"))));
     }
     m_inputChannels = openInputs;
     if (input) m_input = *input;
@@ -228,8 +234,9 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
         rt->closeStream();
         m_inputChannels = 0;
         return core::fail(core::ErrorCode::DeviceUnavailable,
-                          u"Could not start %1 (%2): %3"_s.arg(QString::fromStdString(info.name), apiName(driver),
-                                                              takeLastError(u"unknown error"_s)));
+                          QCoreApplication::translate("Engine", "Could not start %1 (%2): %3")
+                              .arg(QString::fromStdString(info.name), apiName(driver),
+                                   takeLastError(QCoreApplication::translate("Engine", "unknown error"))));
     }
     const auto latencyFrames = static_cast<double>(rt->getStreamLatency());
     m_latencyMs = m_sampleRate > 0.0 ? 1000.0 * std::max(latencyFrames, static_cast<double>(frames)) / m_sampleRate : 0.0;
@@ -272,9 +279,9 @@ core::Result<void> AudioDevice::pause()
     if (!m_rtaudio || !m_rtaudio->isStreamRunning()) return {};
     if (stopRunning(*m_rtaudio) != RTAUDIO_NO_ERROR) {
         const std::scoped_lock lock(m_errorMutex);
-        const QString why = m_errors.empty() ? u"unknown error"_s : m_errors.back();
+        const QString why = m_errors.empty() ? QCoreApplication::translate("Engine", "unknown error") : m_errors.back();
         m_errors.clear();
-        return core::fail(core::ErrorCode::DeviceUnavailable, u"Could not pause %1: %2"_s.arg(m_choice.name, why));
+        return core::fail(core::ErrorCode::DeviceUnavailable, QCoreApplication::translate("Engine", "Could not pause %1: %2").arg(m_choice.name, why));
     }
     m_expectRunning = false; // stopped on purpose
     return {};
@@ -283,7 +290,7 @@ core::Result<void> AudioDevice::pause()
 core::Result<void> AudioDevice::resume()
 {
     if (!m_rtaudio || !m_rtaudio->isStreamOpen()) {
-        return core::fail(core::ErrorCode::DeviceUnavailable, u"No audio output is open to resume"_s);
+        return core::fail(core::ErrorCode::DeviceUnavailable, QCoreApplication::translate("Engine", "No audio output is open to resume"));
     }
     if (m_rtaudio->isStreamRunning()) {
         m_expectRunning = true;
@@ -291,9 +298,9 @@ core::Result<void> AudioDevice::resume()
     }
     if (m_rtaudio->startStream() != RTAUDIO_NO_ERROR) {
         const std::scoped_lock lock(m_errorMutex);
-        const QString why = m_errors.empty() ? u"unknown error"_s : m_errors.back();
+        const QString why = m_errors.empty() ? QCoreApplication::translate("Engine", "unknown error") : m_errors.back();
         m_errors.clear();
-        return core::fail(core::ErrorCode::DeviceUnavailable, u"Could not restart %1: %2"_s.arg(m_choice.name, why));
+        return core::fail(core::ErrorCode::DeviceUnavailable, QCoreApplication::translate("Engine", "Could not restart %1: %2").arg(m_choice.name, why));
     }
     m_expectRunning = true;
     return {};
@@ -323,8 +330,9 @@ std::vector<Notice> AudioDevice::poll()
     const auto polledAt = std::chrono::steady_clock::now();
     if (m_tellDropouts && m_untoldDropouts > 0 && (!m_droppedToldAt || polledAt - *m_droppedToldAt >= std::chrono::minutes(1))) {
         notices.push_back(Notice::warning(
-            u"The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings > Audio "
-            u"usually stops it; so does closing other programs"_s.arg(m_untoldDropouts)));
+            QCoreApplication::translate("Engine", "The audio dropped out (%1 time(s)): the computer could not keep up. A bigger "
+                                                  "buffer in Settings > Audio usually stops it; so does closing other programs")
+                .arg(m_untoldDropouts)));
         m_untoldDropouts = 0;
         m_droppedToldAt = polledAt;
     } else if (!m_tellDropouts) {
@@ -368,8 +376,9 @@ void AudioDevice::recover(std::vector<Notice>& notices)
     if (!m_wanted || outputPresent(*m_wanted)) {
         if (auto again = openUnlogged(m_wanted, m_requestedFrames, m_wantedRate, m_wantedInput)) {
             m_standingIn = false;
-            tell(Notice::info(m_choice.name == lost.name ? u"%1 started again after it stopped"_s.arg(lost.name)
-                                                          : u"%1 stopped: now playing through %2"_s.arg(lost.name, m_choice.name)));
+            tell(Notice::info(m_choice.name == lost.name
+                                  ? QCoreApplication::translate("Engine", "%1 started again after it stopped").arg(lost.name)
+                                  : QCoreApplication::translate("Engine", "%1 stopped: now playing through %2").arg(lost.name, m_choice.name)));
             return;
         } else {
             qCWarning(lcEngine).noquote() << again.error().message;
@@ -381,11 +390,15 @@ void AudioDevice::recover(std::vector<Notice>& notices)
     m_lastLook = std::chrono::steady_clock::now();
     const bool hadInputs = m_wantedInput.has_value();
     if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0, std::nullopt)) {
-        tell(Notice::warning(u"%1 stopped (unplugged?): playing through %2%3 until it is back"_s.arg(
-            lost.name, m_choice.name, hadInputs ? u", without inputs"_s : QString())));
+        tell(Notice::warning(
+            hadInputs ? QCoreApplication::translate("Engine", "%1 stopped (unplugged?): playing through %2, without inputs, until it is back")
+                            .arg(lost.name, m_choice.name)
+                      : QCoreApplication::translate("Engine", "%1 stopped (unplugged?): playing through %2 until it is back")
+                            .arg(lost.name, m_choice.name)));
     } else {
-        tell(Notice::error(u"No audio output is available (%1): the sound comes back when one is plugged in"_s.arg(
-            fallback.error().message)));
+        tell(Notice::error(QCoreApplication::translate("Engine", "No audio output is available (%1): the sound comes back when "
+                                                                 "one is plugged in")
+                               .arg(fallback.error().message)));
     }
 }
 
@@ -405,7 +418,8 @@ void AudioDevice::takeWantedBack(std::vector<Notice>& notices)
         const QString missing = m_wanted->name; // (the open below leaves m_wanted as it is)
         if (!m_rtaudio) {
             if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0, std::nullopt)) {
-                notices.push_back(Notice::warning(u"Playing through %1 until %2 is back"_s.arg(m_choice.name, missing)));
+                notices.push_back(
+                    Notice::warning(QCoreApplication::translate("Engine", "Playing through %1 until %2 is back").arg(m_choice.name, missing)));
                 qCWarning(lcEngine).noquote() << notices.back().text;
             }
         }
@@ -414,8 +428,8 @@ void AudioDevice::takeWantedBack(std::vector<Notice>& notices)
     const QString before = m_rtaudio ? m_choice.name : QString();
     if (auto back = openUnlogged(m_wanted, m_requestedFrames, m_wantedRate, m_wantedInput)) {
         m_standingIn = false;
-        notices.push_back(Notice::info(m_wanted ? u"%1 is back: playing through it again"_s.arg(m_choice.name)
-                                                : u"Playing through %1"_s.arg(m_choice.name)));
+        notices.push_back(Notice::info(m_wanted ? QCoreApplication::translate("Engine", "%1 is back: playing through it again").arg(m_choice.name)
+                                                : QCoreApplication::translate("Engine", "Playing through %1").arg(m_choice.name)));
         qCInfo(lcEngine).noquote() << notices.back().text;
         return;
     } else {
@@ -424,7 +438,8 @@ void AudioDevice::takeWantedBack(std::vector<Notice>& notices)
     // There, but it would not open: keep playing through the stand-in.
     if (!before.isEmpty()) {
         if (auto fallback = openUnlogged(std::nullopt, m_requestedFrames, 0, std::nullopt); !fallback) {
-            notices.push_back(Notice::error(u"No audio output is available: %1"_s.arg(fallback.error().message)));
+            notices.push_back(
+                Notice::error(QCoreApplication::translate("Engine", "No audio output is available: %1").arg(fallback.error().message)));
             qCWarning(lcEngine).noquote() << notices.back().text;
         }
     }
@@ -435,7 +450,8 @@ void AudioDevice::followDefault(std::vector<Notice>& notices)
     const QString now = defaultOutputName();
     if (now.isEmpty() || now == m_choice.name) return;
     if (auto moved = openUnlogged(std::nullopt, m_requestedFrames, m_wantedRate, m_wantedInput)) {
-        notices.push_back(Notice::info(u"Windows' default output changed: now playing through %1"_s.arg(m_choice.name)));
+        notices.push_back(
+            Notice::info(QCoreApplication::translate("Engine", "Windows' default output changed: now playing through %1").arg(m_choice.name)));
         qCInfo(lcEngine).noquote() << notices.back().text;
     } else {
         qCWarning(lcEngine).noquote() << "Could not follow the default output to" << now << ":" << moved.error().message;

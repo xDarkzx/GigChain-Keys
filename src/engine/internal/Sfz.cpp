@@ -1,5 +1,6 @@
 #include "Sfz.h"
 
+#include <QCoreApplication>
 #include <QStringList>
 
 #include <cmath>
@@ -114,7 +115,7 @@ core::Result<std::vector<Region>> parse(const QString& text)
     const auto finishRegion = [&]() -> core::Result<void> {
         if (scope != Scope::Region) return {};
         if (region.sample.isEmpty()) {
-            return core::fail(core::ErrorCode::ParseFailed, u"The region at line %1 has no sample"_s.arg(regionLine));
+            return core::fail(core::ErrorCode::ParseFailed, QCoreApplication::translate("Engine", "The region at line %1 has no sample").arg(regionLine));
         }
         regions.push_back(region);
         return {};
@@ -134,7 +135,9 @@ core::Result<std::vector<Region>> parse(const QString& text)
             }
             if (line.at(at) == u'<') {
                 const qsizetype end = line.indexOf(u'>', at);
-                if (end < 0) return core::fail(core::ErrorCode::ParseFailed, u"An unclosed header at line %1"_s.arg(lineNumber));
+                if (end < 0) {
+                    return core::fail(core::ErrorCode::ParseFailed, QCoreApplication::translate("Engine", "An unclosed header at line %1").arg(lineNumber));
+                }
                 const QString header = line.mid(at + 1, end - at - 1);
                 if (auto done = finishRegion(); !done) return tl::unexpected(done.error());
                 if (header == u"global"_s) {
@@ -147,13 +150,16 @@ core::Result<std::vector<Region>> parse(const QString& text)
                     scope = Scope::Region;
                     regionLine = lineNumber;
                 } else {
-                    return core::fail(core::ErrorCode::ParseFailed, u"Unknown header <%1> at line %2"_s.arg(header).arg(lineNumber));
+                    return core::fail(core::ErrorCode::ParseFailed,
+                                      QCoreApplication::translate("Engine", "Unknown header <%1> at line %2").arg(header).arg(lineNumber));
                 }
                 at = end + 1;
                 continue;
             }
             const qsizetype equals = line.indexOf(u'=', at);
-            if (equals < 0) return core::fail(core::ErrorCode::ParseFailed, u"Not a setting at line %1"_s.arg(lineNumber));
+            if (equals < 0) {
+                return core::fail(core::ErrorCode::ParseFailed, QCoreApplication::translate("Engine", "Not a setting at line %1").arg(lineNumber));
+            }
             const QString key = line.mid(at, equals - at).trimmed();
             QString value;
             if (key == u"sample"_s) { // a file name may have spaces: the rest of the line
@@ -167,11 +173,13 @@ core::Result<std::vector<Region>> parse(const QString& text)
             }
             const auto setter = setters().find(key);
             if (setter == setters().end()) {
-                return core::fail(core::ErrorCode::ParseFailed, u"Unknown setting \"%1\" at line %2"_s.arg(key).arg(lineNumber));
+                return core::fail(core::ErrorCode::ParseFailed,
+                                  QCoreApplication::translate("Engine", "Unknown setting \"%1\" at line %2").arg(key).arg(lineNumber));
             }
             sfz::Region& target = scope == Scope::Global ? global : (scope == Scope::Group ? group : region);
             if (!setter->second(target, value)) {
-                return core::fail(core::ErrorCode::ParseFailed, u"\"%1=%2\" at line %3 is not a value it can take"_s.arg(key, value).arg(lineNumber));
+                return core::fail(core::ErrorCode::ParseFailed,
+                                  QCoreApplication::translate("Engine", "\"%1=%2\" at line %3 is not a value it can take").arg(key, value).arg(lineNumber));
             }
             // A global setting after a group has started still reaches it.
             if (scope == Scope::Global) group = global;

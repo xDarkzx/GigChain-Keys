@@ -45,6 +45,13 @@
     </message>
 </context>
 <context>
+    <name>Audio</name>
+    <message>
+        <source>This session&apos;s realtime priority limit is 0, so the audio (and Wine plugins above all) can drop out more often. Fix: sudo usermod -aG pipewire $USER (-aG audio if no pipewire group), then log in again</source>
+        <translation>इस session की realtime priority limit 0 है, इसलिए audio (और खासकर Wine plugins) ज़्यादा बार कट सकता है। उपाय: sudo usermod -aG pipewire $USER (pipewire group न हो तो -aG audio), फिर दोबारा log in करें</translation>
+    </message>
+</context>
+<context>
     <name>BuiltinFxWindow</name>
     <message>
         <source>Three-band upward and downward compression</source>
@@ -823,6 +830,697 @@ Chord को [brackets] में ठीक उस शब्द से पहल
     <message>
         <source>By Manufacturer</source>
         <translation>Manufacturer के हिसाब से</translation>
+    </message>
+</context>
+<context>
+    <name>Engine</name>
+    <message>
+        <source>No MIDI output named &quot;%1&quot;: is the synth plugged in and on?</source>
+        <translation>&quot;%1&quot; नाम का कोई MIDI output नहीं है: क्या synth जुड़ा हुआ और चालू है?</translation>
+    </message>
+    <message>
+        <source>Could not open the MIDI output %1 (another program, or the MIDI clock, may be using it): %2</source>
+        <translation>MIDI output %1 नहीं खुल सका (शायद कोई और program, या MIDI clock, इसे इस्तेमाल कर रहा है): %2</translation>
+    </message>
+    <message>
+        <source>Could not send to the MIDI output %1: %2</source>
+        <translation>MIDI output %1 पर नहीं भेजा जा सका: %2</translation>
+    </message>
+    <message>
+        <source>Already recording to %1</source>
+        <translation>पहले से %1 में recording हो रही है</translation>
+    </message>
+    <message>
+        <source>Nothing to record: the audio is not running</source>
+        <translation>Record करने को कुछ नहीं: audio चल नहीं रहा</translation>
+    </message>
+    <message>
+        <source>Could not make the folder for the recording: %1</source>
+        <translation>Recording का folder नहीं बन सका: %1</translation>
+    </message>
+    <message>
+        <source>Could not write the recording %1: %2</source>
+        <translation>Recording %1 लिखी नहीं जा सकी: %2</translation>
+    </message>
+    <message>
+        <source>Not recording</source>
+        <translation>अभी recording नहीं हो रही</translation>
+    </message>
+    <message>
+        <source>Could not finish the recording %1: %2</source>
+        <translation>Recording %1 पूरी नहीं हो सकी: %2</translation>
+    </message>
+    <message>
+        <source>it could not be decoded</source>
+        <translation>इसे decode नहीं किया जा सका</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>इसे पढ़ना रद्द कर दिया गया</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>decoder ने जवाब देना बंद कर दिया</translation>
+    </message>
+    <message>
+        <source>Backing track not found: %1</source>
+        <translation>Backing track नहीं मिला: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read %1 without an audio output running</source>
+        <translation>Audio output चले बिना %1 पढ़ा नहीं जा सकता</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: it holds no audio</source>
+        <translation>%1 नहीं बजाया जा सकता: इसमें कोई audio नहीं है</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: %2</source>
+        <translation>%1 नहीं बजाया जा सकता: %2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>यह अनपेक्षित sample format में निकला</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>यह %1 मिनट से लंबा है</translation>
+    </message>
+    <message>
+        <source>Sample not found: %1</source>
+        <translation>Sample नहीं मिला: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: it holds no audio</source>
+        <translation>Sample %1 पढ़ा नहीं जा सकता: इसमें कोई audio नहीं है</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: %2</source>
+        <translation>Sample %1 पढ़ा नहीं जा सकता: %2</translation>
+    </message>
+    <message>
+        <source>Left out %1: a song&apos;s tracks together may be at most %2 minutes of audio (they are all kept in memory)</source>
+        <translation>%1 छोड़ दिया गया: एक गाने के सारे tracks मिलाकर ज़्यादा से ज़्यादा %2 मिनट का audio हो सकते हैं (सब memory में रखे जाते हैं)</translation>
+    </message>
+    <message>
+        <source>No MIDI output named &quot;%1&quot; to send the clock to</source>
+        <translation>&quot;%1&quot; नाम का कोई MIDI output नहीं है जिस पर clock भेजा जाए</translation>
+    </message>
+    <message>
+        <source>Could not send the MIDI clock to %1: %2</source>
+        <translation>MIDI clock %1 पर नहीं भेजा जा सका: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the app&apos;s own instruments (a newer version&apos;s, maybe)</source>
+        <translation>%1 app के अपने instruments में से नहीं है (शायद किसी नए version का है)</translation>
+    </message>
+    <message>
+        <source>%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)</source>
+        <translation>%1 plugin file नहीं है (.vst3 bundle, या इस system का VST2 plugin)</translation>
+    </message>
+    <message>
+        <source>No plugin to open an editor for</source>
+        <translation>ऐसा कोई plugin नहीं जिसका editor खोला जाए</translation>
+    </message>
+    <message>
+        <source>The saved %1 settings are damaged (%2)</source>
+        <translation>%1 की saved settings खराब हैं (%2)</translation>
+    </message>
+    <message>
+        <source>%1: no such plugin (%2)</source>
+        <translation>%1: ऐसा कोई plugin नहीं है (%2)</translation>
+    </message>
+    <message>
+        <source>%1 could not be loaded: %2</source>
+        <translation>%1 load नहीं हो सका: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (no VSTPluginMain)</source>
+        <translation>%1 VST2 plugin नहीं है (VSTPluginMain नहीं है)</translation>
+    </message>
+    <message>
+        <source>%1 did not start</source>
+        <translation>%1 शुरू नहीं हुआ</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (wrong signature)</source>
+        <translation>%1 VST2 plugin नहीं है (गलत signature)</translation>
+    </message>
+    <message>
+        <source>%1 holds several plugins in one file (a &quot;shell&quot;, as Waves&apos;): not supported yet</source>
+        <translation>%1 एक ही file में कई plugins रखता है (Waves जैसा एक &quot;shell&quot;): अभी supported नहीं</translation>
+    </message>
+    <message>
+        <source>%1 cannot process audio</source>
+        <translation>%1 audio process नहीं कर सकता</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read: %2</source>
+        <translation>%1 पढ़ते समय fail हो गया: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read</source>
+        <translation>%1 पढ़ते समय fail हो गया</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading: %2</source>
+        <translation>%1 load होते समय fail हो गया: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading</source>
+        <translation>%1 load होते समय fail हो गया</translation>
+    </message>
+    <message>
+        <source>%1 did not give its settings</source>
+        <translation>%1 ने अपनी settings नहीं दीं</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings: %2</source>
+        <translation>%1 अपनी settings देते समय fail हो गया: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings</source>
+        <translation>%1 अपनी settings देते समय fail हो गया</translation>
+    </message>
+    <message>
+        <source>The saved plugin settings are damaged (%1)</source>
+        <translation>Plugin की saved settings खराब हैं (%1)</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings: %2</source>
+        <translation>%1 अपनी saved settings लेते समय fail हो गया: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings</source>
+        <translation>%1 अपनी saved settings लेते समय fail हो गया</translation>
+    </message>
+    <message>
+        <source>%1: no window to attach the editor to</source>
+        <translation>%1: editor जोड़ने के लिए कोई window नहीं है</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window cannot open here: plugin windows need X11 (the app runs without it, on Wayland). Start the app with QT_QPA_PLATFORM=xcb</source>
+        <translation>%1 की window यहाँ नहीं खुल सकती: plugin windows को X11 चाहिए (app इसके बिना, Wayland पर चल रहा है)। App को QT_QPA_PLATFORM=xcb के साथ शुरू करें</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio input bus %2</source>
+        <translation>%1 ने अपना audio input bus %2 चालू करने से मना कर दिया</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio output bus %2</source>
+        <translation>%1 ने अपना audio output bus %2 चालू करने से मना कर दिया</translation>
+    </message>
+    <message>
+        <source>%1 could not be created</source>
+        <translation>%1 बनाया नहीं जा सका</translation>
+    </message>
+    <message>
+        <source>%1 failed to initialise</source>
+        <translation>%1 initialise नहीं हो सका</translation>
+    </message>
+    <message>
+        <source>%1 does not name its window half (edit controller)</source>
+        <translation>%1 अपना window वाला हिस्सा (edit controller) नहीं बताता</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half (edit controller) could not be created</source>
+        <translation>%1 का window वाला हिस्सा (edit controller) बनाया नहीं जा सका</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half failed to initialise</source>
+        <translation>%1 का window वाला हिस्सा initialise नहीं हो सका</translation>
+    </message>
+    <message>
+        <source>%1&apos;s halves cannot be connected to each other</source>
+        <translation>%1 के दोनों हिस्से आपस में जोड़े नहीं जा सकते</translation>
+    </message>
+    <message>
+        <source>%1&apos;s sound refused to connect to its window</source>
+        <translation>%1 के sound वाले हिस्से ने अपनी window से जुड़ने से मना कर दिया</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window refused to connect to its sound</source>
+        <translation>%1 की window ने अपने sound वाले हिस्से से जुड़ने से मना कर दिया</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its MIDI input</source>
+        <translation>%1 ने अपना MIDI input चालू करने से मना कर दिया</translation>
+    </message>
+    <message>
+        <source>%1 does not support %2 Hz / %3-sample blocks</source>
+        <translation>%1 %2 Hz / %3-sample blocks support नहीं करता</translation>
+    </message>
+    <message>
+        <source>%1 failed to activate</source>
+        <translation>%1 activate नहीं हो सका</translation>
+    </message>
+    <message>
+        <source>%1 failed to start processing</source>
+        <translation>%1 processing शुरू नहीं कर सका</translation>
+    </message>
+    <message>
+        <source>Plugin not found: %1</source>
+        <translation>Plugin नहीं मिला: %1</translation>
+    </message>
+    <message>
+        <source>%1 is not a .vst3 plugin</source>
+        <translation>%1 .vst3 plugin नहीं है</translation>
+    </message>
+    <message>
+        <source>Not a loadable VST3 plugin: %1 (%2)</source>
+        <translation>Load होने लायक VST3 plugin नहीं है: %1 (%2)</translation>
+    </message>
+    <message>
+        <source>%1 contains no audio processor</source>
+        <translation>%1 में कोई audio processor नहीं है</translation>
+    </message>
+    <message>
+        <source>%1 has no audio processor interface</source>
+        <translation>%1 में audio processor interface नहीं है</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed: %2</source>
+        <translation>%1 load करना fail हुआ: %2</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed</source>
+        <translation>%1 load करना fail हुआ</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state: %2</source>
+        <translation>%1 अपनी state देते समय fail हो गया: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state</source>
+        <translation>%1 अपनी state देते समय fail हो गया</translation>
+    </message>
+    <message>
+        <source>%1 did not give its state</source>
+        <translation>%1 ने अपनी state नहीं दी</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state: %2</source>
+        <translation>%1 अपनी saved state लेते समय fail हो गया: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state</source>
+        <translation>%1 अपनी saved state लेते समय fail हो गया</translation>
+    </message>
+    <message>
+        <source>%1 rejected its saved state</source>
+        <translation>%1 ने अपनी saved state ठुकरा दी</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved state</source>
+        <translation>%1 के editor ने अपनी saved state ठुकरा दी</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved settings</source>
+        <translation>%1 के editor ने अपनी saved settings ठुकरा दीं</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor does not support %2 windows</source>
+        <translation>%1 का editor %2 windows support नहीं करता</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor failed to open</source>
+        <translation>%1 का editor नहीं खुल सका</translation>
+    </message>
+    <message>
+        <source>No audio output named &quot;%1&quot; (%2)</source>
+        <translation>&quot;%1&quot; नाम का कोई audio output नहीं है (%2)</translation>
+    </message>
+    <message>
+        <source>This computer has no default audio output</source>
+        <translation>इस computer में कोई default audio output नहीं है</translation>
+    </message>
+    <message>
+        <source>%1 (%2) cannot run at %3 Hz</source>
+        <translation>%1 (%2) %3 Hz पर नहीं चल सकता</translation>
+    </message>
+    <message>
+        <source>The input %1 (%2) and the output %3 (%4) must use the same driver</source>
+        <translation>Input %1 (%2) और output %3 (%4) को एक ही driver इस्तेमाल करना होगा</translation>
+    </message>
+    <message>
+        <source>No audio input named &quot;%1&quot; (%2)</source>
+        <translation>&quot;%1&quot; नाम का कोई audio input नहीं है (%2)</translation>
+    </message>
+    <message>
+        <source>Could not open %1 with the inputs of %2 (%3): %4</source>
+        <translation>%1 को %2 के inputs के साथ नहीं खोला जा सका (%3): %4</translation>
+    </message>
+    <message>
+        <source>unknown error</source>
+        <translation>अनजान error</translation>
+    </message>
+    <message>
+        <source>Could not open %1 (%2): %3</source>
+        <translation>%1 नहीं खुल सका (%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not start %1 (%2): %3</source>
+        <translation>%1 शुरू नहीं हो सका (%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not pause %1: %2</source>
+        <translation>%1 को pause नहीं किया जा सका: %2</translation>
+    </message>
+    <message>
+        <source>No audio output is open to resume</source>
+        <translation>फिर से शुरू करने के लिए कोई audio output खुला नहीं है</translation>
+    </message>
+    <message>
+        <source>Could not restart %1: %2</source>
+        <translation>%1 फिर से शुरू नहीं हो सका: %2</translation>
+    </message>
+    <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>Audio कटा (%1 बार): computer साथ नहीं दे पाया। सेटिंग्स &gt; Audio में बड़ा buffer आमतौर पर इसे रोक देता है; दूसरे programs बंद करने से भी</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 रुकने के बाद फिर से चल पड़ा</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 रुक गया: अब %2 से बज रहा है</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 रुक गया (निकल गया?): वापस आने तक %2 से, बिना inputs के, बज रहा है</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 रुक गया (निकल गया?): वापस आने तक %2 से बज रहा है</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>कोई audio output उपलब्ध नहीं (%1): कोई लगाते ही आवाज़ लौट आएगी</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>%2 वापस आने तक %1 से बज रहा है</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 वापस आ गया: फिर से इसी से बज रहा है</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>%1 से बज रहा है</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>कोई audio output उपलब्ध नहीं: %1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Windows का default output बदल गया: अब %1 से बज रहा है</translation>
+    </message>
+    <message>
+        <source>The saved Saw Stack Pro settings are damaged (%1)</source>
+        <translation>Saw Stack Pro की saved settings खराब हैं (%1)</translation>
+    </message>
+    <message>
+        <source>The region at line %1 has no sample</source>
+        <translation>Line %1 वाले region में कोई sample नहीं है</translation>
+    </message>
+    <message>
+        <source>An unclosed header at line %1</source>
+        <translation>Line %1 पर एक header बंद नहीं हुआ</translation>
+    </message>
+    <message>
+        <source>Unknown header &lt;%1&gt; at line %2</source>
+        <translation>Line %2 पर अनजान header &lt;%1&gt;</translation>
+    </message>
+    <message>
+        <source>Not a setting at line %1</source>
+        <translation>Line %1 पर कोई setting नहीं है</translation>
+    </message>
+    <message>
+        <source>Unknown setting &quot;%1&quot; at line %2</source>
+        <translation>Line %2 पर अनजान setting &quot;%1&quot;</translation>
+    </message>
+    <message>
+        <source>&quot;%1=%2&quot; at line %3 is not a value it can take</source>
+        <translation>Line %3 पर &quot;%1=%2&quot; ऐसा value नहीं जो यह ले सके</translation>
+    </message>
+    <message>
+        <source>Piano not found: %1</source>
+        <translation>Piano नहीं मिला: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the piano %1: %2</source>
+        <translation>Piano %1 पढ़ा नहीं जा सकता: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2</source>
+        <translation>Piano %1: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1 maps no recordings</source>
+        <translation>Piano %1 कोई recording map नहीं करता</translation>
+    </message>
+    <message>
+        <source>Reading the piano %1 was cancelled</source>
+        <translation>Piano %1 को पढ़ना रद्द कर दिया गया</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2&apos;s loop (%3 to %4, fading from %5) is not a loop</source>
+        <translation>Piano %1: %2 का loop (%3 से %4, %5 से fade होता हुआ) loop नहीं है</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2 ends before its loop does (frame %3)</source>
+        <translation>Piano %1: %2 अपने loop से पहले खत्म हो जाता है (frame %3)</translation>
+    </message>
+    <message>
+        <source>The saved Piano Pro settings are damaged (%1)</source>
+        <translation>Piano Pro की saved settings खराब हैं (%1)</translation>
+    </message>
+    <message>
+        <source>The saved Pads Pro settings are damaged (%1)</source>
+        <translation>Pads Pro की saved settings खराब हैं (%1)</translation>
+    </message>
+    <message>
+        <source>the file is not there</source>
+        <translation>file वहाँ नहीं है</translation>
+    </message>
+    <message>
+        <source>the file cannot be opened</source>
+        <translation>file खुल नहीं सकती</translation>
+    </message>
+    <message>
+        <source>it is not a SoundFont 2 file, or it is damaged</source>
+        <translation>यह SoundFont 2 file नहीं है, या खराब है</translation>
+    </message>
+    <message>
+        <source>it has no presets</source>
+        <translation>इसमें कोई preset नहीं है</translation>
+    </message>
+    <message>
+        <source>The SoundFont Player could not start (%1)</source>
+        <translation>SoundFont Player शुरू नहीं हो सका (%1)</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>SoundFont %1 पढ़ा नहीं गया: app बंद हो रहा है</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1 में preset %2:%3 नहीं है: इसका पहला preset बजता है</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>SoundFont %1 पढ़ा नहीं जा सका: %2</translation>
+    </message>
+    <message>
+        <source>There is no SoundFont at %1</source>
+        <translation>%1 पर कोई SoundFont नहीं है</translation>
+    </message>
+    <message>
+        <source>The saved SoundFont Player settings are damaged (%1)</source>
+        <translation>SoundFont Player की saved settings खराब हैं (%1)</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>PipeWire के साथ JACK इस्तेमाल करने के लिए app को pw-jack से शुरू करें</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>Saved audio setup इस्तेमाल नहीं हो सका (%1); उसके लौटने तक system audio इस्तेमाल हो रहा है</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>%1 इस्तेमाल नहीं हो सका (%2); उसके लौटने तक system audio इस्तेमाल हो रहा है</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 ने पिछली बार load होते समय app crash कर दिया था, इसलिए यह बंद है (फिर आज़माने के लिए सेटिंग्स &gt; Plugins)</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
+        <translation>%1 (%2) इस version के अपने instruments में से नहीं है: load नहीं हुआ</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not a VST2 plugin the scan found: not loaded</source>
+        <translation>%1 (%2) ऐसा VST2 plugin नहीं जो scan में मिला हो: load नहीं हुआ</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the installed plugins (%2): not loaded. Install it in %3, or choose another plugin</source>
+        <translation>%1 installed plugins में से नहीं है (%2): load नहीं हुआ। इसे %3 में install करें, या कोई और plugin चुनें</translation>
+    </message>
+    <message>
+        <source>Could not load %1: %2</source>
+        <translation>%1 load नहीं हो सका: %2</translation>
+    </message>
+    <message>
+        <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
+        <translation>%1 अपनी saved settings नहीं ले सका (%2); यह अपनी default settings से बज रहा है</translation>
+    </message>
+    <message>
+        <source>%1 is not available on this system</source>
+        <translation>%1 इस system पर उपलब्ध नहीं है</translation>
+    </message>
+    <message>
+        <source>Choose an ASIO device</source>
+        <translation>कोई ASIO device चुनें</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>%1 पर वापस जाना भी नहीं हो सका: %2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>%1 पर MIDI clock फिर से चल पड़ा</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>MIDI input जुड़ा: %1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>MIDI input हटा: %1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>%1 पर MIDI clock रुक गया: output ने काम करना बंद कर दिया</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>Recording रुक गई: recording लिखी नहीं जा सकी (क्या disk भर गई है?): %1</translation>
+    </message>
+    <message>
+        <source>That effect is no longer in this patch</source>
+        <translation>वह effect अब इस patch में नहीं है</translation>
+    </message>
+    <message>
+        <source>%1 is switched off: switch it on to open its window</source>
+        <translation>%1 बंद है: इसकी window खोलने के लिए इसे चालू करें</translation>
+    </message>
+    <message>
+        <source>%1 is not loaded (see the message about why)</source>
+        <translation>%1 load नहीं हुआ (वजह वाला message देखें)</translation>
+    </message>
+    <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>%1 की settings save नहीं हो सकीं: %2</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading before, so it is switched off</source>
+        <translation>%1 ने पहले load होते समय app crash कर दिया था, इसलिए यह बंद है</translation>
+    </message>
+    <message>
+        <source>%1 is an effect, not an instrument: Sustain Pads need an instrument</source>
+        <translation>%1 effect है, instrument नहीं: Sustain Pads को instrument चाहिए</translation>
+    </message>
+    <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads: %1 की settings वापस नहीं आ सकीं (%2): यह जैसे load होता है वैसे बजता है</translation>
+    </message>
+    <message>
+        <source>That %1 effect is no longer there</source>
+        <translation>वह %1 effect अब वहाँ नहीं है</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>एक और loop की जगह नहीं: ज़्यादा से ज़्यादा %1 loops (पहले एक clear करें)</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>Loop record करने के लिए memory काफ़ी नहीं (%1 MB चाहिए)</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>एक साथ बहुत ज़्यादा loop presses: एक छोड़ दिया गया</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>एक loop अपनी सबसे लंबी हद (2 मिनट या 64 bars) तक पहुँचा और वहीं बंद हो गया</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>उस loop में जितनी layers आ सकती हैं, सब हैं: दूसरी record करने के लिए एक undo करें</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>एक loop की recording उसकी memory में नहीं समाई, इसलिए उसे mute कर दिया गया: इसे clear करके फिर record करें</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>एक loop अपनी recording memory में होने के बिना बंद हुआ (%2 में से %1 frames): यह बजता है, बिना layers के</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>उस loop पर layers के लिए memory काफ़ी नहीं: यह बजता है, बिना layers के</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>Tempo %1 BPM पहले loop से लिया गया</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>पहले loop से कोई tempo नहीं लिया गया: यह 60-180 BPM पर 1, 2 या 4 bars का नहीं है</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>उस loop पर एक और layer record करने के लिए memory काफ़ी नहीं</translation>
+    </message>
+    <message>
+        <source>That plugin is not loaded</source>
+        <translation>वह plugin load नहीं है</translation>
+    </message>
+    <message>
+        <source>That instrument is not loaded</source>
+        <translation>वह instrument load नहीं है</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>सिर्फ़ पहले %1 stems बजते हैं</translation>
+    </message>
+    <message>
+        <source>The backing tracks could not be read: %1</source>
+        <translation>Backing tracks पढ़े नहीं जा सके: %1</translation>
+    </message>
+    <message>
+        <source>This plugin crashed the app while loading before, so it is switched off</source>
+        <translation>इस plugin ने पहले load होते समय app crash कर दिया था, इसलिए यह बंद है</translation>
+    </message>
+    <message>
+        <source>Could not open the file manager at %1</source>
+        <translation>%1 पर file manager नहीं खुल सका</translation>
+    </message>
+    <message>
+        <source>Could not open Explorer for %1</source>
+        <translation>%1 के लिए Explorer नहीं खुल सका</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>%1 पर hardware synth नहीं बजाया जा सकता: %2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>MIDI input %1 नहीं खुल सका: %2</translation>
     </message>
 </context>
 <context>
@@ -1621,6 +2319,33 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <source>Instrument</source>
         <translatorcomment>same</translatorcomment>
         <translation>Instrument</translation>
+    </message>
+</context>
+<context>
+    <name>MidiTrigger</name>
+    <message>
+        <source>channel %1</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>channel %1</translation>
+    </message>
+    <message>
+        <source>Pedal/CC %1 (%2)</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Pedal/CC %1 (%2)</translation>
+    </message>
+    <message>
+        <source>Note %1%2 (%3)</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Note %1%2 (%3)</translation>
+    </message>
+    <message>
+        <source>Program %1 (%2)</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Program %1 (%2)</translation>
+    </message>
+    <message>
+        <source>Not set</source>
+        <translation>सेट नहीं</translation>
     </message>
 </context>
 <context>
@@ -2569,6 +3294,21 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 may not hear the audio inputs: they stay silent. Allow it in the system&apos;s settings, Privacy &amp; Security → Microphone, then choose the input again.</source>
         <translation>%1 को audio inputs सुनने की अनुमति नहीं है: वे खामोश रहते हैं। System settings में Privacy &amp; Security → Microphone में अनुमति दें, फिर input फिर से चुनें।</translation>
+    </message>
+    <message>
+        <source>PulseAudio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>PulseAudio</translation>
+    </message>
+    <message>
+        <source>Core Audio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Core Audio</translation>
+    </message>
+    <message>
+        <source>Windows Audio (WASAPI)</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Windows Audio (WASAPI)</translation>
     </message>
 </context>
 <context>

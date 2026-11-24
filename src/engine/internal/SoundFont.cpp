@@ -256,8 +256,8 @@ void Font::load()
         m_state.store(State::Failed, std::memory_order_release);
     };
     const QFileInfo info(m_path);
-    if (!info.exists()) return fail(u"the file is not there"_s);
-    if (!info.isFile() || !info.isReadable()) return fail(u"the file cannot be opened"_s);
+    if (!info.exists()) return fail(QCoreApplication::translate("Engine", "the file is not there"));
+    if (!info.isFile() || !info.isReadable()) return fail(QCoreApplication::translate("Engine", "the file cannot be opened"));
 
     installLog();
     const QuietScope quiet; // (its errors are still logged, and kept to say why)
@@ -276,7 +276,7 @@ void Font::load()
         // (onFluidLog filled `errors` through t_capture: cppcheck cannot see that.)
         // cppcheck-suppress knownConditionTrueFalse
         qCWarning(lcEngine).noquote() << "FluidSynth on" << m_path << ":" << (errors.isEmpty() ? u"no reason given"_s : errors);
-        return fail(u"it is not a SoundFont 2 file, or it is damaged"_s);
+        return fail(QCoreApplication::translate("Engine", "it is not a SoundFont 2 file, or it is damaged"));
     }
     m_sfont = fluid_synth_get_sfont_by_id(m_owner, id);
     if (m_sfont == nullptr) return fail(u"FluidSynth lost it after reading it"_s);
@@ -287,7 +287,7 @@ void Font::load()
                              .program = fluid_preset_get_num(preset),
                              .name = QString::fromUtf8(fluid_preset_get_name(preset)).trimmed()});
     }
-    if (m_presets.empty()) return fail(u"it has no presets"_s);
+    if (m_presets.empty()) return fail(QCoreApplication::translate("Engine", "it has no presets"));
     std::ranges::sort(m_presets, [](const PresetInfo& a, const PresetInfo& b) {
         return std::tie(a.bank, a.program) < std::tie(b.bank, b.program);
     });
@@ -364,7 +364,7 @@ core::Result<std::unique_ptr<Synth>> Synth::create(std::shared_ptr<Font> font, d
 {
     const auto fail = [](const QString& why) {
         qCWarning(lcEngine).noquote() << "The SoundFont Player could not start:" << why;
-        return core::fail(core::ErrorCode::InvalidData, u"The SoundFont Player could not start (%1)"_s.arg(why));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "The SoundFont Player could not start (%1)").arg(why));
     };
     if (!font || font->state() != Font::State::Ready || font->sfont() == nullptr) return fail(u"its SoundFont is not read"_s);
     installLog();
@@ -588,7 +588,9 @@ void Player::setFile(const QString& path, int bank, int program)
     m_failedReported = false;
     m_adopted = nullptr;
     m_font = path.isEmpty() ? nullptr : FontLibrary::instance().request(path);
-    if (!path.isEmpty() && !m_font) say(u"The SoundFont %1 was not read: the app is closing"_s.arg(QFileInfo(path).fileName()));
+    if (!path.isEmpty() && !m_font) {
+        say(QCoreApplication::translate("Engine", "The SoundFont %1 was not read: the app is closing").arg(QFileInfo(path).fileName()));
+    }
     service();
 }
 
@@ -622,7 +624,7 @@ void Player::choosePreset(int bank, int program)
     const std::vector<PresetInfo>& list = m_font->presets();
     auto found = std::ranges::find_if(list, [&](const PresetInfo& p) { return p.bank == bank && p.program == program; });
     if (found == list.end() && bank >= 0) {
-        say(u"%1 has no preset %2:%3: its first plays"_s.arg(QFileInfo(m_path).fileName()).arg(bank).arg(program));
+        say(QCoreApplication::translate("Engine", "%1 has no preset %2:%3: its first plays").arg(QFileInfo(m_path).fileName()).arg(bank).arg(program));
     }
     if (found == list.end()) found = list.begin();
     setParam(paramId(Param::Preset), stepValue(static_cast<int>(found - list.begin()), static_cast<int>(list.size())));
@@ -634,7 +636,7 @@ void Player::service()
 
     if (m_font && m_font->state() == Font::State::Failed && !m_failedReported) {
         m_failedReported = true;
-        say(u"The SoundFont %1 could not be read: %2"_s.arg(QFileInfo(m_path).fileName(), m_font->problem()));
+        say(QCoreApplication::translate("Engine", "The SoundFont %1 could not be read: %2").arg(QFileInfo(m_path).fileName(), m_font->problem()));
     }
     const bool ready = m_font && m_font->state() == Font::State::Ready;
     if (ready && m_adopted != m_font.get()) {

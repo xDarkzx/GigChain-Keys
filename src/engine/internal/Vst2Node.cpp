@@ -8,6 +8,7 @@
 #include "gigchain/platform/PluginFolders.h"
 #include "gigchain/platform/Process.h"
 
+#include <QCoreApplication>
 #include <QDataStream>
 #include <QFileInfo>
 #include <QLibrary>
@@ -262,32 +263,39 @@ namespace {
 core::Result<vst2::Effect*> start(QLibrary& library, const QString& path)
 {
     const QString name = QFileInfo(path).completeBaseName();
-    if (!QFileInfo::exists(path)) return core::fail(core::ErrorCode::FileNotFound, u"%1: no such plugin (%2)"_s.arg(name, path));
+    if (!QFileInfo::exists(path)) {
+        return core::fail(core::ErrorCode::FileNotFound, QCoreApplication::translate("Engine", "%1: no such plugin (%2)").arg(name, path));
+    }
     const platform::SilentLoaderErrors silent; // no system dialog about a missing library
     library.setFileName(platform::vst2LibraryFile(path));
     if (!library.load()) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 could not be loaded: %2"_s.arg(name, library.errorString()));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 could not be loaded: %2").arg(name, library.errorString()));
     }
     QFunctionPointer entry = library.resolve("VSTPluginMain");
     if (entry == nullptr) entry = library.resolve("main_macho"); // old Mac plugins
     if (entry == nullptr) entry = library.resolve("main");       // old plugins
     if (entry == nullptr) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is not a VST2 plugin (no VSTPluginMain)"_s.arg(name));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is not a VST2 plugin (no VSTPluginMain)").arg(name));
     }
     auto* main = reinterpret_cast<vst2::EntryPoint>(entry); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): a plugin's entry point, by its documented type
     vst2::Effect* effect = main(&hostCallback);
-    if (effect == nullptr) return core::fail(core::ErrorCode::InvalidData, u"%1 did not start"_s.arg(name));
+    if (effect == nullptr) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 did not start").arg(name));
     if (effect->magic != vst2::kMagic) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is not a VST2 plugin (wrong signature)"_s.arg(name));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is not a VST2 plugin (wrong signature)").arg(name));
     }
     if (effect->dispatcher(effect, vst2::op::kGetPlugCategory, 0, 0, nullptr, 0.0F) == vst2::kCategoryShell) {
         effect->dispatcher(effect, vst2::op::kClose, 0, 0, nullptr, 0.0F);
         return core::fail(core::ErrorCode::InvalidData,
-                          u"%1 holds several plugins in one file (a \"shell\", as Waves'): not supported yet"_s.arg(name));
+                          QCoreApplication::translate("Engine",
+                                                      "%1 holds several plugins in one file (a \"shell\", as Waves'): not supported yet")
+                              .arg(name));
     }
     if ((effect->flags & vst2::flag::kCanReplacing) == 0 && effect->processAccumulating == nullptr) {
         effect->dispatcher(effect, vst2::op::kClose, 0, 0, nullptr, 0.0F);
-        return core::fail(core::ErrorCode::InvalidData, u"%1 cannot process audio"_s.arg(name));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 cannot process audio").arg(name));
     }
     return effect;
 }
@@ -319,9 +327,11 @@ core::Result<Vst2Node::Info> Vst2Node::readInfo(const QString& path)
         // (The library stays loaded: some plugins crash when unloaded; the scanner ends anyway.)
         return info;
     } catch (const std::exception& e) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed while being read: %2"_s.arg(QFileInfo(path).completeBaseName(), QString::fromUtf8(e.what())));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed while being read: %2")
+                                                            .arg(QFileInfo(path).completeBaseName(), QString::fromUtf8(e.what())));
     } catch (...) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed while being read"_s.arg(QFileInfo(path).completeBaseName()));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 failed while being read").arg(QFileInfo(path).completeBaseName()));
     }
 }
 
@@ -354,9 +364,11 @@ core::Result<std::shared_ptr<Vst2Node>> Vst2Node::open(const QString& path, doub
     try {
         node = loadUnlogged(path, sampleRate, maxBlock);
     } catch (const std::exception& e) {
-        node = core::fail(core::ErrorCode::InvalidData, u"%1 failed while loading: %2"_s.arg(QFileInfo(path).completeBaseName(), QString::fromUtf8(e.what())));
+        node = core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed while loading: %2")
+                                                            .arg(QFileInfo(path).completeBaseName(), QString::fromUtf8(e.what())));
     } catch (...) {
-        node = core::fail(core::ErrorCode::InvalidData, u"%1 failed while loading"_s.arg(QFileInfo(path).completeBaseName()));
+        node = core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 failed while loading").arg(QFileInfo(path).completeBaseName()));
     }
     if (node) {
         qCInfo(lcEngine).noquote() << "Loaded VST2 plugin" << (*node)->name() << "from" << path;
@@ -537,7 +549,7 @@ core::Result<QByteArray> Vst2Node::saveEncodedState() const
             void* data = nullptr;
             const intptr_t size = impl.call(vst2::op::kGetChunk, 0, 0, static_cast<void*>(&data)); // the whole bank
             if (size <= 0 || data == nullptr || std::cmp_greater(size, kMaxRawStateBytes)) {
-                return core::fail(core::ErrorCode::InvalidData, u"%1 did not give its settings"_s.arg(impl.name));
+                return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 did not give its settings").arg(impl.name));
             }
             out << kChunk << QByteArray(static_cast<const char*>(data), static_cast<qsizetype>(size));
         } else {
@@ -547,9 +559,10 @@ core::Result<QByteArray> Vst2Node::saveEncodedState() const
         }
         return kStateMagic.toByteArray() + qCompress(raw, 9);
     } catch (const std::exception& e) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed giving its settings: %2"_s.arg(impl.name, QString::fromUtf8(e.what())));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 failed giving its settings: %2").arg(impl.name, QString::fromUtf8(e.what())));
     } catch (...) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed giving its settings"_s.arg(impl.name));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed giving its settings").arg(impl.name));
     }
 }
 
@@ -558,7 +571,7 @@ core::Result<void> Vst2Node::restoreEncodedState(const QByteArray& bytes)
     GC_ONLY_MAIN_THREAD();
     Impl& impl = *m_impl;
     const auto damaged = [](const QString& why) {
-        return core::fail(core::ErrorCode::InvalidData, u"The saved plugin settings are damaged (%1)"_s.arg(why));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "The saved plugin settings are damaged (%1)").arg(why));
     };
     if (!bytes.startsWith(kStateMagic)) {
         return damaged(bytes.startsWith("GCS1") ? u"they are a VST3 plugin's"_s : u"not in the expected format"_s);
@@ -593,9 +606,10 @@ core::Result<void> Vst2Node::restoreEncodedState(const QByteArray& bytes)
             return damaged(u"unknown kind %1"_s.arg(kind));
         }
     } catch (const std::exception& e) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed taking its saved settings: %2"_s.arg(impl.name, QString::fromUtf8(e.what())));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed taking its saved settings: %2")
+                                                            .arg(impl.name, QString::fromUtf8(e.what())));
     } catch (...) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed taking its saved settings"_s.arg(impl.name));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed taking its saved settings").arg(impl.name));
     }
     return {};
 }
@@ -664,11 +678,16 @@ public:
     core::Result<void> attach(NativeParent parent) override
     {
         if (m_attached) return {};
-        if (parent.handle == 0) return logged(core::fail(core::ErrorCode::InvalidData, u"%1: no window to attach the editor to"_s.arg(m_impl.name)));
+        if (parent.handle == 0) {
+            return logged(core::fail(core::ErrorCode::InvalidData,
+                                     QCoreApplication::translate("Engine", "%1: no window to attach the editor to").arg(m_impl.name)));
+        }
         if (parent.kind == platform::NativeWindowKind::None) {
             return logged(core::fail(core::ErrorCode::InvalidData,
-                                     u"%1's window cannot open here: plugin windows need X11 (the app runs without it, "
-                                     u"on Wayland). Start the app with QT_QPA_PLATFORM=xcb"_s.arg(m_impl.name)));
+                                     QCoreApplication::translate("Engine", "%1's window cannot open here: plugin windows need X11 "
+                                                                           "(the app runs without it, on Wayland). Start the app "
+                                                                           "with QT_QPA_PLATFORM=xcb")
+                                         .arg(m_impl.name)));
         }
         // Some plugins only know their size once opened; asking first is what hosts do.
         (void)askedSize();

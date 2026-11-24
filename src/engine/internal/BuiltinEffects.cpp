@@ -4,6 +4,7 @@
 #include "gigchain/core/Checks.h"
 #include "gigchain/engine/SidechainCurves.h"
 
+#include <QCoreApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QtEndian>
@@ -135,7 +136,7 @@ core::Result<void> BuiltinEffectNode::restoreEncodedState(const QByteArray& byte
 {
     GC_ONLY_MAIN_THREAD();
     const auto damaged = [this](const QString& why) {
-        return core::fail(core::ErrorCode::InvalidData, u"The saved %1 settings are damaged (%2)"_s.arg(name(), why));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "The saved %1 settings are damaged (%2)").arg(name(), why));
     };
     if (!bytes.startsWith(kStateMagic)) return damaged(u"not in the expected format"_s);
     const QByteArray packed = bytes.mid(kStateMagic.size());

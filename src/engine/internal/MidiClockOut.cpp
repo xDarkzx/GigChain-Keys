@@ -10,6 +10,8 @@
 
 #include <rtmidi/RtMidi.h>
 
+#include <QCoreApplication>
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -53,7 +55,8 @@ core::Result<void> MidiClockOut::open(const QString& port)
     const QStringList ports = listPorts();
     const qsizetype index = ports.indexOf(port);
     if (index < 0) {
-        return core::fail(core::ErrorCode::DeviceUnavailable, u"No MIDI output named \"%1\" to send the clock to"_s.arg(port));
+        return core::fail(core::ErrorCode::DeviceUnavailable,
+                          QCoreApplication::translate("Engine", "No MIDI output named \"%1\" to send the clock to").arg(port));
     }
     try {
         m_out = std::make_unique<RtMidiOut>();
@@ -61,7 +64,7 @@ core::Result<void> MidiClockOut::open(const QString& port)
         m_out->sendMessage(std::array<unsigned char, 1>{0xFA}.data(), 1); // Start
     } catch (const std::exception& e) {
         m_out.reset();
-        const QString why = u"Could not send the MIDI clock to %1: %2"_s.arg(port, QString::fromUtf8(e.what()));
+        const QString why = QCoreApplication::translate("Engine", "Could not send the MIDI clock to %1: %2").arg(port, QString::fromUtf8(e.what()));
         qCWarning(lcEngine).noquote() << why;
         return core::fail(core::ErrorCode::DeviceUnavailable, why);
     }

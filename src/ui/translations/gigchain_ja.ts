@@ -45,6 +45,13 @@
     </message>
 </context>
 <context>
+    <name>Audio</name>
+    <message>
+        <source>This session&apos;s realtime priority limit is 0, so the audio (and Wine plugins above all) can drop out more often. Fix: sudo usermod -aG pipewire $USER (-aG audio if no pipewire group), then log in again</source>
+        <translation>このセッションのリアルタイム優先度の上限は 0 のため、オーディオ（特に Wine プラグイン）が途切れやすくなります。対処：sudo usermod -aG pipewire $USER（pipewire グループがなければ -aG audio）を実行し、ログインし直してください</translation>
+    </message>
+</context>
+<context>
     <name>BuiltinFxWindow</name>
     <message>
         <source>Three-band upward and downward compression</source>
@@ -777,6 +784,697 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>By Manufacturer</source>
         <translation>メーカー別</translation>
+    </message>
+</context>
+<context>
+    <name>Engine</name>
+    <message>
+        <source>No MIDI output named &quot;%1&quot;: is the synth plugged in and on?</source>
+        <translation>「%1」という MIDI 出力はありません：シンセはつながっていて、電源は入っていますか？</translation>
+    </message>
+    <message>
+        <source>Could not open the MIDI output %1 (another program, or the MIDI clock, may be using it): %2</source>
+        <translation>MIDI 出力 %1 を開けませんでした（別のプログラムか MIDI クロックが使っている可能性があります）：%2</translation>
+    </message>
+    <message>
+        <source>Could not send to the MIDI output %1: %2</source>
+        <translation>MIDI 出力 %1 に送れませんでした：%2</translation>
+    </message>
+    <message>
+        <source>Already recording to %1</source>
+        <translation>すでに %1 に録音中です</translation>
+    </message>
+    <message>
+        <source>Nothing to record: the audio is not running</source>
+        <translation>録音するものがありません：オーディオが動いていません</translation>
+    </message>
+    <message>
+        <source>Could not make the folder for the recording: %1</source>
+        <translation>録音用のフォルダーを作れませんでした：%1</translation>
+    </message>
+    <message>
+        <source>Could not write the recording %1: %2</source>
+        <translation>録音 %1 を書き込めませんでした：%2</translation>
+    </message>
+    <message>
+        <source>Not recording</source>
+        <translation>録音していません</translation>
+    </message>
+    <message>
+        <source>Could not finish the recording %1: %2</source>
+        <translation>録音 %1 を完了できませんでした：%2</translation>
+    </message>
+    <message>
+        <source>it could not be decoded</source>
+        <translation>デコードできませんでした</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>読み込みは取り消されました</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>デコーダーが応答しなくなりました</translation>
+    </message>
+    <message>
+        <source>Backing track not found: %1</source>
+        <translation>バッキング・トラックが見つかりません：%1</translation>
+    </message>
+    <message>
+        <source>Cannot read %1 without an audio output running</source>
+        <translation>オーディオ出力が動いていないため %1 を読み込めません</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: it holds no audio</source>
+        <translation>%1 を再生できません：オーディオが入っていません</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: %2</source>
+        <translation>%1 を再生できません：%2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>予期しないサンプル形式で出力されました</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>%1 分より長くなっています</translation>
+    </message>
+    <message>
+        <source>Sample not found: %1</source>
+        <translation>サンプルが見つかりません：%1</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: it holds no audio</source>
+        <translation>サンプル %1 を読み込めません：オーディオが入っていません</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: %2</source>
+        <translation>サンプル %1 を読み込めません：%2</translation>
+    </message>
+    <message>
+        <source>Left out %1: a song&apos;s tracks together may be at most %2 minutes of audio (they are all kept in memory)</source>
+        <translation>%1 を外しました：1 曲のトラックは合計で最大 %2 分のオーディオまでです（すべてメモリーに保持されます）</translation>
+    </message>
+    <message>
+        <source>No MIDI output named &quot;%1&quot; to send the clock to</source>
+        <translation>クロックを送る「%1」という MIDI 出力はありません</translation>
+    </message>
+    <message>
+        <source>Could not send the MIDI clock to %1: %2</source>
+        <translation>MIDI クロックを %1 に送れませんでした：%2</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the app&apos;s own instruments (a newer version&apos;s, maybe)</source>
+        <translation>%1 はアプリ自身のインストゥルメントではありません（新しいバージョンのものかもしれません）</translation>
+    </message>
+    <message>
+        <source>%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)</source>
+        <translation>%1 はプラグイン・ファイルではありません（.vst3 バンドル、またはこのシステムの VST2 プラグイン）</translation>
+    </message>
+    <message>
+        <source>No plugin to open an editor for</source>
+        <translation>エディターを開くプラグインがありません</translation>
+    </message>
+    <message>
+        <source>The saved %1 settings are damaged (%2)</source>
+        <translation>%1 の保存された設定が壊れています（%2）</translation>
+    </message>
+    <message>
+        <source>%1: no such plugin (%2)</source>
+        <translation>%1：そのプラグインはありません（%2）</translation>
+    </message>
+    <message>
+        <source>%1 could not be loaded: %2</source>
+        <translation>%1 を読み込めませんでした：%2</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (no VSTPluginMain)</source>
+        <translation>%1 は VST2 プラグインではありません（VSTPluginMain がありません）</translation>
+    </message>
+    <message>
+        <source>%1 did not start</source>
+        <translation>%1 が起動しませんでした</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (wrong signature)</source>
+        <translation>%1 は VST2 プラグインではありません（シグネチャーが違います）</translation>
+    </message>
+    <message>
+        <source>%1 holds several plugins in one file (a &quot;shell&quot;, as Waves&apos;): not supported yet</source>
+        <translation>%1 は 1 つのファイルに複数のプラグインを含んでいます（Waves のような「シェル」）：まだ対応していません</translation>
+    </message>
+    <message>
+        <source>%1 cannot process audio</source>
+        <translation>%1 はオーディオを処理できません</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read: %2</source>
+        <translation>%1 は読み取り中に失敗しました：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read</source>
+        <translation>%1 は読み取り中に失敗しました</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading: %2</source>
+        <translation>%1 は読み込み中に失敗しました：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading</source>
+        <translation>%1 は読み込み中に失敗しました</translation>
+    </message>
+    <message>
+        <source>%1 did not give its settings</source>
+        <translation>%1 が設定を渡しませんでした</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings: %2</source>
+        <translation>%1 は設定を渡す途中で失敗しました：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings</source>
+        <translation>%1 は設定を渡す途中で失敗しました</translation>
+    </message>
+    <message>
+        <source>The saved plugin settings are damaged (%1)</source>
+        <translation>保存されたプラグイン設定が壊れています（%1）</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings: %2</source>
+        <translation>%1 は保存された設定を受け取る途中で失敗しました：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings</source>
+        <translation>%1 は保存された設定を受け取る途中で失敗しました</translation>
+    </message>
+    <message>
+        <source>%1: no window to attach the editor to</source>
+        <translation>%1：エディターを取り付けるウィンドウがありません</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window cannot open here: plugin windows need X11 (the app runs without it, on Wayland). Start the app with QT_QPA_PLATFORM=xcb</source>
+        <translation>%1 のウィンドウはここでは開けません：プラグインのウィンドウには X11 が必要です（アプリは X11 なしの Wayland で動いています）。QT_QPA_PLATFORM=xcb を付けてアプリを起動してください</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio input bus %2</source>
+        <translation>%1 がオーディオ入力バス %2 の有効化を拒否しました</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio output bus %2</source>
+        <translation>%1 がオーディオ出力バス %2 の有効化を拒否しました</translation>
+    </message>
+    <message>
+        <source>%1 could not be created</source>
+        <translation>%1 を作成できませんでした</translation>
+    </message>
+    <message>
+        <source>%1 failed to initialise</source>
+        <translation>%1 の初期化に失敗しました</translation>
+    </message>
+    <message>
+        <source>%1 does not name its window half (edit controller)</source>
+        <translation>%1 がウィンドウ側（エディット・コントローラー）を示していません</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half (edit controller) could not be created</source>
+        <translation>%1 のウィンドウ側（エディット・コントローラー）を作成できませんでした</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half failed to initialise</source>
+        <translation>%1 のウィンドウ側の初期化に失敗しました</translation>
+    </message>
+    <message>
+        <source>%1&apos;s halves cannot be connected to each other</source>
+        <translation>%1 の 2 つの部分を互いにつなげられません</translation>
+    </message>
+    <message>
+        <source>%1&apos;s sound refused to connect to its window</source>
+        <translation>%1 のサウンド側がウィンドウとの接続を拒否しました</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window refused to connect to its sound</source>
+        <translation>%1 のウィンドウがサウンド側との接続を拒否しました</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its MIDI input</source>
+        <translation>%1 が MIDI 入力の有効化を拒否しました</translation>
+    </message>
+    <message>
+        <source>%1 does not support %2 Hz / %3-sample blocks</source>
+        <translation>%1 は %2 Hz / %3 サンプルのブロックに対応していません</translation>
+    </message>
+    <message>
+        <source>%1 failed to activate</source>
+        <translation>%1 の有効化に失敗しました</translation>
+    </message>
+    <message>
+        <source>%1 failed to start processing</source>
+        <translation>%1 は処理を開始できませんでした</translation>
+    </message>
+    <message>
+        <source>Plugin not found: %1</source>
+        <translation>プラグインが見つかりません：%1</translation>
+    </message>
+    <message>
+        <source>%1 is not a .vst3 plugin</source>
+        <translation>%1 は .vst3 プラグインではありません</translation>
+    </message>
+    <message>
+        <source>Not a loadable VST3 plugin: %1 (%2)</source>
+        <translation>読み込める VST3 プラグインではありません：%1（%2）</translation>
+    </message>
+    <message>
+        <source>%1 contains no audio processor</source>
+        <translation>%1 にはオーディオ・プロセッサーがありません</translation>
+    </message>
+    <message>
+        <source>%1 has no audio processor interface</source>
+        <translation>%1 にはオーディオ・プロセッサーのインターフェースがありません</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed: %2</source>
+        <translation>%1 の読み込みに失敗しました：%2</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed</source>
+        <translation>%1 の読み込みに失敗しました</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state: %2</source>
+        <translation>%1 は状態を渡す途中で失敗しました：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state</source>
+        <translation>%1 は状態を渡す途中で失敗しました</translation>
+    </message>
+    <message>
+        <source>%1 did not give its state</source>
+        <translation>%1 が状態を渡しませんでした</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state: %2</source>
+        <translation>%1 は保存された状態を受け取る途中で失敗しました：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state</source>
+        <translation>%1 は保存された状態を受け取る途中で失敗しました</translation>
+    </message>
+    <message>
+        <source>%1 rejected its saved state</source>
+        <translation>%1 が保存された状態を拒否しました</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved state</source>
+        <translation>%1 のエディターが保存された状態を拒否しました</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved settings</source>
+        <translation>%1 のエディターが保存された設定を拒否しました</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor does not support %2 windows</source>
+        <translation>%1 のエディターは %2 のウィンドウに対応していません</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor failed to open</source>
+        <translation>%1 のエディターを開けませんでした</translation>
+    </message>
+    <message>
+        <source>No audio output named &quot;%1&quot; (%2)</source>
+        <translation>「%1」というオーディオ出力はありません（%2）</translation>
+    </message>
+    <message>
+        <source>This computer has no default audio output</source>
+        <translation>このコンピューターには既定のオーディオ出力がありません</translation>
+    </message>
+    <message>
+        <source>%1 (%2) cannot run at %3 Hz</source>
+        <translation>%1（%2）は %3 Hz で動作できません</translation>
+    </message>
+    <message>
+        <source>The input %1 (%2) and the output %3 (%4) must use the same driver</source>
+        <translation>入力 %1（%2）と出力 %3（%4）は同じドライバーを使う必要があります</translation>
+    </message>
+    <message>
+        <source>No audio input named &quot;%1&quot; (%2)</source>
+        <translation>「%1」というオーディオ入力はありません（%2）</translation>
+    </message>
+    <message>
+        <source>Could not open %1 with the inputs of %2 (%3): %4</source>
+        <translation>%1 を %2 の入力と一緒に開けませんでした（%3）：%4</translation>
+    </message>
+    <message>
+        <source>unknown error</source>
+        <translation>不明なエラー</translation>
+    </message>
+    <message>
+        <source>Could not open %1 (%2): %3</source>
+        <translation>%1 を開けませんでした（%2）：%3</translation>
+    </message>
+    <message>
+        <source>Could not start %1 (%2): %3</source>
+        <translation>%1 を開始できませんでした（%2）：%3</translation>
+    </message>
+    <message>
+        <source>Could not pause %1: %2</source>
+        <translation>%1 を一時停止できませんでした：%2</translation>
+    </message>
+    <message>
+        <source>No audio output is open to resume</source>
+        <translation>再開するオーディオ出力が開いていません</translation>
+    </message>
+    <message>
+        <source>Could not restart %1: %2</source>
+        <translation>%1 を再起動できませんでした：%2</translation>
+    </message>
+    <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>オーディオが途切れました（%1 回）：コンピューターの処理が追いつきませんでした。設定 &gt; オーディオでバッファーを大きくすると、たいてい止まります。ほかのプログラムを閉じるのも効果があります</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 は停止後に再び動き始めました</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 が停止しました：今は %2 から鳴っています</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 が停止しました（抜けた？）：戻るまで %2 から、入力なしで鳴っています</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 が停止しました（抜けた？）：戻るまで %2 から鳴っています</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>使えるオーディオ出力がありません（%1）：出力をつなぐと音が戻ります</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>%2 が戻るまで %1 から鳴っています</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 が戻りました：再びこちらから鳴っています</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>%1 から鳴っています</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>使えるオーディオ出力がありません：%1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Windows の既定の出力が変わりました：今は %1 から鳴っています</translation>
+    </message>
+    <message>
+        <source>The saved Saw Stack Pro settings are damaged (%1)</source>
+        <translation>Saw Stack Pro の保存された設定が壊れています（%1）</translation>
+    </message>
+    <message>
+        <source>The region at line %1 has no sample</source>
+        <translation>%1 行目のリージョンにはサンプルがありません</translation>
+    </message>
+    <message>
+        <source>An unclosed header at line %1</source>
+        <translation>%1 行目のヘッダーが閉じていません</translation>
+    </message>
+    <message>
+        <source>Unknown header &lt;%1&gt; at line %2</source>
+        <translation>%2 行目に不明なヘッダー &lt;%1&gt; があります</translation>
+    </message>
+    <message>
+        <source>Not a setting at line %1</source>
+        <translation>%1 行目は設定ではありません</translation>
+    </message>
+    <message>
+        <source>Unknown setting &quot;%1&quot; at line %2</source>
+        <translation>%2 行目に不明な設定「%1」があります</translation>
+    </message>
+    <message>
+        <source>&quot;%1=%2&quot; at line %3 is not a value it can take</source>
+        <translation>%3 行目の「%1=%2」は受け付けられない値です</translation>
+    </message>
+    <message>
+        <source>Piano not found: %1</source>
+        <translation>ピアノが見つかりません：%1</translation>
+    </message>
+    <message>
+        <source>Cannot read the piano %1: %2</source>
+        <translation>ピアノ %1 を読み込めません：%2</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2</source>
+        <translation>ピアノ %1：%2</translation>
+    </message>
+    <message>
+        <source>The piano %1 maps no recordings</source>
+        <translation>ピアノ %1 には録音が割り当てられていません</translation>
+    </message>
+    <message>
+        <source>Reading the piano %1 was cancelled</source>
+        <translation>ピアノ %1 の読み込みは取り消されました</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2&apos;s loop (%3 to %4, fading from %5) is not a loop</source>
+        <translation>ピアノ %1：%2 のループ（%3 から %4、%5 からフェード）はループになっていません</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2 ends before its loop does (frame %3)</source>
+        <translation>ピアノ %1：%2 がループより先に終わっています（フレーム %3）</translation>
+    </message>
+    <message>
+        <source>The saved Piano Pro settings are damaged (%1)</source>
+        <translation>Piano Pro の保存された設定が壊れています（%1）</translation>
+    </message>
+    <message>
+        <source>The saved Pads Pro settings are damaged (%1)</source>
+        <translation>Pads Pro の保存された設定が壊れています（%1）</translation>
+    </message>
+    <message>
+        <source>the file is not there</source>
+        <translation>ファイルがありません</translation>
+    </message>
+    <message>
+        <source>the file cannot be opened</source>
+        <translation>ファイルを開けません</translation>
+    </message>
+    <message>
+        <source>it is not a SoundFont 2 file, or it is damaged</source>
+        <translation>SoundFont 2 ファイルではないか、壊れています</translation>
+    </message>
+    <message>
+        <source>it has no presets</source>
+        <translation>プリセットがありません</translation>
+    </message>
+    <message>
+        <source>The SoundFont Player could not start (%1)</source>
+        <translation>SoundFont プレーヤーを起動できませんでした（%1）</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>SoundFont %1 は読み込まれませんでした：アプリを終了中です</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1 にはプリセット %2:%3 がありません：最初のプリセットが鳴ります</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>SoundFont %1 を読み込めませんでした：%2</translation>
+    </message>
+    <message>
+        <source>There is no SoundFont at %1</source>
+        <translation>%1 に SoundFont はありません</translation>
+    </message>
+    <message>
+        <source>The saved SoundFont Player settings are damaged (%1)</source>
+        <translation>SoundFont プレーヤーの保存された設定が壊れています（%1）</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>PipeWire で JACK を使うには、pw-jack を付けてアプリを起動してください</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>保存されたオーディオ設定を使えませんでした（%1）。戻るまではシステムのオーディオを使います</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>%1 を使えませんでした（%2）。戻るまではシステムのオーディオを使います</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 は前回の読み込み中にアプリをクラッシュさせたため、オフになっています（もう一度試すには 設定 &gt; プラグイン）</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
+        <translation>%1（%2）はこのバージョン自身のインストゥルメントではありません：読み込んでいません</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not a VST2 plugin the scan found: not loaded</source>
+        <translation>%1（%2）はスキャンで見つかった VST2 プラグインではありません：読み込んでいません</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the installed plugins (%2): not loaded. Install it in %3, or choose another plugin</source>
+        <translation>%1 はインストール済みのプラグインにありません（%2）：読み込んでいません。%3 にインストールするか、別のプラグインを選んでください</translation>
+    </message>
+    <message>
+        <source>Could not load %1: %2</source>
+        <translation>%1 を読み込めませんでした：%2</translation>
+    </message>
+    <message>
+        <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
+        <translation>%1 は保存された設定を受け取れませんでした（%2）。既定の設定で鳴っています</translation>
+    </message>
+    <message>
+        <source>%1 is not available on this system</source>
+        <translation>%1 はこのシステムでは使えません</translation>
+    </message>
+    <message>
+        <source>Choose an ASIO device</source>
+        <translation>ASIO デバイスを選んでください</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>%1 に戻すこともできませんでした：%2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>%1 への MIDI クロックが再び動き始めました</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>MIDI 入力が接続されました：%1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>MIDI 入力が切断されました：%1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>%1 への MIDI クロックが止まりました：出力が動かなくなりました</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>録音を停止しました：録音を書き込めませんでした（ディスクがいっぱい？）：%1</translation>
+    </message>
+    <message>
+        <source>That effect is no longer in this patch</source>
+        <translation>そのエフェクトはもうこのパッチにありません</translation>
+    </message>
+    <message>
+        <source>%1 is switched off: switch it on to open its window</source>
+        <translation>%1 はオフです：ウィンドウを開くにはオンにしてください</translation>
+    </message>
+    <message>
+        <source>%1 is not loaded (see the message about why)</source>
+        <translation>%1 は読み込まれていません（理由はそのメッセージを見てください）</translation>
+    </message>
+    <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>%1 の設定を保存できませんでした：%2</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading before, so it is switched off</source>
+        <translation>%1 は以前読み込み中にアプリをクラッシュさせたため、オフになっています</translation>
+    </message>
+    <message>
+        <source>%1 is an effect, not an instrument: Sustain Pads need an instrument</source>
+        <translation>%1 はエフェクトで、インストゥルメントではありません：Sustain Pads にはインストゥルメントが必要です</translation>
+    </message>
+    <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads：%1 の設定を復元できませんでした（%2）。読み込まれた状態で鳴ります</translation>
+    </message>
+    <message>
+        <source>That %1 effect is no longer there</source>
+        <translation>その %1 エフェクトはもうありません</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>これ以上ループを作れません：ループは最大 %1 個です（先に 1 つクリアしてください）</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>ループを録音するメモリーが足りません（%1 MB 必要）</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>ループのボタンが一度に押されすぎました：1 つは無視されました</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>ループが最大の長さ（2 分または 64 小節）に達し、そこで閉じました</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>そのループにはもうレイヤーを追加できません：別のレイヤーを録るには 1 つ取り消してください</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>ループの録音がメモリーに収まらなかったため、ミュートしました：クリアして録り直してください</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>ループが録音をメモリーに持たないまま閉じました（%2 フレーム中 %1）：レイヤーなしで鳴ります</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>そのループのレイヤー用のメモリーが足りません：レイヤーなしで鳴ります</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>最初のループからテンポ %1 BPM を取得しました</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>最初のループからテンポを取得しませんでした：60〜180 BPM で 1、2、4 小節の長さではありません</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>そのループに別のレイヤーを録音するメモリーが足りません</translation>
+    </message>
+    <message>
+        <source>That plugin is not loaded</source>
+        <translation>そのプラグインは読み込まれていません</translation>
+    </message>
+    <message>
+        <source>That instrument is not loaded</source>
+        <translation>そのインストゥルメントは読み込まれていません</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>最初の %1 本のステムだけが鳴ります</translation>
+    </message>
+    <message>
+        <source>The backing tracks could not be read: %1</source>
+        <translation>バッキング・トラックを読み込めませんでした：%1</translation>
+    </message>
+    <message>
+        <source>This plugin crashed the app while loading before, so it is switched off</source>
+        <translation>このプラグインは以前読み込み中にアプリをクラッシュさせたため、オフになっています</translation>
+    </message>
+    <message>
+        <source>Could not open the file manager at %1</source>
+        <translation>%1 でファイル・マネージャーを開けませんでした</translation>
+    </message>
+    <message>
+        <source>Could not open Explorer for %1</source>
+        <translation>%1 のエクスプローラーを開けませんでした</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>%1 のハードウェア・シンセを鳴らせません：%2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>MIDI 入力 %1 を開けませんでした：%2</translation>
     </message>
 </context>
 <context>
@@ -1553,6 +2251,29 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Instrument</source>
         <translation>インストゥルメント</translation>
+    </message>
+</context>
+<context>
+    <name>MidiTrigger</name>
+    <message>
+        <source>channel %1</source>
+        <translation>チャンネル %1</translation>
+    </message>
+    <message>
+        <source>Pedal/CC %1 (%2)</source>
+        <translation>ペダル/CC %1（%2）</translation>
+    </message>
+    <message>
+        <source>Note %1%2 (%3)</source>
+        <translation>ノート %1%2（%3）</translation>
+    </message>
+    <message>
+        <source>Program %1 (%2)</source>
+        <translation>プログラム %1（%2）</translation>
+    </message>
+    <message>
+        <source>Not set</source>
+        <translation>未設定</translation>
     </message>
 </context>
 <context>
@@ -2455,6 +3176,20 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 may not hear the audio inputs: they stay silent. Allow it in the system&apos;s settings, Privacy &amp; Security → Microphone, then choose the input again.</source>
         <translation>%1 はオーディオ入力を聞く許可がないため、入力は無音です。システム設定の「プライバシーとセキュリティ」→「マイク」で許可してから、入力を選び直してください。</translation>
+    </message>
+    <message>
+        <source>PulseAudio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>PulseAudio</translation>
+    </message>
+    <message>
+        <source>Core Audio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Core Audio</translation>
+    </message>
+    <message>
+        <source>Windows Audio (WASAPI)</source>
+        <translation>Windows オーディオ (WASAPI)</translation>
     </message>
 </context>
 <context>

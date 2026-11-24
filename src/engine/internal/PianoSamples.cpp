@@ -85,13 +85,19 @@ core::Result<SampleSet> loadSampleSet(const QString& sfzPath, double sampleRate,
     QElapsedTimer took;
     took.start();
     QFile file(sfzPath);
-    if (!file.exists()) return core::fail(core::ErrorCode::FileNotFound, u"Piano not found: %1"_s.arg(sfzPath));
+    if (!file.exists()) return core::fail(core::ErrorCode::FileNotFound, QCoreApplication::translate("Engine", "Piano not found: %1").arg(sfzPath));
     if (!file.open(QIODevice::ReadOnly)) {
-        return core::fail(core::ErrorCode::FileReadFailed, u"Cannot read the piano %1: %2"_s.arg(sfzPath, file.errorString()));
+        return core::fail(core::ErrorCode::FileReadFailed,
+                          QCoreApplication::translate("Engine", "Cannot read the piano %1: %2").arg(sfzPath, file.errorString()));
     }
     auto regions = sfz::parse(QString::fromUtf8(file.readAll()));
-    if (!regions) return core::fail(core::ErrorCode::ParseFailed, u"The piano %1: %2"_s.arg(sfzPath, regions.error().message));
-    if (regions->empty()) return core::fail(core::ErrorCode::InvalidData, u"The piano %1 maps no recordings"_s.arg(sfzPath));
+    if (!regions) {
+        return core::fail(core::ErrorCode::ParseFailed,
+                          QCoreApplication::translate("Engine", "The piano %1: %2").arg(sfzPath, regions.error().message));
+    }
+    if (regions->empty()) {
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "The piano %1 maps no recordings").arg(sfzPath));
+    }
 
     std::vector<sfz::Region> attacks;
     std::vector<sfz::Region> releases;
@@ -105,13 +111,14 @@ core::Result<SampleSet> loadSampleSet(const QString& sfzPath, double sampleRate,
     const auto read = [&](const std::vector<sfz::Region>& from, std::vector<SampleZone>& into) -> core::Result<void> {
         for (const sfz::Region& r : fewerLayersPerNote(from, options.maxLayers)) {
             if (cancel != nullptr && cancel->load(std::memory_order_relaxed)) {
-                return core::fail(core::ErrorCode::InvalidData, u"Reading the piano %1 was cancelled"_s.arg(set.name));
+                return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "Reading the piano %1 was cancelled").arg(set.name));
             }
             const double place = std::clamp((r.keyCenter - 21) / 87.0, 0.0, 1.0);
             const bool looped = r.loopEnd > 0;
             if (looped && (r.loopStart >= r.loopEnd || r.tailStart > r.loopStart || r.loopStart < r.offset)) {
                 return core::fail(core::ErrorCode::InvalidData,
-                                  u"The piano %1: %2's loop (%3 to %4, fading from %5) is not a loop"_s.arg(set.name, r.sample)
+                                  QCoreApplication::translate("Engine", "The piano %1: %2's loop (%3 to %4, fading from %5) is not a loop")
+                                      .arg(set.name, r.sample)
                                       .arg(r.loopStart)
                                       .arg(r.loopEnd)
                                       .arg(r.tailStart));
@@ -129,8 +136,10 @@ core::Result<SampleSet> loadSampleSet(const QString& sfzPath, double sampleRate,
             const bool trimmed = !looped && keep < available;
             const auto at = [&](int64_t frame) { return static_cast<double>(frame - r.offset) * ratio; };
             if (looped && at(r.loopEnd) + 4.0 > static_cast<double>(keep)) {
-                return core::fail(core::ErrorCode::InvalidData, u"The piano %1: %2 ends before its loop does (frame %3)"_s.arg(set.name, r.sample)
-                                                                    .arg(r.loopEnd));
+                return core::fail(core::ErrorCode::InvalidData,
+                                  QCoreApplication::translate("Engine", "The piano %1: %2 ends before its loop does (frame %3)")
+                                      .arg(set.name, r.sample)
+                                      .arg(r.loopEnd));
             }
             const auto fade = trimmed ? std::min(keep, static_cast<std::size_t>(options.fadeSeconds * sampleRate)) : std::size_t{0};
             SampleZone zone;

@@ -45,6 +45,13 @@
     </message>
 </context>
 <context>
+    <name>Audio</name>
+    <message>
+        <source>This session&apos;s realtime priority limit is 0, so the audio (and Wine plugins above all) can drop out more often. Fix: sudo usermod -aG pipewire $USER (-aG audio if no pipewire group), then log in again</source>
+        <translation>本次会话的实时优先级上限为 0，所以音频（尤其是 Wine 插件）可能更常断音。解决：执行 sudo usermod -aG pipewire $USER（没有 pipewire 组则用 -aG audio），然后重新登录</translation>
+    </message>
+</context>
+<context>
     <name>BuiltinFxWindow</name>
     <message>
         <source>Three-band upward and downward compression</source>
@@ -773,6 +780,697 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>By Manufacturer</source>
         <translation>按厂商</translation>
+    </message>
+</context>
+<context>
+    <name>Engine</name>
+    <message>
+        <source>No MIDI output named &quot;%1&quot;: is the synth plugged in and on?</source>
+        <translation>没有名为“%1”的 MIDI 输出：合成器接好并打开了吗？</translation>
+    </message>
+    <message>
+        <source>Could not open the MIDI output %1 (another program, or the MIDI clock, may be using it): %2</source>
+        <translation>无法打开 MIDI 输出 %1（可能有其他程序或 MIDI 时钟正在使用它）：%2</translation>
+    </message>
+    <message>
+        <source>Could not send to the MIDI output %1: %2</source>
+        <translation>无法发送到 MIDI 输出 %1：%2</translation>
+    </message>
+    <message>
+        <source>Already recording to %1</source>
+        <translation>已经在录音到 %1</translation>
+    </message>
+    <message>
+        <source>Nothing to record: the audio is not running</source>
+        <translation>没有可录的内容：音频没有在运行</translation>
+    </message>
+    <message>
+        <source>Could not make the folder for the recording: %1</source>
+        <translation>无法创建录音的文件夹：%1</translation>
+    </message>
+    <message>
+        <source>Could not write the recording %1: %2</source>
+        <translation>无法写入录音 %1：%2</translation>
+    </message>
+    <message>
+        <source>Not recording</source>
+        <translation>没有在录音</translation>
+    </message>
+    <message>
+        <source>Could not finish the recording %1: %2</source>
+        <translation>无法完成录音 %1：%2</translation>
+    </message>
+    <message>
+        <source>it could not be decoded</source>
+        <translation>无法解码</translation>
+    </message>
+    <message>
+        <source>reading it was cancelled</source>
+        <translation>读取已取消</translation>
+    </message>
+    <message>
+        <source>the decoder stopped answering</source>
+        <translation>解码器不再响应</translation>
+    </message>
+    <message>
+        <source>Backing track not found: %1</source>
+        <translation>找不到伴奏音轨：%1</translation>
+    </message>
+    <message>
+        <source>Cannot read %1 without an audio output running</source>
+        <translation>没有运行中的音频输出，无法读取 %1</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: it holds no audio</source>
+        <translation>无法播放 %1：其中没有音频</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: %2</source>
+        <translation>无法播放 %1：%2</translation>
+    </message>
+    <message>
+        <source>it came out in an unexpected sample format</source>
+        <translation>输出的采样格式出乎意料</translation>
+    </message>
+    <message>
+        <source>it is longer than %1 minutes</source>
+        <translation>长度超过 %1 分钟</translation>
+    </message>
+    <message>
+        <source>Sample not found: %1</source>
+        <translation>找不到采样：%1</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: it holds no audio</source>
+        <translation>无法读取采样 %1：其中没有音频</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: %2</source>
+        <translation>无法读取采样 %1：%2</translation>
+    </message>
+    <message>
+        <source>Left out %1: a song&apos;s tracks together may be at most %2 minutes of audio (they are all kept in memory)</source>
+        <translation>已略过 %1：一首歌的所有音轨加起来最多 %2 分钟音频（它们都保存在内存里）</translation>
+    </message>
+    <message>
+        <source>No MIDI output named &quot;%1&quot; to send the clock to</source>
+        <translation>没有名为“%1”的 MIDI 输出可以发送时钟</translation>
+    </message>
+    <message>
+        <source>Could not send the MIDI clock to %1: %2</source>
+        <translation>无法把 MIDI 时钟发送到 %1：%2</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the app&apos;s own instruments (a newer version&apos;s, maybe)</source>
+        <translation>%1 不是本应用自带的乐器（也许来自更新的版本）</translation>
+    </message>
+    <message>
+        <source>%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)</source>
+        <translation>%1 不是插件文件（.vst3 包，或本系统的 VST2 插件）</translation>
+    </message>
+    <message>
+        <source>No plugin to open an editor for</source>
+        <translation>没有可以打开编辑器的插件</translation>
+    </message>
+    <message>
+        <source>The saved %1 settings are damaged (%2)</source>
+        <translation>%1 保存的设置已损坏（%2）</translation>
+    </message>
+    <message>
+        <source>%1: no such plugin (%2)</source>
+        <translation>%1：没有这个插件（%2）</translation>
+    </message>
+    <message>
+        <source>%1 could not be loaded: %2</source>
+        <translation>无法加载 %1：%2</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (no VSTPluginMain)</source>
+        <translation>%1 不是 VST2 插件（没有 VSTPluginMain）</translation>
+    </message>
+    <message>
+        <source>%1 did not start</source>
+        <translation>%1 没有启动</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (wrong signature)</source>
+        <translation>%1 不是 VST2 插件（签名不对）</translation>
+    </message>
+    <message>
+        <source>%1 holds several plugins in one file (a &quot;shell&quot;, as Waves&apos;): not supported yet</source>
+        <translation>%1 在一个文件里包含多个插件（像 Waves 那样的“外壳”）：暂不支持</translation>
+    </message>
+    <message>
+        <source>%1 cannot process audio</source>
+        <translation>%1 无法处理音频</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read: %2</source>
+        <translation>%1 在读取时失败：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read</source>
+        <translation>%1 在读取时失败</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading: %2</source>
+        <translation>%1 在加载时失败：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading</source>
+        <translation>%1 在加载时失败</translation>
+    </message>
+    <message>
+        <source>%1 did not give its settings</source>
+        <translation>%1 没有交出它的设置</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings: %2</source>
+        <translation>%1 交出设置时失败：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings</source>
+        <translation>%1 交出设置时失败</translation>
+    </message>
+    <message>
+        <source>The saved plugin settings are damaged (%1)</source>
+        <translation>保存的插件设置已损坏（%1）</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings: %2</source>
+        <translation>%1 接收保存的设置时失败：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings</source>
+        <translation>%1 接收保存的设置时失败</translation>
+    </message>
+    <message>
+        <source>%1: no window to attach the editor to</source>
+        <translation>%1：没有可以挂接编辑器的窗口</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window cannot open here: plugin windows need X11 (the app runs without it, on Wayland). Start the app with QT_QPA_PLATFORM=xcb</source>
+        <translation>%1 的窗口无法在这里打开：插件窗口需要 X11（本应用正在没有 X11 的 Wayland 上运行）。请用 QT_QPA_PLATFORM=xcb 启动本应用</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio input bus %2</source>
+        <translation>%1 拒绝启用它的音频输入总线 %2</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio output bus %2</source>
+        <translation>%1 拒绝启用它的音频输出总线 %2</translation>
+    </message>
+    <message>
+        <source>%1 could not be created</source>
+        <translation>无法创建 %1</translation>
+    </message>
+    <message>
+        <source>%1 failed to initialise</source>
+        <translation>%1 初始化失败</translation>
+    </message>
+    <message>
+        <source>%1 does not name its window half (edit controller)</source>
+        <translation>%1 没有说明它的窗口部分（编辑控制器）</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half (edit controller) could not be created</source>
+        <translation>无法创建 %1 的窗口部分（编辑控制器）</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half failed to initialise</source>
+        <translation>%1 的窗口部分初始化失败</translation>
+    </message>
+    <message>
+        <source>%1&apos;s halves cannot be connected to each other</source>
+        <translation>%1 的两个部分无法互相连接</translation>
+    </message>
+    <message>
+        <source>%1&apos;s sound refused to connect to its window</source>
+        <translation>%1 的声音部分拒绝连接到它的窗口</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window refused to connect to its sound</source>
+        <translation>%1 的窗口拒绝连接到它的声音部分</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its MIDI input</source>
+        <translation>%1 拒绝启用它的 MIDI 输入</translation>
+    </message>
+    <message>
+        <source>%1 does not support %2 Hz / %3-sample blocks</source>
+        <translation>%1 不支持 %2 Hz / %3 采样的块</translation>
+    </message>
+    <message>
+        <source>%1 failed to activate</source>
+        <translation>%1 激活失败</translation>
+    </message>
+    <message>
+        <source>%1 failed to start processing</source>
+        <translation>%1 无法开始处理</translation>
+    </message>
+    <message>
+        <source>Plugin not found: %1</source>
+        <translation>找不到插件：%1</translation>
+    </message>
+    <message>
+        <source>%1 is not a .vst3 plugin</source>
+        <translation>%1 不是 .vst3 插件</translation>
+    </message>
+    <message>
+        <source>Not a loadable VST3 plugin: %1 (%2)</source>
+        <translation>不是可以加载的 VST3 插件：%1（%2）</translation>
+    </message>
+    <message>
+        <source>%1 contains no audio processor</source>
+        <translation>%1 不含音频处理器</translation>
+    </message>
+    <message>
+        <source>%1 has no audio processor interface</source>
+        <translation>%1 没有音频处理器接口</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed: %2</source>
+        <translation>加载 %1 失败：%2</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed</source>
+        <translation>加载 %1 失败</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state: %2</source>
+        <translation>%1 交出状态时失败：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state</source>
+        <translation>%1 交出状态时失败</translation>
+    </message>
+    <message>
+        <source>%1 did not give its state</source>
+        <translation>%1 没有交出它的状态</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state: %2</source>
+        <translation>%1 接收保存的状态时失败：%2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state</source>
+        <translation>%1 接收保存的状态时失败</translation>
+    </message>
+    <message>
+        <source>%1 rejected its saved state</source>
+        <translation>%1 拒绝了它保存的状态</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved state</source>
+        <translation>%1 的编辑器拒绝了保存的状态</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved settings</source>
+        <translation>%1 的编辑器拒绝了保存的设置</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor does not support %2 windows</source>
+        <translation>%1 的编辑器不支持 %2 窗口</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor failed to open</source>
+        <translation>%1 的编辑器无法打开</translation>
+    </message>
+    <message>
+        <source>No audio output named &quot;%1&quot; (%2)</source>
+        <translation>没有名为“%1”的音频输出（%2）</translation>
+    </message>
+    <message>
+        <source>This computer has no default audio output</source>
+        <translation>这台电脑没有默认的音频输出</translation>
+    </message>
+    <message>
+        <source>%1 (%2) cannot run at %3 Hz</source>
+        <translation>%1（%2）无法以 %3 Hz 运行</translation>
+    </message>
+    <message>
+        <source>The input %1 (%2) and the output %3 (%4) must use the same driver</source>
+        <translation>输入 %1（%2）和输出 %3（%4）必须使用同一个驱动</translation>
+    </message>
+    <message>
+        <source>No audio input named &quot;%1&quot; (%2)</source>
+        <translation>没有名为“%1”的音频输入（%2）</translation>
+    </message>
+    <message>
+        <source>Could not open %1 with the inputs of %2 (%3): %4</source>
+        <translation>无法打开带有 %2 输入的 %1（%3）：%4</translation>
+    </message>
+    <message>
+        <source>unknown error</source>
+        <translation>未知错误</translation>
+    </message>
+    <message>
+        <source>Could not open %1 (%2): %3</source>
+        <translation>无法打开 %1（%2）：%3</translation>
+    </message>
+    <message>
+        <source>Could not start %1 (%2): %3</source>
+        <translation>无法启动 %1（%2）：%3</translation>
+    </message>
+    <message>
+        <source>Could not pause %1: %2</source>
+        <translation>无法暂停 %1：%2</translation>
+    </message>
+    <message>
+        <source>No audio output is open to resume</source>
+        <translation>没有打开的音频输出可以恢复</translation>
+    </message>
+    <message>
+        <source>Could not restart %1: %2</source>
+        <translation>无法重新启动 %1：%2</translation>
+    </message>
+    <message>
+        <source>The audio dropped out (%1 time(s)): the computer could not keep up. A bigger buffer in Settings &gt; Audio usually stops it; so does closing other programs</source>
+        <translation>音频断了（%1 次）：电脑跟不上。在 设置 &gt; 音频 中调大缓冲区通常能解决；关闭其他程序也有帮助</translation>
+    </message>
+    <message>
+        <source>%1 started again after it stopped</source>
+        <translation>%1 停止后又恢复了</translation>
+    </message>
+    <message>
+        <source>%1 stopped: now playing through %2</source>
+        <translation>%1 停止了：现在通过 %2 发声</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2, without inputs, until it is back</source>
+        <translation>%1 停止了（被拔掉了？）：在它回来之前通过 %2 发声，没有输入</translation>
+    </message>
+    <message>
+        <source>%1 stopped (unplugged?): playing through %2 until it is back</source>
+        <translation>%1 停止了（被拔掉了？）：在它回来之前通过 %2 发声</translation>
+    </message>
+    <message>
+        <source>No audio output is available (%1): the sound comes back when one is plugged in</source>
+        <translation>没有可用的音频输出（%1）：接上一个后声音就会回来</translation>
+    </message>
+    <message>
+        <source>Playing through %1 until %2 is back</source>
+        <translation>在 %2 回来之前通过 %1 发声</translation>
+    </message>
+    <message>
+        <source>%1 is back: playing through it again</source>
+        <translation>%1 回来了：重新通过它发声</translation>
+    </message>
+    <message>
+        <source>Playing through %1</source>
+        <translation>通过 %1 发声</translation>
+    </message>
+    <message>
+        <source>No audio output is available: %1</source>
+        <translation>没有可用的音频输出：%1</translation>
+    </message>
+    <message>
+        <source>Windows&apos; default output changed: now playing through %1</source>
+        <translation>Windows 的默认输出变了：现在通过 %1 发声</translation>
+    </message>
+    <message>
+        <source>The saved Saw Stack Pro settings are damaged (%1)</source>
+        <translation>Saw Stack Pro 保存的设置已损坏（%1）</translation>
+    </message>
+    <message>
+        <source>The region at line %1 has no sample</source>
+        <translation>第 %1 行的区域没有采样</translation>
+    </message>
+    <message>
+        <source>An unclosed header at line %1</source>
+        <translation>第 %1 行有一个没有闭合的标头</translation>
+    </message>
+    <message>
+        <source>Unknown header &lt;%1&gt; at line %2</source>
+        <translation>第 %2 行有未知标头 &lt;%1&gt;</translation>
+    </message>
+    <message>
+        <source>Not a setting at line %1</source>
+        <translation>第 %1 行不是设置</translation>
+    </message>
+    <message>
+        <source>Unknown setting &quot;%1&quot; at line %2</source>
+        <translation>第 %2 行有未知设置“%1”</translation>
+    </message>
+    <message>
+        <source>&quot;%1=%2&quot; at line %3 is not a value it can take</source>
+        <translation>第 %3 行的“%1=%2”不是它能接受的值</translation>
+    </message>
+    <message>
+        <source>Piano not found: %1</source>
+        <translation>找不到钢琴：%1</translation>
+    </message>
+    <message>
+        <source>Cannot read the piano %1: %2</source>
+        <translation>无法读取钢琴 %1：%2</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2</source>
+        <translation>钢琴 %1：%2</translation>
+    </message>
+    <message>
+        <source>The piano %1 maps no recordings</source>
+        <translation>钢琴 %1 没有映射任何录音</translation>
+    </message>
+    <message>
+        <source>Reading the piano %1 was cancelled</source>
+        <translation>钢琴 %1 的读取已取消</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2&apos;s loop (%3 to %4, fading from %5) is not a loop</source>
+        <translation>钢琴 %1：%2 的循环（%3 到 %4，从 %5 开始淡化）不是一个循环</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2 ends before its loop does (frame %3)</source>
+        <translation>钢琴 %1：%2 在它的循环之前就结束了（第 %3 帧）</translation>
+    </message>
+    <message>
+        <source>The saved Piano Pro settings are damaged (%1)</source>
+        <translation>Piano Pro 保存的设置已损坏（%1）</translation>
+    </message>
+    <message>
+        <source>The saved Pads Pro settings are damaged (%1)</source>
+        <translation>Pads Pro 保存的设置已损坏（%1）</translation>
+    </message>
+    <message>
+        <source>the file is not there</source>
+        <translation>文件不在那里</translation>
+    </message>
+    <message>
+        <source>the file cannot be opened</source>
+        <translation>文件无法打开</translation>
+    </message>
+    <message>
+        <source>it is not a SoundFont 2 file, or it is damaged</source>
+        <translation>它不是 SoundFont 2 文件，或者已损坏</translation>
+    </message>
+    <message>
+        <source>it has no presets</source>
+        <translation>它没有预设</translation>
+    </message>
+    <message>
+        <source>The SoundFont Player could not start (%1)</source>
+        <translation>SoundFont Player 无法启动（%1）</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 was not read: the app is closing</source>
+        <translation>未读取 SoundFont %1：应用正在关闭</translation>
+    </message>
+    <message>
+        <source>%1 has no preset %2:%3: its first plays</source>
+        <translation>%1 没有音色 %2:%3：播放它的第一个音色</translation>
+    </message>
+    <message>
+        <source>The SoundFont %1 could not be read: %2</source>
+        <translation>无法读取 SoundFont %1：%2</translation>
+    </message>
+    <message>
+        <source>There is no SoundFont at %1</source>
+        <translation>%1 处没有 SoundFont</translation>
+    </message>
+    <message>
+        <source>The saved SoundFont Player settings are damaged (%1)</source>
+        <translation>SoundFont Player 保存的设置已损坏（%1）</translation>
+    </message>
+    <message>
+        <source>With PipeWire, start the app with pw-jack to use JACK</source>
+        <translation>使用 PipeWire 时，请用 pw-jack 启动本应用来使用 JACK</translation>
+    </message>
+    <message>
+        <source>The saved audio setup could not be used (%1); using system audio until it is there</source>
+        <translation>无法使用保存的音频设置（%1）；在它回来之前使用系统音频</translation>
+    </message>
+    <message>
+        <source>%1 could not be used (%2); using system audio until it is there</source>
+        <translation>无法使用 %1（%2）；在它回来之前使用系统音频</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading last time, so it is switched off (Settings &gt; Plugins to try it again)</source>
+        <translation>%1 上次加载时让应用崩溃了，所以已被关闭（想再试一次请到 设置 &gt; 插件）</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
+        <translation>%1（%2）不是这个版本自带的乐器：未加载</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not a VST2 plugin the scan found: not loaded</source>
+        <translation>%1（%2）不是扫描找到的 VST2 插件：未加载</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the installed plugins (%2): not loaded. Install it in %3, or choose another plugin</source>
+        <translation>%1 不在已安装的插件中（%2）：未加载。请把它安装到 %3，或选择别的插件</translation>
+    </message>
+    <message>
+        <source>Could not load %1: %2</source>
+        <translation>无法加载 %1：%2</translation>
+    </message>
+    <message>
+        <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
+        <translation>%1 无法接收保存的设置（%2）；它以默认设置发声</translation>
+    </message>
+    <message>
+        <source>%1 is not available on this system</source>
+        <translation>%1 在本系统上不可用</translation>
+    </message>
+    <message>
+        <source>Choose an ASIO device</source>
+        <translation>请选择一个 ASIO 设备</translation>
+    </message>
+    <message>
+        <source>Could not go back to %1 either: %2</source>
+        <translation>也无法回到 %1：%2</translation>
+    </message>
+    <message>
+        <source>MIDI clock to %1 started again</source>
+        <translation>发往 %1 的 MIDI 时钟恢复了</translation>
+    </message>
+    <message>
+        <source>MIDI input connected: %1</source>
+        <translation>MIDI 输入已连接：%1</translation>
+    </message>
+    <message>
+        <source>MIDI input disconnected: %1</source>
+        <translation>MIDI 输入已断开：%1</translation>
+    </message>
+    <message>
+        <source>The MIDI clock to %1 stopped: the output stopped working</source>
+        <translation>发往 %1 的 MIDI 时钟停止了：输出不再工作</translation>
+    </message>
+    <message>
+        <source>Recording stopped: the recording could not be written (is the disk full?): %1</source>
+        <translation>录音已停止：无法写入录音（磁盘满了吗？）：%1</translation>
+    </message>
+    <message>
+        <source>That effect is no longer in this patch</source>
+        <translation>那个效果器已经不在这个音色里了</translation>
+    </message>
+    <message>
+        <source>%1 is switched off: switch it on to open its window</source>
+        <translation>%1 已关闭：打开它才能打开它的窗口</translation>
+    </message>
+    <message>
+        <source>%1 is not loaded (see the message about why)</source>
+        <translation>%1 没有加载（原因见相关消息）</translation>
+    </message>
+    <message>
+        <source>The settings of %1 could not be saved: %2</source>
+        <translation>无法保存 %1 的设置：%2</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading before, so it is switched off</source>
+        <translation>%1 之前加载时让应用崩溃了，所以已被关闭</translation>
+    </message>
+    <message>
+        <source>%1 is an effect, not an instrument: Sustain Pads need an instrument</source>
+        <translation>%1 是效果器，不是乐器：Sustain Pads 需要乐器</translation>
+    </message>
+    <message>
+        <source>Sustain Pads: %1&apos;s settings could not be restored (%2): it plays as it loads</source>
+        <translation>Sustain Pads：无法恢复 %1 的设置（%2）：它按加载时的样子发声</translation>
+    </message>
+    <message>
+        <source>That %1 effect is no longer there</source>
+        <translation>那个 %1 效果器已经不在了</translation>
+    </message>
+    <message>
+        <source>No room for another loop: %1 loops at most (clear one first)</source>
+        <translation>没有空间再加一个循环：最多 %1 个循环（请先清除一个）</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record a loop (%1 MB needed)</source>
+        <translation>内存不够录制循环（需要 %1 MB）</translation>
+    </message>
+    <message>
+        <source>Too many loop presses at once: one was dropped</source>
+        <translation>同时按下的循环按钮太多：丢弃了一次</translation>
+    </message>
+    <message>
+        <source>A loop reached its longest (2 minutes or 64 bars) and closed there</source>
+        <translation>一个循环达到了最大长度（2 分钟或 64 小节），并在那里闭合</translation>
+    </message>
+    <message>
+        <source>That loop has all the layers it can take: undo one to record another</source>
+        <translation>那个循环已经有了能容纳的全部层：撤销一层才能录制另一层</translation>
+    </message>
+    <message>
+        <source>A loop&apos;s recording did not fit its memory, so it was silenced: clear it and record it again</source>
+        <translation>一个循环的录音放不进它的内存，所以已被静音：请清除它并重新录制</translation>
+    </message>
+    <message>
+        <source>A loop closed without its recording in memory (%1 of %2 frames): it plays, without layers</source>
+        <translation>一个循环闭合时录音不在内存中（%2 帧中的 %1 帧）：它会播放，但没有层</translation>
+    </message>
+    <message>
+        <source>Not enough memory for layers on that loop: it plays, without layers</source>
+        <translation>那个循环没有足够内存放层：它会播放，但没有层</translation>
+    </message>
+    <message>
+        <source>Tempo %1 BPM taken from the first loop</source>
+        <translation>已从第一个循环取得速度 %1 BPM</translation>
+    </message>
+    <message>
+        <source>No tempo taken from the first loop: it is not 1, 2 or 4 bars of 60-180 BPM</source>
+        <translation>没有从第一个循环取得速度：它不是 60-180 BPM 下 1、2 或 4 小节长</translation>
+    </message>
+    <message>
+        <source>Not enough memory to record another layer on that loop</source>
+        <translation>内存不够在那个循环上再录一层</translation>
+    </message>
+    <message>
+        <source>That plugin is not loaded</source>
+        <translation>那个插件没有加载</translation>
+    </message>
+    <message>
+        <source>That instrument is not loaded</source>
+        <translation>那个乐器没有加载</translation>
+    </message>
+    <message>
+        <source>Only the first %1 stems play</source>
+        <translation>只有前 %1 个分轨会播放</translation>
+    </message>
+    <message>
+        <source>The backing tracks could not be read: %1</source>
+        <translation>无法读取伴奏音轨：%1</translation>
+    </message>
+    <message>
+        <source>This plugin crashed the app while loading before, so it is switched off</source>
+        <translation>这个插件之前加载时让应用崩溃了，所以已被关闭</translation>
+    </message>
+    <message>
+        <source>Could not open the file manager at %1</source>
+        <translation>无法在 %1 打开文件管理器</translation>
+    </message>
+    <message>
+        <source>Could not open Explorer for %1</source>
+        <translation>无法为 %1 打开资源管理器</translation>
+    </message>
+    <message>
+        <source>The hardware synth on %1 cannot be played: %2</source>
+        <translation>无法演奏 %1 上的硬件合成器：%2</translation>
+    </message>
+    <message>
+        <source>Could not open MIDI input %1: %2</source>
+        <translation>无法打开 MIDI 输入 %1：%2</translation>
     </message>
 </context>
 <context>
@@ -1544,6 +2242,29 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Instrument</source>
         <translation>乐器</translation>
+    </message>
+</context>
+<context>
+    <name>MidiTrigger</name>
+    <message>
+        <source>channel %1</source>
+        <translation>通道 %1</translation>
+    </message>
+    <message>
+        <source>Pedal/CC %1 (%2)</source>
+        <translation>踏板/CC %1（%2）</translation>
+    </message>
+    <message>
+        <source>Note %1%2 (%3)</source>
+        <translation>音符 %1%2（%3）</translation>
+    </message>
+    <message>
+        <source>Program %1 (%2)</source>
+        <translation>音色 %1（%2）</translation>
+    </message>
+    <message>
+        <source>Not set</source>
+        <translation>未设置</translation>
     </message>
 </context>
 <context>
@@ -2445,6 +3166,20 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 may not hear the audio inputs: they stay silent. Allow it in the system&apos;s settings, Privacy &amp; Security → Microphone, then choose the input again.</source>
         <translation>%1 可能听不到音频输入：它们保持无声。请在系统设置的“隐私与安全性 → 麦克风”中允许，然后重新选择输入。</translation>
+    </message>
+    <message>
+        <source>PulseAudio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>PulseAudio</translation>
+    </message>
+    <message>
+        <source>Core Audio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Core Audio</translation>
+    </message>
+    <message>
+        <source>Windows Audio (WASAPI)</source>
+        <translation>Windows 音频 (WASAPI)</translation>
     </message>
 </context>
 <context>

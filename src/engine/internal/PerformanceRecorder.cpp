@@ -2,6 +2,7 @@
 
 #include "EngineLog.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -73,10 +74,13 @@ PerformanceRecorder::~PerformanceRecorder()
 
 core::Result<void> PerformanceRecorder::start(const QString& path, double sampleRate)
 {
-    if (m_thread.joinable()) return core::fail(core::ErrorCode::InvalidData, u"Already recording to %1"_s.arg(m_path));
-    if (sampleRate <= 0.0) return core::fail(core::ErrorCode::DeviceUnavailable, u"Nothing to record: the audio is not running"_s);
+    if (m_thread.joinable()) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "Already recording to %1").arg(m_path));
+    if (sampleRate <= 0.0) {
+        return core::fail(core::ErrorCode::DeviceUnavailable, QCoreApplication::translate("Engine", "Nothing to record: the audio is not running"));
+    }
     if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
-        const QString why = u"Could not make the folder for the recording: %1"_s.arg(QFileInfo(path).absolutePath());
+        const QString why =
+            QCoreApplication::translate("Engine", "Could not make the folder for the recording: %1").arg(QFileInfo(path).absolutePath());
         qCWarning(lcEngine).noquote() << why;
         return core::fail(core::ErrorCode::FileWriteFailed, why);
     }
@@ -84,7 +88,7 @@ core::Result<void> PerformanceRecorder::start(const QString& path, double sample
     file->file.setFileName(path);
     const auto header = waveHeader(static_cast<uint32_t>(sampleRate), 0);
     if (!file->file.open(QIODevice::WriteOnly) || file->file.write(header.data(), header.size()) != kHeaderBytes) {
-        const QString why = u"Could not write the recording %1: %2"_s.arg(path, file->file.errorString());
+        const QString why = QCoreApplication::translate("Engine", "Could not write the recording %1: %2").arg(path, file->file.errorString());
         qCWarning(lcEngine).noquote() << why;
         return core::fail(core::ErrorCode::FileWriteFailed, why);
     }
@@ -135,7 +139,7 @@ bool PerformanceRecorder::drain()
         const auto bytes = static_cast<qint64>(frames * kChannels * sizeof(float));
         const char* from = reinterpret_cast<const char*>(std::span<const float>(m_ring).subspan(at * kChannels).data()); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): raw bytes to a file
         if (m_file->file.write(from, bytes) != bytes) {
-            m_error = u"Could not write the recording %1: %2"_s.arg(m_path, m_file->file.errorString());
+            m_error = QCoreApplication::translate("Engine", "Could not write the recording %1: %2").arg(m_path, m_file->file.errorString());
             return false;
         }
         m_file->dataBytes += static_cast<uint64_t>(bytes);
@@ -161,7 +165,7 @@ void PerformanceRecorder::writeUntilStopped()
 
 core::Result<double> PerformanceRecorder::stop()
 {
-    if (!m_thread.joinable()) return core::fail(core::ErrorCode::InvalidData, u"Not recording"_s);
+    if (!m_thread.joinable()) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "Not recording"));
     m_recording.store(false, std::memory_order_release);
     m_stop.store(true, std::memory_order_release);
     m_thread.join();
@@ -176,7 +180,7 @@ core::Result<double> PerformanceRecorder::stop()
     }
     if (!m_error.isEmpty()) return core::fail(core::ErrorCode::FileWriteFailed, m_error);
     if (!finished) {
-        const QString why = u"Could not finish the recording %1: %2"_s.arg(m_path, m_file->file.errorString());
+        const QString why = QCoreApplication::translate("Engine", "Could not finish the recording %1: %2").arg(m_path, m_file->file.errorString());
         qCWarning(lcEngine).noquote() << why;
         return core::fail(core::ErrorCode::FileWriteFailed, why);
     }
