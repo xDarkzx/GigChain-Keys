@@ -25,6 +25,7 @@
 #include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/gui/iplugviewcontentscalesupport.h"
 
+#include <QCoreApplication>
 #include <QDataStream>
 #include <QFileInfo>
 #include <QScopedValueRollback>
@@ -77,11 +78,6 @@ bool succeeded(tresult result)
     return result == kResultOk || result == kNotImplemented;
 }
 
-QString directionName(Vst::BusDirection direction)
-{
-    return direction == Vst::kInput ? u"input"_s : u"output"_s;
-}
-
 // Activates the main audio buses in one direction (bus 0 when none is marked
 // main). A plugin that refuses is a load error, never ignored.
 core::Result<void> activateMainBuses(Vst::IComponent& component, Vst::BusDirection direction, const QString& name)
@@ -93,13 +89,21 @@ core::Result<void> activateMainBuses(Vst::IComponent& component, Vst::BusDirecti
         if (component.getBusInfo(Vst::kAudio, direction, i, info) != kResultOk || info.busType != Vst::kMain) continue;
         if (!succeeded(component.activateBus(Vst::kAudio, direction, i, true))) {
             return core::fail(core::ErrorCode::InvalidData,
-                              u"%1 refused to activate audio %2 bus %3"_s.arg(name, directionName(direction)).arg(i));
+                              (direction == Vst::kInput
+                                   ? QCoreApplication::translate("Engine", "%1 refused to activate its audio input bus %2")
+                                   : QCoreApplication::translate("Engine", "%1 refused to activate its audio output bus %2"))
+                                  .arg(name)
+                                  .arg(i));
         }
         any = true;
     }
     if (!any && count > 0 && !succeeded(component.activateBus(Vst::kAudio, direction, 0, true))) {
         return core::fail(core::ErrorCode::InvalidData,
-                          u"%1 refused to activate audio %2 bus 0"_s.arg(name, directionName(direction)));
+                          (direction == Vst::kInput
+                               ? QCoreApplication::translate("Engine", "%1 refused to activate its audio input bus %2")
+                               : QCoreApplication::translate("Engine", "%1 refused to activate its audio output bus %2"))
+                              .arg(name)
+                              .arg(0));
     }
     return {};
 }
@@ -175,11 +179,11 @@ public:
     {
         FUnknown* const host = Vst::PluginContextFactory::instance().getPluginContext();
         component = factory.createInstance<Vst::IComponent>(classInfo.ID());
-        if (!component) return core::fail(core::ErrorCode::InvalidData, u"%1 could not be created"_s.arg(name));
+        if (!component) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 could not be created").arg(name));
         const FUnknownPtr<IPluginBase> componentBase(component);
         if (!componentBase || componentBase->initialize(host) != kResultOk) {
             component = nullptr;
-            return core::fail(core::ErrorCode::InvalidData, u"%1 failed to initialise"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed to initialise").arg(name));
         }
         // One object, sound and window: nothing to connect.
         if (const FUnknownPtr<Vst::IEditController> single(component); single) {
@@ -189,30 +193,35 @@ public:
         TUID controllerId{};
         if (component->getControllerClassId(controllerId) != kResultTrue) { // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay): the SDK's TUID is a char array
             // (The SDK's provider refuses these too: its connection fails without a controller.)
-            return core::fail(core::ErrorCode::InvalidData, u"%1 does not name its window half (edit controller)"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData,
+                              QCoreApplication::translate("Engine", "%1 does not name its window half (edit controller)").arg(name));
         }
         controller = factory.createInstance<Vst::IEditController>(VST3::UID(controllerId));
         if (!controller) {
-            return core::fail(core::ErrorCode::InvalidData, u"%1's window half (edit controller) could not be created"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData,
+                              QCoreApplication::translate("Engine", "%1's window half (edit controller) could not be created").arg(name));
         }
         const FUnknownPtr<IPluginBase> controllerBase(controller);
         if (!controllerBase || controllerBase->initialize(host) != kResultOk) {
             controller = nullptr; // (the sound half is terminated by the destructor)
-            return core::fail(core::ErrorCode::InvalidData, u"%1's window half failed to initialise"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1's window half failed to initialise").arg(name));
         }
         const FUnknownPtr<Vst::IConnectionPoint> fromComponent(component);
         const FUnknownPtr<Vst::IConnectionPoint> fromController(controller);
         if (!fromComponent || !fromController) {
-            return core::fail(core::ErrorCode::InvalidData, u"%1's halves cannot be connected to each other"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData,
+                              QCoreApplication::translate("Engine", "%1's halves cannot be connected to each other").arg(name));
         }
         m_component = fromComponent;
         m_controller = fromController;
         if (fromComponent->connect(fromController) != kResultTrue) {
-            return core::fail(core::ErrorCode::InvalidData, u"%1's sound refused to connect to its window"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData,
+                              QCoreApplication::translate("Engine", "%1's sound refused to connect to its window").arg(name));
         }
         m_componentConnected = true;
         if (fromController->connect(fromComponent) != kResultTrue) {
-            return core::fail(core::ErrorCode::InvalidData, u"%1's window refused to connect to its sound"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData,
+                              QCoreApplication::translate("Engine", "%1's window refused to connect to its sound").arg(name));
         }
         m_controllerConnected = true;
         return {};
@@ -397,7 +406,7 @@ struct Vst3Node::Impl
         if (auto r = activateMainBuses(*component, Vst::kOutput, name); !r) return r;
         if (component->getBusCount(Vst::kEvent, Vst::kInput) > 0 &&
             !succeeded(component->activateBus(Vst::kEvent, Vst::kInput, 0, true))) {
-            return core::fail(core::ErrorCode::InvalidData, u"%1 refused to activate its MIDI input"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 refused to activate its MIDI input").arg(name));
         }
         Vst::ProcessSetup setup{.processMode = Vst::kRealtime,
                                 .symbolicSampleSize = Vst::kSample32,
@@ -405,7 +414,10 @@ struct Vst3Node::Impl
                                 .sampleRate = sampleRate};
         if (processor->setupProcessing(setup) != kResultOk) {
             return core::fail(core::ErrorCode::InvalidData,
-                              u"%1 does not support %2 Hz / %3-sample blocks"_s.arg(name).arg(sampleRate).arg(block));
+                              QCoreApplication::translate("Engine", "%1 does not support %2 Hz / %3-sample blocks")
+                                  .arg(name)
+                                  .arg(sampleRate)
+                                  .arg(block));
         }
 
         data.prepare(*component, block, Vst::kSample32);
@@ -424,14 +436,14 @@ struct Vst3Node::Impl
 
         if (!succeeded(component->setActive(true))) {
             data.unprepare();
-            return core::fail(core::ErrorCode::InvalidData, u"%1 failed to activate"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed to activate").arg(name));
         }
         if (!succeeded(processor->setProcessing(true))) {
             if (!succeeded(component->setActive(false))) {
                 qCWarning(lcEngine).noquote() << name << "also failed to deactivate after a failed start";
             }
             data.unprepare();
-            return core::fail(core::ErrorCode::InvalidData, u"%1 failed to start processing"_s.arg(name));
+            return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed to start processing").arg(name));
         }
         active = true;
         maxBlock = block;
@@ -456,10 +468,10 @@ struct Vst3Node::Impl
 core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bundlePath, double sampleRate, int maxBlock)
 {
     if (!QFileInfo::exists(bundlePath)) {
-        return core::fail(core::ErrorCode::FileNotFound, u"Plugin not found: %1"_s.arg(bundlePath));
+        return core::fail(core::ErrorCode::FileNotFound, QCoreApplication::translate("Engine", "Plugin not found: %1").arg(bundlePath));
     }
     if (!bundlePath.endsWith(u".vst3"_s, Qt::CaseInsensitive)) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is not a .vst3 plugin"_s.arg(bundlePath));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 is not a .vst3 plugin").arg(bundlePath));
     }
     try {
         const platform::SilentLoaderErrors silent;
@@ -470,7 +482,8 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
         impl->module = PluginModules::get(bundlePath, error); // shared with its other instances
         if (!impl->module) {
             return core::fail(core::ErrorCode::InvalidData,
-                              u"Not a loadable VST3 plugin: %1 (%2)"_s.arg(bundlePath, QString::fromStdString(error)));
+                              QCoreApplication::translate("Engine", "Not a loadable VST3 plugin: %1 (%2)")
+                                  .arg(bundlePath, QString::fromStdString(error)));
         }
 
         const auto factory = impl->module->getFactory();
@@ -483,7 +496,7 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
             break;
         }
         if (!impl->provider) {
-            return core::fail(core::ErrorCode::InvalidData, u"%1 contains no audio processor"_s.arg(bundlePath));
+            return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 contains no audio processor").arg(bundlePath));
         }
         if (auto set = impl->provider->setUp(impl->name); !set) return tl::unexpected(set.error());
 
@@ -491,7 +504,8 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
         impl->controller = impl->provider->getControllerPtr();
         impl->processor = FUnknownPtr<Vst::IAudioProcessor>(impl->component);
         if (!impl->component || !impl->processor) {
-            return core::fail(core::ErrorCode::InvalidData, u"%1 has no audio processor interface"_s.arg(impl->name));
+            return core::fail(core::ErrorCode::InvalidData,
+                              QCoreApplication::translate("Engine", "%1 has no audio processor interface").arg(impl->name));
         }
 
         // Some plugins only finish initialising once the controller has seen
@@ -518,9 +532,9 @@ core::Result<std::shared_ptr<Vst3Node>> Vst3Node::loadUnlogged(const QString& bu
         return std::make_shared<Vst3Node>(Token{}, std::move(impl));
     } catch (const std::exception& e) {
         return core::fail(core::ErrorCode::InvalidData,
-                          u"Loading %1 failed: %2"_s.arg(bundlePath, QString::fromUtf8(e.what())));
+                          QCoreApplication::translate("Engine", "Loading %1 failed: %2").arg(bundlePath, QString::fromUtf8(e.what())));
     } catch (...) {
-        return core::fail(core::ErrorCode::InvalidData, u"Loading %1 failed"_s.arg(bundlePath));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "Loading %1 failed").arg(bundlePath));
     }
 }
 
@@ -787,7 +801,7 @@ QByteArray Vst3Node::State::encode() const
 core::Result<Vst3Node::State> Vst3Node::State::decode(const QByteArray& bytes)
 {
     const auto damaged = [](const QString& why) {
-        return core::fail(core::ErrorCode::InvalidData, u"The saved plugin settings are damaged (%1)"_s.arg(why));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "The saved plugin settings are damaged (%1)").arg(why));
     };
     if (!bytes.startsWith(kStateMagic)) return damaged(u"not in the expected format"_s);
     const QByteArray packed = bytes.mid(kStateMagic.size());
@@ -829,9 +843,10 @@ core::Result<Vst3Node::State> Vst3Node::saveState() const
     try {
         return saveStateUnguarded();
     } catch (const std::exception& e) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed giving its state: %2"_s.arg(m_impl->name, QString::fromUtf8(e.what())));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 failed giving its state: %2").arg(m_impl->name, QString::fromUtf8(e.what())));
     } catch (...) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed giving its state"_s.arg(m_impl->name));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed giving its state").arg(m_impl->name));
     }
 }
 
@@ -840,7 +855,7 @@ core::Result<Vst3Node::State> Vst3Node::saveStateUnguarded() const
     State state;
     MemoryStream component;
     if (m_impl->component->getState(&component) != kResultOk) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 did not give its state"_s.arg(m_impl->name));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 did not give its state").arg(m_impl->name));
     }
     state.component = streamBytes(component);
     if (m_impl->controller) {
@@ -857,9 +872,10 @@ core::Result<void> Vst3Node::restoreState(const State& state)
     try {
         return restoreStateUnguarded(state);
     } catch (const std::exception& e) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed taking its saved state: %2"_s.arg(m_impl->name, QString::fromUtf8(e.what())));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed taking its saved state: %2")
+                                                            .arg(m_impl->name, QString::fromUtf8(e.what())));
     } catch (...) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 failed taking its saved state"_s.arg(m_impl->name));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 failed taking its saved state").arg(m_impl->name));
     }
 }
 
@@ -871,19 +887,20 @@ core::Result<void> Vst3Node::restoreStateUnguarded(const State& state)
     QByteArray componentBytes(state.component.constData(), state.component.size());
     MemoryStream component(componentBytes.data(), componentBytes.size());
     if (m_impl->component->setState(&component) != kResultOk) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 rejected its saved state"_s.arg(m_impl->name));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1 rejected its saved state").arg(m_impl->name));
     }
     if (m_impl->controller) {
         component.seek(0, IBStream::kIBSeekSet, nullptr);
         if (!succeeded(m_impl->controller->setComponentState(&component))) {
-            return core::fail(core::ErrorCode::InvalidData, u"%1's editor rejected its saved state"_s.arg(m_impl->name));
+            return core::fail(core::ErrorCode::InvalidData,
+                              QCoreApplication::translate("Engine", "%1's editor rejected its saved state").arg(m_impl->name));
         }
         if (!state.controller.isEmpty()) {
             QByteArray controllerBytes(state.controller.constData(), state.controller.size());
             MemoryStream controller(controllerBytes.data(), controllerBytes.size());
             if (!succeeded(m_impl->controller->setState(&controller))) {
                 return core::fail(core::ErrorCode::InvalidData,
-                                  u"%1's editor rejected its saved settings"_s.arg(m_impl->name));
+                                  QCoreApplication::translate("Engine", "%1's editor rejected its saved settings").arg(m_impl->name));
             }
         }
     }
@@ -970,12 +987,15 @@ public:
     {
         if (m_attached) return {};
         if (parent.handle == 0) {
-            return logged(core::fail(core::ErrorCode::InvalidData, u"%1: no window to attach the editor to"_s.arg(m_title)));
+            return logged(core::fail(core::ErrorCode::InvalidData,
+                                     QCoreApplication::translate("Engine", "%1: no window to attach the editor to").arg(m_title)));
         }
         if (parent.kind == platform::NativeWindowKind::None) {
             return logged(core::fail(core::ErrorCode::InvalidData,
-                                     u"%1's window cannot open here: plugin windows need X11 (the app runs without it, "
-                                     u"on Wayland). Start the app with QT_QPA_PLATFORM=xcb"_s.arg(m_title)));
+                                     QCoreApplication::translate("Engine", "%1's window cannot open here: plugin windows need X11 "
+                                                                           "(the app runs without it, on Wayland). Start the app "
+                                                                           "with QT_QPA_PLATFORM=xcb")
+                                         .arg(m_title)));
         }
         // VST3's name for the kind of window, and ours for a message.
         const auto [type, kindName] = [&parent]() -> std::pair<FIDString, QString> {
@@ -989,14 +1009,14 @@ public:
         }();
         if (m_view->isPlatformTypeSupported(type) != kResultTrue) {
             return logged(core::fail(core::ErrorCode::InvalidData,
-                                     u"%1's editor does not support %2 windows"_s.arg(m_title, kindName)));
+                                     QCoreApplication::translate("Engine", "%1's editor does not support %2 windows").arg(m_title, kindName)));
         }
         m_view->setFrame(this);
         // VST3 takes every kind of window as a void*: a Windows handle, an X11
         // window id, an NSView pointer.
         if (m_view->attached(reinterpret_cast<void*>(parent.handle), type) != kResultOk) { // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr): VST3 takes the window as a void*
             m_view->setFrame(nullptr);
-            return logged(core::fail(core::ErrorCode::InvalidData, u"%1's editor failed to open"_s.arg(m_title)));
+            return logged(core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "%1's editor failed to open").arg(m_title)));
         }
         m_attached = true;
         // The plugin's own size: what it is fitted from, every time.
@@ -1156,7 +1176,7 @@ private:
 core::Result<std::unique_ptr<IPluginEditor>> Vst3Node::createEditor(const std::shared_ptr<Vst3Node>& node)
 {
     GC_ONLY_MAIN_THREAD();
-    if (!node) return core::fail(core::ErrorCode::InvalidData, u"No plugin to open an editor for"_s);
+    if (!node) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "No plugin to open an editor for"));
     Impl& impl = *node->m_impl;
     if (!impl.controller) {
         qCInfo(lcEngine).noquote() << impl.name << "has no editor";

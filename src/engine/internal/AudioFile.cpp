@@ -5,6 +5,7 @@
 #include <QAudioBuffer>
 #include <QAudioDecoder>
 #include <QAudioFormat>
+#include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFileInfo>
@@ -89,9 +90,12 @@ namespace {
 // One try at decodeAudioFile(); `stalled` set when the decoder went silent.
 core::Result<AudioClip> decodeAudioFileOnce(const QString& path, double sampleRate, const std::atomic<bool>* cancel, bool& stalled)
 {
-    if (!QFileInfo::exists(path)) return core::fail(core::ErrorCode::FileNotFound, u"Backing track not found: %1"_s.arg(path));
+    if (!QFileInfo::exists(path)) {
+        return core::fail(core::ErrorCode::FileNotFound, QCoreApplication::translate("Engine", "Backing track not found: %1").arg(path));
+    }
     if (!std::isfinite(sampleRate) || sampleRate <= 0.0) {
-        return core::fail(core::ErrorCode::InvalidData, u"Cannot read %1 without an audio output running"_s.arg(path));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "Cannot read %1 without an audio output running").arg(path));
     }
     const QString name = QFileInfo(path).fileName();
 
@@ -109,7 +113,8 @@ core::Result<AudioClip> decodeAudioFileOnce(const QString& path, double sampleRa
         const QString& problem = probed.problem;
         if (sourceChannels <= 0) {
             return core::fail(core::ErrorCode::InvalidData,
-                              u"Cannot play %1: %2"_s.arg(name, problem.isEmpty() ? u"it holds no audio"_s : problem));
+                              problem.isEmpty() ? QCoreApplication::translate("Engine", "Cannot play %1: it holds no audio").arg(name)
+                                                : QCoreApplication::translate("Engine", "Cannot play %1: %2").arg(name, problem));
         }
     }
     const int channels = std::min(sourceChannels, 2); // more than two are mixed down to stereo
@@ -153,8 +158,12 @@ core::Result<AudioClip> decodeAudioFileOnce(const QString& path, double sampleRa
     QString problem = decoded.problem;
     if (!stopped.isEmpty()) problem = stopped;
 
-    if (!problem.isEmpty()) return core::fail(core::ErrorCode::InvalidData, u"Cannot play %1: %2"_s.arg(name, problem));
-    if (clip.left.empty()) return core::fail(core::ErrorCode::InvalidData, u"Cannot play %1: it holds no audio"_s.arg(name));
+    if (!problem.isEmpty()) {
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "Cannot play %1: %2").arg(name, problem));
+    }
+    if (clip.left.empty()) {
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "Cannot play %1: it holds no audio").arg(name));
+    }
     qCInfo(lcEngine).noquote() << "Backing track read:" << path << "," << clip.seconds() << "s at" << sampleRate << "Hz,"
                                << (sourceChannels == 1 ? "mono" : "stereo");
     return clip;
@@ -165,9 +174,12 @@ core::Result<SampleClip> decodeSampleFileOnce(const QString& path, double sample
                                               bool& stalled)
 {
     const QString name = QFileInfo(path).fileName();
-    if (!QFileInfo::exists(path)) return core::fail(core::ErrorCode::FileNotFound, u"Sample not found: %1"_s.arg(path));
+    if (!QFileInfo::exists(path)) {
+        return core::fail(core::ErrorCode::FileNotFound, QCoreApplication::translate("Engine", "Sample not found: %1").arg(path));
+    }
     if (!std::isfinite(sampleRate) || sampleRate <= 0.0 || !std::isfinite(keepSeconds) || keepSeconds <= 0.0) {
-        return core::fail(core::ErrorCode::InvalidData, u"Cannot read %1 without an audio output running"_s.arg(name));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "Cannot read %1 without an audio output running").arg(name));
     }
     // Its own channels and rate first (one buffer tells).
     int sourceChannels = 0;
@@ -183,7 +195,9 @@ core::Result<SampleClip> decodeSampleFileOnce(const QString& path, double sample
         const QString& problem = probed.problem;
         if (sourceChannels <= 0 || sourceRate <= 0.0) {
             return core::fail(core::ErrorCode::InvalidData,
-                              u"Cannot read the sample %1: %2"_s.arg(name, problem.isEmpty() ? u"it holds no audio"_s : problem));
+                              problem.isEmpty()
+                                  ? QCoreApplication::translate("Engine", "Cannot read the sample %1: it holds no audio").arg(name)
+                                  : QCoreApplication::translate("Engine", "Cannot read the sample %1: %2").arg(name, problem));
         }
     }
     const int channels = std::min(sourceChannels, 2);
@@ -221,8 +235,13 @@ core::Result<SampleClip> decodeSampleFileOnce(const QString& path, double sample
     stalled = decoded.stalled;
     QString problem = decoded.problem;
     if (!stopped.isEmpty()) problem = stopped;
-    if (!problem.isEmpty()) return core::fail(core::ErrorCode::InvalidData, u"Cannot read the sample %1: %2"_s.arg(name, problem));
-    if (read.clip.left.empty()) return core::fail(core::ErrorCode::InvalidData, u"Cannot read the sample %1: it holds no audio"_s.arg(name));
+    if (!problem.isEmpty()) {
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "Cannot read the sample %1: %2").arg(name, problem));
+    }
+    if (read.clip.left.empty()) {
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "Cannot read the sample %1: it holds no audio").arg(name));
+    }
     return read;
 }
 
@@ -268,7 +287,8 @@ TrackRead readTrackSet(const std::vector<QString>& paths, double sampleRate, con
             continue;
         }
         if (used + clip->frames() > budget) {
-            const QString why = u"Left out %1: a song's tracks together may be at most %2 minutes of audio (they are all kept in memory)"_s
+            const QString why = QCoreApplication::translate("Engine", "Left out %1: a song's tracks together may be at most %2 minutes "
+                                                                      "of audio (they are all kept in memory)")
                                     .arg(QFileInfo(path).fileName())
                                     .arg(kMaxTrackSetSeconds / 60.0);
             qCWarning(lcEngine).noquote() << why;

@@ -45,6 +45,13 @@
     </message>
 </context>
 <context>
+    <name>Audio</name>
+    <message>
+        <source>This session&apos;s realtime priority limit is 0, so the audio (and Wine plugins above all) can drop out more often. Fix: sudo usermod -aG pipewire $USER (-aG audio if no pipewire group), then log in again</source>
+        <translation>O limite de prioridade em tempo real desta sessão é 0, então o áudio (e principalmente plugins do Wine) pode falhar com mais frequência. Solução: sudo usermod -aG pipewire $USER (-aG audio se não houver grupo pipewire) e entre de novo na sessão</translation>
+    </message>
+</context>
+<context>
     <name>BuiltinFxWindow</name>
     <message>
         <source>Three-band upward and downward compression</source>
@@ -783,6 +790,513 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
     <message>
         <source>By Manufacturer</source>
         <translation>Por fabricante</translation>
+    </message>
+</context>
+<context>
+    <name>Engine</name>
+    <message>
+        <source>No MIDI output named &quot;%1&quot;: is the synth plugged in and on?</source>
+        <translation>Nenhuma saída MIDI chamada &quot;%1&quot;: o sintetizador está conectado e ligado?</translation>
+    </message>
+    <message>
+        <source>Could not open the MIDI output %1 (another program, or the MIDI clock, may be using it): %2</source>
+        <translation>Não foi possível abrir a saída MIDI %1 (outro programa, ou o clock MIDI, pode estar usando): %2</translation>
+    </message>
+    <message>
+        <source>Could not send to the MIDI output %1: %2</source>
+        <translation>Não foi possível enviar para a saída MIDI %1: %2</translation>
+    </message>
+    <message>
+        <source>Already recording to %1</source>
+        <translation>Já está gravando em %1</translation>
+    </message>
+    <message>
+        <source>Nothing to record: the audio is not running</source>
+        <translation>Nada para gravar: o áudio não está rodando</translation>
+    </message>
+    <message>
+        <source>Could not make the folder for the recording: %1</source>
+        <translation>Não foi possível criar a pasta da gravação: %1</translation>
+    </message>
+    <message>
+        <source>Could not write the recording %1: %2</source>
+        <translation>Não foi possível gravar o arquivo %1: %2</translation>
+    </message>
+    <message>
+        <source>Not recording</source>
+        <translation>Não está gravando</translation>
+    </message>
+    <message>
+        <source>Could not finish the recording %1: %2</source>
+        <translation>Não foi possível concluir a gravação %1: %2</translation>
+    </message>
+    <message>
+        <source>Backing track not found: %1</source>
+        <translation>Playback não encontrado: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read %1 without an audio output running</source>
+        <translation>Não é possível ler %1 sem uma saída de áudio rodando</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: it holds no audio</source>
+        <translation>Não é possível tocar %1: ele não contém áudio</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: %2</source>
+        <translation>Não é possível tocar %1: %2</translation>
+    </message>
+    <message>
+        <source>Sample not found: %1</source>
+        <translation>Sample não encontrado: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: it holds no audio</source>
+        <translation>Não é possível ler o sample %1: ele não contém áudio</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: %2</source>
+        <translation>Não é possível ler o sample %1: %2</translation>
+    </message>
+    <message>
+        <source>Left out %1: a song&apos;s tracks together may be at most %2 minutes of audio (they are all kept in memory)</source>
+        <translation>%1 ficou de fora: as faixas de uma música podem somar no máximo %2 minutos de áudio (todas ficam na memória)</translation>
+    </message>
+    <message>
+        <source>No MIDI output named &quot;%1&quot; to send the clock to</source>
+        <translation>Nenhuma saída MIDI chamada &quot;%1&quot; para enviar o clock</translation>
+    </message>
+    <message>
+        <source>Could not send the MIDI clock to %1: %2</source>
+        <translation>Não foi possível enviar o clock MIDI para %1: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the app&apos;s own instruments (a newer version&apos;s, maybe)</source>
+        <translation>%1 não é um dos instrumentos próprios do app (talvez de uma versão mais nova)</translation>
+    </message>
+    <message>
+        <source>%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)</source>
+        <translation>%1 não é um arquivo de plugin (um pacote .vst3, ou um plugin VST2 deste sistema)</translation>
+    </message>
+    <message>
+        <source>No plugin to open an editor for</source>
+        <translation>Nenhum plugin para abrir o editor</translation>
+    </message>
+    <message>
+        <source>The saved %1 settings are damaged (%2)</source>
+        <translation>As configurações salvas de %1 estão danificadas (%2)</translation>
+    </message>
+    <message>
+        <source>%1: no such plugin (%2)</source>
+        <translation>%1: esse plugin não existe (%2)</translation>
+    </message>
+    <message>
+        <source>%1 could not be loaded: %2</source>
+        <translation>Não foi possível carregar %1: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (no VSTPluginMain)</source>
+        <translation>%1 não é um plugin VST2 (sem VSTPluginMain)</translation>
+    </message>
+    <message>
+        <source>%1 did not start</source>
+        <translation>%1 não iniciou</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (wrong signature)</source>
+        <translation>%1 não é um plugin VST2 (assinatura errada)</translation>
+    </message>
+    <message>
+        <source>%1 holds several plugins in one file (a &quot;shell&quot;, as Waves&apos;): not supported yet</source>
+        <translation>%1 contém vários plugins num só arquivo (um &quot;shell&quot;, como os da Waves): ainda não suportado</translation>
+    </message>
+    <message>
+        <source>%1 cannot process audio</source>
+        <translation>%1 não consegue processar áudio</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read: %2</source>
+        <translation>%1 falhou ao ser lido: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read</source>
+        <translation>%1 falhou ao ser lido</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading: %2</source>
+        <translation>%1 falhou ao carregar: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading</source>
+        <translation>%1 falhou ao carregar</translation>
+    </message>
+    <message>
+        <source>%1 did not give its settings</source>
+        <translation>%1 não entregou suas configurações</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings: %2</source>
+        <translation>%1 falhou ao entregar suas configurações: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings</source>
+        <translation>%1 falhou ao entregar suas configurações</translation>
+    </message>
+    <message>
+        <source>The saved plugin settings are damaged (%1)</source>
+        <translation>As configurações salvas do plugin estão danificadas (%1)</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings: %2</source>
+        <translation>%1 falhou ao receber suas configurações salvas: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings</source>
+        <translation>%1 falhou ao receber suas configurações salvas</translation>
+    </message>
+    <message>
+        <source>%1: no window to attach the editor to</source>
+        <translation>%1: nenhuma janela onde anexar o editor</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window cannot open here: plugin windows need X11 (the app runs without it, on Wayland). Start the app with QT_QPA_PLATFORM=xcb</source>
+        <translation>A janela de %1 não pode abrir aqui: janelas de plugin precisam de X11 (o app roda sem ele, no Wayland). Inicie o app com QT_QPA_PLATFORM=xcb</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio input bus %2</source>
+        <translation>%1 se recusou a ativar seu barramento de entrada de áudio %2</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio output bus %2</source>
+        <translation>%1 se recusou a ativar seu barramento de saída de áudio %2</translation>
+    </message>
+    <message>
+        <source>%1 could not be created</source>
+        <translation>Não foi possível criar %1</translation>
+    </message>
+    <message>
+        <source>%1 failed to initialise</source>
+        <translation>%1 falhou ao inicializar</translation>
+    </message>
+    <message>
+        <source>%1 does not name its window half (edit controller)</source>
+        <translation>%1 não informa sua parte de janela (edit controller)</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half (edit controller) could not be created</source>
+        <translation>Não foi possível criar a parte de janela (edit controller) de %1</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half failed to initialise</source>
+        <translation>A parte de janela de %1 falhou ao inicializar</translation>
+    </message>
+    <message>
+        <source>%1&apos;s halves cannot be connected to each other</source>
+        <translation>As duas partes de %1 não podem ser conectadas entre si</translation>
+    </message>
+    <message>
+        <source>%1&apos;s sound refused to connect to its window</source>
+        <translation>A parte de som de %1 se recusou a se conectar à sua janela</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window refused to connect to its sound</source>
+        <translation>A janela de %1 se recusou a se conectar à sua parte de som</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its MIDI input</source>
+        <translation>%1 se recusou a ativar sua entrada MIDI</translation>
+    </message>
+    <message>
+        <source>%1 does not support %2 Hz / %3-sample blocks</source>
+        <translation>%1 não suporta %2 Hz / blocos de %3 amostras</translation>
+    </message>
+    <message>
+        <source>%1 failed to activate</source>
+        <translation>%1 falhou ao ativar</translation>
+    </message>
+    <message>
+        <source>%1 failed to start processing</source>
+        <translation>%1 falhou ao iniciar o processamento</translation>
+    </message>
+    <message>
+        <source>Plugin not found: %1</source>
+        <translation>Plugin não encontrado: %1</translation>
+    </message>
+    <message>
+        <source>%1 is not a .vst3 plugin</source>
+        <translation>%1 não é um plugin .vst3</translation>
+    </message>
+    <message>
+        <source>Not a loadable VST3 plugin: %1 (%2)</source>
+        <translation>Não é um plugin VST3 carregável: %1 (%2)</translation>
+    </message>
+    <message>
+        <source>%1 contains no audio processor</source>
+        <translation>%1 não contém nenhum processador de áudio</translation>
+    </message>
+    <message>
+        <source>%1 has no audio processor interface</source>
+        <translation>%1 não tem interface de processador de áudio</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed: %2</source>
+        <translation>O carregamento de %1 falhou: %2</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed</source>
+        <translation>O carregamento de %1 falhou</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state: %2</source>
+        <translation>%1 falhou ao entregar seu estado: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state</source>
+        <translation>%1 falhou ao entregar seu estado</translation>
+    </message>
+    <message>
+        <source>%1 did not give its state</source>
+        <translation>%1 não entregou seu estado</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state: %2</source>
+        <translation>%1 falhou ao receber seu estado salvo: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state</source>
+        <translation>%1 falhou ao receber seu estado salvo</translation>
+    </message>
+    <message>
+        <source>%1 rejected its saved state</source>
+        <translation>%1 rejeitou seu estado salvo</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved state</source>
+        <translation>O editor de %1 rejeitou seu estado salvo</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved settings</source>
+        <translation>O editor de %1 rejeitou suas configurações salvas</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor does not support %2 windows</source>
+        <translation>O editor de %1 não suporta janelas %2</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor failed to open</source>
+        <translation>O editor de %1 falhou ao abrir</translation>
+    </message>
+    <message>
+        <source>No audio output named &quot;%1&quot; (%2)</source>
+        <translation>Nenhuma saída de áudio chamada &quot;%1&quot; (%2)</translation>
+    </message>
+    <message>
+        <source>This computer has no default audio output</source>
+        <translation>Este computador não tem saída de áudio padrão</translation>
+    </message>
+    <message>
+        <source>%1 (%2) cannot run at %3 Hz</source>
+        <translation>%1 (%2) não consegue rodar a %3 Hz</translation>
+    </message>
+    <message>
+        <source>The input %1 (%2) and the output %3 (%4) must use the same driver</source>
+        <translation>A entrada %1 (%2) e a saída %3 (%4) precisam usar o mesmo driver</translation>
+    </message>
+    <message>
+        <source>No audio input named &quot;%1&quot; (%2)</source>
+        <translation>Nenhuma entrada de áudio chamada &quot;%1&quot; (%2)</translation>
+    </message>
+    <message>
+        <source>Could not open %1 with the inputs of %2 (%3): %4</source>
+        <translation>Não foi possível abrir %1 com as entradas de %2 (%3): %4</translation>
+    </message>
+    <message>
+        <source>unknown error</source>
+        <translation>erro desconhecido</translation>
+    </message>
+    <message>
+        <source>Could not open %1 (%2): %3</source>
+        <translation>Não foi possível abrir %1 (%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not start %1 (%2): %3</source>
+        <translation>Não foi possível iniciar %1 (%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not pause %1: %2</source>
+        <translation>Não foi possível pausar %1: %2</translation>
+    </message>
+    <message>
+        <source>No audio output is open to resume</source>
+        <translation>Nenhuma saída de áudio aberta para retomar</translation>
+    </message>
+    <message>
+        <source>Could not restart %1: %2</source>
+        <translation>Não foi possível reiniciar %1: %2</translation>
+    </message>
+    <message>
+        <source>The saved Saw Stack Pro settings are damaged (%1)</source>
+        <translation>As configurações salvas do Saw Stack Pro estão danificadas (%1)</translation>
+    </message>
+    <message>
+        <source>The region at line %1 has no sample</source>
+        <translation>A região na linha %1 não tem sample</translation>
+    </message>
+    <message>
+        <source>An unclosed header at line %1</source>
+        <translation>Um cabeçalho não fechado na linha %1</translation>
+    </message>
+    <message>
+        <source>Unknown header &lt;%1&gt; at line %2</source>
+        <translation>Cabeçalho desconhecido &lt;%1&gt; na linha %2</translation>
+    </message>
+    <message>
+        <source>Not a setting at line %1</source>
+        <translation>Não é uma configuração na linha %1</translation>
+    </message>
+    <message>
+        <source>Unknown setting &quot;%1&quot; at line %2</source>
+        <translation>Configuração desconhecida &quot;%1&quot; na linha %2</translation>
+    </message>
+    <message>
+        <source>&quot;%1=%2&quot; at line %3 is not a value it can take</source>
+        <translation>&quot;%1=%2&quot; na linha %3 não é um valor aceito</translation>
+    </message>
+    <message>
+        <source>Piano not found: %1</source>
+        <translation>Piano não encontrado: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the piano %1: %2</source>
+        <translation>Não é possível ler o piano %1: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2</source>
+        <translation>O piano %1: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1 maps no recordings</source>
+        <translation>O piano %1 não mapeia nenhuma gravação</translation>
+    </message>
+    <message>
+        <source>Reading the piano %1 was cancelled</source>
+        <translation>A leitura do piano %1 foi cancelada</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2&apos;s loop (%3 to %4, fading from %5) is not a loop</source>
+        <translation>O piano %1: o loop de %2 (de %3 a %4, com fade a partir de %5) não é um loop</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2 ends before its loop does (frame %3)</source>
+        <translation>O piano %1: %2 termina antes do seu loop (frame %3)</translation>
+    </message>
+    <message>
+        <source>The saved Piano Pro settings are damaged (%1)</source>
+        <translation>As configurações salvas do Piano Pro estão danificadas (%1)</translation>
+    </message>
+    <message>
+        <source>The saved Pads Pro settings are damaged (%1)</source>
+        <translation>As configurações salvas do Pads Pro estão danificadas (%1)</translation>
+    </message>
+    <message>
+        <source>the file is not there</source>
+        <translation>o arquivo não está lá</translation>
+    </message>
+    <message>
+        <source>the file cannot be opened</source>
+        <translation>o arquivo não pode ser aberto</translation>
+    </message>
+    <message>
+        <source>it is not a SoundFont 2 file, or it is damaged</source>
+        <translation>não é um arquivo SoundFont 2, ou está danificado</translation>
+    </message>
+    <message>
+        <source>it has no presets</source>
+        <translation>ele não tem presets</translation>
+    </message>
+    <message>
+        <source>The SoundFont Player could not start (%1)</source>
+        <translation>O player de SoundFont não conseguiu iniciar (%1)</translation>
+    </message>
+    <message>
+        <source>There is no SoundFont at %1</source>
+        <translation>Não há nenhum SoundFont em %1</translation>
+    </message>
+    <message>
+        <source>The saved SoundFont Player settings are damaged (%1)</source>
+        <translation>As configurações salvas do player de SoundFont estão danificadas (%1)</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
+        <translation>%1 (%2) não é um dos instrumentos próprios desta versão: não carregado</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not a VST2 plugin the scan found: not loaded</source>
+        <translation>%1 (%2) não é um plugin VST2 que a varredura encontrou: não carregado</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the installed plugins (%2): not loaded. Install it in %3, or choose another plugin</source>
+        <translation>%1 não é um dos plugins instalados (%2): não carregado. Instale-o em %3, ou escolha outro plugin</translation>
+    </message>
+    <message>
+        <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
+        <translation>%1 não conseguiu receber suas configurações salvas (%2); ele toca com os valores padrão</translation>
+    </message>
+    <message>
+        <source>%1 is not available on this system</source>
+        <translation>%1 não está disponível neste sistema</translation>
+    </message>
+    <message>
+        <source>Choose an ASIO device</source>
+        <translation>Escolha um dispositivo ASIO</translation>
+    </message>
+    <message>
+        <source>That effect is no longer in this patch</source>
+        <translation>Esse efeito não está mais neste patch</translation>
+    </message>
+    <message>
+        <source>%1 is switched off: switch it on to open its window</source>
+        <translation>%1 está desligado: ligue-o para abrir a janela dele</translation>
+    </message>
+    <message>
+        <source>%1 is not loaded (see the message about why)</source>
+        <translation>%1 não está carregado (veja a mensagem que explica o motivo)</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading before, so it is switched off</source>
+        <translation>%1 travou o app ao carregar antes, por isso está desligado</translation>
+    </message>
+    <message>
+        <source>%1 is an effect, not an instrument: Sustain Pads need an instrument</source>
+        <translation>%1 é um efeito, não um instrumento: os Sustain Pads precisam de um instrumento</translation>
+    </message>
+    <message>
+        <source>That %1 effect is no longer there</source>
+        <translation>Esse efeito de %1 não existe mais</translation>
+    </message>
+    <message>
+        <source>That plugin is not loaded</source>
+        <translation>Esse plugin não está carregado</translation>
+    </message>
+    <message>
+        <source>That instrument is not loaded</source>
+        <translation>Esse instrumento não está carregado</translation>
+    </message>
+    <message>
+        <source>The backing tracks could not be read: %1</source>
+        <translation>Não foi possível ler os playbacks: %1</translation>
+    </message>
+    <message>
+        <source>This plugin crashed the app while loading before, so it is switched off</source>
+        <translation>Este plugin travou o app ao carregar antes, por isso está desligado</translation>
+    </message>
+    <message>
+        <source>Could not open the file manager at %1</source>
+        <translation>Não foi possível abrir o gerenciador de arquivos em %1</translation>
+    </message>
+    <message>
+        <source>Could not open Explorer for %1</source>
+        <translation>Não foi possível abrir o Explorador para %1</translation>
     </message>
 </context>
 <context>
@@ -1561,6 +2075,30 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
     <message>
         <source>Instrument</source>
         <translation>Instrumento</translation>
+    </message>
+</context>
+<context>
+    <name>MidiTrigger</name>
+    <message>
+        <source>channel %1</source>
+        <translation>canal %1</translation>
+    </message>
+    <message>
+        <source>Pedal/CC %1 (%2)</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Pedal/CC %1 (%2)</translation>
+    </message>
+    <message>
+        <source>Note %1%2 (%3)</source>
+        <translation>Nota %1%2 (%3)</translation>
+    </message>
+    <message>
+        <source>Program %1 (%2)</source>
+        <translation>Programa %1 (%2)</translation>
+    </message>
+    <message>
+        <source>Not set</source>
+        <translation>Não definido</translation>
     </message>
 </context>
 <context>
@@ -2469,6 +3007,20 @@ Digite ou cole na aba Cifra.</translation>
     <message>
         <source>%1 may not hear the audio inputs: they stay silent. Allow it in the system&apos;s settings, Privacy &amp; Security → Microphone, then choose the input again.</source>
         <translation>O %1 não tem permissão para ouvir as entradas de áudio: elas ficam mudas. Permita nos ajustes do sistema, Privacidade e Segurança → Microfone, e escolha a entrada de novo.</translation>
+    </message>
+    <message>
+        <source>PulseAudio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>PulseAudio</translation>
+    </message>
+    <message>
+        <source>Core Audio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Core Audio</translation>
+    </message>
+    <message>
+        <source>Windows Audio (WASAPI)</source>
+        <translation>Áudio do Windows (WASAPI)</translation>
     </message>
 </context>
 <context>

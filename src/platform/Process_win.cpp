@@ -2,6 +2,7 @@
 
 #include "PlatformLog.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QProcess>
 
@@ -88,7 +89,7 @@ core::Result<void> showInFileManager(const QString& path)
 {
     const QString native = QDir::toNativeSeparators(path);
     if (!QProcess::startDetached(u"explorer.exe"_s, {u"/select,"_s + native})) {
-        return core::fail(core::ErrorCode::SystemRefused, u"Could not open Explorer for %1"_s.arg(native));
+        return core::fail(core::ErrorCode::SystemRefused, QCoreApplication::translate("Engine", "Could not open Explorer for %1").arg(native));
     }
     return {};
 }

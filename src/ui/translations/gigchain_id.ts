@@ -45,6 +45,13 @@
     </message>
 </context>
 <context>
+    <name>Audio</name>
+    <message>
+        <source>This session&apos;s realtime priority limit is 0, so the audio (and Wine plugins above all) can drop out more often. Fix: sudo usermod -aG pipewire $USER (-aG audio if no pipewire group), then log in again</source>
+        <translation>Batas prioritas realtime sesi ini adalah 0, jadi audio (terutama plugin Wine) bisa lebih sering putus. Perbaikan: sudo usermod -aG pipewire $USER (-aG audio jika tidak ada grup pipewire), lalu login lagi</translation>
+    </message>
+</context>
+<context>
     <name>BuiltinFxWindow</name>
     <message>
         <source>Three-band upward and downward compression</source>
@@ -801,6 +808,513 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
     <message>
         <source>By Manufacturer</source>
         <translation>Menurut pembuat</translation>
+    </message>
+</context>
+<context>
+    <name>Engine</name>
+    <message>
+        <source>No MIDI output named &quot;%1&quot;: is the synth plugged in and on?</source>
+        <translation>Tidak ada output MIDI bernama &quot;%1&quot;: apakah synth sudah tersambung dan menyala?</translation>
+    </message>
+    <message>
+        <source>Could not open the MIDI output %1 (another program, or the MIDI clock, may be using it): %2</source>
+        <translation>Output MIDI %1 tidak bisa dibuka (mungkin sedang dipakai program lain, atau clock MIDI): %2</translation>
+    </message>
+    <message>
+        <source>Could not send to the MIDI output %1: %2</source>
+        <translation>Tidak bisa mengirim ke output MIDI %1: %2</translation>
+    </message>
+    <message>
+        <source>Already recording to %1</source>
+        <translation>Sudah merekam ke %1</translation>
+    </message>
+    <message>
+        <source>Nothing to record: the audio is not running</source>
+        <translation>Tidak ada yang bisa direkam: audio tidak berjalan</translation>
+    </message>
+    <message>
+        <source>Could not make the folder for the recording: %1</source>
+        <translation>Folder untuk rekaman tidak bisa dibuat: %1</translation>
+    </message>
+    <message>
+        <source>Could not write the recording %1: %2</source>
+        <translation>Rekaman %1 tidak bisa ditulis: %2</translation>
+    </message>
+    <message>
+        <source>Not recording</source>
+        <translation>Tidak sedang merekam</translation>
+    </message>
+    <message>
+        <source>Could not finish the recording %1: %2</source>
+        <translation>Rekaman %1 tidak bisa diselesaikan: %2</translation>
+    </message>
+    <message>
+        <source>Backing track not found: %1</source>
+        <translation>Backing track tidak ditemukan: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read %1 without an audio output running</source>
+        <translation>%1 tidak bisa dibaca tanpa output audio yang berjalan</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: it holds no audio</source>
+        <translation>%1 tidak bisa diputar: tidak berisi audio</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: %2</source>
+        <translation>%1 tidak bisa diputar: %2</translation>
+    </message>
+    <message>
+        <source>Sample not found: %1</source>
+        <translation>Sample tidak ditemukan: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: it holds no audio</source>
+        <translation>Sample %1 tidak bisa dibaca: tidak berisi audio</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: %2</source>
+        <translation>Sample %1 tidak bisa dibaca: %2</translation>
+    </message>
+    <message>
+        <source>Left out %1: a song&apos;s tracks together may be at most %2 minutes of audio (they are all kept in memory)</source>
+        <translation>%1 dilewati: semua track dalam satu lagu paling banyak %2 menit audio (semuanya disimpan di memori)</translation>
+    </message>
+    <message>
+        <source>No MIDI output named &quot;%1&quot; to send the clock to</source>
+        <translation>Tidak ada output MIDI bernama &quot;%1&quot; untuk dikirimi clock</translation>
+    </message>
+    <message>
+        <source>Could not send the MIDI clock to %1: %2</source>
+        <translation>Clock MIDI tidak bisa dikirim ke %1: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the app&apos;s own instruments (a newer version&apos;s, maybe)</source>
+        <translation>%1 bukan salah satu instrumen bawaan aplikasi (mungkin dari versi yang lebih baru)</translation>
+    </message>
+    <message>
+        <source>%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)</source>
+        <translation>%1 bukan file plugin (bundle .vst3, atau plugin VST2 untuk sistem ini)</translation>
+    </message>
+    <message>
+        <source>No plugin to open an editor for</source>
+        <translation>Tidak ada plugin untuk dibuka editornya</translation>
+    </message>
+    <message>
+        <source>The saved %1 settings are damaged (%2)</source>
+        <translation>Pengaturan %1 yang tersimpan rusak (%2)</translation>
+    </message>
+    <message>
+        <source>%1: no such plugin (%2)</source>
+        <translation>%1: plugin tidak ada (%2)</translation>
+    </message>
+    <message>
+        <source>%1 could not be loaded: %2</source>
+        <translation>%1 tidak bisa dimuat: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (no VSTPluginMain)</source>
+        <translation>%1 bukan plugin VST2 (tidak ada VSTPluginMain)</translation>
+    </message>
+    <message>
+        <source>%1 did not start</source>
+        <translation>%1 tidak mau mulai</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (wrong signature)</source>
+        <translation>%1 bukan plugin VST2 (tanda tangan salah)</translation>
+    </message>
+    <message>
+        <source>%1 holds several plugins in one file (a &quot;shell&quot;, as Waves&apos;): not supported yet</source>
+        <translation>%1 berisi beberapa plugin dalam satu file (sebuah &quot;shell&quot;, seperti milik Waves): belum didukung</translation>
+    </message>
+    <message>
+        <source>%1 cannot process audio</source>
+        <translation>%1 tidak bisa memproses audio</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read: %2</source>
+        <translation>%1 gagal saat dibaca: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read</source>
+        <translation>%1 gagal saat dibaca</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading: %2</source>
+        <translation>%1 gagal saat dimuat: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading</source>
+        <translation>%1 gagal saat dimuat</translation>
+    </message>
+    <message>
+        <source>%1 did not give its settings</source>
+        <translation>%1 tidak memberikan pengaturannya</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings: %2</source>
+        <translation>%1 gagal memberikan pengaturannya: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings</source>
+        <translation>%1 gagal memberikan pengaturannya</translation>
+    </message>
+    <message>
+        <source>The saved plugin settings are damaged (%1)</source>
+        <translation>Pengaturan plugin yang tersimpan rusak (%1)</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings: %2</source>
+        <translation>%1 gagal menerima pengaturan tersimpannya: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings</source>
+        <translation>%1 gagal menerima pengaturan tersimpannya</translation>
+    </message>
+    <message>
+        <source>%1: no window to attach the editor to</source>
+        <translation>%1: tidak ada jendela untuk menempelkan editor</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window cannot open here: plugin windows need X11 (the app runs without it, on Wayland). Start the app with QT_QPA_PLATFORM=xcb</source>
+        <translation>Jendela %1 tidak bisa dibuka di sini: jendela plugin membutuhkan X11 (aplikasi berjalan tanpanya, di Wayland). Jalankan aplikasi dengan QT_QPA_PLATFORM=xcb</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio input bus %2</source>
+        <translation>%1 menolak mengaktifkan bus input audio %2 miliknya</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio output bus %2</source>
+        <translation>%1 menolak mengaktifkan bus output audio %2 miliknya</translation>
+    </message>
+    <message>
+        <source>%1 could not be created</source>
+        <translation>%1 tidak bisa dibuat</translation>
+    </message>
+    <message>
+        <source>%1 failed to initialise</source>
+        <translation>%1 gagal diinisialisasi</translation>
+    </message>
+    <message>
+        <source>%1 does not name its window half (edit controller)</source>
+        <translation>%1 tidak menyebutkan bagian jendelanya (edit controller)</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half (edit controller) could not be created</source>
+        <translation>Bagian jendela (edit controller) %1 tidak bisa dibuat</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half failed to initialise</source>
+        <translation>Bagian jendela %1 gagal diinisialisasi</translation>
+    </message>
+    <message>
+        <source>%1&apos;s halves cannot be connected to each other</source>
+        <translation>Kedua bagian %1 tidak bisa disambungkan satu sama lain</translation>
+    </message>
+    <message>
+        <source>%1&apos;s sound refused to connect to its window</source>
+        <translation>Bagian suara %1 menolak tersambung ke jendelanya</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window refused to connect to its sound</source>
+        <translation>Jendela %1 menolak tersambung ke bagian suaranya</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its MIDI input</source>
+        <translation>%1 menolak mengaktifkan input MIDI-nya</translation>
+    </message>
+    <message>
+        <source>%1 does not support %2 Hz / %3-sample blocks</source>
+        <translation>%1 tidak mendukung %2 Hz / blok %3 sampel</translation>
+    </message>
+    <message>
+        <source>%1 failed to activate</source>
+        <translation>%1 gagal diaktifkan</translation>
+    </message>
+    <message>
+        <source>%1 failed to start processing</source>
+        <translation>%1 gagal mulai memproses</translation>
+    </message>
+    <message>
+        <source>Plugin not found: %1</source>
+        <translation>Plugin tidak ditemukan: %1</translation>
+    </message>
+    <message>
+        <source>%1 is not a .vst3 plugin</source>
+        <translation>%1 bukan plugin .vst3</translation>
+    </message>
+    <message>
+        <source>Not a loadable VST3 plugin: %1 (%2)</source>
+        <translation>Bukan plugin VST3 yang bisa dimuat: %1 (%2)</translation>
+    </message>
+    <message>
+        <source>%1 contains no audio processor</source>
+        <translation>%1 tidak berisi pemroses audio</translation>
+    </message>
+    <message>
+        <source>%1 has no audio processor interface</source>
+        <translation>%1 tidak punya antarmuka pemroses audio</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed: %2</source>
+        <translation>Gagal memuat %1: %2</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed</source>
+        <translation>Gagal memuat %1</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state: %2</source>
+        <translation>%1 gagal memberikan statusnya: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state</source>
+        <translation>%1 gagal memberikan statusnya</translation>
+    </message>
+    <message>
+        <source>%1 did not give its state</source>
+        <translation>%1 tidak memberikan statusnya</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state: %2</source>
+        <translation>%1 gagal menerima status tersimpannya: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state</source>
+        <translation>%1 gagal menerima status tersimpannya</translation>
+    </message>
+    <message>
+        <source>%1 rejected its saved state</source>
+        <translation>%1 menolak status tersimpannya</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved state</source>
+        <translation>Editor %1 menolak status tersimpannya</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved settings</source>
+        <translation>Editor %1 menolak pengaturan tersimpannya</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor does not support %2 windows</source>
+        <translation>Editor %1 tidak mendukung jendela %2</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor failed to open</source>
+        <translation>Editor %1 gagal dibuka</translation>
+    </message>
+    <message>
+        <source>No audio output named &quot;%1&quot; (%2)</source>
+        <translation>Tidak ada output audio bernama &quot;%1&quot; (%2)</translation>
+    </message>
+    <message>
+        <source>This computer has no default audio output</source>
+        <translation>Komputer ini tidak punya output audio default</translation>
+    </message>
+    <message>
+        <source>%1 (%2) cannot run at %3 Hz</source>
+        <translation>%1 (%2) tidak bisa berjalan pada %3 Hz</translation>
+    </message>
+    <message>
+        <source>The input %1 (%2) and the output %3 (%4) must use the same driver</source>
+        <translation>Input %1 (%2) dan output %3 (%4) harus memakai driver yang sama</translation>
+    </message>
+    <message>
+        <source>No audio input named &quot;%1&quot; (%2)</source>
+        <translation>Tidak ada input audio bernama &quot;%1&quot; (%2)</translation>
+    </message>
+    <message>
+        <source>Could not open %1 with the inputs of %2 (%3): %4</source>
+        <translation>%1 dengan input dari %2 tidak bisa dibuka (%3): %4</translation>
+    </message>
+    <message>
+        <source>unknown error</source>
+        <translation>kesalahan tidak dikenal</translation>
+    </message>
+    <message>
+        <source>Could not open %1 (%2): %3</source>
+        <translation>%1 tidak bisa dibuka (%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not start %1 (%2): %3</source>
+        <translation>%1 tidak bisa dimulai (%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not pause %1: %2</source>
+        <translation>%1 tidak bisa dijeda: %2</translation>
+    </message>
+    <message>
+        <source>No audio output is open to resume</source>
+        <translation>Tidak ada output audio terbuka untuk dilanjutkan</translation>
+    </message>
+    <message>
+        <source>Could not restart %1: %2</source>
+        <translation>%1 tidak bisa dimulai ulang: %2</translation>
+    </message>
+    <message>
+        <source>The saved Saw Stack Pro settings are damaged (%1)</source>
+        <translation>Pengaturan Saw Stack Pro yang tersimpan rusak (%1)</translation>
+    </message>
+    <message>
+        <source>The region at line %1 has no sample</source>
+        <translation>Region di baris %1 tidak punya sample</translation>
+    </message>
+    <message>
+        <source>An unclosed header at line %1</source>
+        <translation>Header yang tidak ditutup di baris %1</translation>
+    </message>
+    <message>
+        <source>Unknown header &lt;%1&gt; at line %2</source>
+        <translation>Header tidak dikenal &lt;%1&gt; di baris %2</translation>
+    </message>
+    <message>
+        <source>Not a setting at line %1</source>
+        <translation>Bukan pengaturan di baris %1</translation>
+    </message>
+    <message>
+        <source>Unknown setting &quot;%1&quot; at line %2</source>
+        <translation>Pengaturan tidak dikenal &quot;%1&quot; di baris %2</translation>
+    </message>
+    <message>
+        <source>&quot;%1=%2&quot; at line %3 is not a value it can take</source>
+        <translation>&quot;%1=%2&quot; di baris %3 bukan nilai yang bisa diterima</translation>
+    </message>
+    <message>
+        <source>Piano not found: %1</source>
+        <translation>Piano tidak ditemukan: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the piano %1: %2</source>
+        <translation>Piano %1 tidak bisa dibaca: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2</source>
+        <translation>Piano %1: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1 maps no recordings</source>
+        <translation>Piano %1 tidak memetakan rekaman apa pun</translation>
+    </message>
+    <message>
+        <source>Reading the piano %1 was cancelled</source>
+        <translation>Pembacaan piano %1 dibatalkan</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2&apos;s loop (%3 to %4, fading from %5) is not a loop</source>
+        <translation>Piano %1: loop %2 (%3 sampai %4, memudar dari %5) bukan loop</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2 ends before its loop does (frame %3)</source>
+        <translation>Piano %1: %2 berakhir sebelum loop-nya (frame %3)</translation>
+    </message>
+    <message>
+        <source>The saved Piano Pro settings are damaged (%1)</source>
+        <translation>Pengaturan Piano Pro yang tersimpan rusak (%1)</translation>
+    </message>
+    <message>
+        <source>The saved Pads Pro settings are damaged (%1)</source>
+        <translation>Pengaturan Pads Pro yang tersimpan rusak (%1)</translation>
+    </message>
+    <message>
+        <source>the file is not there</source>
+        <translation>file-nya tidak ada</translation>
+    </message>
+    <message>
+        <source>the file cannot be opened</source>
+        <translation>file-nya tidak bisa dibuka</translation>
+    </message>
+    <message>
+        <source>it is not a SoundFont 2 file, or it is damaged</source>
+        <translation>ini bukan file SoundFont 2, atau file-nya rusak</translation>
+    </message>
+    <message>
+        <source>it has no presets</source>
+        <translation>tidak punya preset</translation>
+    </message>
+    <message>
+        <source>The SoundFont Player could not start (%1)</source>
+        <translation>Pemutar SoundFont tidak bisa mulai (%1)</translation>
+    </message>
+    <message>
+        <source>There is no SoundFont at %1</source>
+        <translation>Tidak ada SoundFont di %1</translation>
+    </message>
+    <message>
+        <source>The saved SoundFont Player settings are damaged (%1)</source>
+        <translation>Pengaturan pemutar SoundFont yang tersimpan rusak (%1)</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
+        <translation>%1 (%2) bukan salah satu instrumen bawaan versi ini: tidak dimuat</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not a VST2 plugin the scan found: not loaded</source>
+        <translation>%1 (%2) bukan plugin VST2 yang ditemukan pemindaian: tidak dimuat</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the installed plugins (%2): not loaded. Install it in %3, or choose another plugin</source>
+        <translation>%1 bukan salah satu plugin yang terpasang (%2): tidak dimuat. Pasang di %3, atau pilih plugin lain</translation>
+    </message>
+    <message>
+        <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
+        <translation>%1 tidak bisa menerima pengaturan tersimpannya (%2); ia bermain dengan nilai default</translation>
+    </message>
+    <message>
+        <source>%1 is not available on this system</source>
+        <translation>%1 tidak tersedia di sistem ini</translation>
+    </message>
+    <message>
+        <source>Choose an ASIO device</source>
+        <translation>Pilih perangkat ASIO</translation>
+    </message>
+    <message>
+        <source>That effect is no longer in this patch</source>
+        <translation>Efek itu sudah tidak ada di patch ini</translation>
+    </message>
+    <message>
+        <source>%1 is switched off: switch it on to open its window</source>
+        <translation>%1 dimatikan: nyalakan untuk membuka jendelanya</translation>
+    </message>
+    <message>
+        <source>%1 is not loaded (see the message about why)</source>
+        <translation>%1 tidak dimuat (lihat pesan yang menjelaskan alasannya)</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading before, so it is switched off</source>
+        <translation>%1 pernah membuat aplikasi crash saat dimuat, jadi dimatikan</translation>
+    </message>
+    <message>
+        <source>%1 is an effect, not an instrument: Sustain Pads need an instrument</source>
+        <translation>%1 adalah efek, bukan instrumen: Sustain Pads butuh instrumen</translation>
+    </message>
+    <message>
+        <source>That %1 effect is no longer there</source>
+        <translation>Efek %1 itu sudah tidak ada</translation>
+    </message>
+    <message>
+        <source>That plugin is not loaded</source>
+        <translation>Plugin itu tidak dimuat</translation>
+    </message>
+    <message>
+        <source>That instrument is not loaded</source>
+        <translation>Instrumen itu tidak dimuat</translation>
+    </message>
+    <message>
+        <source>The backing tracks could not be read: %1</source>
+        <translation>Backing track tidak bisa dibaca: %1</translation>
+    </message>
+    <message>
+        <source>This plugin crashed the app while loading before, so it is switched off</source>
+        <translation>Plugin ini pernah membuat aplikasi crash saat dimuat, jadi dimatikan</translation>
+    </message>
+    <message>
+        <source>Could not open the file manager at %1</source>
+        <translation>Pengelola file di %1 tidak bisa dibuka</translation>
+    </message>
+    <message>
+        <source>Could not open Explorer for %1</source>
+        <translation>Explorer untuk %1 tidak bisa dibuka</translation>
     </message>
 </context>
 <context>
@@ -1588,6 +2102,32 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
     <message>
         <source>Instrument</source>
         <translation>Instrumen</translation>
+    </message>
+</context>
+<context>
+    <name>MidiTrigger</name>
+    <message>
+        <source>channel %1</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>channel %1</translation>
+    </message>
+    <message>
+        <source>Pedal/CC %1 (%2)</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Pedal/CC %1 (%2)</translation>
+    </message>
+    <message>
+        <source>Note %1%2 (%3)</source>
+        <translation>Not %1%2 (%3)</translation>
+    </message>
+    <message>
+        <source>Program %1 (%2)</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Program %1 (%2)</translation>
+    </message>
+    <message>
+        <source>Not set</source>
+        <translation>Belum diatur</translation>
     </message>
 </context>
 <context>
@@ -2511,6 +3051,20 @@ Ketik atau tempel di tab Chart.</translation>
     <message>
         <source>%1 may not hear the audio inputs: they stay silent. Allow it in the system&apos;s settings, Privacy &amp; Security → Microphone, then choose the input again.</source>
         <translation>%1 tidak diizinkan mendengar input audio: input tetap senyap. Izinkan di pengaturan sistem, Privasi &amp; Keamanan → Mikrofon, lalu pilih inputnya lagi.</translation>
+    </message>
+    <message>
+        <source>PulseAudio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>PulseAudio</translation>
+    </message>
+    <message>
+        <source>Core Audio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Core Audio</translation>
+    </message>
+    <message>
+        <source>Windows Audio (WASAPI)</source>
+        <translation>Audio Windows (WASAPI)</translation>
     </message>
 </context>
 <context>

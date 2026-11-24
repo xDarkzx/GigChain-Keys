@@ -9,6 +9,7 @@
 #include "gigchain/core/Limits.h"
 #include "gigchain/platform/PluginFolders.h"
 
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QElapsedTimer>
 #include <QDir>
@@ -423,7 +424,8 @@ core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QSt
     // The app's own instruments run no outside code: always there.
     if (PluginNode::isBuiltin(pluginId)) {
         if (std::ranges::any_of(PluginNode::builtins(), [&](const PluginInfo& p) { return p.id == pluginId; })) return {};
-        const QString problem = u"%1 (%2) is not one of this version's own instruments: not loaded"_s.arg(name, pluginId);
+        const QString problem =
+            QCoreApplication::translate("Engine", "%1 (%2) is not one of this version's own instruments: not loaded").arg(name, pluginId);
         qCWarning(lcEngine).noquote() << problem;
         return core::fail(core::ErrorCode::InvalidData, problem);
     }
@@ -437,13 +439,15 @@ core::Result<void> RealEngine::checkInstalled(const QString& pluginId, const QSt
                    && QString::compare(QDir::cleanPath(QFileInfo(p.id).absoluteFilePath()), file, platform::fileNameCase()) == 0;
         });
         if (scanned) return {};
-        const QString problem = u"%1 (%2) is not a VST2 plugin the scan found: not loaded"_s.arg(name, pluginId);
+        const QString problem =
+            QCoreApplication::translate("Engine", "%1 (%2) is not a VST2 plugin the scan found: not loaded").arg(name, pluginId);
         qCWarning(lcEngine).noquote() << problem;
         return core::fail(core::ErrorCode::InvalidData, problem);
     }
     if (isInstalledPlugin(pluginId)) return {};
-    const QString problem = u"%1 is not one of the installed plugins (%2): not loaded. Install it in %3, "
-                            u"or choose another plugin"_s.arg(name, pluginId, QDir::toNativeSeparators(m_pluginFolder));
+    const QString problem = QCoreApplication::translate("Engine", "%1 is not one of the installed plugins (%2): not loaded. "
+                                                                  "Install it in %3, or choose another plugin")
+                                .arg(name, pluginId, QDir::toNativeSeparators(m_pluginFolder));
     qCWarning(lcEngine).noquote() << problem;
     return core::fail(core::ErrorCode::InvalidData, problem);
 }
@@ -480,8 +484,8 @@ std::shared_ptr<PluginNode> RealEngine::loadWithSettings(const core::PluginSlot&
         auto restored = (*node)->restoreEncodedState(slot.state);
         if (!restored) {
             // It still plays, at its defaults; the user needs to know.
-            const QString problem = u"%1 could not take its saved settings (%2); it plays with its defaults"_s.arg(
-                slot.displayName, restored.error().message);
+            const QString problem = QCoreApplication::translate("Engine", "%1 could not take its saved settings (%2); it plays with its defaults")
+                                        .arg(slot.displayName, restored.error().message);
             qCWarning(lcEngine).noquote() << problem;
             m_pendingNotices.push_back(Notice::warning(problem));
         }
@@ -496,7 +500,7 @@ core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
     const AudioApi api = setup.driver;
     // A setup from another system (ASIO on Linux, JACK on Windows).
     if (const auto here = systemAudioDrivers(); std::ranges::find(here, api) == here.end()) {
-        const QString problem = u"%1 is not available on this system"_s.arg(apiName(api));
+        const QString problem = QCoreApplication::translate("Engine", "%1 is not available on this system").arg(apiName(api));
         qCWarning(lcEngine).noquote() << problem;
         return core::fail(core::ErrorCode::DeviceUnavailable, problem);
     }
@@ -504,7 +508,7 @@ core::Result<void> RealEngine::openAudio(const AudioSetup& setup)
     if (!setup.device.isEmpty()) {
         choice = DeviceChoice{.api = api, .name = setup.device};
     } else if (setup.driver == AudioDriver::Asio) {
-        return core::fail(core::ErrorCode::InvalidData, u"Choose an ASIO device"_s);
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "Choose an ASIO device"));
     }
     std::optional<DeviceChoice> input;
     if (!setup.inputDevice.isEmpty()) input = DeviceChoice{.api = api, .name = setup.inputDevice};
@@ -1111,16 +1115,18 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEffectEditor(cons
         if (c.id == id) channel = &c;
     }
     if (channel == nullptr || effect < 0 || static_cast<std::size_t>(effect) >= channel->effects.size()) {
-        return core::fail(core::ErrorCode::OutOfRange, u"That effect is no longer in this patch"_s);
+        return core::fail(core::ErrorCode::OutOfRange, QCoreApplication::translate("Engine", "That effect is no longer in this patch"));
     }
     const core::PluginSlot& slot = channel->effects.at(static_cast<std::size_t>(effect));
     if (slot.bypass) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is switched off: switch it on to open its window").arg(slot.displayName));
     }
     const auto effects = m_currentEffects.find(id.value());
     if (effects == m_currentEffects.end() || static_cast<std::size_t>(effect) >= effects->second.size()
         || !effects->second.at(static_cast<std::size_t>(effect))) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is not loaded (see the message about why)").arg(slot.displayName));
     }
     return PluginNode::createEditor(effects->second.at(static_cast<std::size_t>(effect)));
 }
@@ -1235,14 +1241,16 @@ core::Result<void> RealEngine::setSustainPadsInstrument(const QString& pluginId,
     }
     const QString name = QFileInfo(pluginId).completeBaseName();
     if (m_guard.isBlocked(pluginId)) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 crashed the app while loading before, so it is switched off"_s.arg(name));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 crashed the app while loading before, so it is switched off").arg(name));
     }
     if (auto installed = checkInstalled(pluginId, name); !installed) return tl::unexpected(installed.error());
     const auto loading = m_guard.loading(pluginId);
     auto node = PluginNode::load(pluginId, m_audio.sampleRate(), m_audio.maxBlock());
     if (!node) return tl::unexpected(node.error()); // logged by the plugin's load
     if (!(*node)->isInstrument()) {
-        const QString why = u"%1 is an effect, not an instrument: Sustain Pads need an instrument"_s.arg((*node)->name());
+        const QString why =
+            QCoreApplication::translate("Engine", "%1 is an effect, not an instrument: Sustain Pads need an instrument").arg((*node)->name());
         qCWarning(lcEngine).noquote() << why;
         return core::fail(core::ErrorCode::InvalidData, why);
     }
@@ -1282,15 +1290,17 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createBusEffectEditor(E
     GC_ONLY_MAIN_THREAD();
     const std::vector<QString> keys = busKeys(bus);
     if (effect < 0 || static_cast<std::size_t>(effect) >= keys.size()) {
-        return core::fail(core::ErrorCode::OutOfRange, u"That %1 effect is no longer there"_s.arg(bus.name));
+        return core::fail(core::ErrorCode::OutOfRange, QCoreApplication::translate("Engine", "That %1 effect is no longer there").arg(bus.name));
     }
     const core::PluginSlot& slot = bus.effects.at(static_cast<std::size_t>(effect));
     if (slot.bypass) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is switched off: switch it on to open its window"_s.arg(slot.displayName));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is switched off: switch it on to open its window").arg(slot.displayName));
     }
     const auto node = bus.nodes.find(keys.at(static_cast<std::size_t>(effect)));
     if (node == bus.nodes.end()) {
-        return core::fail(core::ErrorCode::InvalidData, u"%1 is not loaded (see the message about why)"_s.arg(slot.displayName));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "%1 is not loaded (see the message about why)").arg(slot.displayName));
     }
     return PluginNode::createEditor(node->second);
 }
@@ -2155,7 +2165,7 @@ core::Result<void> RealEngine::setPluginParameter(const core::ChannelId& id, int
 {
     GC_ONLY_MAIN_THREAD();
     const auto node = currentNode(id, target);
-    if (!node) return core::fail(core::ErrorCode::InvalidData, u"That plugin is not loaded"_s);
+    if (!node) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "That plugin is not loaded"));
     auto set = node->setParameter(parameter, value);
     if (!set) qCWarning(lcEngine).noquote() << "Setting a parameter:" << set.error().message;
     return set;
@@ -2172,7 +2182,7 @@ core::Result<void> RealEngine::setInstrumentFile(const core::ChannelId& id, cons
 {
     GC_ONLY_MAIN_THREAD();
     const auto node = currentNode(id, -1);
-    if (!node) return core::fail(core::ErrorCode::InvalidData, u"That instrument is not loaded"_s);
+    if (!node) return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "That instrument is not loaded"));
     auto set = node->setFile(path);
     if (!set) qCWarning(lcEngine).noquote() << "Choosing a file:" << set.error().message;
     else qCInfo(lcEngine).noquote() << node->name() << "plays" << (path.isEmpty() ? u"no file"_s : path);
@@ -2301,7 +2311,7 @@ void RealEngine::collectBackingTrack(std::vector<Notice>& notices)
             read.swap(m_trackRead);
         }
         if (m_trackReadBroke.exchange(false, std::memory_order_acquire)) {
-            const QString why = u"The backing tracks could not be read: %1"_s.arg(QString::fromUtf8(m_trackReadWhy.data()));
+            const QString why = QCoreApplication::translate("Engine", "The backing tracks could not be read: %1").arg(QString::fromUtf8(m_trackReadWhy.data()));
             qCWarning(lcEngine).noquote() << why;
             notices.push_back(Notice::error(why));
             m_trackFailed = paths; // not tried again until asked for again
@@ -2357,7 +2367,8 @@ core::Result<std::unique_ptr<IPluginEditor>> RealEngine::createEditorForPlugin(c
     GC_ONLY_MAIN_THREAD();
     // A separate instance, not in the audio graph; the editor keeps it alive.
     if (m_guard.isBlocked(pluginId)) {
-        return core::fail(core::ErrorCode::InvalidData, u"This plugin crashed the app while loading before, so it is switched off"_s);
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "This plugin crashed the app while loading before, so it is switched off"));
     }
     if (auto installed = checkInstalled(pluginId, QFileInfo(pluginId).completeBaseName()); !installed) {
         return tl::unexpected(installed.error());

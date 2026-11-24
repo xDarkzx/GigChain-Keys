@@ -6,6 +6,7 @@
 #include "gigchain/core/Checks.h"
 #include "gigchain/engine/SidechainCurves.h"
 
+#include <QCoreApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QtEndian>
@@ -173,7 +174,7 @@ core::Result<void> PianoProNode::restoreEncodedState(const QByteArray& bytes)
 {
     GC_ONLY_MAIN_THREAD();
     const auto damaged = [](const QString& why) {
-        return core::fail(core::ErrorCode::InvalidData, u"The saved Piano Pro settings are damaged (%1)"_s.arg(why));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "The saved Piano Pro settings are damaged (%1)").arg(why));
     };
     if (!bytes.startsWith(kStateMagic)) return damaged(u"not in the expected format"_s);
     const QByteArray packed = bytes.mid(kStateMagic.size());

@@ -256,8 +256,8 @@ void Font::load()
         m_state.store(State::Failed, std::memory_order_release);
     };
     const QFileInfo info(m_path);
-    if (!info.exists()) return fail(u"the file is not there"_s);
-    if (!info.isFile() || !info.isReadable()) return fail(u"the file cannot be opened"_s);
+    if (!info.exists()) return fail(QCoreApplication::translate("Engine", "the file is not there"));
+    if (!info.isFile() || !info.isReadable()) return fail(QCoreApplication::translate("Engine", "the file cannot be opened"));
 
     installLog();
     const QuietScope quiet; // (its errors are still logged, and kept to say why)
@@ -276,7 +276,7 @@ void Font::load()
         // (onFluidLog filled `errors` through t_capture: cppcheck cannot see that.)
         // cppcheck-suppress knownConditionTrueFalse
         qCWarning(lcEngine).noquote() << "FluidSynth on" << m_path << ":" << (errors.isEmpty() ? u"no reason given"_s : errors);
-        return fail(u"it is not a SoundFont 2 file, or it is damaged"_s);
+        return fail(QCoreApplication::translate("Engine", "it is not a SoundFont 2 file, or it is damaged"));
     }
     m_sfont = fluid_synth_get_sfont_by_id(m_owner, id);
     if (m_sfont == nullptr) return fail(u"FluidSynth lost it after reading it"_s);
@@ -287,7 +287,7 @@ void Font::load()
                              .program = fluid_preset_get_num(preset),
                              .name = QString::fromUtf8(fluid_preset_get_name(preset)).trimmed()});
     }
-    if (m_presets.empty()) return fail(u"it has no presets"_s);
+    if (m_presets.empty()) return fail(QCoreApplication::translate("Engine", "it has no presets"));
     std::ranges::sort(m_presets, [](const PresetInfo& a, const PresetInfo& b) {
         return std::tie(a.bank, a.program) < std::tie(b.bank, b.program);
     });
@@ -364,7 +364,7 @@ core::Result<std::unique_ptr<Synth>> Synth::create(std::shared_ptr<Font> font, d
 {
     const auto fail = [](const QString& why) {
         qCWarning(lcEngine).noquote() << "The SoundFont Player could not start:" << why;
-        return core::fail(core::ErrorCode::InvalidData, u"The SoundFont Player could not start (%1)"_s.arg(why));
+        return core::fail(core::ErrorCode::InvalidData, QCoreApplication::translate("Engine", "The SoundFont Player could not start (%1)").arg(why));
     };
     if (!font || font->state() != Font::State::Ready || font->sfont() == nullptr) return fail(u"its SoundFont is not read"_s);
     installLog();

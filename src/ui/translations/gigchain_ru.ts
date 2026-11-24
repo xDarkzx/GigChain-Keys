@@ -45,6 +45,13 @@
     </message>
 </context>
 <context>
+    <name>Audio</name>
+    <message>
+        <source>This session&apos;s realtime priority limit is 0, so the audio (and Wine plugins above all) can drop out more often. Fix: sudo usermod -aG pipewire $USER (-aG audio if no pipewire group), then log in again</source>
+        <translation>Ограничение приоритета реального времени в этом сеансе равно 0, поэтому звук (и особенно плагины Wine) может прерываться чаще. Решение: sudo usermod -aG pipewire $USER (-aG audio, если группы pipewire нет), затем войдите в систему заново</translation>
+    </message>
+</context>
+<context>
     <name>BuiltinFxWindow</name>
     <message>
         <source>Three-band upward and downward compression</source>
@@ -773,6 +780,513 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>By Manufacturer</source>
         <translation>По производителю</translation>
+    </message>
+</context>
+<context>
+    <name>Engine</name>
+    <message>
+        <source>No MIDI output named &quot;%1&quot;: is the synth plugged in and on?</source>
+        <translation>Нет MIDI-выхода с именем «%1»: синтезатор подключён и включён?</translation>
+    </message>
+    <message>
+        <source>Could not open the MIDI output %1 (another program, or the MIDI clock, may be using it): %2</source>
+        <translation>Не удалось открыть MIDI-выход %1 (возможно, его занимает другая программа или MIDI-клок): %2</translation>
+    </message>
+    <message>
+        <source>Could not send to the MIDI output %1: %2</source>
+        <translation>Не удалось отправить на MIDI-выход %1: %2</translation>
+    </message>
+    <message>
+        <source>Already recording to %1</source>
+        <translation>Запись в %1 уже идёт</translation>
+    </message>
+    <message>
+        <source>Nothing to record: the audio is not running</source>
+        <translation>Нечего записывать: звук не запущен</translation>
+    </message>
+    <message>
+        <source>Could not make the folder for the recording: %1</source>
+        <translation>Не удалось создать папку для записи: %1</translation>
+    </message>
+    <message>
+        <source>Could not write the recording %1: %2</source>
+        <translation>Не удалось записать файл %1: %2</translation>
+    </message>
+    <message>
+        <source>Not recording</source>
+        <translation>Запись не идёт</translation>
+    </message>
+    <message>
+        <source>Could not finish the recording %1: %2</source>
+        <translation>Не удалось завершить запись %1: %2</translation>
+    </message>
+    <message>
+        <source>Backing track not found: %1</source>
+        <translation>Минусовка не найдена: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read %1 without an audio output running</source>
+        <translation>Нельзя прочитать %1, пока не работает аудиовыход</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: it holds no audio</source>
+        <translation>Нельзя воспроизвести %1: в нём нет звука</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: %2</source>
+        <translation>Нельзя воспроизвести %1: %2</translation>
+    </message>
+    <message>
+        <source>Sample not found: %1</source>
+        <translation>Сэмпл не найден: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: it holds no audio</source>
+        <translation>Нельзя прочитать сэмпл %1: в нём нет звука</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: %2</source>
+        <translation>Нельзя прочитать сэмпл %1: %2</translation>
+    </message>
+    <message>
+        <source>Left out %1: a song&apos;s tracks together may be at most %2 minutes of audio (they are all kept in memory)</source>
+        <translation>%1 пропущен: дорожки одной песни вместе могут занимать не больше %2 минут звука (все они хранятся в памяти)</translation>
+    </message>
+    <message>
+        <source>No MIDI output named &quot;%1&quot; to send the clock to</source>
+        <translation>Нет MIDI-выхода с именем «%1», куда отправлять клок</translation>
+    </message>
+    <message>
+        <source>Could not send the MIDI clock to %1: %2</source>
+        <translation>Не удалось отправить MIDI-клок на %1: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the app&apos;s own instruments (a newer version&apos;s, maybe)</source>
+        <translation>%1 — не один из собственных инструментов приложения (возможно, из более новой версии)</translation>
+    </message>
+    <message>
+        <source>%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)</source>
+        <translation>%1 — не файл плагина (не пакет .vst3 и не VST2-плагин этой системы)</translation>
+    </message>
+    <message>
+        <source>No plugin to open an editor for</source>
+        <translation>Нет плагина, чей редактор можно открыть</translation>
+    </message>
+    <message>
+        <source>The saved %1 settings are damaged (%2)</source>
+        <translation>Сохранённые настройки %1 повреждены (%2)</translation>
+    </message>
+    <message>
+        <source>%1: no such plugin (%2)</source>
+        <translation>%1: такого плагина нет (%2)</translation>
+    </message>
+    <message>
+        <source>%1 could not be loaded: %2</source>
+        <translation>Не удалось загрузить %1: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (no VSTPluginMain)</source>
+        <translation>%1 — не VST2-плагин (нет VSTPluginMain)</translation>
+    </message>
+    <message>
+        <source>%1 did not start</source>
+        <translation>%1 не запустился</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (wrong signature)</source>
+        <translation>%1 — не VST2-плагин (неверная сигнатура)</translation>
+    </message>
+    <message>
+        <source>%1 holds several plugins in one file (a &quot;shell&quot;, as Waves&apos;): not supported yet</source>
+        <translation>%1 содержит несколько плагинов в одном файле («оболочка», как у Waves): пока не поддерживается</translation>
+    </message>
+    <message>
+        <source>%1 cannot process audio</source>
+        <translation>%1 не умеет обрабатывать звук</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read: %2</source>
+        <translation>%1 дал сбой при чтении: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read</source>
+        <translation>%1 дал сбой при чтении</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading: %2</source>
+        <translation>%1 дал сбой при загрузке: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading</source>
+        <translation>%1 дал сбой при загрузке</translation>
+    </message>
+    <message>
+        <source>%1 did not give its settings</source>
+        <translation>%1 не отдал свои настройки</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings: %2</source>
+        <translation>%1 дал сбой, отдавая свои настройки: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings</source>
+        <translation>%1 дал сбой, отдавая свои настройки</translation>
+    </message>
+    <message>
+        <source>The saved plugin settings are damaged (%1)</source>
+        <translation>Сохранённые настройки плагина повреждены (%1)</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings: %2</source>
+        <translation>%1 дал сбой, принимая сохранённые настройки: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings</source>
+        <translation>%1 дал сбой, принимая сохранённые настройки</translation>
+    </message>
+    <message>
+        <source>%1: no window to attach the editor to</source>
+        <translation>%1: нет окна, к которому можно прикрепить редактор</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window cannot open here: plugin windows need X11 (the app runs without it, on Wayland). Start the app with QT_QPA_PLATFORM=xcb</source>
+        <translation>Окно %1 здесь не откроется: окнам плагинов нужен X11 (приложение работает без него, на Wayland). Запустите приложение с QT_QPA_PLATFORM=xcb</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio input bus %2</source>
+        <translation>%1 отказался включить свою входную аудиошину %2</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio output bus %2</source>
+        <translation>%1 отказался включить свою выходную аудиошину %2</translation>
+    </message>
+    <message>
+        <source>%1 could not be created</source>
+        <translation>Не удалось создать %1</translation>
+    </message>
+    <message>
+        <source>%1 failed to initialise</source>
+        <translation>%1 не удалось инициализировать</translation>
+    </message>
+    <message>
+        <source>%1 does not name its window half (edit controller)</source>
+        <translation>%1 не называет свою оконную часть (контроллер редактора)</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half (edit controller) could not be created</source>
+        <translation>Не удалось создать оконную часть (контроллер редактора) %1</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half failed to initialise</source>
+        <translation>Оконную часть %1 не удалось инициализировать</translation>
+    </message>
+    <message>
+        <source>%1&apos;s halves cannot be connected to each other</source>
+        <translation>Две части %1 не удаётся соединить друг с другом</translation>
+    </message>
+    <message>
+        <source>%1&apos;s sound refused to connect to its window</source>
+        <translation>Звуковая часть %1 отказалась соединяться со своим окном</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window refused to connect to its sound</source>
+        <translation>Окно %1 отказалось соединяться со своей звуковой частью</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its MIDI input</source>
+        <translation>%1 отказался включить свой MIDI-вход</translation>
+    </message>
+    <message>
+        <source>%1 does not support %2 Hz / %3-sample blocks</source>
+        <translation>%1 не поддерживает %2 Гц / блоки по %3 сэмплов</translation>
+    </message>
+    <message>
+        <source>%1 failed to activate</source>
+        <translation>%1 не удалось активировать</translation>
+    </message>
+    <message>
+        <source>%1 failed to start processing</source>
+        <translation>%1 не смог начать обработку</translation>
+    </message>
+    <message>
+        <source>Plugin not found: %1</source>
+        <translation>Плагин не найден: %1</translation>
+    </message>
+    <message>
+        <source>%1 is not a .vst3 plugin</source>
+        <translation>%1 — не плагин .vst3</translation>
+    </message>
+    <message>
+        <source>Not a loadable VST3 plugin: %1 (%2)</source>
+        <translation>Это не загружаемый VST3-плагин: %1 (%2)</translation>
+    </message>
+    <message>
+        <source>%1 contains no audio processor</source>
+        <translation>%1 не содержит аудиопроцессора</translation>
+    </message>
+    <message>
+        <source>%1 has no audio processor interface</source>
+        <translation>У %1 нет интерфейса аудиопроцессора</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed: %2</source>
+        <translation>Не удалось загрузить %1: %2</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed</source>
+        <translation>Не удалось загрузить %1</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state: %2</source>
+        <translation>%1 дал сбой, отдавая своё состояние: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state</source>
+        <translation>%1 дал сбой, отдавая своё состояние</translation>
+    </message>
+    <message>
+        <source>%1 did not give its state</source>
+        <translation>%1 не отдал своё состояние</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state: %2</source>
+        <translation>%1 дал сбой, принимая сохранённое состояние: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state</source>
+        <translation>%1 дал сбой, принимая сохранённое состояние</translation>
+    </message>
+    <message>
+        <source>%1 rejected its saved state</source>
+        <translation>%1 отклонил своё сохранённое состояние</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved state</source>
+        <translation>Редактор %1 отклонил сохранённое состояние</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved settings</source>
+        <translation>Редактор %1 отклонил сохранённые настройки</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor does not support %2 windows</source>
+        <translation>Редактор %1 не поддерживает окна %2</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor failed to open</source>
+        <translation>Редактор %1 не удалось открыть</translation>
+    </message>
+    <message>
+        <source>No audio output named &quot;%1&quot; (%2)</source>
+        <translation>Нет аудиовыхода с именем «%1» (%2)</translation>
+    </message>
+    <message>
+        <source>This computer has no default audio output</source>
+        <translation>На этом компьютере нет аудиовыхода по умолчанию</translation>
+    </message>
+    <message>
+        <source>%1 (%2) cannot run at %3 Hz</source>
+        <translation>%1 (%2) не может работать на %3 Гц</translation>
+    </message>
+    <message>
+        <source>The input %1 (%2) and the output %3 (%4) must use the same driver</source>
+        <translation>Вход %1 (%2) и выход %3 (%4) должны использовать один и тот же драйвер</translation>
+    </message>
+    <message>
+        <source>No audio input named &quot;%1&quot; (%2)</source>
+        <translation>Нет аудиовхода с именем «%1» (%2)</translation>
+    </message>
+    <message>
+        <source>Could not open %1 with the inputs of %2 (%3): %4</source>
+        <translation>Не удалось открыть %1 со входами %2 (%3): %4</translation>
+    </message>
+    <message>
+        <source>unknown error</source>
+        <translation>неизвестная ошибка</translation>
+    </message>
+    <message>
+        <source>Could not open %1 (%2): %3</source>
+        <translation>Не удалось открыть %1 (%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not start %1 (%2): %3</source>
+        <translation>Не удалось запустить %1 (%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not pause %1: %2</source>
+        <translation>Не удалось приостановить %1: %2</translation>
+    </message>
+    <message>
+        <source>No audio output is open to resume</source>
+        <translation>Нет открытого аудиовыхода, который можно возобновить</translation>
+    </message>
+    <message>
+        <source>Could not restart %1: %2</source>
+        <translation>Не удалось перезапустить %1: %2</translation>
+    </message>
+    <message>
+        <source>The saved Saw Stack Pro settings are damaged (%1)</source>
+        <translation>Сохранённые настройки Saw Stack Pro повреждены (%1)</translation>
+    </message>
+    <message>
+        <source>The region at line %1 has no sample</source>
+        <translation>У региона в строке %1 нет сэмпла</translation>
+    </message>
+    <message>
+        <source>An unclosed header at line %1</source>
+        <translation>Незакрытый заголовок в строке %1</translation>
+    </message>
+    <message>
+        <source>Unknown header &lt;%1&gt; at line %2</source>
+        <translation>Неизвестный заголовок &lt;%1&gt; в строке %2</translation>
+    </message>
+    <message>
+        <source>Not a setting at line %1</source>
+        <translation>Не настройка в строке %1</translation>
+    </message>
+    <message>
+        <source>Unknown setting &quot;%1&quot; at line %2</source>
+        <translation>Неизвестная настройка «%1» в строке %2</translation>
+    </message>
+    <message>
+        <source>&quot;%1=%2&quot; at line %3 is not a value it can take</source>
+        <translation>«%1=%2» в строке %3 — недопустимое значение</translation>
+    </message>
+    <message>
+        <source>Piano not found: %1</source>
+        <translation>Фортепиано не найдено: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the piano %1: %2</source>
+        <translation>Нельзя прочитать фортепиано %1: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2</source>
+        <translation>Фортепиано %1: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1 maps no recordings</source>
+        <translation>Фортепиано %1 не привязывает ни одной записи</translation>
+    </message>
+    <message>
+        <source>Reading the piano %1 was cancelled</source>
+        <translation>Чтение фортепиано %1 отменено</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2&apos;s loop (%3 to %4, fading from %5) is not a loop</source>
+        <translation>Фортепиано %1: петля %2 (с %3 по %4, затухание с %5) — не петля</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2 ends before its loop does (frame %3)</source>
+        <translation>Фортепиано %1: %2 кончается раньше своей петли (кадр %3)</translation>
+    </message>
+    <message>
+        <source>The saved Piano Pro settings are damaged (%1)</source>
+        <translation>Сохранённые настройки Piano Pro повреждены (%1)</translation>
+    </message>
+    <message>
+        <source>The saved Pads Pro settings are damaged (%1)</source>
+        <translation>Сохранённые настройки Pads Pro повреждены (%1)</translation>
+    </message>
+    <message>
+        <source>the file is not there</source>
+        <translation>файла нет на месте</translation>
+    </message>
+    <message>
+        <source>the file cannot be opened</source>
+        <translation>файл не открывается</translation>
+    </message>
+    <message>
+        <source>it is not a SoundFont 2 file, or it is damaged</source>
+        <translation>это не файл SoundFont 2, или он повреждён</translation>
+    </message>
+    <message>
+        <source>it has no presets</source>
+        <translation>в нём нет пресетов</translation>
+    </message>
+    <message>
+        <source>The SoundFont Player could not start (%1)</source>
+        <translation>Плеер SoundFont не смог запуститься (%1)</translation>
+    </message>
+    <message>
+        <source>There is no SoundFont at %1</source>
+        <translation>По пути %1 нет SoundFont</translation>
+    </message>
+    <message>
+        <source>The saved SoundFont Player settings are damaged (%1)</source>
+        <translation>Сохранённые настройки плеера SoundFont повреждены (%1)</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
+        <translation>%1 (%2) — не один из собственных инструментов этой версии: не загружен</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not a VST2 plugin the scan found: not loaded</source>
+        <translation>%1 (%2) — не VST2-плагин, найденный при сканировании: не загружен</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the installed plugins (%2): not loaded. Install it in %3, or choose another plugin</source>
+        <translation>%1 нет среди установленных плагинов (%2): не загружен. Установите его в %3 или выберите другой плагин</translation>
+    </message>
+    <message>
+        <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
+        <translation>%1 не смог принять сохранённые настройки (%2); он играет с настройками по умолчанию</translation>
+    </message>
+    <message>
+        <source>%1 is not available on this system</source>
+        <translation>%1 недоступен в этой системе</translation>
+    </message>
+    <message>
+        <source>Choose an ASIO device</source>
+        <translation>Выберите ASIO-устройство</translation>
+    </message>
+    <message>
+        <source>That effect is no longer in this patch</source>
+        <translation>Этого эффекта больше нет в этом патче</translation>
+    </message>
+    <message>
+        <source>%1 is switched off: switch it on to open its window</source>
+        <translation>%1 выключен: включите его, чтобы открыть его окно</translation>
+    </message>
+    <message>
+        <source>%1 is not loaded (see the message about why)</source>
+        <translation>%1 не загружен (причина — в сообщении об этом)</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading before, so it is switched off</source>
+        <translation>%1 раньше обрушил приложение при загрузке, поэтому он выключен</translation>
+    </message>
+    <message>
+        <source>%1 is an effect, not an instrument: Sustain Pads need an instrument</source>
+        <translation>%1 — эффект, а не инструмент: Sustain Pads нужен инструмент</translation>
+    </message>
+    <message>
+        <source>That %1 effect is no longer there</source>
+        <translation>Этого эффекта %1 больше нет</translation>
+    </message>
+    <message>
+        <source>That plugin is not loaded</source>
+        <translation>Этот плагин не загружен</translation>
+    </message>
+    <message>
+        <source>That instrument is not loaded</source>
+        <translation>Этот инструмент не загружен</translation>
+    </message>
+    <message>
+        <source>The backing tracks could not be read: %1</source>
+        <translation>Не удалось прочитать минусовки: %1</translation>
+    </message>
+    <message>
+        <source>This plugin crashed the app while loading before, so it is switched off</source>
+        <translation>Этот плагин раньше обрушил приложение при загрузке, поэтому он выключен</translation>
+    </message>
+    <message>
+        <source>Could not open the file manager at %1</source>
+        <translation>Не удалось открыть файловый менеджер в %1</translation>
+    </message>
+    <message>
+        <source>Could not open Explorer for %1</source>
+        <translation>Не удалось открыть Проводник для %1</translation>
     </message>
 </context>
 <context>
@@ -1549,6 +2063,29 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Instrument</source>
         <translation>Инструмент</translation>
+    </message>
+</context>
+<context>
+    <name>MidiTrigger</name>
+    <message>
+        <source>channel %1</source>
+        <translation>канал %1</translation>
+    </message>
+    <message>
+        <source>Pedal/CC %1 (%2)</source>
+        <translation>Педаль/CC %1 (%2)</translation>
+    </message>
+    <message>
+        <source>Note %1%2 (%3)</source>
+        <translation>Нота %1%2 (%3)</translation>
+    </message>
+    <message>
+        <source>Program %1 (%2)</source>
+        <translation>Программа %1 (%2)</translation>
+    </message>
+    <message>
+        <source>Not set</source>
+        <translation>Не задано</translation>
     </message>
 </context>
 <context>
@@ -2451,6 +2988,20 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 may not hear the audio inputs: they stay silent. Allow it in the system&apos;s settings, Privacy &amp; Security → Microphone, then choose the input again.</source>
         <translation>%1 не может слышать аудиовходы: они молчат. Разрешите это в системных настройках, Конфиденциальность и безопасность → Микрофон, затем снова выберите вход.</translation>
+    </message>
+    <message>
+        <source>PulseAudio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>PulseAudio</translation>
+    </message>
+    <message>
+        <source>Core Audio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Core Audio</translation>
+    </message>
+    <message>
+        <source>Windows Audio (WASAPI)</source>
+        <translation>Звук Windows (WASAPI)</translation>
     </message>
 </context>
 <context>

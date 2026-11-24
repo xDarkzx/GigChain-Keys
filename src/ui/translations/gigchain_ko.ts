@@ -45,6 +45,13 @@
     </message>
 </context>
 <context>
+    <name>Audio</name>
+    <message>
+        <source>This session&apos;s realtime priority limit is 0, so the audio (and Wine plugins above all) can drop out more often. Fix: sudo usermod -aG pipewire $USER (-aG audio if no pipewire group), then log in again</source>
+        <translation>이 세션의 실시간 우선순위 한도가 0이라서 오디오(특히 Wine 플러그인)가 더 자주 끊길 수 있습니다. 해결: sudo usermod -aG pipewire $USER(pipewire 그룹이 없으면 -aG audio)를 실행한 뒤 다시 로그인하세요</translation>
+    </message>
+</context>
+<context>
     <name>BuiltinFxWindow</name>
     <message>
         <source>Three-band upward and downward compression</source>
@@ -773,6 +780,513 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>By Manufacturer</source>
         <translation>제조사별</translation>
+    </message>
+</context>
+<context>
+    <name>Engine</name>
+    <message>
+        <source>No MIDI output named &quot;%1&quot;: is the synth plugged in and on?</source>
+        <translation>&quot;%1&quot;(이)라는 MIDI 출력이 없습니다: 신스가 연결되어 있고 켜져 있나요?</translation>
+    </message>
+    <message>
+        <source>Could not open the MIDI output %1 (another program, or the MIDI clock, may be using it): %2</source>
+        <translation>MIDI 출력 %1을(를) 열 수 없습니다(다른 프로그램이나 MIDI 클럭이 사용 중일 수 있습니다): %2</translation>
+    </message>
+    <message>
+        <source>Could not send to the MIDI output %1: %2</source>
+        <translation>MIDI 출력 %1(으)로 보낼 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>Already recording to %1</source>
+        <translation>이미 %1에 녹음 중입니다</translation>
+    </message>
+    <message>
+        <source>Nothing to record: the audio is not running</source>
+        <translation>녹음할 것이 없습니다: 오디오가 실행되고 있지 않습니다</translation>
+    </message>
+    <message>
+        <source>Could not make the folder for the recording: %1</source>
+        <translation>녹음용 폴더를 만들 수 없습니다: %1</translation>
+    </message>
+    <message>
+        <source>Could not write the recording %1: %2</source>
+        <translation>녹음 %1을(를) 쓸 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>Not recording</source>
+        <translation>녹음 중이 아닙니다</translation>
+    </message>
+    <message>
+        <source>Could not finish the recording %1: %2</source>
+        <translation>녹음 %1을(를) 마무리할 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>Backing track not found: %1</source>
+        <translation>반주 트랙을 찾을 수 없습니다: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read %1 without an audio output running</source>
+        <translation>오디오 출력이 실행되고 있지 않아 %1을(를) 읽을 수 없습니다</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: it holds no audio</source>
+        <translation>%1을(를) 재생할 수 없습니다: 오디오가 들어 있지 않습니다</translation>
+    </message>
+    <message>
+        <source>Cannot play %1: %2</source>
+        <translation>%1을(를) 재생할 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>Sample not found: %1</source>
+        <translation>샘플을 찾을 수 없습니다: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: it holds no audio</source>
+        <translation>샘플 %1을(를) 읽을 수 없습니다: 오디오가 들어 있지 않습니다</translation>
+    </message>
+    <message>
+        <source>Cannot read the sample %1: %2</source>
+        <translation>샘플 %1을(를) 읽을 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>Left out %1: a song&apos;s tracks together may be at most %2 minutes of audio (they are all kept in memory)</source>
+        <translation>%1을(를) 뺐습니다: 한 곡의 트랙은 합쳐서 최대 %2분의 오디오까지입니다(모두 메모리에 보관됩니다)</translation>
+    </message>
+    <message>
+        <source>No MIDI output named &quot;%1&quot; to send the clock to</source>
+        <translation>클럭을 보낼 &quot;%1&quot;(이)라는 MIDI 출력이 없습니다</translation>
+    </message>
+    <message>
+        <source>Could not send the MIDI clock to %1: %2</source>
+        <translation>MIDI 클럭을 %1(으)로 보낼 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the app&apos;s own instruments (a newer version&apos;s, maybe)</source>
+        <translation>%1은(는) 앱 자체의 악기가 아닙니다(더 새로운 버전의 것일 수 있습니다)</translation>
+    </message>
+    <message>
+        <source>%1 is not a plugin file (a .vst3 bundle, or a VST2 plugin of this system)</source>
+        <translation>%1은(는) 플러그인 파일이 아닙니다(.vst3 번들 또는 이 시스템의 VST2 플러그인)</translation>
+    </message>
+    <message>
+        <source>No plugin to open an editor for</source>
+        <translation>편집기를 열 플러그인이 없습니다</translation>
+    </message>
+    <message>
+        <source>The saved %1 settings are damaged (%2)</source>
+        <translation>%1의 저장된 설정이 손상되었습니다(%2)</translation>
+    </message>
+    <message>
+        <source>%1: no such plugin (%2)</source>
+        <translation>%1: 그런 플러그인이 없습니다(%2)</translation>
+    </message>
+    <message>
+        <source>%1 could not be loaded: %2</source>
+        <translation>%1을(를) 불러올 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (no VSTPluginMain)</source>
+        <translation>%1은(는) VST2 플러그인이 아닙니다(VSTPluginMain 없음)</translation>
+    </message>
+    <message>
+        <source>%1 did not start</source>
+        <translation>%1이(가) 시작되지 않았습니다</translation>
+    </message>
+    <message>
+        <source>%1 is not a VST2 plugin (wrong signature)</source>
+        <translation>%1은(는) VST2 플러그인이 아닙니다(서명이 잘못됨)</translation>
+    </message>
+    <message>
+        <source>%1 holds several plugins in one file (a &quot;shell&quot;, as Waves&apos;): not supported yet</source>
+        <translation>%1은(는) 한 파일에 여러 플러그인을 담고 있습니다(Waves 같은 &quot;셸&quot;): 아직 지원하지 않습니다</translation>
+    </message>
+    <message>
+        <source>%1 cannot process audio</source>
+        <translation>%1은(는) 오디오를 처리할 수 없습니다</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read: %2</source>
+        <translation>%1을(를) 읽는 중에 실패했습니다: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while being read</source>
+        <translation>%1을(를) 읽는 중에 실패했습니다</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading: %2</source>
+        <translation>%1을(를) 불러오는 중에 실패했습니다: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed while loading</source>
+        <translation>%1을(를) 불러오는 중에 실패했습니다</translation>
+    </message>
+    <message>
+        <source>%1 did not give its settings</source>
+        <translation>%1이(가) 설정을 넘겨주지 않았습니다</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings: %2</source>
+        <translation>%1이(가) 설정을 넘겨주다가 실패했습니다: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its settings</source>
+        <translation>%1이(가) 설정을 넘겨주다가 실패했습니다</translation>
+    </message>
+    <message>
+        <source>The saved plugin settings are damaged (%1)</source>
+        <translation>저장된 플러그인 설정이 손상되었습니다(%1)</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings: %2</source>
+        <translation>%1이(가) 저장된 설정을 받다가 실패했습니다: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved settings</source>
+        <translation>%1이(가) 저장된 설정을 받다가 실패했습니다</translation>
+    </message>
+    <message>
+        <source>%1: no window to attach the editor to</source>
+        <translation>%1: 편집기를 붙일 창이 없습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window cannot open here: plugin windows need X11 (the app runs without it, on Wayland). Start the app with QT_QPA_PLATFORM=xcb</source>
+        <translation>%1의 창을 여기서 열 수 없습니다: 플러그인 창에는 X11이 필요합니다(앱은 X11 없이 Wayland에서 실행 중입니다). QT_QPA_PLATFORM=xcb로 앱을 시작하세요</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio input bus %2</source>
+        <translation>%1이(가) 오디오 입력 버스 %2의 활성화를 거부했습니다</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its audio output bus %2</source>
+        <translation>%1이(가) 오디오 출력 버스 %2의 활성화를 거부했습니다</translation>
+    </message>
+    <message>
+        <source>%1 could not be created</source>
+        <translation>%1을(를) 만들 수 없습니다</translation>
+    </message>
+    <message>
+        <source>%1 failed to initialise</source>
+        <translation>%1을(를) 초기화하지 못했습니다</translation>
+    </message>
+    <message>
+        <source>%1 does not name its window half (edit controller)</source>
+        <translation>%1이(가) 창 쪽(편집 컨트롤러)을 알려주지 않습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half (edit controller) could not be created</source>
+        <translation>%1의 창 쪽(편집 컨트롤러)을 만들 수 없습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window half failed to initialise</source>
+        <translation>%1의 창 쪽을 초기화하지 못했습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s halves cannot be connected to each other</source>
+        <translation>%1의 두 부분을 서로 연결할 수 없습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s sound refused to connect to its window</source>
+        <translation>%1의 사운드 쪽이 창과의 연결을 거부했습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s window refused to connect to its sound</source>
+        <translation>%1의 창이 사운드 쪽과의 연결을 거부했습니다</translation>
+    </message>
+    <message>
+        <source>%1 refused to activate its MIDI input</source>
+        <translation>%1이(가) MIDI 입력의 활성화를 거부했습니다</translation>
+    </message>
+    <message>
+        <source>%1 does not support %2 Hz / %3-sample blocks</source>
+        <translation>%1은(는) %2 Hz / %3샘플 블록을 지원하지 않습니다</translation>
+    </message>
+    <message>
+        <source>%1 failed to activate</source>
+        <translation>%1을(를) 활성화하지 못했습니다</translation>
+    </message>
+    <message>
+        <source>%1 failed to start processing</source>
+        <translation>%1이(가) 처리를 시작하지 못했습니다</translation>
+    </message>
+    <message>
+        <source>Plugin not found: %1</source>
+        <translation>플러그인을 찾을 수 없습니다: %1</translation>
+    </message>
+    <message>
+        <source>%1 is not a .vst3 plugin</source>
+        <translation>%1은(는) .vst3 플러그인이 아닙니다</translation>
+    </message>
+    <message>
+        <source>Not a loadable VST3 plugin: %1 (%2)</source>
+        <translation>불러올 수 있는 VST3 플러그인이 아닙니다: %1(%2)</translation>
+    </message>
+    <message>
+        <source>%1 contains no audio processor</source>
+        <translation>%1에는 오디오 프로세서가 없습니다</translation>
+    </message>
+    <message>
+        <source>%1 has no audio processor interface</source>
+        <translation>%1에는 오디오 프로세서 인터페이스가 없습니다</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed: %2</source>
+        <translation>%1을(를) 불러오지 못했습니다: %2</translation>
+    </message>
+    <message>
+        <source>Loading %1 failed</source>
+        <translation>%1을(를) 불러오지 못했습니다</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state: %2</source>
+        <translation>%1이(가) 상태를 넘겨주다가 실패했습니다: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed giving its state</source>
+        <translation>%1이(가) 상태를 넘겨주다가 실패했습니다</translation>
+    </message>
+    <message>
+        <source>%1 did not give its state</source>
+        <translation>%1이(가) 상태를 넘겨주지 않았습니다</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state: %2</source>
+        <translation>%1이(가) 저장된 상태를 받다가 실패했습니다: %2</translation>
+    </message>
+    <message>
+        <source>%1 failed taking its saved state</source>
+        <translation>%1이(가) 저장된 상태를 받다가 실패했습니다</translation>
+    </message>
+    <message>
+        <source>%1 rejected its saved state</source>
+        <translation>%1이(가) 저장된 상태를 거부했습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved state</source>
+        <translation>%1의 편집기가 저장된 상태를 거부했습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor rejected its saved settings</source>
+        <translation>%1의 편집기가 저장된 설정을 거부했습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor does not support %2 windows</source>
+        <translation>%1의 편집기는 %2 창을 지원하지 않습니다</translation>
+    </message>
+    <message>
+        <source>%1&apos;s editor failed to open</source>
+        <translation>%1의 편집기를 열지 못했습니다</translation>
+    </message>
+    <message>
+        <source>No audio output named &quot;%1&quot; (%2)</source>
+        <translation>&quot;%1&quot;(이)라는 오디오 출력이 없습니다(%2)</translation>
+    </message>
+    <message>
+        <source>This computer has no default audio output</source>
+        <translation>이 컴퓨터에는 기본 오디오 출력이 없습니다</translation>
+    </message>
+    <message>
+        <source>%1 (%2) cannot run at %3 Hz</source>
+        <translation>%1(%2)은(는) %3 Hz로 실행할 수 없습니다</translation>
+    </message>
+    <message>
+        <source>The input %1 (%2) and the output %3 (%4) must use the same driver</source>
+        <translation>입력 %1(%2)과(와) 출력 %3(%4)은(는) 같은 드라이버를 써야 합니다</translation>
+    </message>
+    <message>
+        <source>No audio input named &quot;%1&quot; (%2)</source>
+        <translation>&quot;%1&quot;(이)라는 오디오 입력이 없습니다(%2)</translation>
+    </message>
+    <message>
+        <source>Could not open %1 with the inputs of %2 (%3): %4</source>
+        <translation>%1을(를) %2의 입력과 함께 열 수 없습니다(%3): %4</translation>
+    </message>
+    <message>
+        <source>unknown error</source>
+        <translation>알 수 없는 오류</translation>
+    </message>
+    <message>
+        <source>Could not open %1 (%2): %3</source>
+        <translation>%1을(를) 열 수 없습니다(%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not start %1 (%2): %3</source>
+        <translation>%1을(를) 시작할 수 없습니다(%2): %3</translation>
+    </message>
+    <message>
+        <source>Could not pause %1: %2</source>
+        <translation>%1을(를) 일시 정지할 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>No audio output is open to resume</source>
+        <translation>다시 시작할 오디오 출력이 열려 있지 않습니다</translation>
+    </message>
+    <message>
+        <source>Could not restart %1: %2</source>
+        <translation>%1을(를) 다시 시작할 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>The saved Saw Stack Pro settings are damaged (%1)</source>
+        <translation>Saw Stack Pro의 저장된 설정이 손상되었습니다(%1)</translation>
+    </message>
+    <message>
+        <source>The region at line %1 has no sample</source>
+        <translation>%1번째 줄의 리전에 샘플이 없습니다</translation>
+    </message>
+    <message>
+        <source>An unclosed header at line %1</source>
+        <translation>%1번째 줄에 닫히지 않은 헤더가 있습니다</translation>
+    </message>
+    <message>
+        <source>Unknown header &lt;%1&gt; at line %2</source>
+        <translation>%2번째 줄에 알 수 없는 헤더 &lt;%1&gt;이(가) 있습니다</translation>
+    </message>
+    <message>
+        <source>Not a setting at line %1</source>
+        <translation>%1번째 줄은 설정이 아닙니다</translation>
+    </message>
+    <message>
+        <source>Unknown setting &quot;%1&quot; at line %2</source>
+        <translation>%2번째 줄에 알 수 없는 설정 &quot;%1&quot;이(가) 있습니다</translation>
+    </message>
+    <message>
+        <source>&quot;%1=%2&quot; at line %3 is not a value it can take</source>
+        <translation>%3번째 줄의 &quot;%1=%2&quot;은(는) 받을 수 없는 값입니다</translation>
+    </message>
+    <message>
+        <source>Piano not found: %1</source>
+        <translation>피아노를 찾을 수 없습니다: %1</translation>
+    </message>
+    <message>
+        <source>Cannot read the piano %1: %2</source>
+        <translation>피아노 %1을(를) 읽을 수 없습니다: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2</source>
+        <translation>피아노 %1: %2</translation>
+    </message>
+    <message>
+        <source>The piano %1 maps no recordings</source>
+        <translation>피아노 %1에는 매핑된 녹음이 없습니다</translation>
+    </message>
+    <message>
+        <source>Reading the piano %1 was cancelled</source>
+        <translation>피아노 %1 읽기가 취소되었습니다</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2&apos;s loop (%3 to %4, fading from %5) is not a loop</source>
+        <translation>피아노 %1: %2의 루프(%3부터 %4까지, %5부터 페이드)는 루프가 아닙니다</translation>
+    </message>
+    <message>
+        <source>The piano %1: %2 ends before its loop does (frame %3)</source>
+        <translation>피아노 %1: %2이(가) 루프보다 먼저 끝납니다(프레임 %3)</translation>
+    </message>
+    <message>
+        <source>The saved Piano Pro settings are damaged (%1)</source>
+        <translation>Piano Pro의 저장된 설정이 손상되었습니다(%1)</translation>
+    </message>
+    <message>
+        <source>The saved Pads Pro settings are damaged (%1)</source>
+        <translation>Pads Pro의 저장된 설정이 손상되었습니다(%1)</translation>
+    </message>
+    <message>
+        <source>the file is not there</source>
+        <translation>파일이 없습니다</translation>
+    </message>
+    <message>
+        <source>the file cannot be opened</source>
+        <translation>파일을 열 수 없습니다</translation>
+    </message>
+    <message>
+        <source>it is not a SoundFont 2 file, or it is damaged</source>
+        <translation>SoundFont 2 파일이 아니거나 손상되었습니다</translation>
+    </message>
+    <message>
+        <source>it has no presets</source>
+        <translation>프리셋이 없습니다</translation>
+    </message>
+    <message>
+        <source>The SoundFont Player could not start (%1)</source>
+        <translation>SoundFont Player를 시작할 수 없습니다(%1)</translation>
+    </message>
+    <message>
+        <source>There is no SoundFont at %1</source>
+        <translation>%1에 SoundFont가 없습니다</translation>
+    </message>
+    <message>
+        <source>The saved SoundFont Player settings are damaged (%1)</source>
+        <translation>SoundFont Player의 저장된 설정이 손상되었습니다(%1)</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not one of this version&apos;s own instruments: not loaded</source>
+        <translation>%1(%2)은(는) 이 버전 자체의 악기가 아닙니다: 불러오지 않았습니다</translation>
+    </message>
+    <message>
+        <source>%1 (%2) is not a VST2 plugin the scan found: not loaded</source>
+        <translation>%1(%2)은(는) 스캔에서 찾은 VST2 플러그인이 아닙니다: 불러오지 않았습니다</translation>
+    </message>
+    <message>
+        <source>%1 is not one of the installed plugins (%2): not loaded. Install it in %3, or choose another plugin</source>
+        <translation>%1은(는) 설치된 플러그인이 아닙니다(%2): 불러오지 않았습니다. %3에 설치하거나 다른 플러그인을 고르세요</translation>
+    </message>
+    <message>
+        <source>%1 could not take its saved settings (%2); it plays with its defaults</source>
+        <translation>%1이(가) 저장된 설정을 받지 못했습니다(%2). 기본 설정으로 소리 납니다</translation>
+    </message>
+    <message>
+        <source>%1 is not available on this system</source>
+        <translation>%1은(는) 이 시스템에서 사용할 수 없습니다</translation>
+    </message>
+    <message>
+        <source>Choose an ASIO device</source>
+        <translation>ASIO 장치를 고르세요</translation>
+    </message>
+    <message>
+        <source>That effect is no longer in this patch</source>
+        <translation>그 이펙트는 이제 이 패치에 없습니다</translation>
+    </message>
+    <message>
+        <source>%1 is switched off: switch it on to open its window</source>
+        <translation>%1이(가) 꺼져 있습니다: 창을 열려면 켜세요</translation>
+    </message>
+    <message>
+        <source>%1 is not loaded (see the message about why)</source>
+        <translation>%1이(가) 불러와지지 않았습니다(이유는 해당 메시지를 보세요)</translation>
+    </message>
+    <message>
+        <source>%1 crashed the app while loading before, so it is switched off</source>
+        <translation>%1이(가) 이전에 불러오는 중 앱을 멈추게 해서 꺼져 있습니다</translation>
+    </message>
+    <message>
+        <source>%1 is an effect, not an instrument: Sustain Pads need an instrument</source>
+        <translation>%1은(는) 이펙트이지 악기가 아닙니다: Sustain Pads에는 악기가 필요합니다</translation>
+    </message>
+    <message>
+        <source>That %1 effect is no longer there</source>
+        <translation>그 %1 이펙트는 이제 없습니다</translation>
+    </message>
+    <message>
+        <source>That plugin is not loaded</source>
+        <translation>그 플러그인은 불러와져 있지 않습니다</translation>
+    </message>
+    <message>
+        <source>That instrument is not loaded</source>
+        <translation>그 악기는 불러와져 있지 않습니다</translation>
+    </message>
+    <message>
+        <source>The backing tracks could not be read: %1</source>
+        <translation>반주 트랙을 읽을 수 없습니다: %1</translation>
+    </message>
+    <message>
+        <source>This plugin crashed the app while loading before, so it is switched off</source>
+        <translation>이 플러그인은 이전에 불러오는 중 앱을 멈추게 해서 꺼져 있습니다</translation>
+    </message>
+    <message>
+        <source>Could not open the file manager at %1</source>
+        <translation>%1에서 파일 관리자를 열 수 없습니다</translation>
+    </message>
+    <message>
+        <source>Could not open Explorer for %1</source>
+        <translation>%1의 파일 탐색기를 열 수 없습니다</translation>
     </message>
 </context>
 <context>
@@ -1544,6 +2058,29 @@ Put a chord in [brackets] right before the word it changes on.</source>
     <message>
         <source>Instrument</source>
         <translation>악기</translation>
+    </message>
+</context>
+<context>
+    <name>MidiTrigger</name>
+    <message>
+        <source>channel %1</source>
+        <translation>채널 %1</translation>
+    </message>
+    <message>
+        <source>Pedal/CC %1 (%2)</source>
+        <translation>페달/CC %1(%2)</translation>
+    </message>
+    <message>
+        <source>Note %1%2 (%3)</source>
+        <translation>노트 %1%2(%3)</translation>
+    </message>
+    <message>
+        <source>Program %1 (%2)</source>
+        <translation>프로그램 %1(%2)</translation>
+    </message>
+    <message>
+        <source>Not set</source>
+        <translation>설정 안 됨</translation>
     </message>
 </context>
 <context>
@@ -2445,6 +2982,20 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 may not hear the audio inputs: they stay silent. Allow it in the system&apos;s settings, Privacy &amp; Security → Microphone, then choose the input again.</source>
         <translation>%1이(가) 오디오 입력을 들을 수 없어서 무음 상태입니다. 시스템 설정의 개인정보 보호 및 보안 → 마이크에서 허용한 다음 입력을 다시 선택하세요.</translation>
+    </message>
+    <message>
+        <source>PulseAudio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>PulseAudio</translation>
+    </message>
+    <message>
+        <source>Core Audio</source>
+        <translatorcomment>same</translatorcomment>
+        <translation>Core Audio</translation>
+    </message>
+    <message>
+        <source>Windows Audio (WASAPI)</source>
+        <translation>Windows 오디오(WASAPI)</translation>
     </message>
 </context>
 <context>

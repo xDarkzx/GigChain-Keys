@@ -1,10 +1,12 @@
 // The language the app speaks (docs/i18n/app.md): the player's choice, else
 // the computer's, else English; and the translations that come with the app.
 #include "Language.h"
+#include "Sfz.h"
 
 #include <QCoreApplication>
 #include <QtTest>
 
+using namespace gigchain;
 using namespace gigchain::ui;
 using namespace Qt::StringLiterals;
 
@@ -96,6 +98,18 @@ private slots:
         const auto missing = none.install(u"xx"_s);
         QVERIFY(!missing.has_value());
         QVERIFY(missing.error().message.contains(u"xx"_s));
+    }
+
+    // The engine's messages the player reads (a file it cannot read, a
+    // plugin that will not load) are in the app's language too.
+    void theEnginesMessagesSpeakIt()
+    {
+        const QString english = engine::sfz::parse(u"<region>\nlokey=10\n<nonsense>\n"_s).error().message;
+        QVERIFY2(english.contains(u"at line"_s), qPrintable(english));
+        Language german;
+        QVERIFY(german.install(u"de"_s).has_value());
+        const QString translated = engine::sfz::parse(u"<region>\nlokey=10\n<nonsense>\n"_s).error().message;
+        QVERIFY2(translated.contains(u"in Zeile"_s), qPrintable(translated));
     }
 };
 

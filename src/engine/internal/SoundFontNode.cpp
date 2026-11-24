@@ -4,6 +4,7 @@
 #include "gigchain/core/Checks.h"
 #include "gigchain/engine/BuiltinReadings.h"
 
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -115,7 +116,7 @@ core::Result<void> SoundFontNode::setFile(const QString& path)
 {
     GC_ONLY_MAIN_THREAD();
     if (!path.isEmpty() && !QFileInfo(path).isFile()) {
-        return core::fail(core::ErrorCode::FileNotFound, u"There is no SoundFont at %1"_s.arg(path));
+        return core::fail(core::ErrorCode::FileNotFound, QCoreApplication::translate("Engine", "There is no SoundFont at %1").arg(path));
     }
     m_player.setFile(path); // its first preset (the window chooses another)
     m_edited.store(true, std::memory_order_relaxed);
@@ -142,7 +143,8 @@ core::Result<void> SoundFontNode::restoreEncodedState(const QByteArray& bytes)
 {
     GC_ONLY_MAIN_THREAD();
     const auto damaged = [](const QString& why) {
-        return core::fail(core::ErrorCode::InvalidData, u"The saved SoundFont Player settings are damaged (%1)"_s.arg(why));
+        return core::fail(core::ErrorCode::InvalidData,
+                          QCoreApplication::translate("Engine", "The saved SoundFont Player settings are damaged (%1)").arg(why));
     };
     if (!bytes.startsWith(kStateMagic)) return damaged(u"not in the expected format"_s);
     const QByteArray packed = bytes.mid(kStateMagic.size());
