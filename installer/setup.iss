@@ -86,6 +86,9 @@ Name: "chinesesimplified"; MessagesFile: "languages\ChineseSimplified.isl"
 [Messages]
 ; What the community Hindi and Indonesian files predate (newer Inno Setup
 ; messages): said in the language instead of English.
+; (The community file has these two backwards: "or earlier".)
+hindi.WinVersionTooLowError=इस प्रोग्राम को चलाने के लिए %1 वर्ज़न %2 या उसके बाद का चाहिए।
+hindi.WinVersionTooHighError=यह प्रोग्राम %1 वर्ज़न %2 या उसके बाद के वर्ज़न पर इंस्टॉल नहीं हो सकता।
 hindi.AbortRetryIgnoreCancel=इंस्टॉलेशन रद्द करें
 hindi.AbortRetryIgnoreSelectAction=क्या करना है चुनें
 hindi.AbortRetryIgnoreIgnore=एरर को &अनदेखा करें और आगे बढ़ें

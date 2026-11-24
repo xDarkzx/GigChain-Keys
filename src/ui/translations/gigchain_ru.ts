@@ -60,15 +60,18 @@
     </message>
     <message>
         <source>LOW</source>
-        <translation>НИЗ</translation>
+        <translatorcomment>same</translatorcomment>
+        <translation>LOW</translation>
     </message>
     <message>
         <source>MID</source>
-        <translation>СЕРЕДИНА</translation>
+        <translatorcomment>same</translatorcomment>
+        <translation>MID</translation>
     </message>
     <message>
         <source>HIGH</source>
-        <translation>ВЕРХ</translation>
+        <translatorcomment>same</translatorcomment>
+        <translation>HIGH</translation>
     </message>
     <message>
         <source>Orange: lifted. Blue: pushed down.</source>
@@ -92,7 +95,8 @@
     </message>
     <message>
         <source>RATE</source>
-        <translation>СКОРОСТЬ</translation>
+        <translatorcomment>same</translatorcomment>
+        <translation>RATE</translation>
     </message>
     <message>
         <source>Slope %1</source>

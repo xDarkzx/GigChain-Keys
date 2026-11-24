@@ -4,6 +4,9 @@ src/ui/translations/gigchain_<code>.ts, which lupdate fills with every
 marked text and which lrelease builds into the app.
 
     app_i18n.py check              every language: complete, current and intact
+    app_i18n.py check LUPDATE PROJECT
+                                   ... and holding every text the source marks
+                                   (lupdate and qt_add_translations' project file)
     app_i18n.py todo <code>        the texts still to translate, as JSON:
                                    [{"key", "context", "source", "comment", "plural"}]
     app_i18n.py merge <code> FILE  writes translations ({key: text, or a list
@@ -194,6 +197,35 @@ def check() -> list[str]:
     return problems
 
 
+def source_drift(lupdate: str, project: str) -> list[str]:
+    """The source's marked texts against the files': lupdate (as update_translations
+    runs it) on a copy of one file must leave it as it is."""
+    import shutil
+    import subprocess
+    import tempfile
+    code = LANGUAGES[0]
+    with tempfile.TemporaryDirectory() as folder:
+        copy = Path(folder) / path_of(code).name
+        shutil.copyfile(path_of(code), copy)
+        run = subprocess.run([lupdate, "-project", project, "-no-obsolete", "-locations", "none", "-ts", str(copy)],
+                             capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if run.returncode != 0:
+            return [f"lupdate failed ({run.returncode}): {run.stderr.strip() or run.stdout.strip()}"]
+        if copy.read_text(encoding="utf-8") == path_of(code).read_text(encoding="utf-8"):
+            return []
+        theirs = {(m.context, m.source, m.comment) for m in read(code).messages()}
+        ET_root = ET.parse(copy).getroot()
+        now = {(c.findtext("name") or "", m.findtext("source") or "", m.findtext("comment") or "")
+               for c in ET_root.findall("context") for m in c.findall("message")}
+        new = sorted(now - theirs)
+        gone = sorted(theirs - now)
+        problems = [f"new in the source, in no translation file: [{c}] \"{s[:70]}\"" for c, s, _ in new[:20]]
+        problems += [f"no longer in the source: [{c}] \"{s[:70]}\"" for c, s, _ in gone[:20]]
+        problems.append("the translation files are not current with the source: build the update_translations "
+                        "target, translate what is new, and commit")
+        return problems
+
+
 def todo(code: str) -> list[dict]:
     return [{"key": m.key, "context": m.context, "source": m.source, "comment": m.comment or m.extracomment,
              "plural": PLURALS[code] if m.plural else 0}
@@ -226,8 +258,10 @@ def merge(code: str, given: dict) -> list[str]:
 def main(argv: list[str]) -> int:
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8")
-    if len(argv) >= 2 and argv[1] == "check":
+    if len(argv) in (2, 4) and argv[1] == "check":
         problems = check()
+        if len(argv) == 4:  # check <lupdate> <lupdate project .json>: also against the source
+            problems += source_drift(argv[2], argv[3])
         for p in problems[:200]:
             print(p)
         if problems:

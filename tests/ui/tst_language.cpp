@@ -45,6 +45,10 @@ private slots:
         QCOMPARE(Language::resolve({}, {u"zh"_s}), u"zh_CN"_s);
         QCOMPARE(Language::resolve({}, {u"zh-TW"_s}), QString());
         QCOMPARE(Language::resolve({}, {u"zh-Hant-HK"_s}), QString());
+        // The script, when the tag names one, decides over the territory.
+        QCOMPARE(Language::resolve({}, {u"zh-Hans-HK"_s}), u"zh_CN"_s);
+        QCOMPARE(Language::resolve({}, {u"zh-Hant-CN"_s}), QString());
+        QCOMPARE(Language::resolve({}, {u"zh-HK"_s}), QString());
     }
 
     // What the player chose in Settings wins, English included; a value the

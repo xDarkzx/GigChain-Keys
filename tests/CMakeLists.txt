@@ -51,7 +51,18 @@ add_test(NAME notices_name_this_systems_files
 # Every language has every text, translated and intact (tools/app_i18n.py, docs/i18n/app.md).
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_FOUND)
-    add_test(NAME translations_complete COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/app_i18n.py check)
+    # (With lupdate and the project file qt_add_translations describes: a text
+    # new in the source fails it too. The .json is made from the configured
+    # .cmake as the update_translations target makes it, first.)
+    set(_lupdate_project ${CMAKE_BINARY_DIR}/src/ui/.lupdate/${PROJECT_NAME}_lupdate_project)
+    add_test(NAME translations_project
+             COMMAND ${CMAKE_COMMAND} -DIN_FILE=${_lupdate_project}.cmake -DOUT_FILE=${_lupdate_project}.json
+                     -P ${Qt6LinguistTools_DIR}/GenerateLUpdateProject.cmake)
+    set_tests_properties(translations_project PROPERTIES FIXTURES_SETUP lupdate_project)
+    add_test(NAME translations_complete
+             COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/app_i18n.py check $<TARGET_FILE:Qt6::lupdate>
+                     ${_lupdate_project}.json)
+    set_tests_properties(translations_complete PROPERTIES FIXTURES_REQUIRED lupdate_project)
 else()
     message(WARNING "No Python 3: the translations_complete test (tools/app_i18n.py check) is not registered")
 endif()

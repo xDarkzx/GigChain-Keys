@@ -47,7 +47,8 @@ public:
 
     // Installs `code`'s translations on the application, for as long as this
     // lives. An unknown code, or translations that will not load, fail with
-    // the cause (English stays).
+    // the cause (English stays). Qt's own for the language failing also fails,
+    // with the app's translations installed (said in the message).
     core::Result<void> install(const QString& code);
 
 private:

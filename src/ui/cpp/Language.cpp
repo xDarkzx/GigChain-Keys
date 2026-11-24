@@ -41,8 +41,12 @@ QString codeFor(const QString& tag)
     const QString main = lower.section(u'-', 0, 0);
     if (main == u"pt"_s) return u"pt_BR"_s;
     if (main == u"zh"_s) {
-        const bool traditional = lower.contains(u"hant"_s) || lower.contains(u"-tw"_s) || lower.contains(u"-hk"_s)
-                                 || lower.contains(u"-mo"_s);
+        // The script decides when the tag names one ("zh-Hans-HK": Simplified);
+        // else the territory (Taiwan, Hong Kong, Macao write Traditional).
+        const QStringList parts = lower.split(u'-');
+        if (parts.contains(u"hans"_s)) return u"zh_CN"_s;
+        if (parts.contains(u"hant"_s)) return {};
+        const bool traditional = parts.contains(u"tw"_s) || parts.contains(u"hk"_s) || parts.contains(u"mo"_s);
         return traditional ? QString() : u"zh_CN"_s;
     }
     return known(main) ? main : QString();
@@ -87,12 +91,23 @@ core::Result<void> Language::install(const QString& code)
         return core::fail(core::ErrorCode::FileReadFailed, u"The %1 translations are empty (%2)"_s.arg(code, file));
     }
     m_app = std::move(app);
-    // Qt's own (the standard dialogs' buttons), where Qt has the language.
-    if (auto qt = std::make_unique<QTranslator>(); QFile::exists(u":/i18n/qtbase_%1.qm"_s.arg(code))) {
-        if (qt->load(u":/i18n/qtbase_%1.qm"_s.arg(code)) && QCoreApplication::installTranslator(qt.get())) m_qt = std::move(qt);
-        else qCWarning(lcUi).noquote() << "Qt's own" << code << "translations did not load: its dialogs stay in English";
-    }
     qCInfo(lcUi).noquote() << "Language:" << code;
+    // Qt's own (the standard dialogs' buttons), where Qt has the language
+    // (none for some: not a failure). One that is there but fails is said.
+    const QString qtFile = u":/i18n/qtbase_%1.qm"_s.arg(code);
+    if (!QFile::exists(qtFile)) return {};
+    auto qt = std::make_unique<QTranslator>();
+    if (!qt->load(qtFile)) {
+        return core::fail(core::ErrorCode::FileReadFailed,
+                          u"Qt's own %1 translations could not be loaded (%2): the app speaks %1, Qt's standard dialog "
+                          "buttons stay English"_s.arg(code, qtFile));
+    }
+    if (!QCoreApplication::installTranslator(qt.get())) {
+        return core::fail(core::ErrorCode::FileReadFailed,
+                          u"Qt's own %1 translations are empty (%2): the app speaks %1, Qt's standard dialog buttons "
+                          "stay English"_s.arg(code, qtFile));
+    }
+    m_qt = std::move(qt);
     return {};
 }
 

@@ -95,7 +95,8 @@
     </message>
     <message>
         <source>RATE</source>
-        <translation>KECEPATAN</translation>
+        <translatorcomment>same</translatorcomment>
+        <translation>RATE</translation>
     </message>
     <message>
         <source>Slope %1</source>
