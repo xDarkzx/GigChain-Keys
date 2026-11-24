@@ -1,4 +1,5 @@
 // Loads the real Main.qml with the demo engine and fails on any QML warning.
+#include "Language.h"
 #include "Notifications.h"
 #include "Session.h"
 #include "StartupProgress.h"
@@ -561,6 +562,58 @@ private slots:
     {
         QCOMPARE(m_qml->rootObjects().size(), 1);
         settle();
+    }
+
+    // The main window in a language with long words and in other scripts
+    // (docs/i18n/app.md): it loads as cleanly as in English, and speaks it.
+    void speaksOtherLanguages_data()
+    {
+        QTest::addColumn<QString>("code");
+        QTest::addColumn<QString>("script"); // its own letters, when not Latin
+        QTest::newRow("de") << u"de"_s << QString();
+        QTest::newRow("ru") << u"ru"_s << u"[\\x{0400}-\\x{04FF}]"_s;
+        QTest::newRow("hi") << u"hi"_s << u"[\\x{0900}-\\x{097F}]"_s;
+        QTest::newRow("ja") << u"ja"_s << u"[\\x{3040}-\\x{30FF}\\x{4E00}-\\x{9FFF}]"_s;
+    }
+    void speaksOtherLanguages()
+    {
+        QFETCH(QString, code);
+        QFETCH(QString, script);
+        QStringList texts;
+        const std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+            if (item->isVisible()) {
+                if (const QVariant text = item->property("text"); text.isValid() && !text.toString().isEmpty()) texts << text.toString();
+            }
+            for (QQuickItem* child : item->childItems()) walk(child);
+        };
+        walk(window()->contentItem()); // in English (init)
+        const QStringList english = texts;
+        texts.clear();
+        m_qml.reset();
+        ui::Language language;
+        QVERIFY2(language.install(code), qPrintable(code));
+        m_qml = std::make_unique<QQmlApplicationEngine>();
+        ui::PluginIconProvider::install(*m_qml);
+        connect(m_qml.get(), &QQmlEngine::warnings, this, [this](const QList<QQmlError>& warnings) {
+            for (const QQmlError& w : warnings) m_warnings << w.toString();
+        });
+        m_qml->setInitialProperties(m_session->initialProperties());
+        m_qml->loadFromModule(u"GigChain.Ui"_s, u"Main"_s);
+        QCOMPARE(m_qml->rootObjects().size(), 1);
+        settle();
+        shoot(u"main-"_s + code);
+
+        // On screen in the language: words English does not show, in its own letters.
+        walk(window()->contentItem());
+        QStringList translated = texts;
+        translated.removeIf([&english](const QString& t) { return english.contains(t); });
+        QVERIFY2(!translated.isEmpty(), qPrintable(code + u": the window shows only English"_s));
+        if (!script.isEmpty()) {
+            const QRegularExpression letters(script);
+            QVERIFY2(std::ranges::any_of(translated, [&letters](const QString& t) { return letters.match(t).hasMatch(); }),
+                     qPrintable(code + u": none of its letters on screen: "_s + translated.join(u" | "_s)));
+        }
+        m_qml.reset(); // (before the language goes)
     }
 
     // The support ask works from the keyboard: Tab reaches "Don't ask again"
@@ -1390,6 +1443,31 @@ private slots:
         settle();
         QVERIFY(!m_session->settingsController().teaching().value(u"active"_s).toBool());
         QVERIFY(m_session->document().setLoopControls({}));
+    }
+
+    // Settings > General has the language box: the computer's, English and
+    // every language the app has; a new choice says it shows at the next start.
+    void settingsOfferTheLanguages()
+    {
+        auto* dialog = window()->findChild<QObject*>(u"settingsDialog"_s);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "open"));
+        QVERIFY(dialog->setProperty("page", 0)); // General
+        settle();
+        auto* box = dialog->findChild<QQuickItem*>(u"languageBox"_s);
+        QVERIFY(box != nullptr && box->isVisible());
+        QCOMPARE(box->property("count").toInt(), 2 + static_cast<int>(ui::Language::available().size()));
+        const QVariantList choices = ui::SettingsController::languages();
+        const auto german = std::ranges::find_if(choices, [](const QVariant& c) { return c.toMap().value(u"code"_s) == u"de"_s; });
+        QVERIFY(german != choices.end());
+        const int index = static_cast<int>(german - choices.begin());
+        QVERIFY(box->setProperty("currentIndex", index));
+        QVERIFY(QMetaObject::invokeMethod(box, "activated", Q_ARG(int, index)));
+        settle();
+        QCOMPARE(m_session->settingsController().language(), u"de"_s);
+        QVERIFY(m_session->settingsController().languageNeedsRestart() == (ui::Language::resolve(QString(), QLocale().uiLanguages()) != u"de"_s));
+        shoot(u"settings-language"_s);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        settle();
     }
 
     // Settings > MIDI shows each input's whole name: a keyboard's two ports

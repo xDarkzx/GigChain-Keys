@@ -1,5 +1,7 @@
 #include "SettingsMigration.h"
 
+#include "Language.h"
+
 #include "gigchain/core/Branding.h"
 
 #include <QFileInfo>
@@ -14,7 +16,9 @@ namespace gigchain::ui {
 
 bool carryOverSettings(const QSettings& previous, QSettings& current)
 {
-    if (!current.allKeys().isEmpty()) return false; // the current name already has settings
+    QStringList have = current.allKeys();
+    have.removeAll(Language::kSettingKey); // (the installer's language alone: not settings of this name yet)
+    if (!have.isEmpty()) return false;     // the current name already has settings
     const QStringList keys = previous.allKeys();
     if (keys.isEmpty()) return false;
     for (const QString& key : keys) current.setValue(key, previous.value(key));

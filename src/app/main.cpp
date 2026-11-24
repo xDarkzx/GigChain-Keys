@@ -138,9 +138,7 @@ int runApp(int argc, char** argv)
                                                    QLocale().uiLanguages());
         !code.isEmpty()) {
         if (auto installed = language.install(code); !installed) {
-            qCWarning(lcApp).noquote() << installed.error().message;
-        } else {
-            qCInfo(lcApp).noquote() << "Language:" << code;
+            qCWarning(lcApp).noquote() << installed.error().message; // (installed: Language logs it)
         }
     }
 

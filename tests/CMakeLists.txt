@@ -48,6 +48,13 @@ add_test(NAME platform_boundary
 add_test(NAME notices_name_this_systems_files
          COMMAND ${CMAKE_COMMAND} -DNOTICES=${CMAKE_BINARY_DIR}/installer/THIRD-PARTY-NOTICES.txt
                  -DSYSTEM=${CMAKE_SYSTEM_NAME} -P ${PROJECT_SOURCE_DIR}/cmake/CheckNotices.cmake)
+# Every language has every text, translated and intact (tools/app_i18n.py, docs/i18n/app.md).
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_FOUND)
+    add_test(NAME translations_complete COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/app_i18n.py check)
+else()
+    message(WARNING "No Python 3: the translations_complete test (tools/app_i18n.py check) is not registered")
+endif()
 
 add_subdirectory(platform)
 add_subdirectory(core)

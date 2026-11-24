@@ -579,6 +579,19 @@ private slots:
         QCOMPARE(m_settings->value(u"audio/bufferFrames"_s).toInt(), 128);
     }
 
+    // The installer writes only the language it spoke: the earlier name's
+    // settings still come across, and the language stays.
+    void previousSettingsComeAcrossTheInstallersLanguage()
+    {
+        QSettings previous(m_dir->filePath(u"previous.ini"_s), QSettings::IniFormat);
+        previous.setValue(u"audio/bufferFrames"_s, 128);
+        m_settings->setValue(Language::kSettingKey, u"de"_s);
+
+        QVERIFY(carryOverSettings(previous, *m_settings));
+        QCOMPARE(m_settings->value(u"audio/bufferFrames"_s).toInt(), 128);
+        QCOMPARE(m_settings->value(Language::kSettingKey).toString(), u"de"_s);
+    }
+
     // The Perform view's chart size (A−/A+): kept at once, remembered at the
     // next start, and never too small to read or too big to fit.
     void theChartSizeIsRemembered()
