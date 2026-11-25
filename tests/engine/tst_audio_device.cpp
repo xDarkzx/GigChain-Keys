@@ -9,6 +9,7 @@
 #include <QStandardPaths>
 #include <QtTest>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -336,6 +337,55 @@ private slots:
                  qPrintable(joined(notices)));
     }
 #endif
+
+    // #81: while a stop is under way the callback plays silence and calls no
+    // plugin (PipeWire's JACK cancels the audio thread: never inside a plugin),
+    // and it is counted while it runs, so the stop knows when none is.
+    void aQuietCallbackCallsNoPlugin()
+    {
+        AudioDevice device;
+        int rendered = 0;
+        device.m_render = [&](AudioBlock, const AudioInputs&) { ++rendered; };
+        device.m_outputChannels = 2;
+        device.m_quiet.store(true);
+        constexpr std::size_t kFrames = 64;
+        std::vector<float> out(2 * kFrames, 0.5F);
+        QCOMPARE(AudioDevice::callback(out.data(), nullptr, kFrames, 0.0, 0, &device), 0);
+        QCOMPARE(rendered, 0);
+        QVERIFY(std::ranges::all_of(out, [](float s) { return s == 0.0F; }));
+        QCOMPARE(device.m_inCallback.load(), 0); // (left again)
+    }
+
+    // #82: JACK's graph at another size than the stream: RtAudio refuses every
+    // cycle with a warning. Not logged hundreds of times a second: the stream
+    // is opened again (at the server's size), once, and the player told.
+    void aBufferSizeChangeOpensTheStreamAgain()
+    {
+        AudioDevice unopened;
+        unopened.onError(RTAUDIO_WARNING, "RtApiJack::callbackEvent(): the JACK buffer size has changed ... cannot process!");
+        QVERIFY(unopened.m_serverSizeChanged.load());
+        QVERIFY(unopened.m_errors.empty()); // not one line per refused cycle
+
+        if (AudioDevice::listOutputs().empty()) QSKIP("No audio outputs on this machine");
+        AudioDevice device;
+        std::atomic<int> blocks{0};
+        QVERIFY(device.open(std::nullopt, 256, [&](AudioBlock out, const AudioInputs&) {
+            std::fill_n(out.left, out.frames, 0.0F);
+            std::fill_n(out.right, out.frames, 0.0F);
+            blocks.fetch_add(1);
+        }).has_value());
+        waitForBlocks(blocks, 5);
+        for (int i = 0; i < 50; ++i) device.onError(RTAUDIO_WARNING, "RtApiJack::callbackEvent(): the JACK buffer size has changed ... cannot process!");
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"runs at another block size"_s));
+        const std::vector<Notice> notices = device.poll();
+        QVERIFY2(joined(notices).contains(u"changed its buffer size"_s), qPrintable(joined(notices)));
+        QVERIFY(device.isOpen());
+        QVERIFY(!device.m_serverSizeChanged.load());
+        const int before = blocks.load();
+        waitForBlocks(blocks, before + 5);
+        QVERIFY2(blocks.load() >= before + 5, "no sound after opening it again");
+        QVERIFY(device.poll().empty()); // once
+    }
 
     void unknownDeviceIsAnError()
     {

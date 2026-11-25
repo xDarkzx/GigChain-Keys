@@ -1173,6 +1173,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>使えるオーディオ出力がありません（%1）：出力をつなぐと音が戻ります</translation>
     </message>
     <message>
+        <source>The audio server changed its buffer size: %1 plays again at %2 samples (%3 ms)</source>
+        <translation>オーディオサーバーがバッファサイズを変更しました: %1 を %2 サンプル (%3 ms) で再び鳴らします</translation>
+    </message>
+    <message>
         <source>Playing through %1 until %2 is back</source>
         <translation>%2 が戻るまで %1 から鳴っています</translation>
     </message>
@@ -2779,8 +2783,8 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>インストゥルメントを検索</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>非表示のインストゥルメントを表示</translation>
+        <source>Show all hidden instruments (%1)</source>
+        <translation>非表示の楽器をすべて表示 (%1)</translation>
     </message>
     <message>
         <source>No instruments yet</source>
@@ -3719,16 +3723,28 @@ Type or paste them in the Chart tab.</source>
         <translation>非表示のインストゥルメント</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>非表示のインストゥルメントを表示</translation>
+        <source>Show again</source>
+        <translation>再表示</translation>
+    </message>
+    <message>
+        <source>Show all hidden instruments</source>
+        <translation>非表示の楽器をすべて表示</translation>
     </message>
     <message>
         <source>Hide an instrument by right-clicking it in the Instruments list.</source>
         <translation>インストゥルメント一覧で右クリックすると非表示にできます。</translation>
     </message>
     <message>
+        <source>None hidden. Hide an instrument by right-clicking it in the Instruments list.</source>
+        <translation>非表示の楽器はありません。楽器リストで楽器を右クリックすると非表示にできます。</translation>
+    </message>
+    <message>
         <source>Reset to defaults</source>
         <translation>初期設定に戻す</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>適用</translation>
     </message>
     <message>
         <source>OK</source>
@@ -5599,6 +5615,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The computer&apos;s language</source>
         <translation>コンピューターの言語</translation>
+    </message>
+    <message>
+        <source>With JACK the audio server sets the buffer size: the size chosen here is asked for from the next start.</source>
+        <translation>JACK ではバッファサイズはオーディオサーバーが決めます。ここで選んだサイズは次回の起動から要求されます。</translation>
+    </message>
+    <message>
+        <source>JACK runs at %1 samples now (%2 ms).</source>
+        <translation>JACK は現在 %1 サンプル (%2 ms) で動作しています。</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

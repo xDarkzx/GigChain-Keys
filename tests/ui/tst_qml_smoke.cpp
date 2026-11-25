@@ -1622,6 +1622,54 @@ private slots:
         QCOMPARE(stripAt(0)->property("silentReason").toString(), QString());
     }
 
+    // #86: one at a time on a touch screen, a finger on another strip's fader
+    // picks that instrument and leaves its volume alone; once it is the
+    // selected one, the fader moves. Playing all together, the fader moves at once.
+    void oneAtATimeTheFirstTouchOnAFaderOnlySelects()
+    {
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.addChannel(u"demo.piano"_s, u"Piano"_s));
+        QVERIFY(doc.addChannel(u"demo.pad"_s, u"Pad"_s));
+        QVERIFY(doc.setPlayMode(1));
+        doc.setSelectedChannel(0);
+        QQuickWindow* w = window();
+        w->requestActivate();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        settle();
+        auto* strips = m_qml->rootObjects().value(0)->findChild<QObject*>(u"mixerStrips"_s);
+        QVERIFY(strips != nullptr);
+        const auto stripAt = [strips](int i) {
+            QQuickItem* strip = nullptr;
+            QMetaObject::invokeMethod(strips, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, strip), Q_ARG(int, i));
+            return strip;
+        };
+        QQuickItem* padFader = findItem(stripAt(1), u"faderSlider"_s);
+        QVERIFY(padFader != nullptr);
+        // From below the cap (at 0 dB) further down: a slider jumps to the finger.
+        const QPoint from = padFader->mapToScene(QPointF(padFader->width() / 2, padFader->height() * 0.6)).toPoint();
+        const QPoint to = from + QPoint(0, 30);
+        const auto padVolume = [&doc] { return doc.currentPatch()->channels.at(1).volumeDb; };
+
+        fingerDrag(from, to);
+        settle();
+        QCOMPARE(doc.selectedChannel(), 1); // the pad picked
+        QCOMPARE(padVolume(), 0.0);         // and its volume left alone
+
+        fingerDrag(from, to); // selected now: the fader moves
+        settle();
+        QVERIFY2(padVolume() < -1.0, qPrintable(QString::number(padVolume())));
+
+        // Playing all together: no selecting first.
+        QVERIFY(doc.setPlayMode(0));
+        settle();
+        QQuickItem* pianoFader = findItem(stripAt(0), u"faderSlider"_s);
+        QVERIFY(pianoFader != nullptr);
+        const QPoint pianoFrom = pianoFader->mapToScene(QPointF(pianoFader->width() / 2, pianoFader->height() * 0.6)).toPoint();
+        fingerDrag(pianoFrom, pianoFrom + QPoint(0, 30));
+        settle();
+        QVERIFY(doc.currentPatch()->channels.at(0).volumeDb < -1.0);
+    }
+
     // A message is shown in its level's colour, in its own window (above a
     // plugin's window), and goes away by itself; worse news stays longer.
     void notificationsShowInTheirColourAndGoAwayByThemselves()

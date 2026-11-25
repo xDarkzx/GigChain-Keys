@@ -50,8 +50,11 @@ Item {
             }
         }
 
+        // Every hidden one at once (one by one: Settings > Plugins, #84).
         StageButton {
-            text: qsTr("Show hidden instruments")
+            objectName: "showAllHiddenBrowser"
+            text: qsTr("Show all hidden instruments (%1)").arg(browser.pluginModel.hiddenPlugins.length)
+            visible: browser.pluginModel.hiddenPlugins.length > 0
             font.pixelSize: Theme.smallFontSize
             Layout.alignment: Qt.AlignRight
             onClicked: browser.pluginModel.showAll()

@@ -1169,6 +1169,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>사용할 수 있는 오디오 출력이 없습니다(%1): 출력을 연결하면 소리가 돌아옵니다</translation>
     </message>
     <message>
+        <source>The audio server changed its buffer size: %1 plays again at %2 samples (%3 ms)</source>
+        <translation>오디오 서버의 버퍼 크기가 바뀌었습니다: %1이(가) %2 샘플(%3 ms)로 다시 재생됩니다</translation>
+    </message>
+    <message>
         <source>Playing through %1 until %2 is back</source>
         <translation>%2이(가) 돌아올 때까지 %1(으)로 소리가 납니다</translation>
     </message>
@@ -2769,8 +2773,8 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>악기 검색</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>숨긴 악기 보기</translation>
+        <source>Show all hidden instruments (%1)</source>
+        <translation>숨긴 악기 모두 표시 (%1)</translation>
     </message>
     <message>
         <source>No instruments yet</source>
@@ -3709,16 +3713,28 @@ Type or paste them in the Chart tab.</source>
         <translation>숨긴 악기</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>숨긴 악기 보기</translation>
+        <source>Show again</source>
+        <translation>다시 표시</translation>
+    </message>
+    <message>
+        <source>Show all hidden instruments</source>
+        <translation>숨긴 악기 모두 표시</translation>
     </message>
     <message>
         <source>Hide an instrument by right-clicking it in the Instruments list.</source>
         <translation>악기 목록에서 오른쪽 클릭해서 악기를 숨기세요.</translation>
     </message>
     <message>
+        <source>None hidden. Hide an instrument by right-clicking it in the Instruments list.</source>
+        <translation>숨긴 악기가 없습니다. 악기 목록에서 악기를 오른쪽 클릭하면 숨길 수 있습니다.</translation>
+    </message>
+    <message>
         <source>Reset to defaults</source>
         <translation>기본값으로 초기화</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>적용</translation>
     </message>
     <message>
         <source>OK</source>
@@ -5589,6 +5605,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The computer&apos;s language</source>
         <translation>컴퓨터 언어</translation>
+    </message>
+    <message>
+        <source>With JACK the audio server sets the buffer size: the size chosen here is asked for from the next start.</source>
+        <translation>JACK에서는 오디오 서버가 버퍼 크기를 정합니다. 여기서 고른 크기는 다음 시작부터 요청됩니다.</translation>
+    </message>
+    <message>
+        <source>JACK runs at %1 samples now (%2 ms).</source>
+        <translation>JACK은 지금 %1 샘플(%2 ms)로 동작합니다.</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

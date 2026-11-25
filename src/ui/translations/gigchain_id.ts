@@ -1197,6 +1197,10 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
         <translation>Tidak ada output audio yang tersedia (%1): suara kembali begitu ada yang dicolokkan</translation>
     </message>
     <message>
+        <source>The audio server changed its buffer size: %1 plays again at %2 samples (%3 ms)</source>
+        <translation>Server audio mengubah ukuran buffernya: %1 berbunyi lagi pada %2 sampel (%3 ms)</translation>
+    </message>
+    <message>
         <source>Playing through %1 until %2 is back</source>
         <translation>Suara keluar lewat %1 sampai %2 kembali</translation>
     </message>
@@ -2830,8 +2834,8 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
         <translation>Cari instrumen</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Tampilkan instrumen tersembunyi</translation>
+        <source>Show all hidden instruments (%1)</source>
+        <translation>Tampilkan semua instrumen tersembunyi (%1)</translation>
     </message>
     <message>
         <source>No instruments yet</source>
@@ -3787,16 +3791,28 @@ Ketik atau tempel di tab Chart.</translation>
         <translation>Instrumen tersembunyi</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Tampilkan instrumen tersembunyi</translation>
+        <source>Show again</source>
+        <translation>Tampilkan lagi</translation>
+    </message>
+    <message>
+        <source>Show all hidden instruments</source>
+        <translation>Tampilkan semua instrumen tersembunyi</translation>
     </message>
     <message>
         <source>Hide an instrument by right-clicking it in the Instruments list.</source>
         <translation>Sembunyikan instrumen dengan klik kanan padanya di daftar Instrumen.</translation>
     </message>
     <message>
+        <source>None hidden. Hide an instrument by right-clicking it in the Instruments list.</source>
+        <translation>Tidak ada yang disembunyikan. Sembunyikan instrumen dengan klik kanan di daftar Instrumen.</translation>
+    </message>
+    <message>
         <source>Reset to defaults</source>
         <translation>Kembalikan ke bawaan</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Terapkan</translation>
     </message>
     <message>
         <source>OK</source>
@@ -5711,6 +5727,14 @@ Ketik atau tempel di tab Chart.</translation>
     <message>
         <source>The computer&apos;s language</source>
         <translation>Bahasa komputer</translation>
+    </message>
+    <message>
+        <source>With JACK the audio server sets the buffer size: the size chosen here is asked for from the next start.</source>
+        <translation>Dengan JACK, server audio yang menentukan ukuran buffer: ukuran yang dipilih di sini diminta mulai saat dijalankan berikutnya.</translation>
+    </message>
+    <message>
+        <source>JACK runs at %1 samples now (%2 ms).</source>
+        <translation>JACK sekarang berjalan pada %1 sampel (%2 ms).</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

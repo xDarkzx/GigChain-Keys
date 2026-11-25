@@ -564,6 +564,19 @@ Rectangle {
                     strip.menu(volumeKnobMenuComponent).popup(at.x, at.y)
                 }
             }
+            // One at a time: touching a strip picks the instrument that plays,
+            // so the first touch only selects it; the fader moves once it is
+            // selected (#86). (Left button only: right-click still learns a knob.)
+            MouseArea {
+                objectName: "faderSelectFirst"
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                enabled: strip.doc.playMode === 1 && !strip.selected
+                onPressed: {
+                    strip.doc.selectedChannel = strip.index
+                    strip.takeKeys()
+                }
+            }
         }
 
         RowLayout {

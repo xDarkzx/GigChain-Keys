@@ -277,6 +277,7 @@ void SettingsController::load()
 {
     m_outputs = m_engine.audioOutputs();
     m_loaded = m_engine.audioSetup();
+    showChosenJackBuffer();
     m_pending = m_loaded;
     m_midi = m_engine.midiInputs();
     m_midiTouched = false;
@@ -791,6 +792,25 @@ double SettingsController::latencyMs() const
     return m_pending.sampleRate > 0 ? 1000.0 * m_pending.bufferFrames / m_pending.sampleRate : 0.0;
 }
 
+void SettingsController::showChosenJackBuffer()
+{
+    m_serverFrames = 0;
+    if (m_loaded.driver != engine::AudioDriver::Jack) return;
+    m_serverFrames = m_loaded.bufferFrames;
+    const auto chosen = m_settings.value(kBufferKey, kDefaultBuffer).toInt();
+    if (bufferSizes().contains(QVariant(chosen))) m_loaded.bufferFrames = static_cast<unsigned int>(chosen);
+}
+
+QString SettingsController::bufferNote() const
+{
+    if (m_pending.driver != engine::AudioDriver::Jack) return {};
+    QString general = tr("With JACK the audio server sets the buffer size: the size chosen here is asked for "
+                               "from the next start.");
+    if (m_serverFrames == 0 || m_loaded.sampleRate == 0) return general;
+    return tr("JACK runs at %1 samples now (%2 ms).").arg(m_serverFrames).arg(1000.0 * m_serverFrames / m_loaded.sampleRate, 0, 'f', 1)
+           + u" "_s + general;
+}
+
 QVariantList SettingsController::midiInputs() const
 {
     QVariantList list;
@@ -1077,6 +1097,8 @@ bool SettingsController::apply()
             m_settings.setValue(kRateKey, m_pending.sampleRate);
             m_settings.setValue(kBufferKey, m_pending.bufferFrames);
             m_settings.setValue(kInputDeviceKey, m_pending.inputDevice);
+            showChosenJackBuffer(); // (after the size is saved)
+            m_pending = m_loaded;   // (what runs now: Apply again changes nothing, #85)
             checkInputPermission();
         }
     }

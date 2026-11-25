@@ -182,6 +182,41 @@ private slots:
         QCOMPARE(again.instrumentMenu().value(u"vendors"_s).toList()[0].toMap().value(u"plugins"_s).toList().size(), 2);
     }
 
+    // #84: Settings lists each hidden instrument; one is shown again on its own.
+    void hiddenInstrumentsAreShownAgainOneByOne()
+    {
+        const OfficialArtwork artwork(noArtwork());
+        QSettings settings(m_dir->filePath(u"unhide.ini"_s), QSettings::IniFormat);
+        {
+            PluginListModel model(*m_engine, artwork, &settings);
+            model.setInstrumentsOnly(true);
+            QVERIFY(model.hiddenPlugins().isEmpty());
+            model.hide(u"spy/Pad.vst3"_s);
+            model.hide(u"spy/Piano.vst3"_s);
+            QCOMPARE(model.rowCount(), 0);
+            const QVariantList hidden = model.hiddenPlugins();
+            QCOMPARE(hidden.size(), 2);
+            QCOMPARE(hidden.first().toMap().value(u"pluginId"_s).toString(), u"spy/Pad.vst3"_s);
+            QCOMPARE(hidden.first().toMap().value(u"name"_s).toString(), u"Spy Pad"_s);
+
+            QSignalSpy menus(&model, &PluginListModel::menusChanged);
+            model.unhide(u"spy/Piano.vst3"_s);
+            QCOMPARE(menus.count(), 1); // (the list and the pickers are told)
+            QCOMPARE(model.rowCount(), 1);
+            QCOMPARE(roleData(model, 0, "name").toString(), u"Spy Piano"_s);
+            QCOMPARE(model.hiddenPlugins().size(), 1);
+            model.unhide(u"spy/Piano.vst3"_s); // not hidden: nothing changes
+            QCOMPARE(menus.count(), 1);
+        }
+        PluginListModel again(*m_engine, artwork, &settings); // next start: the Pad still hidden
+        again.setInstrumentsOnly(true);
+        QCOMPARE(again.rowCount(), 1);
+        QCOMPARE(again.hiddenPlugins().size(), 1);
+        again.unhide(u"spy/Pad.vst3"_s);
+        QCOMPARE(again.rowCount(), 2);
+        QVERIFY(!settings.contains(u"plugins/hidden"_s)); // none left: the key goes
+    }
+
     void favouritesStayOnTopAndRatingsAreRemembered()
     {
         const OfficialArtwork artwork(noArtwork());

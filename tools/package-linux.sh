@@ -50,7 +50,11 @@ if [ "$SKIP_TESTS" = 0 ]; then
 fi
 # How the packages start the app (tools/linux-launcher.sh: through pw-jack
 # when PipeWire runs, so JACK works from the menu, #70), with the app's path.
-launcher() { sed "s|^APP=@APP@\$|APP=$1|" "$ROOT/tools/linux-launcher.sh"; }
+# Where Qt keeps the app's settings (organization/name.conf: the buffer size, #83).
+launcher() {
+    sed -e "s|^APP=@APP@\$|APP=$1|" -e "s|@ORGANIZATION@|$(branding PRODUCT_BRAND)|" -e "s|@NAME@|$NAME|" \
+        "$ROOT/tools/linux-launcher.sh"
+}
 
 # ------------------------------------------------------------ the tools
 # linuxdeploy and its Qt plugin (AppImages themselves: run extracted, so no
@@ -195,6 +199,7 @@ rm -f "$APPRUN"
 launcher '"${APPDIR:-$(dirname "$(readlink -f "$0")")}/usr/bin/'"$EXE"'"' > "$APPRUN"
 chmod 755 "$APPRUN"
 grep -qF "/usr/bin/$EXE\"" "$APPRUN" || { echo "The AppImage's launcher does not start the app" >&2; exit 1; }
+grep -q '^[^#]*@[A-Z][A-Z]*@' "$APPRUN" && { echo "The AppImage's launcher still has a placeholder" >&2; exit 1; }
 APPIMAGE="$DIST/$EXE-$VERSION-x86_64.AppImage"
 rm -f "$APPIMAGE"
 ARCH=x86_64 appimagetool-x86_64.AppImage --no-appstream "$APPDIR" "$APPIMAGE" >/dev/null
@@ -215,6 +220,7 @@ launcher "\"$OPT/bin/$EXE\"" > "$DEB/usr/bin/$PACKAGE"
 chmod 755 "$DEB/usr/bin/$PACKAGE"
 grep -qxF "APP=\"$OPT/bin/$EXE\"" "$DEB/usr/bin/$PACKAGE" && [ -x "$DEB$OPT/bin/$EXE" ] \
     || { echo "The .deb's launcher does not start the app" >&2; exit 1; }
+grep -q '^[^#]*@[A-Z][A-Z]*@' "$DEB/usr/bin/$PACKAGE" && { echo "The .deb's launcher still has a placeholder" >&2; exit 1; }
 sed "s|^Exec=.*|Exec=/usr/bin/$PACKAGE %f|" "$WORK/$PACKAGE.desktop" > "$DEB/usr/share/applications/$PACKAGE.desktop"
 cp "$WORK/$PACKAGE.png" "$DEB/usr/share/icons/hicolor/256x256/apps/"
 cp "$WORK/$PACKAGE.xml" "$DEB/usr/share/mime/packages/"
