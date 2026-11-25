@@ -4,11 +4,13 @@ name: Pages
 # with translations (docs/i18n/website.md): tools/site_i18n.py writes each
 # page in each language from site/i18n/<language>.json. The download
 # buttons read the latest release's files from the GitHub API when a page
-# opens, so a new release needs no new pages.
+# opens, so a new release needs no new pages. Published from the `website`
+# branch (unprotected, so a text change is live in minutes with no pull
+# request); main keeps the code and checks the site in pull requests.
 "on":
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [website]
     paths: ["site/**", "docs/images/**", "branding/app-icon.png", "tools/site_i18n*.py", ".github/workflows/pages.yml"]
   # (A pull request: the same tests, checks and build; nothing published.)
   pull_request:
