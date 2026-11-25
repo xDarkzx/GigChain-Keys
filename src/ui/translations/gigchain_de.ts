@@ -1186,6 +1186,10 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
         <translation>Kein Audioausgang verfügbar (%1): Der Klang kommt zurück, sobald einer angeschlossen wird</translation>
     </message>
     <message>
+        <source>The audio server changed its buffer size: %1 plays again at %2 samples (%3 ms)</source>
+        <translation>Der Audioserver hat seine Puffergröße geändert: %1 spielt wieder mit %2 Samples (%3 ms)</translation>
+    </message>
+    <message>
         <source>Playing through %1 until %2 is back</source>
         <translation>Wiedergabe über %1, bis %2 wieder da ist</translation>
     </message>
@@ -2810,8 +2814,8 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
         <translation>Instrumente suchen</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Ausgeblendete Instrumente zeigen</translation>
+        <source>Show all hidden instruments (%1)</source>
+        <translation>Alle ausgeblendeten Instrumente zeigen (%1)</translation>
     </message>
     <message>
         <source>No instruments yet</source>
@@ -3768,16 +3772,28 @@ Tipp sie im Tab Chart ein oder füge sie ein.</translation>
         <translation>Ausgeblendete Instrumente</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Ausgeblendete Instrumente zeigen</translation>
+        <source>Show again</source>
+        <translation>Wieder zeigen</translation>
+    </message>
+    <message>
+        <source>Show all hidden instruments</source>
+        <translation>Alle ausgeblendeten Instrumente zeigen</translation>
     </message>
     <message>
         <source>Hide an instrument by right-clicking it in the Instruments list.</source>
         <translation>Blende ein Instrument aus, indem du es in der Instrumentenliste rechts anklickst.</translation>
     </message>
     <message>
+        <source>None hidden. Hide an instrument by right-clicking it in the Instruments list.</source>
+        <translation>Keine ausgeblendet. Ein Instrument blendest du per Rechtsklick in der Instrumentenliste aus.</translation>
+    </message>
+    <message>
         <source>Reset to defaults</source>
         <translation>Auf Standard zurücksetzen</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Übernehmen</translation>
     </message>
     <message>
         <source>OK</source>
@@ -5688,6 +5704,14 @@ Tipp sie im Tab Chart ein oder füge sie ein.</translation>
     <message>
         <source>The computer&apos;s language</source>
         <translation>Die Sprache des Computers</translation>
+    </message>
+    <message>
+        <source>With JACK the audio server sets the buffer size: the size chosen here is asked for from the next start.</source>
+        <translation>Bei JACK legt der Audioserver die Puffergröße fest: Die hier gewählte Größe wird ab dem nächsten Start angefordert.</translation>
+    </message>
+    <message>
+        <source>JACK runs at %1 samples now (%2 ms).</source>
+        <translation>JACK läuft gerade mit %1 Samples (%2 ms).</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

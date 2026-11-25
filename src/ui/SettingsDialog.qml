@@ -309,6 +309,17 @@ StageDialog {
                                 color: Theme.textDim
                             }
                         }
+                        // JACK: the server's size, not the one chosen above (#83).
+                        Label {
+                            objectName: "bufferNote"
+                            visible: text !== ""
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            text: dialog.settings.bufferNote
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
                         SettingsSection { title: qsTr("Outputs") }
                         SettingsRow {
                             label: qsTr("Click to")
@@ -852,15 +863,41 @@ StageDialog {
                             }
                         }
                         SettingsSection { title: qsTr("Hidden instruments") }
+                        // Each one shown again on its own, or all at once (#84).
+                        Repeater {
+                            model: dialog.pluginModel.hiddenPlugins
+                            delegate: RowLayout {
+                                id: hiddenRow
+                                required property var modelData
+                                objectName: "hiddenPluginRow"
+                                Layout.leftMargin: 20
+                                Layout.rightMargin: 20
+                                spacing: 12
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: hiddenRow.modelData.name
+                                    elide: Text.ElideRight
+                                }
+                                StageButton {
+                                    objectName: "unhidePlugin"
+                                    text: qsTr("Show again")
+                                    onClicked: dialog.pluginModel.unhide(hiddenRow.modelData.pluginId)
+                                }
+                            }
+                        }
                         RowLayout {
                             Layout.leftMargin: 20
                             spacing: 12
                             StageButton {
-                                text: qsTr("Show hidden instruments")
+                                objectName: "showAllHidden"
+                                text: qsTr("Show all hidden instruments")
+                                enabled: dialog.pluginModel.hiddenPlugins.length > 0
                                 onClicked: dialog.pluginModel.showAll()
                             }
                             Label {
-                                text: qsTr("Hide an instrument by right-clicking it in the Instruments list.")
+                                text: dialog.pluginModel.hiddenPlugins.length > 0
+                                      ? qsTr("Hide an instrument by right-clicking it in the Instruments list.")
+                                      : qsTr("None hidden. Hide an instrument by right-clicking it in the Instruments list.")
                                 color: Theme.textDim
                             }
                         }
@@ -895,6 +932,12 @@ StageDialog {
             StageButton {
                 text: qsTr("Cancel")
                 onClicked: dialog.close()
+            }
+            // Applies the changes and keeps the window open, to try them (#85).
+            StageButton {
+                objectName: "settingsApply"
+                text: qsTr("Apply")
+                onClicked: dialog.settings.apply()
             }
             StageButton {
                 objectName: "settingsOk"

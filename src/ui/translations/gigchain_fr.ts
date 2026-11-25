@@ -1185,6 +1185,10 @@ Mettez un accord entre [crochets] juste avant le mot sur lequel il change.</tran
         <translation>Aucune sortie audio disponible (%1) : le son reviendra dès qu’une sortie sera branchée</translation>
     </message>
     <message>
+        <source>The audio server changed its buffer size: %1 plays again at %2 samples (%3 ms)</source>
+        <translation>Le serveur audio a changé sa taille de tampon : %1 rejoue à %2 échantillons (%3 ms)</translation>
+    </message>
+    <message>
         <source>Playing through %1 until %2 is back</source>
         <translation>Lecture par %1 jusqu’au retour de %2</translation>
     </message>
@@ -2800,8 +2804,8 @@ Mettez un accord entre [crochets] juste avant le mot sur lequel il change.</tran
         <translation>Rechercher des instruments</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Afficher les instruments masqués</translation>
+        <source>Show all hidden instruments (%1)</source>
+        <translation>Afficher tous les instruments masqués (%1)</translation>
     </message>
     <message>
         <source>No instruments yet</source>
@@ -3755,16 +3759,28 @@ Tapez-les ou collez-les dans l’onglet Grille.</translation>
         <translation>Instruments masqués</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Afficher les instruments masqués</translation>
+        <source>Show again</source>
+        <translation>Afficher à nouveau</translation>
+    </message>
+    <message>
+        <source>Show all hidden instruments</source>
+        <translation>Afficher tous les instruments masqués</translation>
     </message>
     <message>
         <source>Hide an instrument by right-clicking it in the Instruments list.</source>
         <translation>Masquez un instrument par un clic droit dessus dans la liste Instruments.</translation>
     </message>
     <message>
+        <source>None hidden. Hide an instrument by right-clicking it in the Instruments list.</source>
+        <translation>Aucun masqué. Masquez un instrument par un clic droit dans la liste des instruments.</translation>
+    </message>
+    <message>
         <source>Reset to defaults</source>
         <translation>Rétablir les valeurs par défaut</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Appliquer</translation>
     </message>
     <message>
         <source>OK</source>
@@ -5665,6 +5681,14 @@ Tapez-les ou collez-les dans l’onglet Grille.</translation>
     <message>
         <source>The computer&apos;s language</source>
         <translation>La langue de l’ordinateur</translation>
+    </message>
+    <message>
+        <source>With JACK the audio server sets the buffer size: the size chosen here is asked for from the next start.</source>
+        <translation>Avec JACK, le serveur audio fixe la taille du tampon : la taille choisie ici est demandée dès le prochain démarrage.</translation>
+    </message>
+    <message>
+        <source>JACK runs at %1 samples now (%2 ms).</source>
+        <translation>JACK tourne actuellement à %1 échantillons (%2 ms).</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

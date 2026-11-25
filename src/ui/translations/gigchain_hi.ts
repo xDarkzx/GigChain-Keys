@@ -1219,6 +1219,10 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <translation>कोई audio output उपलब्ध नहीं (%1): कोई लगाते ही आवाज़ लौट आएगी</translation>
     </message>
     <message>
+        <source>The audio server changed its buffer size: %1 plays again at %2 samples (%3 ms)</source>
+        <translation>ऑडियो सर्वर ने अपना बफ़र साइज़ बदला: %1 फिर से %2 सैंपल (%3 ms) पर बजता है</translation>
+    </message>
+    <message>
         <source>Playing through %1 until %2 is back</source>
         <translation>%2 वापस आने तक %1 से बज रहा है</translation>
     </message>
@@ -2877,8 +2881,8 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <translation>Instruments खोजें</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>छुपे हुए instruments दिखाएँ</translation>
+        <source>Show all hidden instruments (%1)</source>
+        <translation>सभी छिपे इंस्ट्रूमेंट दिखाएँ (%1)</translation>
     </message>
     <message>
         <source>No instruments yet</source>
@@ -3868,16 +3872,28 @@ Type or paste them in the Chart tab.</source>
         <translation>छुपे हुए instruments</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>छुपे हुए instruments दिखाएँ</translation>
+        <source>Show again</source>
+        <translation>फिर से दिखाएँ</translation>
+    </message>
+    <message>
+        <source>Show all hidden instruments</source>
+        <translation>सभी छिपे इंस्ट्रूमेंट दिखाएँ</translation>
     </message>
     <message>
         <source>Hide an instrument by right-clicking it in the Instruments list.</source>
         <translation>Instruments list में किसी instrument पर right-click करके उसे छुपाएँ।</translation>
     </message>
     <message>
+        <source>None hidden. Hide an instrument by right-clicking it in the Instruments list.</source>
+        <translation>कोई छिपा नहीं है। इंस्ट्रूमेंट्स सूची में किसी इंस्ट्रूमेंट पर राइट-क्लिक करके उसे छिपाएँ।</translation>
+    </message>
+    <message>
         <source>Reset to defaults</source>
         <translation>Defaults पर reset करें</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>लागू करें</translation>
     </message>
     <message>
         <source>OK</source>
@@ -5828,6 +5844,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The computer&apos;s language</source>
         <translation>कंप्यूटर की भाषा</translation>
+    </message>
+    <message>
+        <source>With JACK the audio server sets the buffer size: the size chosen here is asked for from the next start.</source>
+        <translation>JACK में बफ़र साइज़ ऑडियो सर्वर तय करता है: यहाँ चुना गया साइज़ अगली बार शुरू करने से माँगा जाता है।</translation>
+    </message>
+    <message>
+        <source>JACK runs at %1 samples now (%2 ms).</source>
+        <translation>JACK अभी %1 सैंपल (%2 ms) पर चल रहा है।</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

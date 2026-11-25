@@ -51,6 +51,8 @@ class SettingsController : public QObject
     Q_PROPERTY(int bufferFrames READ bufferFrames WRITE setBufferFrames NOTIFY changed)
     Q_PROPERTY(QVariantList bufferSizes READ bufferSizes CONSTANT)
     Q_PROPERTY(double latencyMs READ latencyMs NOTIFY changed)                   // one buffer at the chosen rate
+    // With JACK: the audio server sets the buffer size, not the app (#83); what it is now ("" other drivers).
+    Q_PROPERTY(QString bufferNote READ bufferNote NOTIFY changed)
     Q_PROPERTY(QVariantList midiInputs READ midiInputs NOTIFY changed)            // [{name, enabled, mode (setMidiInputMode), channel, taught}]
     Q_PROPERTY(QVariantMap teaching READ teaching NOTIFY changed)                 // see startTeaching
     Q_PROPERTY(QString running READ running NOTIFY changed)                      // the engine's status line
@@ -141,6 +143,7 @@ public:
     void setBufferFrames(int frames);
     [[nodiscard]] static QVariantList bufferSizes();
     [[nodiscard]] double latencyMs() const;
+    [[nodiscard]] QString bufferNote() const;
     [[nodiscard]] QVariantList midiInputs() const;
     [[nodiscard]] QString running() const { return m_running; }
     [[nodiscard]] QString error() const { return m_error; }
@@ -268,6 +271,10 @@ private:
     // Saves the settings now; empty, or why they could not be (logged, and in `error`).
     QString keptOrWhyNot();
     void keepRateValid();
+    // With JACK the engine runs at the server's size: the box shows the size
+    // the player chose (saved, asked of PipeWire at the next start), so it
+    // neither jumps back nor reopens the stream for nothing (#83).
+    void showChosenJackBuffer();
     [[nodiscard]] engine::MidiSetup pendingMidi() const;
     static void saveMidi(QSettings& settings, const engine::MidiSetup& midi);
 
@@ -277,6 +284,7 @@ private:
     std::vector<engine::AudioOutput> m_outputs;
     engine::AudioSetup m_pending;
     engine::AudioSetup m_loaded; // what ran when the window opened
+    unsigned int m_serverFrames = 0; // JACK: the server's buffer size now (0 other drivers)
     std::vector<engine::MidiPort> m_midi; // as shown, with this page's changes
     bool m_midiTouched = false;           // changed on this page since load()
     bool m_reopenLast = false;

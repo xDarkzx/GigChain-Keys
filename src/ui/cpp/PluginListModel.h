@@ -32,6 +32,8 @@ class PluginListModel : public QAbstractListModel
     // The picker menus (see effectMenu()/instrumentMenu()); they change when plugins are hidden or shown.
     Q_PROPERTY(QVariantMap effectMenu READ effectMenu NOTIFY menusChanged)
     Q_PROPERTY(QVariantMap instrumentMenu READ instrumentMenu NOTIFY menusChanged)
+    // The hidden plugins that are installed, by name: [{pluginId, name}] (Settings > Plugins, #84).
+    Q_PROPERTY(QVariantList hiddenPlugins READ hiddenPlugins NOTIFY menusChanged)
 
 public:
     enum Role
@@ -96,9 +98,12 @@ public:
     // string, or why it could not (also logged) for the caller to show.
     Q_INVOKABLE QString showInFolder(const QString& pluginId) const;
 
-    // Hide a plugin from the browser list and the pickers (remembered); showAll() undoes every hide.
+    // Hide a plugin from the browser list and the pickers (remembered); unhide() undoes
+    // one hide, showAll() every one.
     Q_INVOKABLE void hide(const QString& pluginId);
+    Q_INVOKABLE void unhide(const QString& pluginId);
     Q_INVOKABLE void showAll();
+    [[nodiscard]] QVariantList hiddenPlugins() const;
 
 signals:
     void filterTextChanged();

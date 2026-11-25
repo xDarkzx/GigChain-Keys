@@ -552,6 +552,9 @@ Rectangle {
             Layout.minimumHeight: 60 // (a short mixer squeezes the fader, never the mute, solo and name below it)
             volumeDb: strip.volumeDb
             level: strip.peak
+            // One at a time: a strip not selected is selected first (below), with
+            // any finger (#86).
+            movable: !(strip.doc.playMode === 1 && !strip.selected)
             onVolumeMoved: (db) => strip.doc.setChannelVolume(strip.index, db)
             // Right-click: learn the keyboard knob or fader that moves it.
             MouseArea {
@@ -562,6 +565,19 @@ Rectangle {
                 onClicked: (mouse) => {
                     const at = mapToItem(strip, mouse.x, mouse.y) // (the menu opens where it was clicked)
                     strip.menu(volumeKnobMenuComponent).popup(at.x, at.y)
+                }
+            }
+            // One at a time: touching a strip picks the instrument that plays,
+            // so the first touch only selects it; the fader moves once it is
+            // selected (#86). (Left button only: right-click still learns a knob.)
+            MouseArea {
+                objectName: "faderSelectFirst"
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                enabled: strip.doc.playMode === 1 && !strip.selected
+                onPressed: {
+                    strip.doc.selectedChannel = strip.index
+                    strip.takeKeys()
                 }
             }
         }

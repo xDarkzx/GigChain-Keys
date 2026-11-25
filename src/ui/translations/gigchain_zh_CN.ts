@@ -1169,6 +1169,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>没有可用的音频输出（%1）：接上一个后声音就会回来</translation>
     </message>
     <message>
+        <source>The audio server changed its buffer size: %1 plays again at %2 samples (%3 ms)</source>
+        <translation>音频服务器更改了缓冲区大小：%1 以 %2 个采样（%3 毫秒）重新播放</translation>
+    </message>
+    <message>
         <source>Playing through %1 until %2 is back</source>
         <translation>在 %2 回来之前通过 %1 发声</translation>
     </message>
@@ -2769,8 +2773,8 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>搜索乐器</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>显示隐藏的乐器</translation>
+        <source>Show all hidden instruments (%1)</source>
+        <translation>显示所有隐藏的乐器（%1）</translation>
     </message>
     <message>
         <source>No instruments yet</source>
@@ -3709,16 +3713,28 @@ Type or paste them in the Chart tab.</source>
         <translation>隐藏的乐器</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>显示隐藏的乐器</translation>
+        <source>Show again</source>
+        <translation>重新显示</translation>
+    </message>
+    <message>
+        <source>Show all hidden instruments</source>
+        <translation>显示所有隐藏的乐器</translation>
     </message>
     <message>
         <source>Hide an instrument by right-clicking it in the Instruments list.</source>
         <translation>在乐器列表中右键一个乐器即可隐藏它。</translation>
     </message>
     <message>
+        <source>None hidden. Hide an instrument by right-clicking it in the Instruments list.</source>
+        <translation>没有隐藏的乐器。在乐器列表中右键单击乐器即可将其隐藏。</translation>
+    </message>
+    <message>
         <source>Reset to defaults</source>
         <translation>恢复默认</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>应用</translation>
     </message>
     <message>
         <source>OK</source>
@@ -5589,6 +5605,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The computer&apos;s language</source>
         <translation>电脑的语言</translation>
+    </message>
+    <message>
+        <source>With JACK the audio server sets the buffer size: the size chosen here is asked for from the next start.</source>
+        <translation>使用 JACK 时，缓冲区大小由音频服务器决定：此处选择的大小将从下次启动时开始请求。</translation>
+    </message>
+    <message>
+        <source>JACK runs at %1 samples now (%2 ms).</source>
+        <translation>JACK 当前以 %1 个采样（%2 毫秒）运行。</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

@@ -15,6 +15,7 @@ cat > "$work/opt/bin/app" <<'EOF'
 #!/bin/sh
 printf 'app'
 for arg in "$@"; do printf ' [%s]' "$arg"; done
+[ -n "${PIPEWIRE_LATENCY:-}" ] && printf ' latency=%s' "$PIPEWIRE_LATENCY"
 printf '\n'
 EOF
 cat > "$work/bin/pw-jack" <<'EOF'
@@ -26,10 +27,25 @@ chmod +x "$work/opt/bin/app" "$work/bin/pw-jack"
 
 # The launcher as the .deb installs it (the app's path), and as the
 # AppImage's AppRun (next to it, wherever the AppImage is).
-sed "s|^APP=@APP@\$|APP=\"$work/opt/bin/app\"|" "$ROOT/tools/linux-launcher.sh" > "$work/launcher"
-sed 's|^APP=@APP@$|APP="${APPDIR:-$(dirname "$(readlink -f "$0")")}/opt/bin/app"|' "$ROOT/tools/linux-launcher.sh" > "$work/AppRun"
+names=(-e "s|@ORGANIZATION@|GigChain|" -e "s|@NAME@|GigChain Keys|") # (as tools/package-linux.sh)
+sed -e "s|^APP=@APP@\$|APP=\"$work/opt/bin/app\"|" "${names[@]}" "$ROOT/tools/linux-launcher.sh" > "$work/launcher"
+sed -e 's|^APP=@APP@$|APP="${APPDIR:-$(dirname "$(readlink -f "$0")")}/opt/bin/app"|' "${names[@]}" \
+    "$ROOT/tools/linux-launcher.sh" > "$work/AppRun"
 chmod +x "$work/launcher" "$work/AppRun"
-grep -q '^APP=@APP@' "$work/launcher" "$work/AppRun" && { echo "FAIL: @APP@ was not replaced" >&2; exit 1; }
+grep -q '^[^#]*@[A-Z][A-Z]*@' "$work/launcher" "$work/AppRun" && { echo "FAIL: a placeholder was not replaced" >&2; exit 1; }
+
+# Saved settings, as Qt writes them (~/.config/<organization>/<name>.conf).
+settings() { # <folder> <file contents>
+    mkdir -p "$1/GigChain"
+    printf '%b' "$2" > "$1/GigChain/GigChain Keys.conf"
+}
+settings "$work/cfg-256" '[General]\nbufferFrames=999\n\n[audio]\ndriver=jack\nbufferFrames=256\nsampleRate=48000\n'
+settings "$work/cfg-own-rate" '[audio]\nbufferFrames=128\nsampleRate=0\n'
+settings "$work/cfg-crlf" '[audio]\r\nbufferFrames=64\r\nsampleRate=44100\r\n'
+settings "$work/cfg-none" '[audio]\ndriver=jack\n'
+settings "$work/cfg-garbage" '[audio]\nbufferFrames=lots\n'
+settings "$work/cfg-huge" '[audio]\nbufferFrames=1000000\n'
+settings "$work/home/.config" '[audio]\nbufferFrames=256\nsampleRate=48000\n'
 
 # PipeWire running: its socket in the runtime folder.
 python3 -c 'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$work/run/pipewire-0"
@@ -86,6 +102,28 @@ expect "AppImage: APPDIR, as the AppImage runtime sets it" "pw-jack app" \
 ln -s "$work/AppRun" "$work/bin/linked-AppRun"
 expect "AppImage: started through a link to AppRun" "app" \
     "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/norun" -- "$work/bin/linked-AppRun"
+
+# The buffer size saved in Settings is asked of PipeWire (#83).
+expect "saved buffer: PipeWire is asked for it" "pw-jack app [x] latency=256/48000" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "XDG_CONFIG_HOME=$work/cfg-256" -- "$work/launcher" x
+expect "saved buffer, the device's own rate: 48 kHz assumed" "pw-jack app latency=128/48000" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "XDG_CONFIG_HOME=$work/cfg-own-rate" -- "$work/launcher"
+expect "saved buffer, Windows line ends" "pw-jack app latency=64/44100" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "XDG_CONFIG_HOME=$work/cfg-crlf" -- "$work/launcher"
+expect "saved buffer under HOME's .config" "pw-jack app latency=256/48000" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "HOME=$work/home" -- "$work/launcher"
+expect "PIPEWIRE_LATENCY already set: left as it is" "pw-jack app latency=512/48000" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "XDG_CONFIG_HOME=$work/cfg-256" "PIPEWIRE_LATENCY=512/48000" -- "$work/launcher"
+expect "no buffer saved: nothing asked" "pw-jack app" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "XDG_CONFIG_HOME=$work/cfg-none" -- "$work/launcher"
+expect "a buffer that is not a number: nothing asked" "pw-jack app" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "XDG_CONFIG_HOME=$work/cfg-garbage" -- "$work/launcher"
+expect "an impossible buffer: nothing asked" "pw-jack app" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "XDG_CONFIG_HOME=$work/cfg-huge" -- "$work/launcher"
+expect "no settings file: nothing asked" "pw-jack app" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "XDG_CONFIG_HOME=$work/nowhere" -- "$work/launcher"
+expect "not through pw-jack: nothing asked" "app" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/norun" "XDG_CONFIG_HOME=$work/cfg-256" -- "$work/launcher"
 
 if [ "$failures" -gt 0 ]; then
     echo "$failures launcher check(s) failed" >&2

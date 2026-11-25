@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <chrono>
 #include <span>
+#include <string_view>
 #include <thread>
 
 using namespace Qt::StringLiterals;
@@ -33,17 +34,36 @@ std::unique_ptr<RtAudio> probe(AudioApi api)
     });
 }
 
+// How long a stop waits for a callback already running (a plugin's block) to end.
+constexpr auto kCallbackIdleWait = std::chrono::milliseconds(200);
+// RtAudio's warning when JACK runs at another block size than the stream's (6.0.1).
+constexpr std::string_view kJackSizeChanged = "JACK buffer size has changed";
+// At most one reopen for a size change in this long (the graph may still be moving).
+constexpr auto kSizeReopenGap = std::chrono::seconds(1);
+
+} // namespace
+
 // Stops a running stream at once. JACK's stopStream() first waits for its last
 // blocks to play out, but RtAudio refuses every block of a size other than the
 // one asked for, so with PipeWire's graph running at another size the wait never
 // ends and the app hangs (#54). abortStream() skips that wait: no callback runs
-// once it returns, which is all a pause or a close needs.
-RtAudioErrorType stopRunning(RtAudio& rt)
+// once it returns, which is all a pause or a close needs. But PipeWire stops its
+// JACK thread with pthread_cancel, which must not land inside a plugin (#81): the
+// callback goes quiet first, and the stop waits (briefly) for the one running.
+bool AudioDevice::stopRunning()
 {
-    return rt.getCurrentApi() == RtAudio::UNIX_JACK ? rt.abortStream() : rt.stopStream();
+    if (m_rtaudio->getCurrentApi() != RtAudio::UNIX_JACK) return m_rtaudio->stopStream() == RTAUDIO_NO_ERROR;
+    m_quiet.store(true);
+    const auto until = std::chrono::steady_clock::now() + kCallbackIdleWait;
+    while (m_inCallback.load() > 0 && std::chrono::steady_clock::now() < until) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    if (m_inCallback.load() > 0) {
+        qCWarning(lcEngine).noquote() << "A block of" << m_choice.name << "was still playing after"
+                                      << kCallbackIdleWait.count() << "ms: stopping it anyway";
+    }
+    return m_rtaudio->abortStream() == RTAUDIO_NO_ERROR;
 }
-
-} // namespace
 
 AudioDevice::AudioDevice() = default;
 
@@ -109,7 +129,8 @@ core::Result<void> AudioDevice::open(std::optional<DeviceChoice> choice, unsigne
     auto opened = openUnlogged(std::move(choice), bufferFrames, askedRate, std::move(input));
     if (opened) {
         qCInfo(lcEngine).noquote() << "Audio output:" << m_choice.name << "(" << apiName(m_choice.api) << ")"
-                                   << m_sampleRate << "Hz," << m_maxBlock << "frames, latency" << m_latencyMs << "ms";
+                                   << m_sampleRate << "Hz," << m_maxBlock << "frames (asked" << bufferFrames << "), latency"
+                                   << m_latencyMs << "ms";
         if (m_inputChannels > 0) {
             qCInfo(lcEngine).noquote() << "Audio input:" << m_input.name << "," << m_inputChannels << "channels";
         }
@@ -230,6 +251,8 @@ core::Result<void> AudioDevice::openUnlogged(std::optional<DeviceChoice> choice,
     if (input) m_input = *input;
     m_maxBlock = static_cast<int>(frames);
     m_sampleRate = rt->getStreamSampleRate();
+    m_quiet.store(false); // (quiet since the last stop)
+    m_serverSizeChanged.store(false); // (refusals of the stream before are over)
     if (rt->startStream() != RTAUDIO_NO_ERROR) {
         rt->closeStream();
         m_inputChannels = 0;
@@ -267,7 +290,7 @@ void AudioDevice::close()
             return;
         }
     }
-    if (m_rtaudio->isStreamRunning() && stopRunning(*m_rtaudio) != RTAUDIO_NO_ERROR) {
+    if (m_rtaudio->isStreamRunning() && !stopRunning()) {
         qCWarning(lcEngine).noquote() << "Stopping" << m_choice.name << "reported an error";
     }
     if (m_rtaudio->isStreamOpen()) m_rtaudio->closeStream();
@@ -277,7 +300,7 @@ void AudioDevice::close()
 core::Result<void> AudioDevice::pause()
 {
     if (!m_rtaudio || !m_rtaudio->isStreamRunning()) return {};
-    if (stopRunning(*m_rtaudio) != RTAUDIO_NO_ERROR) {
+    if (!stopRunning()) {
         const std::scoped_lock lock(m_errorMutex);
         const QString why = m_errors.empty() ? QCoreApplication::translate("Engine", "unknown error") : m_errors.back();
         m_errors.clear();
@@ -296,6 +319,7 @@ core::Result<void> AudioDevice::resume()
         m_expectRunning = true;
         return {};
     }
+    m_quiet.store(false); // (quiet since the pause)
     if (m_rtaudio->startStream() != RTAUDIO_NO_ERROR) {
         const std::scoped_lock lock(m_errorMutex);
         const QString why = m_errors.empty() ? QCoreApplication::translate("Engine", "unknown error") : m_errors.back();
@@ -345,6 +369,13 @@ std::vector<Notice> AudioDevice::poll()
     const bool stoppedByItself = m_expectRunning && m_rtaudio && !m_rtaudio->isStreamRunning();
     if (m_deviceLost.exchange(false) || stoppedByItself) {
         recover(notices);
+        return notices;
+    }
+    // JACK runs at another size than the stream: silent until it is opened again (#82).
+    // Not while paused on purpose (the flag waits for resume()).
+    if (m_serverSizeChanged.load() && m_rtaudio && m_expectRunning
+        && std::chrono::steady_clock::now() - m_lastSizeReopen >= kSizeReopenGap) {
+        reopenAtServerSize(notices);
         return notices;
     }
     const bool changed = std::exchange(m_devicesChanged, false);
@@ -400,6 +431,31 @@ void AudioDevice::recover(std::vector<Notice>& notices)
                                                                  "one is plugged in")
                                .arg(fallback.error().message)));
     }
+}
+
+void AudioDevice::reopenAtServerSize(std::vector<Notice>& notices)
+{
+    m_lastSizeReopen = std::chrono::steady_clock::now();
+    const int before = m_maxBlock;
+    qCWarning(lcEngine).noquote() << "JACK's server runs at another block size than" << m_choice.name << "was opened at ("
+                                  << before << "frames): every cycle is refused; opening it again at the server's size";
+    // As it was opened (the wanted device, or the default standing in; the
+    // same rate and inputs): only the size is the server's.
+    const std::optional<DeviceChoice> device = m_standingIn ? std::nullopt : m_wanted;
+    if (auto again = openUnlogged(device, m_requestedFrames, m_requestedRate, m_requestedInput)) {
+        qCInfo(lcEngine).noquote() << "Audio output:" << m_choice.name << "(" << apiName(m_choice.api) << ")" << m_sampleRate
+                                   << "Hz," << m_maxBlock << "frames, latency" << m_latencyMs << "ms";
+        notices.push_back(Notice::info(QCoreApplication::translate("Engine", "The audio server changed its buffer size: %1 plays "
+                                                                             "again at %2 samples (%3 ms)")
+                                           .arg(m_choice.name)
+                                           .arg(m_maxBlock)
+                                           .arg(m_latencyMs, 0, 'f', 1)));
+        qCInfo(lcEngine).noquote() << notices.back().text;
+        return;
+    } else {
+        qCWarning(lcEngine).noquote() << again.error().message;
+    }
+    recover(notices); // back to whatever works (its notices say what)
 }
 
 void AudioDevice::standIn(const DeviceChoice& missing, unsigned int rate, std::optional<DeviceChoice> input)
@@ -488,6 +544,23 @@ QString AudioDevice::defaultOutputName()
 int AudioDevice::callback(void* output, void* input, unsigned int frames, double, unsigned int status, void* user)
 {
     auto* self = static_cast<AudioDevice*>(user);
+    // Counted while it runs, so a stop knows when no plugin is being called (#81).
+    self->m_inCallback.fetch_add(1);
+    const struct Leave {
+        AudioDevice* device;
+        explicit Leave(AudioDevice* d) : device(d) {}
+        Leave(const Leave&) = delete;
+        Leave& operator=(const Leave&) = delete;
+        Leave(Leave&&) = delete;
+        Leave& operator=(Leave&&) = delete;
+        ~Leave() { device->m_inCallback.fetch_sub(1); }
+    } leave{self};
+    if (self->m_quiet.load()) {
+        // Being stopped: silence, and no plugin called (nothing here may be a
+        // cancellation point).
+        std::fill_n(static_cast<float*>(output), static_cast<std::size_t>(frames) * static_cast<std::size_t>(self->m_outputChannels), 0.0F);
+        return 0;
+    }
     // Flush denormals to zero: decaying reverb tails otherwise cost huge CPU.
     platform::flushDenormalsToZeroForThisThread();
     if ((status & (RTAUDIO_OUTPUT_UNDERFLOW | RTAUDIO_INPUT_OVERFLOW)) != 0) {
@@ -522,6 +595,11 @@ void AudioDevice::onError(int type, const std::string& text)
     if (type == RTAUDIO_DEVICE_DISCONNECT) {
         m_disconnectReported.store(true);
         m_deviceLost.store(true);
+    }
+    if (text.find(kJackSizeChanged) != std::string::npos) {
+        // Said on every refused cycle (hundreds a second): flagged, logged once by poll().
+        m_serverSizeChanged.store(true);
+        return;
     }
     const std::scoped_lock lock(m_errorMutex);
     m_errors.push_back(QString::fromStdString(text));

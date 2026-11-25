@@ -158,6 +158,14 @@ private:
     [[nodiscard]] static bool outputPresent(const DeviceChoice& choice);
     // The name of the system's default output now (empty: none).
     [[nodiscard]] static QString defaultOutputName();
+    // Stops the running stream (pause and close). With JACK: abortStream(),
+    // after the callback is quiet and idle (#81, below). False: RtAudio
+    // reported an error (its text is in m_errors).
+    bool stopRunning();
+    // JACK's server runs at another block size than the stream was opened at
+    // (PipeWire's graph changed): every cycle is refused, so the stream is
+    // opened again at the server's size (#82).
+    void reopenAtServerSize(std::vector<Notice>& notices);
 
     std::unique_ptr<RtAudio> m_rtaudio;
     RenderCallback m_render;
@@ -186,6 +194,16 @@ private:
 
     std::atomic<bool> m_deviceLost{false};
     std::atomic<bool> m_disconnectReported{false}; // (for close: JACK is closing the stream itself)
+    // #81: PipeWire's JACK stops a stream by cancelling its audio thread
+    // (pthread_cancel). Landing inside a plugin blocked on a socket (yabridge),
+    // the forced unwind meets the render's noexcept frames: std::terminate.
+    // So before the stop the callback goes quiet (silence, no plugin called)
+    // and the stop waits until no callback is running.
+    std::atomic<bool> m_quiet{false};
+    std::atomic<int> m_inCallback{0};
+    // #82: RtAudio refused a JACK cycle of another size (its warning, any thread).
+    std::atomic<bool> m_serverSizeChanged{false};
+    std::chrono::steady_clock::time_point m_lastSizeReopen{};
     std::atomic<uint64_t> m_underflows{0};
     // Main thread (poll): dropouts not told yet, and when they last were.
     // Off until the app's settings say (on by default there): an engine run

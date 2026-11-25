@@ -1169,6 +1169,10 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>Нет доступного аудиовыхода (%1): звук вернётся, когда какой-нибудь подключат</translation>
     </message>
     <message>
+        <source>The audio server changed its buffer size: %1 plays again at %2 samples (%3 ms)</source>
+        <translation>Аудиосервер изменил размер буфера: %1 снова играет с %2 сэмплами (%3 мс)</translation>
+    </message>
+    <message>
         <source>Playing through %1 until %2 is back</source>
         <translation>Звук идёт через %1, пока не вернётся %2</translation>
     </message>
@@ -2775,8 +2779,8 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>Поиск инструментов</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Показать скрытые инструменты</translation>
+        <source>Show all hidden instruments (%1)</source>
+        <translation>Показать все скрытые инструменты (%1)</translation>
     </message>
     <message>
         <source>No instruments yet</source>
@@ -3717,16 +3721,28 @@ Type or paste them in the Chart tab.</source>
         <translation>Скрытые инструменты</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Показать скрытые инструменты</translation>
+        <source>Show again</source>
+        <translation>Показать снова</translation>
+    </message>
+    <message>
+        <source>Show all hidden instruments</source>
+        <translation>Показать все скрытые инструменты</translation>
     </message>
     <message>
         <source>Hide an instrument by right-clicking it in the Instruments list.</source>
         <translation>Скройте инструмент правым щелчком по нему в списке «Инструменты».</translation>
     </message>
     <message>
+        <source>None hidden. Hide an instrument by right-clicking it in the Instruments list.</source>
+        <translation>Скрытых нет. Чтобы скрыть инструмент, щёлкните его правой кнопкой в списке инструментов.</translation>
+    </message>
+    <message>
         <source>Reset to defaults</source>
         <translation>Сбросить по умолчанию</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Применить</translation>
     </message>
     <message>
         <source>OK</source>
@@ -5597,6 +5613,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The computer&apos;s language</source>
         <translation>Язык компьютера</translation>
+    </message>
+    <message>
+        <source>With JACK the audio server sets the buffer size: the size chosen here is asked for from the next start.</source>
+        <translation>С JACK размер буфера задаёт аудиосервер: выбранный здесь размер запрашивается со следующего запуска.</translation>
+    </message>
+    <message>
+        <source>JACK runs at %1 samples now (%2 ms).</source>
+        <translation>JACK сейчас работает с %1 сэмплами (%2 мс).</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

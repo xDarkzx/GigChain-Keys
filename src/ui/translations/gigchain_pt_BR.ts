@@ -1179,6 +1179,10 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
         <translation>Nenhuma saída de áudio disponível (%1): o som volta quando uma for conectada</translation>
     </message>
     <message>
+        <source>The audio server changed its buffer size: %1 plays again at %2 samples (%3 ms)</source>
+        <translation>O servidor de áudio mudou o tamanho do buffer: %1 volta a tocar com %2 amostras (%3 ms)</translation>
+    </message>
+    <message>
         <source>Playing through %1 until %2 is back</source>
         <translation>Tocando por %1 até %2 voltar</translation>
     </message>
@@ -2792,8 +2796,8 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
         <translation>Buscar instrumentos</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Mostrar instrumentos ocultos</translation>
+        <source>Show all hidden instruments (%1)</source>
+        <translation>Mostrar todos os instrumentos ocultos (%1)</translation>
     </message>
     <message>
         <source>No instruments yet</source>
@@ -3740,16 +3744,28 @@ Digite ou cole na aba Cifra.</translation>
         <translation>Instrumentos ocultos</translation>
     </message>
     <message>
-        <source>Show hidden instruments</source>
-        <translation>Mostrar instrumentos ocultos</translation>
+        <source>Show again</source>
+        <translation>Mostrar de novo</translation>
+    </message>
+    <message>
+        <source>Show all hidden instruments</source>
+        <translation>Mostrar todos os instrumentos ocultos</translation>
     </message>
     <message>
         <source>Hide an instrument by right-clicking it in the Instruments list.</source>
         <translation>Oculte um instrumento clicando com o botão direito nele na lista Instrumentos.</translation>
     </message>
     <message>
+        <source>None hidden. Hide an instrument by right-clicking it in the Instruments list.</source>
+        <translation>Nenhum oculto. Oculte um instrumento clicando nele com o botão direito na lista de instrumentos.</translation>
+    </message>
+    <message>
         <source>Reset to defaults</source>
         <translation>Restaurar padrões</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Aplicar</translation>
     </message>
     <message>
         <source>OK</source>
@@ -5644,6 +5660,14 @@ Digite ou cole na aba Cifra.</translation>
     <message>
         <source>The computer&apos;s language</source>
         <translation>O idioma do computador</translation>
+    </message>
+    <message>
+        <source>With JACK the audio server sets the buffer size: the size chosen here is asked for from the next start.</source>
+        <translation>Com JACK, o servidor de áudio define o tamanho do buffer: o tamanho escolhido aqui é pedido a partir da próxima inicialização.</translation>
+    </message>
+    <message>
+        <source>JACK runs at %1 samples now (%2 ms).</source>
+        <translation>O JACK roda agora com %1 amostras (%2 ms).</translation>
     </message>
     <message>
         <source>The keyboard&apos;s controls could not be saved (%1)</source>

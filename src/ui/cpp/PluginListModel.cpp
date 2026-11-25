@@ -166,6 +166,31 @@ void PluginListModel::hide(const QString& pluginId)
     emit menusChanged();
 }
 
+void PluginListModel::unhide(const QString& pluginId)
+{
+    if (!m_hidden.removeOne(pluginId)) return;
+    if (m_settings != nullptr) {
+        if (m_hidden.isEmpty()) m_settings->remove(u"plugins/hidden"_s);
+        else m_settings->setValue(u"plugins/hidden"_s, m_hidden);
+        m_settings->sync();
+        if (m_settings->status() != QSettings::NoError) {
+            qCWarning(lcUi).noquote() << "Showing" << pluginId << "again could not be saved (" << m_settings->fileName()
+                                      << "): it is hidden again at the next start";
+        }
+    }
+    applyFilter();
+    emit menusChanged();
+}
+
+QVariantList PluginListModel::hiddenPlugins() const
+{
+    QVariantList list;
+    for (const auto& plugin : m_all) {
+        if (m_hidden.contains(plugin.id)) list << QVariantMap{{u"pluginId"_s, plugin.id}, {u"name"_s, plugin.name}};
+    }
+    return list;
+}
+
 void PluginListModel::showAll()
 {
     if (m_hidden.isEmpty()) return;

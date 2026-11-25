@@ -150,6 +150,45 @@ private slots:
         QCOMPARE(m_engine->setupChanges, 0); // no dropout for nothing
     }
 
+    // #85: Apply keeps the window open; applying again changes nothing.
+    void applyingTwiceReopensOnce()
+    {
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        settings.setDevice(u"Spy Headphones"_s);
+        QVERIFY(settings.apply());
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->setupChanges, 1);
+        QCOMPARE(settings.device(), u"Spy Headphones"_s);
+    }
+
+    // #83: JACK runs at the audio server's size whatever is asked: the box
+    // shows the size chosen (asked of PipeWire at the next start), a note
+    // the server's, and nothing reopens for the difference.
+    void jackShowsTheChosenBufferAndTheServersSize()
+    {
+        m_engine->setup = engine::AudioSetup{.driver = engine::AudioDriver::Jack, .device = u"Spy JACK"_s,
+                                             .sampleRate = 48000, .bufferFrames = 1024, .inputDevice = {}};
+        m_settings->setValue(u"audio/bufferFrames"_s, 256);
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QCOMPARE(settings.bufferFrames(), 256);
+        QVERIFY2(settings.bufferNote().contains(u"1024"_s), qPrintable(settings.bufferNote()));
+        QVERIFY2(settings.bufferNote().contains(u"21.3"_s), qPrintable(settings.bufferNote()));
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->setupChanges, 0); // no reopen for the server's size
+
+        settings.setBufferFrames(128);
+        QVERIFY(settings.apply());
+        QCOMPARE(m_engine->setupChanges, 1);
+        QCOMPARE(SettingsController::engineOptions(*m_settings).audio.bufferFrames, 128u);
+        QCOMPARE(settings.bufferFrames(), 128);
+
+        // Other drivers: no note, the box is what runs.
+        settings.setDriver(u"system"_s);
+        QCOMPARE(settings.bufferNote(), QString());
+    }
+
     void aFailedDeviceIsReportedAndNotSaved()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);
