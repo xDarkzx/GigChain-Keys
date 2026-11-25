@@ -385,6 +385,17 @@ private slots:
         waitForBlocks(blocks, before + 5);
         QVERIFY2(blocks.load() >= before + 5, "no sound after opening it again");
         QVERIFY(device.poll().empty()); // once
+
+        // Paused on purpose: it stays paused; the reopen waits for resume().
+        QVERIFY(device.pause().has_value());
+        device.onError(RTAUDIO_WARNING, "RtApiJack::callbackEvent(): the JACK buffer size has changed ... cannot process!");
+        device.m_lastSizeReopen = {}; // (the pause alone holds it back)
+        QVERIFY(device.poll().empty());
+        QVERIFY(!device.m_rtaudio->isStreamRunning());
+        QVERIFY(device.resume().has_value());
+        device.m_lastSizeReopen = {}; // (the one-a-second limit is not under test here)
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"runs at another block size"_s));
+        QVERIFY2(joined(device.poll()).contains(u"changed its buffer size"_s), "not opened again after resume()");
     }
 
     void unknownDeviceIsAnError()

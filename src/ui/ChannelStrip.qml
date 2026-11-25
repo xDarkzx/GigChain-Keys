@@ -552,6 +552,9 @@ Rectangle {
             Layout.minimumHeight: 60 // (a short mixer squeezes the fader, never the mute, solo and name below it)
             volumeDb: strip.volumeDb
             level: strip.peak
+            // One at a time: a strip not selected is selected first (below), with
+            // any finger (#86).
+            movable: !(strip.doc.playMode === 1 && !strip.selected)
             onVolumeMoved: (db) => strip.doc.setChannelVolume(strip.index, db)
             // Right-click: learn the keyboard knob or fader that moves it.
             MouseArea {

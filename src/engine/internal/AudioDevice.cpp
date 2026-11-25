@@ -372,7 +372,9 @@ std::vector<Notice> AudioDevice::poll()
         return notices;
     }
     // JACK runs at another size than the stream: silent until it is opened again (#82).
-    if (m_serverSizeChanged.load() && m_rtaudio && std::chrono::steady_clock::now() - m_lastSizeReopen >= kSizeReopenGap) {
+    // Not while paused on purpose (the flag waits for resume()).
+    if (m_serverSizeChanged.load() && m_rtaudio && m_expectRunning
+        && std::chrono::steady_clock::now() - m_lastSizeReopen >= kSizeReopenGap) {
         reopenAtServerSize(notices);
         return notices;
     }

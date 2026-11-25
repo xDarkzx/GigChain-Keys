@@ -172,6 +172,11 @@ void PluginListModel::unhide(const QString& pluginId)
     if (m_settings != nullptr) {
         if (m_hidden.isEmpty()) m_settings->remove(u"plugins/hidden"_s);
         else m_settings->setValue(u"plugins/hidden"_s, m_hidden);
+        m_settings->sync();
+        if (m_settings->status() != QSettings::NoError) {
+            qCWarning(lcUi).noquote() << "Showing" << pluginId << "again could not be saved (" << m_settings->fileName()
+                                      << "): it is hidden again at the next start";
+        }
     }
     applyFilter();
     emit menusChanged();

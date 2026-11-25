@@ -1650,9 +1650,11 @@ private slots:
         const QPoint to = from + QPoint(0, 30);
         const auto padVolume = [&doc] { return doc.currentPatch()->channels.at(1).volumeDb; };
 
+        QVERIFY(!padFader->isEnabled()); // (no finger moves it, a second one included)
         fingerDrag(from, to);
         settle();
         QCOMPARE(doc.selectedChannel(), 1); // the pad picked
+        QVERIFY(padFader->isEnabled());
         QCOMPARE(padVolume(), 0.0);         // and its volume left alone
 
         fingerDrag(from, to); // selected now: the fader moves

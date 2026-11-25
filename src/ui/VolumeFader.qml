@@ -12,6 +12,8 @@ Item {
     property real level: 0
     property real minDb: -60
     property real maxDb: 12
+    // False: the fader takes no mouse or touch (it still shows the volume and level).
+    property bool movable: true
     signal volumeMoved(real volumeDb)
 
     readonly property real levelDb: level > 0 ? 20 * Math.log10(level) : -200
@@ -80,6 +82,7 @@ Item {
             objectName: "faderSlider"
             anchors.fill: parent
             orientation: Qt.Vertical
+            enabled: fader.movable
             from: fader.minDb
             to: fader.maxDb
             // Follows the volume whenever it is not being dragged (a plain
