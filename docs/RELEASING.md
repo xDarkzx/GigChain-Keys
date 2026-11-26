@@ -96,10 +96,12 @@ A version ships **every Monday** (New Zealand time). The week before it:
    (`.github/workflows/mac.yml`, `.github/workflows/linux.yml`), not new
    builds: download their artifacts (`gh run download <run id>`), and rename
    `GigChain Keys-<version>-arm64.dmg` to `GigChainKeys-<version>-arm64.dmg`
-   (GitHub turns spaces in release file names into dots). The Linux ones
+   and the Intel one, `GigChain Keys-<version>-x86_64.dmg`, to
+   `GigChainKeys-<version>-x86_64.dmg` (GitHub turns spaces in release file
+   names into dots). The Linux ones
    (`GigChainKeys-<version>-x86_64.AppImage`, `gigchain-keys_<version>_amd64.deb`)
    keep their names.
-6. **Checksums:** put the five files in one folder and write
+6. **Checksums:** put the six files in one folder and write
    `SHA256SUMS.txt` (one `<sha256>  <file name>` line each, as `shasum -a 256`
    writes it):
 
@@ -109,7 +111,7 @@ A version ships **every Monday** (New Zealand time). The week before it:
        Set-Content -Encoding ascii release\SHA256SUMS.txt
    ```
 
-7. **Publish the release** with the notes from the changelog, the five
+7. **Publish the release** with the notes from the changelog, the six
    files and the checksums:
 
    ```powershell
@@ -118,6 +120,7 @@ A version ships **every Monday** (New Zealand time). The week before it:
        release\GigChainKeys-0.1.0-x64-setup.exe `
        release\GigChainKeys-0.1.0-x64-portable.zip `
        release\GigChainKeys-0.1.0-arm64.dmg `
+       release\GigChainKeys-0.1.0-x86_64.dmg `
        release\GigChainKeys-0.1.0-x86_64.AppImage `
        release\gigchain-keys_0.1.0_amd64.deb `
        release\SHA256SUMS.txt

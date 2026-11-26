@@ -14,8 +14,20 @@ permissions:
 
 jobs:
   mac:
-    runs-on: macos-15
-    timeout-minutes: 60
+    # Apple Silicon, and Intel (#79): each built, tested and packaged on its
+    # own kind of Mac. One failing does not cancel the other.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+            preset: mac-release
+          - arch: x86_64
+            runner: macos-15-intel
+            preset: mac-intel-release
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
     env:
       VCPKG_ROOT: ${{ github.workspace }}/../vcpkg
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/../vcpkg-cache,readwrite
@@ -60,8 +72,8 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ github.workspace }}/../vcpkg-cache
-          key: vcpkg-mac-${{ steps.xcode.outputs.version }}-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
-          restore-keys: vcpkg-mac-${{ steps.xcode.outputs.version }}-
+          key: vcpkg-mac-${{ matrix.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
+          restore-keys: vcpkg-mac-${{ matrix.arch }}-${{ steps.xcode.outputs.version }}-
 
       # Piano Pro's samples (cmake/PianoSamples.cmake downloads them, ~650 MB, once).
       - name: Piano samples
@@ -71,35 +83,35 @@ jobs:
           key: piano-samples-2e91c9aa7b16d936f035963149df1fe4cbd65911116fb3e3ea6daca52e92024b
 
       - name: Configure
-        run: cmake --preset mac-release
+        run: cmake --preset ${{ matrix.preset }}
 
       # -k 0: every file that fails is reported in one run, not only the first.
       - name: Build
-        run: cmake --build --preset mac-release -- -k 0
+        run: cmake --build --preset ${{ matrix.preset }} -- -k 0
 
       - name: Save the library cache
         if: always() && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ${{ github.workspace }}/../vcpkg-cache
-          key: vcpkg-mac-${{ steps.xcode.outputs.version }}-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
+          key: vcpkg-mac-${{ matrix.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('vcpkg.json', 'ports/**', 'triplets/**') }}
 
       - name: Test plugins
         run: brew install --cask surge-xt
 
       - name: Test
-        run: ctest --preset mac-release
+        run: ctest --preset ${{ matrix.preset }}
 
       - name: Package
         run: |
           version=$(sed -nE 's/^set\(PRODUCT_VERSION "([^"]+)"\).*/\1/p' branding.cmake)
-          bash tools/package-mac.sh build/mac-release "$version"
+          bash tools/package-mac.sh build/${{ matrix.preset }} "$version" ${{ matrix.arch }}
 
       - name: Upload the .dmg
         uses: actions/upload-artifact@v7
         with:
-          name: GigChain-Keys-mac-arm64
-          path: build/mac-release/*.dmg
+          name: GigChain-Keys-mac-${{ matrix.arch }}
+          path: build/${{ matrix.preset }}/*.dmg
           if-no-files-found: error
 
       # Always: which tests ran and which skipped (ctest prints only failures).
@@ -107,8 +119,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: mac-test-logs
+          name: mac-test-logs-${{ matrix.arch }}
           path: |
-            build/mac-release/tests/**/*.log
-            build/mac-release/Testing/Temporary/LastTest.log
+            build/${{ matrix.preset }}/tests/**/*.log
+            build/${{ matrix.preset }}/Testing/Temporary/LastTest.log
           if-no-files-found: ignore

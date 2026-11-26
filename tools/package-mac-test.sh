@@ -17,6 +17,7 @@ if [ -n "${MAC_BASH:-}" ]; then
 fi
 echo "the scripts run under: $(bash --version | head -1)"
 export OTOOL=llvm-otool-18
+export LIPO=llvm-lipo-18
 CC=(clang-18 --target=arm64-apple-macos13 -fuse-ld=lld -nostdlib -Wl,-platform_version,macos,13.0,13.0)
 echo 'void binder(void) __asm__("dyld_stub_binder"); void binder(void) {}' > "$work/system.c"
 "${CC[@]}" -shared -Wl,-install_name,/usr/lib/libSystem.B.dylib "$work/system.c" -o "$work/libSystem.B.dylib"
@@ -32,6 +33,11 @@ echo vst3 > "$build/_deps/vst3sdk-src/LICENSE.txt"
 for port in rtaudio rtmidi tl-expected fluidsynth gcem; do
     mkdir -p "$build/vcpkg_installed/arm64-osx-13/share/$port"
     echo "$port" > "$build/vcpkg_installed/arm64-osx-13/share/$port/copyright"
+done
+# The app's sound pack, as cmake/PianoSamples.cmake lays it out.
+mkdir -p "$build/samples/piano" "$build/samples/pads"
+for file in "piano/Concert Grand.sfz" "piano/Upright.sfz" "piano/Rhodes.sfz" "piano/CREDITS.txt" "pads/strings.txt" "pads/piano.txt" "pads/CREDITS.txt"; do
+    echo sample > "$build/samples/$file"
 done
 
 # Stand-ins: each records its call; hdiutil records what the .dmg would hold.
@@ -70,9 +76,35 @@ check "the .dmg holds the app, Applications, the licence, the notices and the li
      grep -qx "./licenses/vst3sdk.txt" "$work/dmg-contents.txt"'
 check "the .dmg is named with the version" 'grep -q "GigChain Keys-9.9.9-arm64.dmg" "$log"'
 
-# A licence missing: the package stops, naming it.
-rm "$build/vcpkg_installed/arm64-osx-13/share/rtmidi/copyright"
-if PATH="$bin:$PATH" QT_ROOT_DIR="$work/qt" bash "$ROOT/tools/package-mac.sh" "$build" 9.9.9 > "$work/out2.txt" 2>&1; then
+# Intel (#79): an Apple Silicon app is refused under the Intel name...
+if PATH="$bin:$PATH" QT_ROOT_DIR="$work/qt" bash "$ROOT/tools/package-mac.sh" "$build" 9.9.9 x86_64 > "$work/out3.txt" 2>&1; then
+    echo "FAIL: an Apple Silicon app was packaged as Intel"; fail=1
+else
+    check "an app built for another Mac is refused, named" 'grep -q "built for .arm64., not x86_64" "$work/out3.txt"'
+fi
+# ... and an Intel app is packaged with the Intel libraries' licences, named so.
+ICC=(clang-18 --target=x86_64-apple-macos13 -fuse-ld=lld -nostdlib -Wl,-platform_version,macos,13.0,13.0)
+"${ICC[@]}" -shared -Wl,-install_name,/usr/lib/libSystem.B.dylib "$work/system.c" -o "$work/libSystem-x86.B.dylib"
+"${ICC[@]}" "$work/libSystem-x86.B.dylib" "$work/main.c" -o "$app/MacOS/GigChain Keys"
+"${ICC[@]}" "$work/libSystem-x86.B.dylib" "$work/main.c" -o "$app/MacOS/GigChainKeysScan"
+for port in rtaudio rtmidi tl-expected fluidsynth gcem; do
+    mkdir -p "$build/vcpkg_installed/x64-osx-13/share/$port"
+    echo "$port" > "$build/vcpkg_installed/x64-osx-13/share/$port/copyright"
+done
+if PATH="$bin:$PATH" QT_ROOT_DIR="$work/qt" bash "$ROOT/tools/package-mac.sh" "$build" 9.9.9 x86_64 > "$work/out4.txt" 2>&1; then
+    check "the Intel .dmg is named for Intel" 'grep -q "GigChain Keys-9.9.9-x86_64.dmg" "$log"'
+else
+    echo "FAIL: the Intel app was not packaged:"; cat "$work/out4.txt"; fail=1
+fi
+if PATH="$bin:$PATH" QT_ROOT_DIR="$work/qt" bash "$ROOT/tools/package-mac.sh" "$build" 9.9.9 sparc > "$work/out5.txt" 2>&1; then
+    echo "FAIL: an unknown architecture was packaged"; fail=1
+else
+    check "an unknown architecture is refused" 'grep -q "Unknown Mac architecture: sparc" "$work/out5.txt"'
+fi
+
+# A licence missing: the package stops, naming it. (The app is Intel's now.)
+rm "$build/vcpkg_installed/x64-osx-13/share/rtmidi/copyright"
+if PATH="$bin:$PATH" QT_ROOT_DIR="$work/qt" bash "$ROOT/tools/package-mac.sh" "$build" 9.9.9 x86_64 > "$work/out2.txt" 2>&1; then
     echo "FAIL: a missing licence was packaged anyway"; fail=1
 else
     check "a missing licence stops the package, named" 'grep -q "missing: .*rtmidi/copyright" "$work/out2.txt"'

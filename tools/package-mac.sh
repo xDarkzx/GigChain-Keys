@@ -2,15 +2,28 @@
 # The Mac's .dmg: Qt inside the app (macdeployqt), the whole bundle ad-hoc
 # signed and verified, then a compressed disk image with an Applications
 # link and the licences.
-#   bash tools/package-mac.sh <build dir> <version>
+#   bash tools/package-mac.sh <build dir> <version> [arm64 | x86_64]
+# The architecture (Apple Silicon by default, or Intel: #79) names the .dmg
+# and the libraries' folder, and the app must be built for it.
 set -euo pipefail
 BUILD="$1"
 VERSION="$2"
+ARCH="${3:-arm64}"
+case "$ARCH" in
+    arm64) TRIPLET=arm64-osx-13 ;;  # (the mac-release preset's)
+    x86_64) TRIPLET=x64-osx-13 ;;   # (the mac-intel-release preset's)
+    *) echo "Unknown Mac architecture: $ARCH (arm64 or x86_64)" >&2; exit 1 ;;
+esac
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$BUILD/GigChain Keys.app"
-DMG="$BUILD/GigChain Keys-$VERSION-arm64.dmg"
+DMG="$BUILD/GigChain Keys-$VERSION-$ARCH.dmg"
 [ -d "$APP" ] || { echo "No app bundle at $APP" >&2; exit 1; }
 [ -x "$APP/Contents/MacOS/GigChainKeysScan" ] || { echo "The plugin scanner is missing from $APP" >&2; exit 1; }
+# Built for that Mac: an Apple Silicon app named Intel would never open there.
+for exe in "$APP/Contents/MacOS/GigChain Keys" "$APP/Contents/MacOS/GigChainKeysScan"; do
+    built="$("${LIPO:-lipo}" -archs "$exe" | xargs)" # (xargs: without the spaces around it)
+    [ "$built" = "$ARCH" ] || { echo "$exe is built for '$built', not $ARCH" >&2; exit 1; }
+done
 # No program it ships has the live test control (docs/testing/live-test-control.md).
 if grep -rqF GCK-DEV-CONTROL-v1 "$APP/Contents/MacOS"; then
     echo "The app contains the live test control: never release a dev build" >&2; exit 1
@@ -35,7 +48,6 @@ bash "$ROOT/tools/check-mac-links.sh" "$APP"
 # The licences travel with the app (a dragged-out app has no .dmg around it)
 # and sit in the .dmg: the notices, and the texts they point to.
 NOTICES="$BUILD/installer/THIRD-PARTY-NOTICES.txt"
-TRIPLET=arm64-osx-13 # (the mac-release preset's)
 LICENCES=("$ROOT/LICENSE" "$NOTICES" "$BUILD/_deps/vst3sdk-src/LICENSE.txt")
 for port in rtaudio rtmidi tl-expected fluidsynth gcem; do LICENCES+=("$BUILD/vcpkg_installed/$TRIPLET/share/$port/copyright"); done
 for file in "${LICENCES[@]}"; do

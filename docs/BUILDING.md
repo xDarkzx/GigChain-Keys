@@ -2,11 +2,11 @@
 
 GigChain Keys is C++20 with Qt 6.10 (QML), the Steinberg VST3 SDK, RtAudio
 and RtMidi, built with CMake presets. Windows is the main platform; Linux and
-macOS (Apple Silicon) build from the same sources.
+macOS (Apple Silicon and Intel) build from the same sources.
 
 - [Windows](#windows)
 - [Linux (and WSL)](#linux-and-wsl)
-- [macOS (Apple Silicon)](#macos-apple-silicon)
+- [macOS (Apple Silicon and Intel)](#macos-apple-silicon-and-intel)
 - [The Windows installer](#the-windows-installer)
 - [The Linux packages](#the-linux-packages)
 - [Checks before a commit](#checks-before-a-commit)
@@ -73,13 +73,15 @@ What differs by system lives in per-system files (`*_win.cpp`,
 `*_posix.cpp`, `*_linux.cpp`, `*_mac.cpp`), mostly in `src/platform`; a test
 fails if system code appears anywhere else.
 
-## macOS (Apple Silicon)
+## macOS (Apple Silicon and Intel)
 
-Apple Silicon Macs on macOS 13 or newer. The Mac build runs on GitHub's Mac
-machines (`.github/workflows/mac.yml`): **Actions → Mac → Run workflow**, or
-push a release tag (`v*`). It builds with the `mac-release` preset, runs every
-test (with Surge XT from Homebrew as the test instrument), and makes
-`GigChain Keys-<version>-arm64.dmg` (the run's artifact): the app with Qt
+Macs on macOS 13 or newer: Apple Silicon and Intel, each its own build. The
+Mac build runs on GitHub's Mac machines (`.github/workflows/mac.yml`):
+**Actions → Mac → Run workflow**, or push a release tag (`v*`). It builds
+twice, on an Apple Silicon Mac with the `mac-release` preset and on an Intel
+Mac with `mac-intel-release`, runs every test on each (with Surge XT from
+Homebrew as the test instrument), and makes `GigChain Keys-<version>-arm64.dmg`
+and `GigChain Keys-<version>-x86_64.dmg` (the run's artifacts): the app with Qt
 inside, ad-hoc signed, not notarized. Testers open it once through **System
 Settings → Privacy & Security → Open Anyway**
 ([testing/mac-checklist.md](testing/mac-checklist.md)).
@@ -93,6 +95,9 @@ cmake --build --preset mac-release
 ctest --preset mac-release
 bash tools/package-mac.sh build/mac-release <version>   # the .dmg
 ```
+
+On an Intel Mac, the same with `mac-intel-release`, and
+`bash tools/package-mac.sh build/mac-intel-release <version> x86_64`.
 
 Audio: Core Audio; MIDI: Core MIDI; plugins from
 `~/Library/Audio/Plug-Ins/VST3` and `/Library/Audio/Plug-Ins/VST3`.

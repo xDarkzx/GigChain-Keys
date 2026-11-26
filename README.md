@@ -66,6 +66,7 @@ open source too, under the GPL.
 | **Windows 10 / 11** (64-bit) | [**Installer** (`GigChainKeys-<version>-x64-setup.exe`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Recommended. Installs for you or for everyone, upgrades in place, uninstalls from *Apps & features*. |
 | | [Portable zip (`GigChainKeys-<version>-x64-portable.zip`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | No install: unzip anywhere (a USB stick, too) and run `GigChainKeys.exe`. |
 | **macOS 13+** (Apple Silicon) | [Disk image (`GigChainKeys-<version>-arm64.dmg`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Less tested than Windows: Mac reports are especially welcome. See *First start on a Mac* below. |
+| **macOS 13+** (Intel) | [Disk image (`GigChainKeys-<version>-x86_64.dmg`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | From 0.13. For Macs with an Intel processor (Apple menu → *About This Mac* says *Intel*). The newest and least tested build: reports especially welcome. |
 | **Linux** (64-bit) | [AppImage (`GigChainKeys-<version>-x86_64.AppImage`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | One file for most distributions (Ubuntu 22.04+, Fedora, Arch, Mint…): make it executable and run it. |
 | | [.deb (`gigchain-keys_<version>_amd64.deb`)](https://github.com/xDarkzx/GigChain-Keys/releases/latest) | Ubuntu, Debian, Mint, Pop!_OS: double-click to install. Adds a menu entry and opens `.gigchain` setlists. |
 
