@@ -223,6 +223,9 @@ Rectangle {
                 id: channelStrip
                 onKeysWanted: strips.forceActiveFocus()
                 lifted: strips.dragFrom === channelStrip.index
+                // Held while the strips scroll on past its place: kept, not
+                // culled (its grip must see the release, or the drag never ends).
+                ListView.delayRemove: lifted
                 liftOffset: strips.pointerX + strips.contentX - strips.liftX
                 onGripPressed: (sceneX) => strips.liftStrip(channelStrip.index, sceneX)
                 onGripMoved: (sceneX) => strips.dragStrip(sceneX)

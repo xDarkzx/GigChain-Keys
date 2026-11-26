@@ -82,14 +82,16 @@ void unlinkFromSharing(Song& song, const QString& shareId)
 
 std::map<QString, QString> instanceRenames(const Setlist& before, const Setlist& after)
 {
-    // The key each slot plays, by the slot: "<song>|<sound>|<channel>|<place>".
+    // The key each slot plays, by the slot: "<song>|<sound>|<channel>|<place>|<plugin>".
+    // (The plugin too: after an effect is removed, another one is in its
+    // place; undone, that place has its first plugin back, never the other's instance.)
     const auto keysBySlot = [](const Setlist& setlist) {
         std::map<QString, QString> keys;
         for (const Song& song : setlist.songs) {
             for (const Patch& patch : song.patches) {
                 for (const PluginUse& use : pluginUses(song.id, patch)) {
                     const Channel& channel = patch.channels.at(static_cast<std::size_t>(use.channel));
-                    keys[u"%1|%2|%3|%4"_s.arg(song.id.value(), patch.id.value(), channel.id.value()).arg(use.effect)] = use.key;
+                    keys[u"%1|%2|%3|%4|%5"_s.arg(song.id.value(), patch.id.value(), channel.id.value()).arg(use.effect).arg(use.slot->pluginId)] = use.key;
                 }
             }
         }

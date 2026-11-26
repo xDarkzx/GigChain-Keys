@@ -154,6 +154,20 @@ private slots:
         Setlist other;
         other.songs = {songWith(u"Funk"_s, {piano()})}; // another song: nothing in common
         QVERIFY(instanceRenames(before, other).empty());
+
+        // An effect removed, then the removal undone: a different plugin is
+        // back in the same place, so nothing is renamed (Reverb keeps its own,
+        // the Delay loads with its own settings).
+        Setlist withBoth;
+        withBoth.songs = {songWith(u"Ballad"_s, {piano()})};
+        Channel& channel = withBoth.songs.at(0).patches.at(0).channels.at(0);
+        channel.effects = {PluginSlot{.pluginId = u"plugins/Delay.vst3"_s, .displayName = u"Delay"_s, .bypass = false, .state = {}, .shareId = {}},
+                           PluginSlot{.pluginId = u"plugins/Reverb.vst3"_s, .displayName = u"Reverb"_s, .bypass = false, .state = {}, .shareId = {}}};
+        Setlist removed = withBoth;
+        auto& effects = removed.songs.at(0).patches.at(0).channels.at(0).effects;
+        effects.erase(effects.begin()); // the Delay: the Reverb is now the first effect
+        QVERIFY(instanceRenames(removed, withBoth).empty());
+        QVERIFY(instanceRenames(withBoth, removed).empty());
     }
 };
 

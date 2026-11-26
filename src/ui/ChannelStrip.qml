@@ -380,7 +380,7 @@ Rectangle {
         // the grip, the colour tag and the ✕ remove button
         Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: 12
+            Layout.preferredHeight: strip.editable ? 20 : 12 // (room for the grip's finger-sized area)
             // Drag it to put the strip somewhere else (#94): a handle of its
             // own, so a finger sliding over the strips still scrolls them.
             // Not on stage: nothing is moved by accident in a song.
@@ -391,8 +391,8 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.leftMargin: -4
                 anchors.verticalCenter: parent.verticalCenter
-                width: 24 // (bigger than its dots: a finger finds it)
-                height: 20
+                width: 40 // (far bigger than its dots: a fingertip finds it; the ✕ stays clear at the right)
+                height: 32
                 Grid {
                     anchors.centerIn: parent
                     columns: 3
@@ -428,7 +428,7 @@ Rectangle {
             }
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
-                x: grip.visible ? 18 : 0
+                x: grip.visible ? 24 : 0
                 width: parent.width - 16 - x
                 height: 3
                 radius: 1.5

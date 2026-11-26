@@ -7,6 +7,7 @@
 #include "SpyEngine.h"
 
 #include "gigchain/core/Limits.h"
+#include "gigchain/core/PluginSharing.h"
 #include "gigchain/core/SetlistFile.h"
 
 #include <QDir>
@@ -186,6 +187,30 @@ private slots:
             return list;
         };
 
+        // The instance key each strip's instrument plays, by the strip, read
+        // from the slots themselves (the expected renames: each strip from
+        // its key before to its key after, nothing else).
+        const auto instrumentKeys = [this] {
+            std::map<QString, QString> keys; // channel id -> key
+            const core::Patch* patch = m_doc->currentPatch();
+            for (const core::Song& song : m_doc->setlist().songs) {
+                if (std::ranges::none_of(song.patches, [patch](const core::Patch& p) { return p.id == patch->id; })) continue;
+                for (const core::PluginUse& use : core::pluginUses(song.id, *patch)) {
+                    if (use.effect < 0) keys[patch->channels.at(static_cast<std::size_t>(use.channel)).id.value()] = use.key;
+                }
+            }
+            return keys;
+        };
+        const auto renamesBetween = [](const std::map<QString, QString>& was, const std::map<QString, QString>& now) {
+            std::map<QString, QString> renames;
+            for (const auto& [channel, key] : was) {
+                if (now.contains(channel) && now.at(channel) != key) renames.emplace(key, now.at(channel));
+            }
+            return renames;
+        };
+        const std::map<QString, QString> keysBefore = instrumentKeys();
+        QCOMPARE(keysBefore.size(), std::size_t{3});
+
         QSignalSpy channels(m_doc.get(), &DocumentController::channelsChanged);
         m_engine->renamedInstances.clear();
         QVERIFY(m_doc->moveChannel(2, 0));
@@ -197,16 +222,20 @@ private slots:
         QCOMPARE(verseNow, verse);                                      // the parts play the same strips
         QVERIFY(m_doc->isDirty());
         QCOMPARE(channels.size(), 1);
-        const std::map<QString, QString> moved = m_engine->renamedInstances;
-        QVERIFY(!moved.empty()); // the two pianos keep their own instances
+        const std::map<QString, QString> keysAfter = instrumentKeys();
+        const std::map<QString, QString> forward = renamesBetween(keysBefore, keysAfter);
+        QVERIFY(!forward.empty());
+        QCOMPARE(m_engine->renamedInstances, forward); // each strip keeps its own instance, exactly
 
         m_engine->renamedInstances.clear();
         QVERIFY(m_doc->undo()); // one step back
         QCOMPARE(names(), (QStringList{u"Piano"_s, u"Strings"_s, u"Piano 2"_s}));
-        for (const auto& [oldKey, newKey] : moved) {
-            QVERIFY2(m_engine->renamedInstances.contains(newKey), qPrintable(newKey));
-            QCOMPARE(m_engine->renamedInstances.at(newKey), oldKey); // each back under its own key
-        }
+        QCOMPARE(instrumentKeys(), keysBefore);
+        QCOMPARE(m_engine->renamedInstances, renamesBetween(keysAfter, keysBefore)); // each back under its own key
+        QCOMPARE(channelId(m_doc->selectedChannel()), chosen); // still the chosen one (it plays)
+        QVERIFY(m_doc->redo());
+        QCOMPARE(channelId(m_doc->selectedChannel()), chosen);
+        QVERIFY(m_doc->undo());
 
         QVERIFY(m_doc->moveChannel(0, 1)); // no plugin twice in the way: nothing renamed
         QCOMPARE(names(), (QStringList{u"Strings"_s, u"Piano"_s, u"Piano 2"_s}));

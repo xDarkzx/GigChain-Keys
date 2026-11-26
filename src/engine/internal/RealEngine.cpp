@@ -377,6 +377,26 @@ void RealEngine::relinkInstances(const core::Setlist& setlist)
 void RealEngine::renameInstances(const std::map<QString, QString>& renamed)
 {
     GC_ONLY_MAIN_THREAD();
+    // Never onto an instance still loaded that is not moving away itself
+    // (an undone removal: the strip that stayed played the other's, and the
+    // other's own is still loaded): it would be lost, with its settings. That
+    // rename is left out, so its own instance stays where it is too (and so
+    // on along a chain); relinkInstances then keeps both.
+    std::map<QString, QString> kept = renamed;
+    for (bool dropped = true; dropped;) {
+        dropped = false;
+        for (auto it = kept.begin(); it != kept.end();) {
+            if (m_nodes.contains(it->second) && !kept.contains(it->second)) {
+                it = kept.erase(it);
+                dropped = true;
+            } else {
+                ++it;
+            }
+        }
+    }
+    if (kept.size() < renamed.size()) {
+        qCInfo(lcEngine) << "Kept" << renamed.size() - kept.size() << "loaded plugins where they are (another is still loaded in their new place)";
+    }
     // All taken out first, then put back: keys can trade places (A <-> B).
     struct Instance
     {
@@ -387,7 +407,7 @@ void RealEngine::renameInstances(const std::map<QString, QString>& renamed)
         bool edited = false;
     };
     std::vector<Instance> taken;
-    for (const auto& [oldKey, newKey] : renamed) {
+    for (const auto& [oldKey, newKey] : kept) {
         auto node = m_nodes.extract(oldKey);
         if (!node) continue; // not loaded (bypassed, failed): it loads when played
         Instance instance{.key = newKey, .node = std::move(node.mapped()), .state = {}, .plugin = {}, .edited = m_editedNodes.erase(oldKey) > 0};

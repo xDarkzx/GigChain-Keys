@@ -53,7 +53,9 @@ public:
     virtual void relinkInstances(const core::Setlist& setlist) = 0;
     // A channel moved (core::moveChannel's keys, old -> new): each loaded
     // instance plays on under its new key, exactly, so nothing loads again
-    // and no setting is lost (#94). Then apply the patch as usual.
+    // and no setting is lost (#94). A rename onto an instance still loaded
+    // that is not moving away itself is left out (it would be lost). Then
+    // apply the patch as usual.
     virtual void renameInstances(const std::map<QString, QString>& renamed) = 0;
     virtual void setProgressHandler(LoadProgress handler) = 0;
 

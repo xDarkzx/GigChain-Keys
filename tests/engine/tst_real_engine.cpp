@@ -624,6 +624,23 @@ private slots:
         engine.applyPatch(song.id, setlist.songs.at(0).patches.at(1));
         QCOMPARE(loads, 0);
         QVERIFY2(std::abs(value(c, -1) - 0.2) < 0.02, qPrintable(QString::number(value(c, -1))));
+
+        // A rename onto an instance still loaded that is not moving away (an
+        // undone removal: the strip that stayed played the other's): both
+        // kept, none replaced, each strip with its own settings.
+        engine.applyPatch(song.id, setlist.songs.at(0).patches.at(0));
+        const std::vector<core::PluginUse> uses = core::pluginUses(song.id, setlist.songs.at(0).patches.at(0));
+        const auto instrumentKey = [&uses](int channel) {
+            const auto use = std::ranges::find_if(uses, [channel](const core::PluginUse& u) { return u.channel == channel && u.effect < 0; });
+            return use == uses.end() ? QString() : use->key;
+        };
+        QVERIFY(!instrumentKey(0).isEmpty() && !instrumentKey(1).isEmpty());
+        engine.renameInstances({{instrumentKey(0), instrumentKey(1)}}); // B's onto A's
+        QCOMPARE(engine.loadedPluginCount(), loaded);
+        engine.applyPatch(song.id, setlist.songs.at(0).patches.at(0));
+        QCOMPARE(loads, 0);
+        QVERIFY2(std::abs(value(a, -1) - 0.2) < 0.02, qPrintable(QString::number(value(a, -1))));
+        QVERIFY2(std::abs(value(b, -1) - 0.8) < 0.02, qPrintable(QString::number(value(b, -1))));
         QVERIFY(engine.poll().empty());
     }
 

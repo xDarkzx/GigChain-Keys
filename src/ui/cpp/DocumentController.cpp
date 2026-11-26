@@ -2620,7 +2620,7 @@ bool DocumentController::report(const core::Error& error)
     return false;
 }
 
-void DocumentController::setCursor(core::Cursor to, bool force)
+void DocumentController::setCursor(core::Cursor to, bool force, const std::optional<core::ChannelId>& keep)
 {
     GC_ONLY_MAIN_THREAD();
     if (to == m_cursor && !force) return;
@@ -2631,7 +2631,7 @@ void DocumentController::setCursor(core::Cursor to, bool force)
     FreezeWatchdog::mark(u"switch to %1 / %2"_s.arg(currentSongName(), patch != nullptr ? patch->name : QString()));
     QElapsedTimer timer;
     timer.start();
-    resetSelectedChannel();
+    resetSelectedChannel(keep);
     // The engine first: views react to these signals by asking the engine
     // about the new channels (e.g. for plugin editors).
     applyCurrentPatchToEngine();
@@ -2697,10 +2697,13 @@ core::Cursor DocumentController::follow(const std::optional<core::PatchId>& id, 
     return fallback;
 }
 
-void DocumentController::resetSelectedChannel()
+void DocumentController::resetSelectedChannel(const std::optional<core::ChannelId>& keep)
 {
     const core::Patch* patch = currentPatch();
     m_selectedChannel = (patch != nullptr && !patch->channels.empty()) ? 0 : -1;
+    if (patch == nullptr || !keep) return;
+    const auto found = std::ranges::find_if(patch->channels, [&keep](const core::Channel& c) { return c.id == *keep; });
+    if (found != patch->channels.end()) m_selectedChannel = static_cast<int>(found - patch->channels.begin());
 }
 
 void DocumentController::applyCurrentPatchToEngine()
@@ -2794,6 +2797,10 @@ bool DocumentController::restore(std::vector<UndoStep>& from, std::vector<UndoSt
     // Each slot back on its own instance (a strip moved back, #94), exactly;
     // what is left, an undone link or own copy, relinked: nothing reloads.
     const std::map<QString, QString> renamed = core::instanceRenames(m_setlist, step.setlist);
+    // The chosen strip stays chosen when the same sound comes back (a strip
+    // moved back): in One at a time it is the one that plays.
+    const std::optional<core::PatchId> patchBefore = currentPatchId();
+    const std::optional<core::ChannelId> chosen = selectedChannelId();
     m_setlist = std::move(step.setlist);
     m_committed = m_setlist;
     emit structureChanged();
@@ -2801,7 +2808,10 @@ bool DocumentController::restore(std::vector<UndoStep>& from, std::vector<UndoSt
     emit mixerControlsChanged();
     if (!renamed.empty()) m_engine.renameInstances(renamed);
     m_engine.relinkInstances(m_setlist); // an undone link or own copy reloads nothing
-    setCursor(core::clampCursor(m_setlist, step.cursor), true); // plays it and refreshes every view
+    const core::Cursor restored = core::clampCursor(m_setlist, step.cursor);
+    const core::Patch* patchAfter = core::patchAt(m_setlist, restored);
+    const bool samePatch = patchBefore && patchAfter != nullptr && patchAfter->id == *patchBefore;
+    setCursor(restored, true, samePatch ? chosen : std::nullopt); // plays it and refreshes every view
     m_committedCursor = m_cursor;
     setDirty(true);
     emit undoChanged();

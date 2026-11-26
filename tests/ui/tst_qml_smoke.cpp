@@ -1220,20 +1220,25 @@ private slots:
         QCOMPARE(names(), (QStringList{u"Pad"_s, u"Piano"_s, u"Organ"_s}));
         settle();
 
-        // More strips than fit: held at the edge, the strips scroll along.
+        // More strips than fit: held at the edge, the strips scroll along, all
+        // the way to the last (the held strip's own place long out of view).
         for (int i = 0; i < 14; ++i) QVERIFY(doc.addChannel(u"demo.piano"_s, u"Extra"_s));
         settle();
         strips->setProperty("contentX", 0);
         settle();
-        QVERIFY(strips->property("contentWidth").toReal() > strips->width() + 200);
+        const qreal most = strips->property("originX").toReal() + strips->property("contentWidth").toReal() - strips->width();
+        QVERIFY(most > strips->width()); // (far more strips than fit)
         from = gripOf(0);
         to = QPoint(strips->mapToScene(QPointF(strips->width() - 6, 0)).toPoint().x(), from.y());
         QTest::mousePress(w, Qt::LeftButton, {}, from);
         for (int i = 1; i <= 12; ++i) QTest::mouseMove(w, from + ((to - from) * i / 12), 15);
-        QTRY_VERIFY2(strips->property("contentX").toReal() > 150,
-                     qPrintable(u"scrolled to %1"_s.arg(strips->property("contentX").toReal())));
+        QTRY_VERIFY2_WITH_TIMEOUT(strips->property("contentX").toReal() >= most - 1,
+                                  qPrintable(u"scrolled to %1 of %2"_s.arg(strips->property("contentX").toReal()).arg(most)), 10000);
+        QTest::mouseMove(w, to + QPoint(-1, 0), 15); // (still held, at the end)
         QTest::mouseRelease(w, Qt::LeftButton, {}, to);
-        QTRY_VERIFY(names().indexOf(u"Pad"_s) > 3); // dropped further along
+        QTRY_COMPARE(names().last(), u"Pad"_s); // dropped last
+        QVERIFY(strips->property("interactive").toBool()); // the drag is over: the strips scroll again
+        QVERIFY(!marker->isVisible());
         settle();
 
         // The strips rebuilt mid-drag (another sound, from a pedal): the drag
