@@ -79,6 +79,17 @@ Rectangle {
     signal keysWanted()
     function takeKeys() { strip.keysWanted() }
 
+    // Dragged by its grip to another place (#94): the mixer follows the
+    // pointer (scene x) and moves the channel where it is let go.
+    signal gripPressed(real sceneX)
+    signal gripMoved(real sceneX)
+    signal gripReleased()
+    // Lifted while dragged: drawn over the others, `liftOffset` from its place.
+    property bool lifted: false
+    property real liftOffset: 0
+    z: lifted ? 10 : 0
+    transform: Translate { x: strip.lifted ? strip.liftOffset : 0 }
+
     readonly property real peakDb: peak > 0 ? 20 * Math.log10(peak) : -200
     property int menuEffect: -1 // effect the effect menu acts on
 
@@ -114,7 +125,7 @@ Rectangle {
         function onPlayModeChanged() { strip.refreshSilent() }
         function onCurrentChanged() { strip.refreshSilent() }
     }
-    opacity: silentReason !== "" ? 0.55 : 1
+    opacity: lifted ? 0.85 : (silentReason !== "" ? 0.55 : 1)
     ToolTip.visible: stripHover.hovered && silentReason !== ""
     ToolTip.delay: 400
     ToolTip.text: qsTr("Silent now: %1").arg(silentReason)
@@ -366,13 +377,59 @@ Rectangle {
         anchors.margins: 4
         spacing: 3
 
-        // colour tag with the ✕ remove button
+        // the grip, the colour tag and the ✕ remove button
         Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 12
+            // Drag it to put the strip somewhere else (#94): a handle of its
+            // own, so a finger sliding over the strips still scrolls them.
+            // Not on stage: nothing is moved by accident in a song.
+            Item {
+                id: grip
+                objectName: "stripGrip"
+                visible: strip.editable
+                anchors.left: parent.left
+                anchors.leftMargin: -4
+                anchors.verticalCenter: parent.verticalCenter
+                width: 24 // (bigger than its dots: a finger finds it)
+                height: 20
+                Grid {
+                    anchors.centerIn: parent
+                    columns: 3
+                    spacing: 2
+                    Repeater {
+                        model: 6
+                        Rectangle {
+                            width: 2.5
+                            height: 2.5
+                            radius: 1.25
+                            color: gripHover.hovered || gripDrag.active ? Theme.text : Theme.textDim
+                        }
+                    }
+                }
+                HoverHandler {
+                    id: gripHover
+                    cursorShape: gripDrag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                }
+                DragHandler {
+                    id: gripDrag
+                    target: null
+                    // The strips' list must not take the drag for a scroll.
+                    grabPermissions: PointerHandler.CanTakeOverFromAnything
+                    onActiveChanged: {
+                        if (active) strip.gripPressed(centroid.scenePosition.x)
+                        else strip.gripReleased()
+                    }
+                    onCentroidChanged: if (active) strip.gripMoved(centroid.scenePosition.x)
+                }
+                ToolTip.visible: gripHover.hovered && !gripDrag.active
+                ToolTip.delay: 600
+                ToolTip.text: qsTr("Drag to move this channel")
+            }
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 16
+                x: grip.visible ? 18 : 0
+                width: parent.width - 16 - x
                 height: 3
                 radius: 1.5
                 color: strip.color

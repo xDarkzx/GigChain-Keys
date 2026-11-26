@@ -312,6 +312,10 @@
         <translation>エフェクトを削除</translation>
     </message>
     <message>
+        <source>Drag to move this channel</source>
+        <translation>ドラッグしてこのチャンネルを移動</translation>
+    </message>
+    <message>
         <source>Remove this channel</source>
         <translation>このチャンネルを削除</translation>
     </message>

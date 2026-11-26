@@ -15,6 +15,18 @@ Window {
     required property int channel
     required property int effect
     required property string pluginId
+    // Its channel, kept by id: a strip moved (#94) takes its window with it
+    // (it never turns another strip's knobs); gone, the window closes.
+    property string channelId: ""
+    Component.onCompleted: channelId = windows.channelIdAt(channel) // (where it was opened)
+    Connections {
+        target: win.windows
+        function onChannelsMoved() {
+            const now = win.windows.channelIndexOf(win.channelId)
+            if (now < 0) win.close()
+            else win.channel = now
+        }
+    }
 
     readonly property bool isOtt: pluginId === "builtin:ott"
     readonly property bool isEnhance: pluginId === "builtin:enhance"

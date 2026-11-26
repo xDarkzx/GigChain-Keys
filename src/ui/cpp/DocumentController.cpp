@@ -968,6 +968,23 @@ bool DocumentController::removeChannel(int channel)
     return true;
 }
 
+bool DocumentController::moveChannel(int from, int to)
+{
+    const std::optional<core::ChannelId> chosen = selectedChannelId();
+    const auto renamed = core::moveChannel(m_setlist, m_cursor, from, to);
+    if (!renamed) return report(renamed.error());
+    if (from == to) return true;
+    m_engine.renameInstances(*renamed); // each strip plays on with its own (nothing reloads)
+    const core::Patch* patch = currentPatch();
+    int select = m_selectedChannel;
+    if (chosen && patch != nullptr) {
+        const auto found = std::ranges::find_if(patch->channels, [&chosen](const core::Channel& c) { return c.id == *chosen; });
+        if (found != patch->channels.end()) select = static_cast<int>(found - patch->channels.begin());
+    }
+    commitChannels(select);
+    return true;
+}
+
 bool DocumentController::addEffect(int channel, const QString& pluginId, const QString& name)
 {
     if (auto r = core::addEffect(m_setlist, m_cursor, channel, core::PluginSlot{.pluginId = pluginId, .displayName = name, .bypass = false, .state = {}}); !r) {
@@ -2774,11 +2791,15 @@ bool DocumentController::restore(std::vector<UndoStep>& from, std::vector<UndoSt
     UndoStep step = std::move(from.back());
     from.pop_back();
     const QScopedValueRollback restoring(m_restoring, true);
+    // Each slot back on its own instance (a strip moved back, #94), exactly;
+    // what is left, an undone link or own copy, relinked: nothing reloads.
+    const std::map<QString, QString> renamed = core::instanceRenames(m_setlist, step.setlist);
     m_setlist = std::move(step.setlist);
     m_committed = m_setlist;
     emit structureChanged();
     emit chordInversionsChanged();
     emit mixerControlsChanged();
+    if (!renamed.empty()) m_engine.renameInstances(renamed);
     m_engine.relinkInstances(m_setlist); // an undone link or own copy reloads nothing
     setCursor(core::clampCursor(m_setlist, step.cursor), true); // plays it and refreshes every view
     m_committedCursor = m_cursor;

@@ -28,6 +28,7 @@ public:
     void applyPatch(const core::SongId& song, const core::Patch& patch) override;
     void preload(const core::Setlist&) override {}
     void relinkInstances(const core::Setlist&) override {} // (demo plugins load nothing)
+    void renameInstances(const std::map<QString, QString>&) override {}
     void setProgressHandler(LoadProgress) override {}
     void setControlTriggers(const ControlTriggers&) override {}
     std::vector<ControlAction> takeControlActions() override { return {}; }

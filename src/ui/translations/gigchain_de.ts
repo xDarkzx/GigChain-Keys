@@ -313,6 +313,10 @@
         <translation>Effekt entfernen</translation>
     </message>
     <message>
+        <source>Drag to move this channel</source>
+        <translation>Ziehen, um diesen Kanal zu verschieben</translation>
+    </message>
+    <message>
         <source>Remove this channel</source>
         <translation>Diesen Kanal entfernen</translation>
     </message>

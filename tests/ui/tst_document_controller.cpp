@@ -167,6 +167,55 @@ private slots:
         QCOMPARE(m_doc->selectedInstrumentSongs(), 0);
     }
 
+    // A strip dragged to another place (#94): the order changes, the chosen
+    // strip stays chosen, the parts still play their strips, and the engine
+    // keeps each strip's own plugins, on undo too (the same piano twice).
+    void aStripIsMovedIntoAnotherOrder()
+    {
+        addSectionsSong(); // Piano, Strings
+        QVERIFY(m_doc->addChannel(u"spy/Piano.vst3"_s, u"Piano"_s)); // "Piano 2": the same plugin again
+        QStringList verse = sectionChannels(0);
+        verse.sort();
+        m_doc->setSelectedChannel(2);
+        const core::ChannelId chosen = channelId(2);
+        QVERIFY(m_doc->saveAs(path(u"moved.gigchain"_s)));
+        QVERIFY(!m_doc->isDirty());
+        const auto names = [this] {
+            QStringList list;
+            for (const core::Channel& c : m_doc->currentPatch()->channels) list << c.name;
+            return list;
+        };
+
+        QSignalSpy channels(m_doc.get(), &DocumentController::channelsChanged);
+        m_engine->renamedInstances.clear();
+        QVERIFY(m_doc->moveChannel(2, 0));
+        QCOMPARE(names(), (QStringList{u"Piano 2"_s, u"Piano"_s, u"Strings"_s}));
+        QCOMPARE(m_engine->lastPatch.channels.at(0).name, u"Piano 2"_s); // played in the new order
+        QCOMPARE(channelId(m_doc->selectedChannel()), chosen);          // still the chosen one
+        QStringList verseNow = sectionChannels(0);
+        verseNow.sort();
+        QCOMPARE(verseNow, verse);                                      // the parts play the same strips
+        QVERIFY(m_doc->isDirty());
+        QCOMPARE(channels.size(), 1);
+        const std::map<QString, QString> moved = m_engine->renamedInstances;
+        QVERIFY(!moved.empty()); // the two pianos keep their own instances
+
+        m_engine->renamedInstances.clear();
+        QVERIFY(m_doc->undo()); // one step back
+        QCOMPARE(names(), (QStringList{u"Piano"_s, u"Strings"_s, u"Piano 2"_s}));
+        for (const auto& [oldKey, newKey] : moved) {
+            QVERIFY2(m_engine->renamedInstances.contains(newKey), qPrintable(newKey));
+            QCOMPARE(m_engine->renamedInstances.at(newKey), oldKey); // each back under its own key
+        }
+
+        QVERIFY(m_doc->moveChannel(0, 1)); // no plugin twice in the way: nothing renamed
+        QCOMPARE(names(), (QStringList{u"Strings"_s, u"Piano"_s, u"Piano 2"_s}));
+        QVERIFY(!m_doc->moveChannel(0, 3)); // no such place: refused, said
+        QVERIFY(!m_doc->lastError().isEmpty());
+        QVERIFY(m_doc->moveChannel(1, 1)); // onto itself: nothing
+        QCOMPARE(names(), (QStringList{u"Strings"_s, u"Piano"_s, u"Piano 2"_s}));
+    }
+
     void startsWithNoSetlistAndNothingInIt()
     {
         DocumentController fresh(*m_engine, *m_settings);

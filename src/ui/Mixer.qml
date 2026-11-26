@@ -143,6 +143,68 @@ Rectangle {
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.horizontal: ScrollBar {}
             keyNavigationEnabled: false // (the arrows change sounds and songs: Main's shortcuts)
+
+            // A strip dragged by its grip (#94): which one, the gap it would
+            // land in (0 before the first .. count after the last), and the
+            // pointer, in the view and as it was in the strips when lifted.
+            property int dragFrom: -1
+            property int dropGap: -1
+            property real pointerX: 0
+            property real liftX: 0
+            readonly property real stride: Theme.stripWidth + spacing
+            // While dragging, a slide over the strips is the drag, not a scroll.
+            interactive: dragFrom < 0
+            function liftStrip(index, sceneX) {
+                pointerX = mapFromItem(null, sceneX, 0).x
+                liftX = pointerX + contentX
+                dragFrom = index
+                findDropGap()
+            }
+            function dragStrip(sceneX) {
+                pointerX = mapFromItem(null, sceneX, 0).x
+                findDropGap()
+            }
+            function findDropGap() {
+                dropGap = Math.max(0, Math.min(count, Math.round((pointerX + contentX - originX) / stride)))
+            }
+            function dropStrip() {
+                const from = dragFrom
+                const to = dropGap > from ? dropGap - 1 : dropGap
+                dragFrom = -1
+                dropGap = -1
+                if (from >= 0 && to >= 0 && to !== from) mixer.doc.moveChannel(from, to)
+            }
+            // The strips rebuilt mid-drag (another sound, from a pedal): the
+            // drag is off (its strip may be gone, never to be let go).
+            Connections {
+                target: mixer.doc
+                function onCurrentChanged() { strips.dragFrom = -1; strips.dropGap = -1 }
+                function onChannelsChanged() { strips.dragFrom = -1; strips.dropGap = -1 }
+            }
+            // Held near an edge: the strips scroll along (they can be wider than the window).
+            Timer {
+                readonly property real edge: 40
+                interval: 16
+                repeat: true
+                running: strips.dragFrom >= 0 && (strips.pointerX < edge || strips.pointerX > strips.width - edge)
+                onTriggered: {
+                    const step = strips.pointerX < edge ? -Math.min(edge, edge - strips.pointerX) : Math.min(edge, strips.pointerX - (strips.width - edge))
+                    const most = Math.max(strips.originX, strips.originX + strips.contentWidth - strips.width)
+                    strips.contentX = Math.max(strips.originX, Math.min(most, strips.contentX + step / 2))
+                    strips.findDropGap()
+                }
+            }
+            // Where the dragged strip will land.
+            Rectangle {
+                objectName: "stripDropMarker"
+                visible: strips.dragFrom >= 0 && strips.dropGap >= 0 && strips.dropGap !== strips.dragFrom && strips.dropGap !== strips.dragFrom + 1
+                x: Math.max(strips.originX, strips.originX + strips.dropGap * strips.stride - strips.spacing / 2 - width / 2)
+                z: 20
+                width: 3
+                height: Math.min(strips.height, mixer.stripCap)
+                radius: 1.5
+                color: Theme.accent
+            }
             // A strip clicked: Delete (or Backspace) removes its channel, F2
             // (on a Mac also Return) renames it. Not on stage.
             Keys.onPressed: (event) => {
@@ -158,7 +220,13 @@ Rectangle {
                 }
             }
             delegate: ChannelStrip {
+                id: channelStrip
                 onKeysWanted: strips.forceActiveFocus()
+                lifted: strips.dragFrom === channelStrip.index
+                liftOffset: strips.pointerX + strips.contentX - strips.liftX
+                onGripPressed: (sceneX) => strips.liftStrip(channelStrip.index, sceneX)
+                onGripMoved: (sceneX) => strips.dragStrip(sceneX)
+                onGripReleased: strips.dropStrip()
                 editable: mixer.editable
                 engineStatus: mixer.engineStatus
                 songSection: mixer.engineStatus.songSection

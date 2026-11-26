@@ -74,9 +74,17 @@ public:
     Q_INVOKABLE void setBuiltinEffectValue(int channel, int effect, int parameter, double value);
     // Sidechain curve `curve` at `slope` as `points` levels (0-1) over one cycle, for drawing.
     Q_INVOKABLE [[nodiscard]] QVariantList sidechainCurve(int curve, double slope, int points) const;
+    // A channel kept by its id, as its strip can be moved (#94): the id of
+    // the channel at `channel` ("" none), and where the channel with `id` is
+    // now in the current patch (-1 not there).
+    Q_INVOKABLE [[nodiscard]] QString channelIdAt(int channel) const;
+    Q_INVOKABLE [[nodiscard]] int channelIndexOf(const QString& id) const;
 
 signals:
     void openCountChanged();
+    // The current patch's channels changed (moved, added, removed, another
+    // patch): a window kept on a channel finds its place again.
+    void channelsMoved();
     // One of the app's own effects was clicked: its window (the app's) is
     // to open (or come to the front), titled `title`, above `owner`.
     void builtinEffectRequested(int channel, int effect, const QString& pluginId, const QString& title, QWindow* owner);

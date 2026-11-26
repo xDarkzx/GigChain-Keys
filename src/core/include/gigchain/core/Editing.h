@@ -5,6 +5,7 @@
 #include "gigchain/core/Navigation.h"
 
 #include <functional>
+#include <map>
 
 // Setlist edits. Each function validates its input and leaves the setlist
 // unchanged when it returns an error. Names are trimmed.
@@ -86,6 +87,14 @@ Result<int> addChannel(Setlist& setlist, Cursor cursor, const PluginSlot& instru
 // through its effects, instead of an instrument. Returns its index.
 Result<int> addInputChannel(Setlist& setlist, Cursor cursor, const QString& name, int inputLeft, int inputRight);
 Result<void> removeChannel(Setlist& setlist, Cursor cursor, int channelIndex);
+// Moves a channel of the sound so it ends at `to` (#94: strips in the order
+// played on stage). Every slot keeps playing its own plugin instance (its
+// settings): a plugin's instances go by their order in a sound, so when the
+// move would hand one to another slot (the same plugin on two strips), the
+// song's slots are linked for sharing first (sharing what they shared) and
+// the keys that changed are returned, old -> new, for the engine
+// (IEngine::renameInstances). Usually nothing changes: empty.
+Result<std::map<QString, QString>> moveChannel(Setlist& setlist, Cursor cursor, int from, int to);
 Result<void> addEffect(Setlist& setlist, Cursor cursor, int channelIndex, const PluginSlot& effect);
 Result<void> removeEffect(Setlist& setlist, Cursor cursor, int channelIndex, int effectIndex);
 

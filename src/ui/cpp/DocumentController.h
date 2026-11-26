@@ -246,6 +246,9 @@ public:
     // Channels of the current patch
     Q_INVOKABLE bool addChannel(const QString& pluginId, const QString& name);
     Q_INVOKABLE bool removeChannel(int channel);
+    // Moves a strip so it ends at `to` (dragged in the mixer, #94): the
+    // chosen strip stays chosen and every strip keeps its own plugins.
+    Q_INVOKABLE bool moveChannel(int from, int to);
     Q_INVOKABLE bool addEffect(int channel, const QString& pluginId, const QString& name);
     Q_INVOKABLE bool removeEffect(int channel, int effect);
     // A bypassed effect stays in the chain but is not played.

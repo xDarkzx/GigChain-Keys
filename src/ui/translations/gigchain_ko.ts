@@ -308,6 +308,10 @@
         <translation>이펙트 제거</translation>
     </message>
     <message>
+        <source>Drag to move this channel</source>
+        <translation>드래그하여 이 채널 이동</translation>
+    </message>
+    <message>
         <source>Remove this channel</source>
         <translation>이 채널 제거</translation>
     </message>

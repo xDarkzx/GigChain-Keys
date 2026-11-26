@@ -552,6 +552,63 @@ Result<void> removeChannel(Setlist& setlist, Cursor cursor, int channelIndex)
     return {};
 }
 
+namespace {
+
+// The instance each slot of the song plays, by the slot (its sound, its
+// channel's id, -1 its instrument or its effect's place): slots keep their
+// identity wherever their channel is.
+std::map<QString, QString> instanceOfEachSlot(const Song& song)
+{
+    std::map<QString, QString> played;
+    for (std::size_t p = 0; p < song.patches.size(); ++p) {
+        const Patch& patch = song.patches.at(p);
+        for (const PluginUse& use : pluginUses(song.id, patch)) {
+            played[u"%1|%2|%3"_s.arg(p).arg(patch.channels.at(toIndex(use.channel)).id.value()).arg(use.effect)] = use.key;
+        }
+    }
+    return played;
+}
+
+} // namespace
+
+Result<std::map<QString, QString>> moveChannel(Setlist& setlist, Cursor cursor, int from, int to)
+{
+    const Patch* patch = patchAt(setlist, cursor);
+    if (patch == nullptr) return missing(u"Patch"_s);
+    if (!inRange(from, patch->channels.size())) return missing(u"Channel %1"_s.arg(from + 1));
+    if (!inRange(to, patch->channels.size())) return missing(u"Channel %1"_s.arg(to + 1));
+    std::map<QString, QString> renamed;
+    if (from == to) return renamed;
+
+    Song& song = setlist.songs.at(toIndex(cursor.song));
+    const std::map<QString, QString> before = instanceOfEachSlot(song);
+    Song moved = song;
+    moveElement(moved.patches.at(toIndex(cursor.patch)).channels, from, to);
+    if (instanceOfEachSlot(moved) == before) { // (the usual case: no plugin twice in the sound)
+        song = std::move(moved);
+        return renamed;
+    }
+    // Instances go by their order in a sound: linked for sharing, each slot's
+    // key is its share id's, wherever its channel stands.
+    moved = song;
+    linkForSharing(moved);
+    const std::map<QString, QString> linked = instanceOfEachSlot(moved);
+    moveElement(moved.patches.at(toIndex(cursor.patch)).channels, from, to);
+    if (instanceOfEachSlot(moved) != linked) {
+        return fail(ErrorCode::InvalidData, u"Moving channel %1 would change what other channels play: not moved"_s.arg(from + 1));
+    }
+    for (const auto& [slot, oldKey] : before) {
+        const QString& newKey = linked.at(slot);
+        if (newKey == oldKey) continue;
+        const auto [entry, added] = renamed.emplace(oldKey, newKey);
+        if (!added && entry->second != newKey) { // (one instance would become two: never)
+            return fail(ErrorCode::InvalidData, u"Moving channel %1 would split a shared plugin: not moved"_s.arg(from + 1));
+        }
+    }
+    song = std::move(moved);
+    return renamed;
+}
+
 Result<void> addEffect(Setlist& setlist, Cursor cursor, int channelIndex, const PluginSlot& effect)
 {
     return updateChannel(setlist, cursor, channelIndex, [&effect](Channel& channel) {
