@@ -3455,6 +3455,18 @@ Type or paste them in the Chart tab.</source>
         <translation>최대 1분에 한 번, 보통 해결되는 방법과 함께 (위에서 버퍼 크게).</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>화면</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>사운드가 켜져 있는 동안 화면 켜 두기</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>컴퓨터는 MIDI 키보드 연주를 사용으로 보지 않기 때문에 공연 도중 화면이 꺼지고 잠길 수 있습니다. 평소처럼 절전되게 하려면 이 옵션을 끄세요(예: 배터리 사용 시).</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translation>안전 리미터</translation>
     </message>
@@ -3970,6 +3982,13 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 songs</source>
         <translation>%1곡</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>라이브 연주 중</translation>
     </message>
 </context>
 <context>

@@ -22,6 +22,7 @@ qt_add_qml_module(gigchain_ui
         cpp/WarmupController.h cpp/WarmupController.cpp
         cpp/HelpLibrary.h cpp/HelpLibrary.cpp
         cpp/StartupProgress.h cpp/StartupProgress.cpp
+        cpp/StayAwake.h cpp/StayAwake.cpp
         cpp/StageQuips.h cpp/StageQuips.cpp
         cpp/FreezeWatchdog.h cpp/FreezeWatchdog.cpp
         cpp/CrashReports.h cpp/CrashReports.cpp

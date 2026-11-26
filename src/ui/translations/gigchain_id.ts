@@ -3529,6 +3529,18 @@ Ketik atau tempel di tab Chart.</translation>
         <translation>Paling banyak sekali per menit, dengan cara yang biasanya memperbaikinya (buffer lebih besar di atas).</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>Layar</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>Biarkan layar tetap menyala selama suara berjalan</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>Komputer Anda tidak menganggap bermain keyboard MIDI sebagai penggunaan, jadi di tengah set layar bisa mati dan terkunci. Matikan ini agar layar tidur seperti biasa (saat memakai baterai, misalnya).</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translation>Limiter pengaman</translation>
     </message>
@@ -4064,6 +4076,13 @@ Ketik atau tempel di tab Chart.</translation>
     <message>
         <source>%1 songs</source>
         <translation>%1 lagu</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>Bermain live</translation>
     </message>
 </context>
 <context>

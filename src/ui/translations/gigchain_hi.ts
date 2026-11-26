@@ -3600,6 +3600,18 @@ Type or paste them in the Chart tab.</source>
         <translation>ज़्यादा से ज़्यादा मिनट में एक बार, उस उपाय के साथ जो आम तौर पर ठीक करता है (ऊपर बड़ा buffer)।</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>स्क्रीन</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>साउंड चलते समय स्क्रीन चालू रखें</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>आपका कंप्यूटर MIDI कीबोर्ड बजाने को इस्तेमाल नहीं मानता, इसलिए सेट के बीच में स्क्रीन बंद होकर लॉक हो सकती है। इसे बंद करें ताकि वह हमेशा की तरह स्लीप हो सके (जैसे बैटरी पर)।</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translatorcomment>same</translatorcomment>
         <translation>Safety limiter</translation>
@@ -4150,6 +4162,13 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 songs</source>
         <translation>%1 गाने</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>लाइव बजा रहे हैं</translation>
     </message>
 </context>
 <context>

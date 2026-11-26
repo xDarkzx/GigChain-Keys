@@ -3455,6 +3455,18 @@ Type or paste them in the Chart tab.</source>
         <translation>最多每分钟一次，并附上通常的解决办法（在上面调大缓冲区）。</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>屏幕</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>声音运行时保持屏幕常亮</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>电脑不会把弹奏 MIDI 键盘算作使用，所以演出中途屏幕可能变暗并锁定。关闭此项可让它像平常一样休眠（例如使用电池时）。</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translation>安全限制器</translation>
     </message>
@@ -3970,6 +3982,13 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 songs</source>
         <translation>%1 首歌</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>现场演奏中</translation>
     </message>
 </context>
 <context>
