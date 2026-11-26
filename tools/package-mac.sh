@@ -21,7 +21,7 @@ DMG="$BUILD/GigChain Keys-$VERSION-$ARCH.dmg"
 [ -x "$APP/Contents/MacOS/GigChainKeysScan" ] || { echo "The plugin scanner is missing from $APP" >&2; exit 1; }
 # Built for that Mac: an Apple Silicon app named Intel would never open there.
 for exe in "$APP/Contents/MacOS/GigChain Keys" "$APP/Contents/MacOS/GigChainKeysScan"; do
-    built="$("${LIPO:-lipo}" -archs "$exe")"
+    built="$("${LIPO:-lipo}" -archs "$exe" | xargs)" # (xargs: without the spaces around it)
     [ "$built" = "$ARCH" ] || { echo "$exe is built for '$built', not $ARCH" >&2; exit 1; }
 done
 # No program it ships has the live test control (docs/testing/live-test-control.md).

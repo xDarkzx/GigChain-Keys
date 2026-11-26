@@ -34,6 +34,11 @@ for port in rtaudio rtmidi tl-expected fluidsynth gcem; do
     mkdir -p "$build/vcpkg_installed/arm64-osx-13/share/$port"
     echo "$port" > "$build/vcpkg_installed/arm64-osx-13/share/$port/copyright"
 done
+# The app's sound pack, as cmake/PianoSamples.cmake lays it out.
+mkdir -p "$build/samples/piano" "$build/samples/pads"
+for file in "piano/Concert Grand.sfz" "piano/Upright.sfz" "piano/Rhodes.sfz" "piano/CREDITS.txt" "pads/strings.txt" "pads/piano.txt" "pads/CREDITS.txt"; do
+    echo sample > "$build/samples/$file"
+done
 
 # Stand-ins: each records its call; hdiutil records what the .dmg would hold.
 bin="$work/bin"
