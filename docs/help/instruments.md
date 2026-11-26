@@ -307,6 +307,19 @@ Each channel strip, top to bottom:
 **Right-click anywhere on the strip** for the channel menu: **Keyboard Zone…**,
 **Knobs…**, **Play Audio Input**, **Replace Instrument**, **Remove Channel**.
 
+## Putting the strips in your order
+
+Drag a strip by its **grip** (the six dots left of its colour tag) and let
+go where you want it: a line shows where it will land, and past the edge of
+the mixer the strips scroll along. With a finger, drag the grip too; a
+finger slid over the rest of the strips still scrolls them. The order is
+saved with the sound, and **Undo** puts it back. Each strip keeps its
+instrument, its effects and their settings; the strip you had chosen stays
+chosen (in **One at a time** the same instrument plays on). Keyboard knobs
+learned for the mixer's faders follow the place, as on a control surface:
+the first fader moves whichever strip is first. On stage (Perform) there is
+no grip, so nothing moves by accident in a song.
+
 ## The Aux strip: one shared reverb
 
 Left of the master, the **Aux** strip holds effects that channels share:

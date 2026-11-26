@@ -311,6 +311,10 @@
         <translation>Quitar efecto</translation>
     </message>
     <message>
+        <source>Drag to move this channel</source>
+        <translation>Arrastra para mover este canal</translation>
+    </message>
+    <message>
         <source>Remove this channel</source>
         <translation>Quitar este canal</translation>
     </message>

@@ -5,6 +5,7 @@
 
 #include <QString>
 
+#include <map>
 #include <vector>
 
 namespace gigchain::core {
@@ -40,5 +41,12 @@ void linkForSharing(Song& song);
 // The song's slots linked with the share id go back to the song's own
 // instances (the song's patches still share them).
 void unlinkFromSharing(Song& song, const QString& shareId);
+
+// Two versions of a setlist (as undo puts one back): each instance key that
+// changed, old -> new, by the slot that plays it (its song, sound, channel,
+// place and plugin), so every slot keeps its own instance (IEngine::
+// renameInstances). Only one-to-one changes: an instance that would be
+// shared or split, or a place now holding another plugin, is left out.
+[[nodiscard]] std::map<QString, QString> instanceRenames(const Setlist& before, const Setlist& after);
 
 } // namespace gigchain::core

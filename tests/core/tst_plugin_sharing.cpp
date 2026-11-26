@@ -3,6 +3,9 @@
 
 #include <QtTest>
 
+#include <map>
+#include <optional>
+
 using namespace gigchain::core;
 using namespace Qt::StringLiterals;
 
@@ -117,6 +120,54 @@ private slots:
         QVERIFY(copy.has_value());
         QCOMPARE(keyOf(setlist.songs.at(1), 0), keyOf(setlist.songs.at(0), 0));
         QCOMPARE(songsUsing(setlist, keyOf(setlist.songs.at(0), 0)), (std::vector<int>{0, 1}));
+    }
+
+    // Between two versions of a setlist (an undo of a strip moved, #94):
+    // the key each instance had and has now, by the slot that plays it, so
+    // every slot gets its own back. What cannot be told one to one (an
+    // instance shared, or split) is left out (relinkInstances takes it).
+    void instanceRenamesFollowEachSlot()
+    {
+        Setlist before;
+        before.songs = {songWith(u"Ballad"_s, {piano(), piano()})};
+        Setlist after = before;
+        QVERIFY(instanceRenames(before, after).empty()); // nothing changed
+        const auto renamed = moveChannel(after, Cursor{0, 0}, 1, 0);
+        QVERIFY(renamed.has_value() && !renamed->empty());
+        QCOMPARE(instanceRenames(before, after), *renamed);
+        std::map<QString, QString> back;
+        for (const auto& [oldKey, newKey] : *renamed) back.emplace(newKey, oldKey);
+        QCOMPARE(instanceRenames(after, before), back); // undone: each back to its own
+
+        // Two songs' own instances becoming one (linked) or one becoming two: left out.
+        Setlist own;
+        own.songs = {songWith(u"Ballad"_s, {piano()}), songWith(u"Funk"_s, {piano()})};
+        Setlist merged = own;
+        for (Song& song : merged.songs) {
+            std::optional<PluginSlot>& instrument = song.patches.at(0).channels.at(0).instrument;
+            QVERIFY(instrument.has_value());
+            if (instrument) instrument->shareId = u"one"_s;
+        }
+        QCOMPARE(keyOf(merged.songs.at(0), 0), keyOf(merged.songs.at(1), 0)); // (one instance)
+        QVERIFY(instanceRenames(own, merged).empty());
+        QVERIFY(instanceRenames(merged, own).empty());
+        Setlist other;
+        other.songs = {songWith(u"Funk"_s, {piano()})}; // another song: nothing in common
+        QVERIFY(instanceRenames(before, other).empty());
+
+        // An effect removed, then the removal undone: a different plugin is
+        // back in the same place, so nothing is renamed (Reverb keeps its own,
+        // the Delay loads with its own settings).
+        Setlist withBoth;
+        withBoth.songs = {songWith(u"Ballad"_s, {piano()})};
+        Channel& channel = withBoth.songs.at(0).patches.at(0).channels.at(0);
+        channel.effects = {PluginSlot{.pluginId = u"plugins/Delay.vst3"_s, .displayName = u"Delay"_s, .bypass = false, .state = {}, .shareId = {}},
+                           PluginSlot{.pluginId = u"plugins/Reverb.vst3"_s, .displayName = u"Reverb"_s, .bypass = false, .state = {}, .shareId = {}}};
+        Setlist removed = withBoth;
+        auto& effects = removed.songs.at(0).patches.at(0).channels.at(0).effects;
+        effects.erase(effects.begin()); // the Delay: the Reverb is now the first effect
+        QVERIFY(instanceRenames(removed, withBoth).empty());
+        QVERIFY(instanceRenames(withBoth, removed).empty());
     }
 };
 

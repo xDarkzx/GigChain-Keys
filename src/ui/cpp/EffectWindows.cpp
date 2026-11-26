@@ -62,6 +62,8 @@ EffectWindows::EffectWindows(engine::IEngine& engine, DocumentController& docume
     connect(&m_document, &DocumentController::currentChanged, this, &EffectWindows::sweep);
     connect(&m_document, &DocumentController::channelsChanged, this, &EffectWindows::sweep);
     connect(&m_document, &DocumentController::channelUpdated, this, &EffectWindows::sweep);
+    connect(&m_document, &DocumentController::currentChanged, this, &EffectWindows::channelsMoved);
+    connect(&m_document, &DocumentController::channelsChanged, this, &EffectWindows::channelsMoved);
 }
 
 EffectWindows::~EffectWindows()
@@ -303,6 +305,20 @@ const core::Channel* EffectWindows::channelAt(int channel) const
     const core::Patch* patch = m_document.currentPatch();
     if (patch == nullptr || channel < 0 || std::cmp_greater_equal(channel, patch->channels.size())) return nullptr;
     return &patch->channels.at(static_cast<std::size_t>(channel));
+}
+
+QString EffectWindows::channelIdAt(int channel) const
+{
+    const core::Channel* strip = channelAt(channel);
+    return strip != nullptr ? strip->id.value() : QString();
+}
+
+int EffectWindows::channelIndexOf(const QString& id) const
+{
+    const core::Patch* patch = m_document.currentPatch();
+    if (patch == nullptr || id.isEmpty()) return -1;
+    const auto found = std::ranges::find_if(patch->channels, [&id](const core::Channel& c) { return c.id.value() == id; });
+    return found != patch->channels.end() ? static_cast<int>(found - patch->channels.begin()) : -1;
 }
 
 QString EffectWindows::effectPluginId(int channel, int effect) const

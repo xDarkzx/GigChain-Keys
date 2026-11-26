@@ -374,6 +374,59 @@ void RealEngine::relinkInstances(const core::Setlist& setlist)
     if (moved > 0) qCInfo(lcEngine) << "Kept" << moved << "loaded plugins for the songs now sharing them (nothing reloaded)";
 }
 
+void RealEngine::renameInstances(const std::map<QString, QString>& renamed)
+{
+    GC_ONLY_MAIN_THREAD();
+    // Never onto an instance still loaded that is not moving away itself
+    // (an undone removal: the strip that stayed played the other's, and the
+    // other's own is still loaded): it would be lost, with its settings. That
+    // rename is left out, so its own instance stays where it is too (and so
+    // on along a chain); relinkInstances then keeps both.
+    std::map<QString, QString> kept = renamed;
+    for (bool dropped = true; dropped;) {
+        dropped = false;
+        for (auto it = kept.begin(); it != kept.end();) {
+            if (m_nodes.contains(it->second) && !kept.contains(it->second)) {
+                it = kept.erase(it);
+                dropped = true;
+            } else {
+                ++it;
+            }
+        }
+    }
+    if (kept.size() < renamed.size()) {
+        qCInfo(lcEngine) << "Kept" << renamed.size() - kept.size() << "loaded plugins where they are (another is still loaded in their new place)";
+    }
+    // All taken out first, then put back: keys can trade places (A <-> B).
+    struct Instance
+    {
+        QString key; // the new one
+        std::shared_ptr<PluginNode> node;
+        std::optional<QByteArray> state;
+        std::optional<QString> plugin;
+        bool edited = false;
+    };
+    std::vector<Instance> taken;
+    for (const auto& [oldKey, newKey] : kept) {
+        auto node = m_nodes.extract(oldKey);
+        if (!node) continue; // not loaded (bypassed, failed): it loads when played
+        Instance instance{.key = newKey, .node = std::move(node.mapped()), .state = {}, .plugin = {}, .edited = m_editedNodes.erase(oldKey) > 0};
+        if (auto state = m_nodeStates.extract(oldKey)) instance.state = std::move(state.mapped());
+        if (auto plugin = m_nodePlugins.extract(oldKey)) instance.plugin = std::move(plugin.mapped());
+        taken.push_back(std::move(instance));
+    }
+    for (Instance& instance : taken) {
+        m_nodeStates.erase(instance.key);
+        m_nodePlugins.erase(instance.key);
+        m_editedNodes.erase(instance.key);
+        m_nodes.insert_or_assign(instance.key, std::move(instance.node));
+        if (instance.state) m_nodeStates[instance.key] = std::move(*instance.state);
+        if (instance.plugin) m_nodePlugins[instance.key] = std::move(*instance.plugin);
+        if (instance.edited) m_editedNodes.insert(instance.key);
+    }
+    if (!taken.empty()) qCInfo(lcEngine) << "Kept" << taken.size() << "loaded plugins with their channels in the new order (nothing reloaded)";
+}
+
 std::shared_ptr<PluginNode> RealEngine::nodeFor(const QString& key, const core::PluginSlot& slot, bool announce)
 {
     GC_ONLY_MAIN_THREAD();

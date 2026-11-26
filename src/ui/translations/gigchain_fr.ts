@@ -313,6 +313,10 @@
         <translation>Retirer l’effet</translation>
     </message>
     <message>
+        <source>Drag to move this channel</source>
+        <translation>Faites glisser pour déplacer cette tranche</translation>
+    </message>
+    <message>
         <source>Remove this channel</source>
         <translation>Retirer cette tranche</translation>
     </message>

@@ -553,6 +553,97 @@ private slots:
         QVERIFY(engine.poll().empty());
     }
 
+    // Strips moved into another order (#94), with the same plugin on two of
+    // them (as instrument and effect) and shared with the song's other sound:
+    // each strip plays on with its own instances, nothing loads again.
+    void movingAStripKeepsEachStripsOwnPlugins()
+    {
+        auto created = createQuietEngine();
+        if (!created && created.error().code == core::ErrorCode::DeviceUnavailable) QSKIP("No audio device");
+        QVERIFY(created.has_value());
+        IEngine& engine = **created;
+        engine.setMasterVolume(core::limits::kMinVolumeDb);
+
+        // The app's own (their knobs can be set from here; always there).
+        const auto channelWith = [&](const QString& name) {
+            core::Channel channel = core::makeChannel(name);
+            channel.instrument = slot(u"builtin:saw-stack-pro"_s, u"Saw Stack Pro"_s);
+            channel.effects = {slot(u"builtin:ott"_s, u"Squash"_s)};
+            return channel;
+        };
+        core::Setlist setlist;
+        core::Song song = core::makeSong(u"Ballad"_s);
+        song.patches.at(0).channels = {channelWith(u"A"_s), channelWith(u"B"_s)};
+        song.patches.push_back(core::makePatch(u"Chorus"_s));
+        song.patches.at(1).channels = {channelWith(u"C"_s)}; // shares A's (the first in each sound)
+        setlist.songs = {song};
+        const core::ChannelId a = song.patches.at(0).channels.at(0).id;
+        const core::ChannelId b = song.patches.at(0).channels.at(1).id;
+        const core::ChannelId c = song.patches.at(1).channels.at(0).id;
+        engine.preload(setlist);
+        engine.applyPatch(song.id, setlist.songs.at(0).patches.at(0));
+        const std::size_t loaded = engine.loadedPluginCount();
+        QCOMPARE(loaded, std::size_t{4}); // A's two (C's too), B's two
+
+        // Each instance marked with a value of its own.
+        const auto knobOf = [&](int target) {
+            const std::vector<PluginParameter> parameters = engine.pluginParameters(a, target);
+            const auto continuous = std::ranges::find_if(parameters, [](const PluginParameter& p) { return p.choices.isEmpty(); });
+            return continuous == parameters.end() ? std::optional<uint32_t>{} : std::optional<uint32_t>{continuous->id};
+        };
+        const std::optional<uint32_t> instrumentKnob = knobOf(-1);
+        const std::optional<uint32_t> effectKnob = knobOf(0);
+        QVERIFY(instrumentKnob && effectKnob);
+        const auto knobFor = [&](int target) { return target < 0 ? *instrumentKnob : *effectKnob; };
+        const auto mark = [&](const core::ChannelId& id, int target, double value) {
+            QVERIFY(engine.setPluginParameter(id, target, knobFor(target), value).has_value());
+        };
+        mark(a, -1, 0.2);
+        mark(a, 0, 0.3);
+        mark(b, -1, 0.8);
+        mark(b, 0, 0.7);
+        const auto value = [&](const core::ChannelId& id, int target) { return engine.pluginParameterValue(id, target, knobFor(target)); };
+        QVERIFY(std::abs(value(b, -1) - 0.8) < 0.02);
+
+        int loads = 0;
+        engine.setProgressHandler([&](LoadStage stage, const QString& what, int, int) {
+            if (stage == LoadStage::LoadingSounds && !what.isEmpty()) ++loads;
+        });
+        const auto renamed = core::moveChannel(setlist, core::Cursor{0, 0}, 1, 0); // B before A
+        QVERIFY(renamed.has_value());
+        QVERIFY(!renamed->empty());
+        engine.renameInstances(*renamed);
+        engine.applyPatch(song.id, setlist.songs.at(0).patches.at(0));
+        QCOMPARE(loads, 0);
+        QCOMPARE(engine.loadedPluginCount(), loaded);
+        QVERIFY2(std::abs(value(a, -1) - 0.2) < 0.02, qPrintable(QString::number(value(a, -1))));
+        QVERIFY2(std::abs(value(a, 0) - 0.3) < 0.02, qPrintable(QString::number(value(a, 0))));
+        QVERIFY2(std::abs(value(b, -1) - 0.8) < 0.02, qPrintable(QString::number(value(b, -1))));
+        QVERIFY2(std::abs(value(b, 0) - 0.7) < 0.02, qPrintable(QString::number(value(b, 0))));
+        // The other sound still shares A's instrument.
+        engine.applyPatch(song.id, setlist.songs.at(0).patches.at(1));
+        QCOMPARE(loads, 0);
+        QVERIFY2(std::abs(value(c, -1) - 0.2) < 0.02, qPrintable(QString::number(value(c, -1))));
+
+        // A rename onto an instance still loaded that is not moving away (an
+        // undone removal: the strip that stayed played the other's): both
+        // kept, none replaced, each strip with its own settings.
+        engine.applyPatch(song.id, setlist.songs.at(0).patches.at(0));
+        const std::vector<core::PluginUse> uses = core::pluginUses(song.id, setlist.songs.at(0).patches.at(0));
+        const auto instrumentKey = [&uses](int channel) {
+            const auto use = std::ranges::find_if(uses, [channel](const core::PluginUse& u) { return u.channel == channel && u.effect < 0; });
+            return use == uses.end() ? QString() : use->key;
+        };
+        QVERIFY(!instrumentKey(0).isEmpty() && !instrumentKey(1).isEmpty());
+        engine.renameInstances({{instrumentKey(0), instrumentKey(1)}}); // B's onto A's
+        QCOMPARE(engine.loadedPluginCount(), loaded);
+        engine.applyPatch(song.id, setlist.songs.at(0).patches.at(0));
+        QCOMPARE(loads, 0);
+        QVERIFY2(std::abs(value(a, -1) - 0.2) < 0.02, qPrintable(QString::number(value(a, -1))));
+        QVERIFY2(std::abs(value(b, -1) - 0.8) < 0.02, qPrintable(QString::number(value(b, -1))));
+        QVERIFY(engine.poll().empty());
+    }
+
     void pluginSettingsAreStoredAndComeBack()
     {
         if (!QFileInfo::exists(kSmall)) QSKIP("The test effect is not installed");

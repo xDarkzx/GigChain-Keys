@@ -1159,6 +1159,116 @@ private slots:
         QCOMPARE(after, order); // no song was moved
     }
 
+    // #94: a strip dragged by its grip goes where it is dropped (a mouse or
+    // a finger); past the edge the strips scroll along; on stage there is
+    // no grip (nothing moved by accident in a song).
+    void aStripIsDraggedByItsGripIntoAnotherPlace()
+    {
+        window()->resize(1400, 760);
+        ui::DocumentController& doc = m_session->document();
+        for (const QString& name : {u"Piano"_s, u"Organ"_s, u"Pad"_s}) QVERIFY(doc.addChannel(u"demo.piano"_s, name));
+        const auto names = [&doc] {
+            QStringList list;
+            for (const core::Channel& c : doc.currentPatch()->channels) list << c.name;
+            return list;
+        };
+        QCOMPARE(names(), (QStringList{u"Piano"_s, u"Organ"_s, u"Pad"_s}));
+        QQuickWindow* w = window();
+        QVERIFY(QTest::qWaitForWindowExposed(w));
+        settle();
+        auto* strips = w->findChild<QQuickItem*>(u"mixerStrips"_s);
+        QVERIFY(strips != nullptr);
+        const auto stripAt = [strips](int index) {
+            QQuickItem* strip = nullptr;
+            QMetaObject::invokeMethod(strips, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, strip), Q_ARG(int, index));
+            return strip;
+        };
+        const auto gripOf = [&stripAt](int index) {
+            QQuickItem* strip = stripAt(index);
+            QQuickItem* grip = strip != nullptr ? strip->findChild<QQuickItem*>(u"stripGrip"_s) : nullptr;
+            return grip != nullptr ? grip->mapToScene(QPointF(grip->width() / 2, grip->height() / 2)).toPoint() : QPoint();
+        };
+        const auto leftOf = [&stripAt](int index) {
+            QQuickItem* strip = stripAt(index);
+            return strip->mapToScene(QPointF(strip->width() * 0.2, strip->height() / 2)).toPoint();
+        };
+        QVERIFY(!gripOf(2).isNull());
+        doc.setSelectedChannel(1); // Organ
+        settle();
+
+        // The mouse: Pad onto Piano's left half -> first.
+        QPoint from = gripOf(2);
+        QPoint to = QPoint(leftOf(0).x(), from.y());
+        QTest::mousePress(w, Qt::LeftButton, {}, from);
+        for (int i = 1; i <= 12; ++i) QTest::mouseMove(w, from + ((to - from) * i / 12), 15);
+        auto* marker = w->findChild<QQuickItem*>(u"stripDropMarker"_s);
+        QVERIFY(marker != nullptr);
+        QVERIFY(marker->isVisible()); // where it will land, shown while dragging
+        shoot(u"strip-drag"_s);
+        QTest::mouseRelease(w, Qt::LeftButton, {}, to);
+        QTRY_COMPARE(names(), (QStringList{u"Pad"_s, u"Piano"_s, u"Organ"_s}));
+        QCOMPARE(doc.selectedChannel(), 2); // still the Organ
+        QVERIFY(!marker->isVisible());
+        settle();
+
+        // A finger: Pad (now first) to the far right.
+        from = gripOf(0);
+        to = QPoint(stripAt(2)->mapToScene(QPointF(stripAt(2)->width() * 0.8, 0)).toPoint().x(), from.y());
+        fingerDrag(from, to);
+        QTRY_COMPARE(names(), (QStringList{u"Piano"_s, u"Organ"_s, u"Pad"_s}));
+        QVERIFY(doc.undo());
+        QCOMPARE(names(), (QStringList{u"Pad"_s, u"Piano"_s, u"Organ"_s}));
+        settle();
+
+        // More strips than fit: held at the edge, the strips scroll along, all
+        // the way to the last (the held strip's own place long out of view).
+        for (int i = 0; i < 14; ++i) QVERIFY(doc.addChannel(u"demo.piano"_s, u"Extra"_s));
+        settle();
+        strips->setProperty("contentX", 0);
+        settle();
+        const qreal most = strips->property("originX").toReal() + strips->property("contentWidth").toReal() - strips->width();
+        QVERIFY(most > strips->width()); // (far more strips than fit)
+        from = gripOf(0);
+        to = QPoint(strips->mapToScene(QPointF(strips->width() - 6, 0)).toPoint().x(), from.y());
+        QTest::mousePress(w, Qt::LeftButton, {}, from);
+        for (int i = 1; i <= 12; ++i) QTest::mouseMove(w, from + ((to - from) * i / 12), 15);
+        QTRY_VERIFY2_WITH_TIMEOUT(strips->property("contentX").toReal() >= most - 1,
+                                  qPrintable(u"scrolled to %1 of %2"_s.arg(strips->property("contentX").toReal()).arg(most)), 10000);
+        QTest::mouseMove(w, to + QPoint(-1, 0), 15); // (still held, at the end)
+        QTest::mouseRelease(w, Qt::LeftButton, {}, to);
+        QTRY_COMPARE(names().last(), u"Pad"_s); // dropped last
+        QVERIFY(strips->property("interactive").toBool()); // the drag is over: the strips scroll again
+        QVERIFY(!marker->isVisible());
+        settle();
+
+        // The strips rebuilt mid-drag (another sound, from a pedal): the drag
+        // is off and the strips scroll again.
+        strips->setProperty("contentX", 0);
+        settle();
+        from = gripOf(1);
+        QTest::mousePress(w, Qt::LeftButton, {}, from);
+        for (int i = 1; i <= 4; ++i) QTest::mouseMove(w, from + QPoint(10 * i, 0), 15);
+        QVERIFY(!strips->property("interactive").toBool()); // (dragging)
+        QVERIFY(doc.addPatch(0));
+        QVERIFY(doc.selectPatch(0, 1));
+        settle();
+        QTest::mouseRelease(w, Qt::LeftButton, {}, from + QPoint(40, 0));
+        QTRY_VERIFY(strips->property("interactive").toBool());
+        QVERIFY(doc.selectPatch(0, 0));
+        settle();
+
+        // On stage: no grip.
+        QVERIFY(strips->parentItem() != nullptr);
+        auto* mixer = w->findChild<QObject*>(u"mixerBottom"_s);
+        QVERIFY(mixer != nullptr);
+        QVERIFY(mixer->setProperty("editable", false));
+        settle();
+        auto* grip = stripAt(0)->findChild<QQuickItem*>(u"stripGrip"_s);
+        QVERIFY(grip != nullptr && !grip->isVisible());
+        QVERIFY(mixer->setProperty("editable", true));
+        settle();
+    }
+
     // A channel is named after the sound it plays: double-click its name
     // plate, type, Enter (F2 does the same for the strip clicked).
     void aChannelIsRenamedOnItsStrip()
@@ -2332,6 +2442,31 @@ Window {
         QVERIFY(doc.removeEffect(0, 2));
         QTRY_VERIFY(fxWindowNamed(u"SIDECHAIN"_s) == nullptr);
         QVERIFY(fxWindowNamed(u"SQUASH"_s) != nullptr);
+
+        // #94: another strip with a Squash of its own moved in front: the
+        // open window stays with its own strip's Squash (it never turns
+        // another strip's knobs), and the other's opens a window of its own.
+        QVERIFY(doc.addChannel(u"fake.grand-piano"_s, u"Second Piano"_s));
+        QVERIFY(doc.addEffect(1, u"builtin:ott"_s, u"Squash"_s));
+        QVERIFY(doc.moveChannel(1, 0));
+        settle();
+        QTRY_COMPARE(ott->property("channel").toInt(), 1);
+        QVERIFY(ott->isVisible());
+        bool opened = false;
+        QVERIFY(QMetaObject::invokeMethod(windows, "open", Q_RETURN_ARG(bool, opened), Q_ARG(int, 0), Q_ARG(int, 0),
+                                          Q_ARG(QWindow*, window())));
+        QVERIFY(opened);
+        const auto squashes = [] {
+            const QWindowList all = QGuiApplication::topLevelWindows();
+            return static_cast<int>(std::ranges::count_if(all, [](const QWindow* w) {
+                return w->isVisible() && w->property("pluginId").toString() == u"builtin:ott";
+            }));
+        };
+        QTRY_COMPARE(squashes(), 2); // its own window, beside the moved one's
+        // Its strip removed: it goes.
+        const QPointer<QQuickWindow> moved = ott;
+        QVERIFY(doc.removeChannel(1));
+        QTRY_VERIFY(moved.isNull() || !moved->isVisible());
     }
 
     // Saw Stack Pro (the app's own instrument) shows its window in the main

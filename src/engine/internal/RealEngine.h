@@ -59,6 +59,7 @@ public:
     void applyPatch(const core::SongId& song, const core::Patch& patch) override;
     void preload(const core::Setlist& setlist) override;
     void relinkInstances(const core::Setlist& setlist) override;
+    void renameInstances(const std::map<QString, QString>& renamed) override;
     void setProgressHandler(LoadProgress handler) override { m_progress = std::move(handler); }
     [[nodiscard]] std::size_t loadedPluginCount() const override { return m_nodes.size(); }
     [[nodiscard]] QStringList blockedPlugins() const override { return m_guard.blocked(); }

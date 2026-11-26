@@ -308,6 +308,10 @@
         <translation>Удалить эффект</translation>
     </message>
     <message>
+        <source>Drag to move this channel</source>
+        <translation>Перетащите, чтобы переместить этот канал</translation>
+    </message>
+    <message>
         <source>Remove this channel</source>
         <translation>Удалить этот канал</translation>
     </message>

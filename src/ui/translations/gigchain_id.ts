@@ -319,6 +319,10 @@
         <translation>Hapus efek</translation>
     </message>
     <message>
+        <source>Drag to move this channel</source>
+        <translation>Seret untuk memindahkan kanal ini</translation>
+    </message>
+    <message>
         <source>Remove this channel</source>
         <translation>Hapus kanal ini</translation>
     </message>

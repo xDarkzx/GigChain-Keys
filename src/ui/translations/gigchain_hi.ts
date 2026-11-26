@@ -326,6 +326,10 @@
         <translation>Effect हटाएँ</translation>
     </message>
     <message>
+        <source>Drag to move this channel</source>
+        <translation>इस channel को खिसकाने के लिए खींचें</translation>
+    </message>
+    <message>
         <source>Remove this channel</source>
         <translation>यह channel हटाएँ</translation>
     </message>

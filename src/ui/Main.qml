@@ -377,7 +377,8 @@ ApplicationWindow {
         target: root.effectWindows
         property var fxWindows: ({})
         function onBuiltinEffectRequested(channel: int, effect: int, pluginId: string, title: string, owner: var) {
-            const key = channel + ":" + effect + ":" + pluginId
+            // (By the channel's id: its strip can be moved, #94.)
+            const key = root.effectWindows.channelIdAt(channel) + ":" + effect + ":" + pluginId
             const open = fxWindows[key]
             if (open) {
                 open.raise()

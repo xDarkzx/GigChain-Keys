@@ -2,10 +2,13 @@
 #include "gigchain/core/Chart.h"
 #include "gigchain/core/Editing.h"
 #include "gigchain/core/Limits.h"
+#include "gigchain/core/PluginSharing.h"
 #include "gigchain/core/SongMap.h"
 #include "gigchain/core/Validation.h"
 
 #include <algorithm>
+#include <map>
+#include <set>
 
 #include <QtTest>
 
@@ -32,6 +35,28 @@ QStringList songNames(const Setlist& setlist)
 
 const PluginSlot kPiano{.pluginId = u"fake.grand-piano"_s, .displayName = u"Grand Piano"_s, .bypass = false, .state = {}};
 const PluginSlot kReverb{.pluginId = u"fake.reverb"_s, .displayName = u"Reverb"_s, .bypass = false, .state = {}};
+const PluginSlot kOrgan{.pluginId = u"fake.organ"_s, .displayName = u"Organ"_s, .bypass = false, .state = {}};
+
+// Which instance each slot of the song plays: "<patch>/<channel id>/<effect, -1 the instrument>" -> key.
+std::map<QString, QString> instancesOf(const Song& song)
+{
+    std::map<QString, QString> played;
+    for (std::size_t p = 0; p < song.patches.size(); ++p) {
+        const Patch& patch = song.patches.at(p);
+        for (const PluginUse& use : pluginUses(song.id, patch)) {
+            const QString& channel = patch.channels.at(static_cast<std::size_t>(use.channel)).id.value();
+            played[u"%1/%2/%3"_s.arg(p).arg(channel).arg(use.effect)] = use.key;
+        }
+    }
+    return played;
+}
+
+QStringList channelNames(const Patch& patch)
+{
+    QStringList names;
+    for (const Channel& channel : patch.channels) names << channel.name;
+    return names;
+}
 
 } // namespace
 
@@ -137,6 +162,74 @@ private slots:
         QVERIFY(movePatch(s, 0, 1, 0).has_value());
         QCOMPARE(s.songs[0].patches[0].name, u"Second"_s);
         QVERIFY(movePatch(s, 0, 0, 2).error().code == ErrorCode::OutOfRange);
+    }
+
+    // A strip moved to another place (#94): only the order changes; every
+    // plugin plays on as it was, so nothing is renamed or loaded again.
+    void moveChannelReorders()
+    {
+        Setlist s = abc();
+        const Cursor at{0, 0};
+        QVERIFY(addChannel(s, at, kPiano).has_value());
+        QVERIFY(addChannel(s, at, kOrgan).has_value());
+        QVERIFY(addEffect(s, at, 1, kReverb).has_value());
+        const Song before = s.songs.at(0);
+        const auto renamed = moveChannel(s, at, 0, 1);
+        QVERIFY(renamed.has_value());
+        QVERIFY(renamed->empty()); // no plugin twice: each instance's key stays
+        QCOMPARE(channelNames(s.songs.at(0).patches.at(0)), (QStringList{u"Organ"_s, u"Grand Piano"_s}));
+        QCOMPARE(instancesOf(s.songs.at(0)), instancesOf(before));
+        QVERIFY(s.songs.at(0).patches.at(0).channels.at(1).instrument.value_or(PluginSlot{}).shareId.isEmpty()); // nothing else touched
+
+        QVERIFY(moveChannel(s, at, 1, 1).has_value()); // onto itself: nothing
+        QCOMPARE(channelNames(s.songs.at(0).patches.at(0)), (QStringList{u"Organ"_s, u"Grand Piano"_s}));
+        QVERIFY(moveChannel(s, at, 0, 2).error().code == ErrorCode::OutOfRange);
+        QVERIFY(moveChannel(s, at, -1, 0).error().code == ErrorCode::OutOfRange);
+        QVERIFY(moveChannel(s, Cursor{0, 3}, 0, 1).error().code == ErrorCode::OutOfRange);
+        QCOMPARE(channelNames(s.songs.at(0).patches.at(0)), (QStringList{u"Organ"_s, u"Grand Piano"_s}));
+    }
+
+    // The same piano and reverb on two strips, and the piano shared with the
+    // song's other sound: instances go by their order in a sound, so a plain
+    // move would hand each strip the other's settings. Each slot keeps its
+    // own instance; what changed is said, old key -> new, for the engine.
+    void moveChannelKeepsEachStripsOwnPlugins()
+    {
+        Setlist s = abc();
+        const Cursor verse{0, 0};
+        QVERIFY(addChannel(s, verse, kPiano).has_value()); // A
+        QVERIFY(addEffect(s, verse, 0, kReverb).has_value());
+        QVERIFY(addChannel(s, verse, kPiano).has_value()); // B
+        QVERIFY(addEffect(s, verse, 1, kReverb).has_value());
+        QVERIFY(addPatch(s, 0, u"Chorus"_s).has_value());
+        QVERIFY(addChannel(s, Cursor{0, 1}, kPiano).has_value()); // shares A's piano (the first in each)
+        const Song before = s.songs.at(0);
+        const std::map<QString, QString> was = instancesOf(before);
+        QCOMPARE(was.at(u"1/%1/-1"_s.arg(before.patches.at(1).channels.at(0).id.value())),
+                 was.at(u"0/%1/-1"_s.arg(before.patches.at(0).channels.at(0).id.value()))); // (shared, as said)
+
+        const auto renamed = moveChannel(s, verse, 1, 0);
+        QVERIFY2(renamed.has_value(), qPrintable(renamed ? QString() : renamed.error().message));
+        QCOMPARE(channelNames(s.songs.at(0).patches.at(0)), (QStringList{u"Grand Piano 2"_s, u"Grand Piano"_s}));
+        // Every slot, in both sounds, plays what it played: its old instance under the new key.
+        const std::map<QString, QString> now = instancesOf(s.songs.at(0));
+        QCOMPARE(now.size(), was.size());
+        for (const auto& [slot, key] : was) {
+            QVERIFY2(renamed->contains(key), qPrintable(slot));
+            QCOMPARE(now.at(slot), renamed->at(key));
+        }
+        // ... and each old instance has one new key (none merged, none split).
+        std::set<QString> newKeys;
+        for (const auto& [oldKey, newKey] : *renamed) newKeys.insert(newKey);
+        QCOMPARE(newKeys.size(), renamed->size());
+
+        // From now on the order no longer decides: moving back renames nothing.
+        const auto back = moveChannel(s, verse, 0, 1);
+        QVERIFY(back.has_value());
+        QVERIFY(back->empty());
+        QCOMPARE(channelNames(s.songs.at(0).patches.at(0)), (QStringList{u"Grand Piano"_s, u"Grand Piano 2"_s}));
+        QCOMPARE(instancesOf(s.songs.at(0)), now);
+        QVERIFY(validate(s).has_value());
     }
 
     void addChannelUsesInstrumentName()

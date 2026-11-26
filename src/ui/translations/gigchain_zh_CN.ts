@@ -308,6 +308,10 @@
         <translation>移除效果器</translation>
     </message>
     <message>
+        <source>Drag to move this channel</source>
+        <translation>拖动以移动此通道</translation>
+    </message>
+    <message>
         <source>Remove this channel</source>
         <translation>移除此通道</translation>
     </message>

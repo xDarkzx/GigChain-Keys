@@ -246,6 +246,9 @@ public:
     // Channels of the current patch
     Q_INVOKABLE bool addChannel(const QString& pluginId, const QString& name);
     Q_INVOKABLE bool removeChannel(int channel);
+    // Moves a strip so it ends at `to` (dragged in the mixer, #94): the
+    // chosen strip stays chosen and every strip keeps its own plugins.
+    Q_INVOKABLE bool moveChannel(int from, int to);
     Q_INVOKABLE bool addEffect(int channel, const QString& pluginId, const QString& name);
     Q_INVOKABLE bool removeEffect(int channel, int effect);
     // A bypassed effect stays in the chain but is not played.
@@ -469,14 +472,16 @@ private:
     bool updateMapping(int channel, int mapping, const std::function<void(core::ControlMapping&)>& change);
     // A chart edit's result into the current song (or its reason reported).
     bool applyChartEdit(const core::Result<QString>& edited, const QString& coalesceKey);
-    void setCursor(core::Cursor to, bool force = false);
+    // `keep`: the channel to stay selected, if the new patch has it (undo, redo).
+    void setCursor(core::Cursor to, bool force = false, const std::optional<core::ChannelId>& keep = std::nullopt);
     void commitStructure(core::Cursor target, const std::optional<core::PatchId>& previous);
     void commitRename();
     void commitChannels(int select);
     void commitChannelField(int channel, bool reapply);
     [[nodiscard]] std::optional<core::PatchId> currentPatchId() const;
     [[nodiscard]] core::Cursor follow(const std::optional<core::PatchId>& id, core::Cursor fallback) const;
-    void resetSelectedChannel();
+    // The first channel, or `keep` where the patch has it.
+    void resetSelectedChannel(const std::optional<core::ChannelId>& keep = std::nullopt);
     void applyCurrentPatchToEngine();
     void setHasSetlist(bool has);
     void rememberRecent(const QString& path);
