@@ -3492,6 +3492,18 @@ Tapez-les ou collez-les dans l’onglet Grille.</translation>
         <translation>Au plus une fois par minute, avec ce qui règle le problème d’habitude (un buffer plus grand ci-dessus).</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>Écran</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>Garder l&apos;écran allumé tant que le son tourne</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>Votre ordinateur ne compte pas le jeu sur un clavier MIDI comme une utilisation : en plein concert, l&apos;écran pourrait s&apos;éteindre et se verrouiller. Désactivez cette option pour qu&apos;il se mette en veille comme d&apos;habitude (sur batterie, par exemple).</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translation>Limiteur de sécurité</translation>
     </message>
@@ -4026,6 +4038,13 @@ Tapez-les ou collez-les dans l’onglet Grille.</translation>
     <message>
         <source>%1 songs</source>
         <translation>%1 morceaux</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>Jeu en direct</translation>
     </message>
 </context>
 <context>

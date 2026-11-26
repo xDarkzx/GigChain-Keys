@@ -84,6 +84,8 @@ class SettingsController : public QObject
     Q_PROPERTY(int middleCOctave READ middleCOctave WRITE setMiddleCOctave NOTIFY middleCChanged)
     // Audio: dropouts told on screen (once a minute at most), not only logged.
     Q_PROPERTY(bool dropoutWarnings READ dropoutWarnings WRITE setDropoutWarnings NOTIFY changed)
+    // Audio: the screen stays on (no blanking or lock) while the sound runs (#92).
+    Q_PROPERTY(bool keepScreenOn READ keepScreenOn WRITE setKeepScreenOn NOTIFY changed)
     // The Perform view's chart size (A−/A+): kept at once (not with Apply),
     // 1.0 to 3.0 times the edit view's.
     Q_PROPERTY(double chartTextSize READ chartTextSize WRITE setChartTextSize NOTIFY chartTextSizeChanged)
@@ -169,6 +171,10 @@ public:
     void setMiddleCOctave(int octave);
     [[nodiscard]] bool dropoutWarnings() const { return m_dropoutWarnings; }
     void setDropoutWarnings(bool on);
+    [[nodiscard]] bool keepScreenOn() const { return m_keepScreenOn; }
+    void setKeepScreenOn(bool on);
+    // Saved: the screen kept on while the sound runs (on unless switched off; the session asks at start).
+    [[nodiscard]] static bool keepScreenOn(const QSettings& settings);
     [[nodiscard]] int autosaveMinutes() const { return m_autosaveMinutes; }
     void setAutosaveMinutes(int minutes);
     [[nodiscard]] static QVariantList autosaveChoices();
@@ -265,6 +271,8 @@ signals:
     void pluginSwitchedBackOn(const QString& path);
     void globalTransposeChanged();
     void middleCChanged();
+    // OK: whether the screen is kept on while the sound runs (StayAwake follows it).
+    void keepScreenOnApplied(bool on);
 
 private:
     [[nodiscard]] const engine::AudioOutput* chosenOutput() const;
@@ -295,6 +303,7 @@ private:
     int m_globalTranspose = 0;
     int m_autosaveMinutes = 5;
     bool m_dropoutWarnings = true;
+    bool m_keepScreenOn = true;
     bool m_silencePrevious = false;
     engine::ControlTriggers m_controls{};
     int m_learning = -1;

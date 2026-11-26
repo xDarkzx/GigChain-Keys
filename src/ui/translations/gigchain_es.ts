@@ -3477,6 +3477,18 @@ Escríbelos o pégalos en la pestaña Chart.</translation>
         <translation>Como mucho una vez por minuto, con lo que suele arreglarlo (un búfer más grande arriba).</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>Pantalla</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>Mantener la pantalla encendida mientras suena el audio</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>Tu ordenador no cuenta tocar un teclado MIDI como uso, así que en mitad del concierto la pantalla podría apagarse y bloquearse. Desactívalo para que entre en reposo como siempre (con batería, por ejemplo).</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translation>Limitador de seguridad</translation>
     </message>
@@ -4004,6 +4016,13 @@ Escríbelos o pégalos en la pestaña Chart.</translation>
     <message>
         <source>%1 songs</source>
         <translation>%1 canciones</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>Tocando en directo</translation>
     </message>
 </context>
 <context>

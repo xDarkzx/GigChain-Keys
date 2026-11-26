@@ -113,6 +113,8 @@ const QString kSilencePreviousKey = u"general/silencePreviousPatch"_s;
 const QString kMiddleCKey = u"midi/middleCOctave"_s;
 // Audio: dropouts told to the player (MainStage's overload message), not only logged.
 const QString kDropoutWarningsKey = u"audio/dropoutWarnings"_s;
+// Audio: the screen kept on while the sound runs (#92: a MIDI keyboard is no activity to the system).
+const QString kKeepScreenOnKey = u"audio/keepScreenOn"_s;
 // Autosave every N minutes (0: never); the choices offered.
 const QString kAutosaveKey = u"general/autosaveMinutes"_s;
 constexpr int kDefaultAutosave = 5;
@@ -290,6 +292,7 @@ void SettingsController::load()
     m_globalTranspose = m_engine.globalTranspose();
     m_autosaveMinutes = savedAutosave(m_settings);
     m_dropoutWarnings = m_settings.value(kDropoutWarningsKey, true).toBool();
+    m_keepScreenOn = keepScreenOn(m_settings);
     m_silencePrevious = m_settings.value(kSilencePreviousKey, false).toBool();
     m_limiterOn = m_settings.value(kLimiterKey, true).toBool();
     m_limiterCeilingDb = savedCeiling(m_settings);
@@ -586,6 +589,18 @@ void SettingsController::setDropoutWarnings(bool on)
     if (m_dropoutWarnings == on) return;
     m_dropoutWarnings = on;
     emit changed();
+}
+
+void SettingsController::setKeepScreenOn(bool on)
+{
+    if (m_keepScreenOn == on) return;
+    m_keepScreenOn = on;
+    emit changed();
+}
+
+bool SettingsController::keepScreenOn(const QSettings& settings)
+{
+    return settings.value(kKeepScreenOnKey, true).toBool();
 }
 
 void SettingsController::setAutosaveMinutes(int minutes)
@@ -1036,6 +1051,7 @@ void SettingsController::resetToDefaults()
     m_tuningHz = kDefaultTuningHz;
     m_autosaveMinutes = kDefaultAutosave;
     m_dropoutWarnings = true;
+    m_keepScreenOn = true;
     m_silencePrevious = false;
     setMiddleCOctave(4);
     setGlobalTranspose(0); // (live, as the transpose always is)
@@ -1122,6 +1138,8 @@ bool SettingsController::apply()
     m_settings.setValue(kAutosaveKey, m_autosaveMinutes);
     m_engine.setDropoutWarnings(m_dropoutWarnings);
     m_settings.setValue(kDropoutWarningsKey, m_dropoutWarnings);
+    m_settings.setValue(kKeepScreenOnKey, m_keepScreenOn);
+    emit keepScreenOnApplied(m_keepScreenOn);
     m_engine.setSilencePreviousPatch(m_silencePrevious);
     m_settings.setValue(kSilencePreviousKey, m_silencePrevious);
     setGlobalTranspose(m_globalTranspose); // (applied and kept at once anyway)

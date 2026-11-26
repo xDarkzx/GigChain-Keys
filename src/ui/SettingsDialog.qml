@@ -358,6 +358,24 @@ StageDialog {
                             color: Theme.textDim
                             wrapMode: Text.Wrap
                         }
+                        SettingsSection { title: qsTr("Screen") }
+                        CheckBox {
+                            objectName: "keepScreenOn"
+                            Layout.leftMargin: 14
+                            text: qsTr("Keep the screen on while the sound is running")
+                            checked: dialog.settings.keepScreenOn
+                            onToggled: dialog.settings.keepScreenOn = checked
+                            focusPolicy: Qt.NoFocus
+                        }
+                        Label {
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 20
+                            Layout.fillWidth: true
+                            text: qsTr("Your computer doesn't count playing a MIDI keyboard as using it, so mid-set the screen "
+                                       + "could go dark and lock. Switch this off to let it sleep as usual (on battery, say).")
+                            color: Theme.textDim
+                            wrapMode: Text.Wrap
+                        }
                         SettingsSection { title: qsTr("Safety limiter") }
                         CheckBox {
                             objectName: "limiterEnabled"

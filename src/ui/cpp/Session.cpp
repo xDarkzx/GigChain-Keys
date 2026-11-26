@@ -27,13 +27,18 @@ Session::Session(engine::IEngine& engine, QSettings& settings)
       m_settingsController(engine, m_document, settings),
       m_community(settings, branding::version()),
       m_practice(engine, m_document),
-      m_warmup(engine, m_practice, settings)
+      m_warmup(engine, m_practice, settings),
+      m_stayAwake(engine, {}, SettingsController::keepScreenOn(settings))
 {
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_channelModel, &ChannelModel::refreshLevels);
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_settingsController, &SettingsController::pollLearning);
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_loops, &LoopController::poll);
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_panel, &PanelController::poll);
     QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_sustainPads, &SustainPadsController::poll);
+    // The screen stays on while the sound runs, unless switched off in Settings > Audio (#92).
+    QObject::connect(&m_engineStatus, &EngineStatus::polled, &m_engineStatus, [this] { m_stayAwake.poll(); });
+    QObject::connect(&m_settingsController, &SettingsController::keepScreenOnApplied, &m_settingsController,
+                     [this](bool on) { m_stayAwake.setEnabled(on); });
     // Plugins looked for again (Settings > Plugins): the lists follow.
     QObject::connect(&m_settingsController, &SettingsController::pluginsChanged, &m_pluginModel,
                      [this, &engine] { m_pluginModel.reload(engine); });

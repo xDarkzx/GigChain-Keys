@@ -3506,6 +3506,18 @@ Tipp sie im Tab Chart ein oder füge sie ein.</translation>
         <translation>Höchstens einmal pro Minute, mit dem, was meist hilft (ein größerer Puffer oben).</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>Bildschirm</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>Bildschirm eingeschaltet lassen, solange der Sound läuft</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>Dein Computer zählt das Spielen auf einem MIDI-Keyboard nicht als Benutzung, deshalb könnte der Bildschirm mitten im Set dunkel werden und sich sperren. Schalte dies aus, damit er wie gewohnt in den Ruhezustand geht (zum Beispiel im Akkubetrieb).</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translation>Sicherheits-Limiter</translation>
     </message>
@@ -4041,6 +4053,13 @@ Tipp sie im Tab Chart ein oder füge sie ein.</translation>
     <message>
         <source>%1 songs</source>
         <translation>%1 Songs</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>Live-Auftritt</translation>
     </message>
 </context>
 <context>

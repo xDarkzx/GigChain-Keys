@@ -11,5 +11,14 @@ if(WIN32)
     # CrashHandler_win: MiniDumpWriteDump.
     target_link_libraries(gigchain_platform PRIVATE psapi winmm dbghelp)
 endif()
-gigchain_platform_sources(gigchain_platform PluginFolders MemoryUse Process Timing Windows CrashHandler InstanceLock Audio)
+if(APPLE)
+    # KeepAwake_mac: IOKit's power assertions.
+    target_link_libraries(gigchain_platform PRIVATE "-framework IOKit" "-framework CoreFoundation")
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # KeepAwake_linux: the desktop's screen saver and logind, over D-Bus.
+    find_package(Qt6 REQUIRED COMPONENTS DBus)
+    target_link_libraries(gigchain_platform PRIVATE Qt6::DBus)
+endif()
+gigchain_platform_sources(gigchain_platform PluginFolders MemoryUse Process Timing Windows CrashHandler InstanceLock Audio KeepAwake)
 gigchain_target_defaults(gigchain_platform)

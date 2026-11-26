@@ -71,6 +71,17 @@ strip (or right-click > **Rename…**, or click it and press **F2**), type
 The song has no chords yet. Add them in the **Chart** tab. See
 [Chord charts](charts.md) and [Practice mode](practice.md).
 
+## The screen goes dark or locks while I play
+
+Your computer doesn't count a MIDI keyboard as someone using it, only a typing
+keyboard and a mouse. So the app keeps the screen on while the sound is
+running: **Settings > Audio > Keep the screen on while the sound is running**,
+on unless you switch it off. On Linux it asks the desktop's screen saver (GNOME,
+KDE and most others answer); a desktop without one may still blank the screen
+on its own timer. On Windows a **screen saver** you turned on still starts
+(Windows has them off unless you chose one): set it to **(None)** in
+Windows' **Settings > Personalization > Lock screen > Screen saver** for gigs.
+
 ## Still stuck?
 
 **Help > About** shows the version and the website, where you can report the
