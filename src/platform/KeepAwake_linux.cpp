@@ -34,7 +34,9 @@ struct KeepAwake::System
     bool held = false;
 
     // Lets go of both; what could not be let go, said (the lock is let go
-    // anyway: closing it is what logind waits for).
+    // anyway: closing it is what logind waits for). A screen saver that did
+    // not answer keeps its cookie, so the next hold(false) (or the way out)
+    // asks again: still held until then.
     QString letGo()
     {
         QString problem;
@@ -44,10 +46,11 @@ struct KeepAwake::System
             const QDBusMessage answer = QDBusConnection::sessionBus().call(call, QDBus::Block, kAnswerMs);
             if (answer.type() == QDBusMessage::ErrorMessage)
                 problem = u"the screen saver (%1): %2"_s.arg(kSaverService, answer.errorMessage());
-            saverCookie.reset();
+            else
+                saverCookie.reset();
         }
         idleLock = QDBusUnixFileDescriptor();
-        held = false;
+        held = saverCookie.has_value();
         return problem;
     }
 };
@@ -103,8 +106,12 @@ core::Result<void> KeepAwake::hold(bool on, const QString& reason)
     if (!m_system->saverCookie && !m_system->idleLock.isValid())
         return core::fail(core::ErrorCode::SystemRefused,
                           u"The desktop did not keep the screen on: %1"_s.arg(problems.join(u"; "_s)));
-    if (!problems.isEmpty()) // (one of the two is held: the other is said, not an error)
-        qCInfo(lcPlatform).noquote() << u"Keeping the screen on without %1"_s.arg(problems.join(u"; "_s));
+    if (!problems.isEmpty()) { // (one of the two is held: the other is said, not an error)
+        qCInfo(lcPlatform).noquote() << (m_system->saverCookie
+                                             ? u"The screen is kept on; automatic suspend is not held off: %1"_s
+                                             : u"Only automatic suspend is held off; the screen may still go dark: %1"_s)
+                                            .arg(problems.join(u"; "_s));
+    }
     m_system->held = true;
     return {};
 }

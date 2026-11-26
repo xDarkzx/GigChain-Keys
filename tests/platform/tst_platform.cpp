@@ -17,7 +17,12 @@
 
 #ifdef Q_OS_LINUX
 #include <QDBusConnection>
+#include <QDBusError>
+#include <array>
+#include <cstdio>
+#include <signal.h>
 #include <sys/resource.h>
+#include <sys/types.h>
 #endif
 #ifdef Q_OS_WIN
 #define NOMINMAX
@@ -49,6 +54,26 @@ public slots:
     }
     void UnInhibit(uint cookie) { held.remove(cookie); }
 };
+
+#ifdef Q_OS_LINUX
+// The test's own session bus (started in main, before anything uses D-Bus):
+// the stand-in screen saver is the only one there, whatever desktop runs
+// the test, so the app's requests are always seen. 0: none (no dbus-daemon).
+pid_t g_busPid = 0;
+
+void startPrivateBus()
+{
+    FILE* out = popen("dbus-daemon --session --fork --print-address=1 --print-pid=1", "r");
+    if (out == nullptr) return;
+    std::array<char, 512> address{};
+    std::array<char, 32> pid{};
+    const bool read = fgets(address.data(), address.size(), out) != nullptr && fgets(pid.data(), pid.size(), out) != nullptr;
+    pclose(out);
+    if (!read) return;
+    qputenv("DBUS_SESSION_BUS_ADDRESS", QByteArray(address.data()).trimmed());
+    g_busPid = static_cast<pid_t>(QByteArray(pid.data()).trimmed().toLong());
+}
+#endif
 
 class TestPlatform : public QObject
 {
@@ -217,12 +242,13 @@ private slots:
     void keepAwakeHoldsTheScreenAndLetsGo()
     {
 #ifdef Q_OS_LINUX
+        if (g_busPid == 0) QSKIP("dbus-daemon is not installed: no session bus of the test's own");
         QDBusConnection bus = QDBusConnection::sessionBus();
-        if (!bus.isConnected()) QSKIP("No session bus here (run it under dbus-run-session)");
+        QVERIFY2(bus.isConnected(), qPrintable(bus.lastError().message()));
         FakeScreenSaver saver;
-        // (A desktop's own service already there: the app's request goes to it, unseen here.)
-        const bool ours = bus.registerService(u"org.freedesktop.ScreenSaver"_s)
-                          && bus.registerObject(u"/org/freedesktop/ScreenSaver"_s, &saver, QDBusConnection::ExportAllSlots);
+        // (The test's own bus: the stand-in is the only screen saver, so every request is seen.)
+        QVERIFY(bus.registerService(u"org.freedesktop.ScreenSaver"_s));
+        QVERIFY(bus.registerObject(u"/org/freedesktop/ScreenSaver"_s, &saver, QDBusConnection::ExportAllSlots));
 #endif
 #ifdef Q_OS_WIN
         // What this thread asks of Windows: asking the same again changes
@@ -241,14 +267,12 @@ private slots:
             QVERIFY(heldNow());
 #endif
 #ifdef Q_OS_LINUX
-            if (ours) {
-                QCOMPARE(saver.held.size(), 1);
-                QCOMPARE(saver.held.first(), u"Playing live"_s);
-            }
+            QCOMPARE(saver.held.size(), 1);
+            QCOMPARE(saver.held.first(), u"Playing live"_s);
 #endif
             QVERIFY(awake.hold(true, u"Playing live"_s)); // already held: nothing more asked
 #ifdef Q_OS_LINUX
-            if (ours) QCOMPARE(saver.asked, 1);
+            QCOMPARE(saver.asked, 1);
 #endif
             QVERIFY(awake.hold(false, {}));
             QVERIFY(!awake.held());
@@ -256,7 +280,7 @@ private slots:
             QVERIFY(letGo());
 #endif
 #ifdef Q_OS_LINUX
-            if (ours) QVERIFY(saver.held.isEmpty());
+            QVERIFY(saver.held.isEmpty());
 #endif
             QVERIFY(awake.hold(false, {})); // already let go
             QVERIFY(awake.hold(true, u"Playing live"_s));
@@ -265,12 +289,10 @@ private slots:
         QVERIFY(letGo());
 #endif
 #ifdef Q_OS_LINUX
-        if (ours) {
-            QCOMPARE(saver.asked, 2);
-            QVERIFY(saver.held.isEmpty());
-            bus.unregisterObject(u"/org/freedesktop/ScreenSaver"_s);
-            bus.unregisterService(u"org.freedesktop.ScreenSaver"_s);
-        }
+        QCOMPARE(saver.asked, 2);
+        QVERIFY(saver.held.isEmpty());
+        bus.unregisterObject(u"/org/freedesktop/ScreenSaver"_s);
+        bus.unregisterService(u"org.freedesktop.ScreenSaver"_s);
 #endif
     }
 };
@@ -278,8 +300,15 @@ private slots:
 int main(int argc, char** argv)
 {
     qputenv("QT_SCALE_FACTOR", "2"); // a "Retina" screen, off-screen
+#ifdef Q_OS_LINUX
+    startPrivateBus();
+#endif
     QGuiApplication app(argc, argv);
     TestPlatform test;
-    return QTest::qExec(&test, argc, argv);
+    const int result = QTest::qExec(&test, argc, argv);
+#ifdef Q_OS_LINUX
+    if (g_busPid > 0) kill(g_busPid, SIGTERM);
+#endif
+    return result;
 }
 #include "tst_platform.moc"

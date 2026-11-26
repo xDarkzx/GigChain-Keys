@@ -2,6 +2,9 @@
 
 #include "gigchain/core/Error.h"
 
+#include <QElapsedTimer>
+
+#include <chrono>
 #include <functional>
 #include <memory>
 
@@ -28,7 +31,10 @@ public:
     // What asks the system: on or off (platform::KeepAwake when none is given).
     using Ask = std::function<core::Result<void>(bool on)>;
 
-    explicit StayAwake(engine::IEngine& engine, Ask ask = {}, bool enabled = true);
+    // A release the system did not take is asked again every `retryEvery`
+    // (not at every poll: an unanswering desktop holds each ask up).
+    explicit StayAwake(engine::IEngine& engine, Ask ask = {}, bool enabled = true,
+                       std::chrono::milliseconds retryEvery = std::chrono::seconds(5));
     ~StayAwake();
     StayAwake(const StayAwake&) = delete;
     StayAwake& operator=(const StayAwake&) = delete;
@@ -52,6 +58,8 @@ private:
     bool m_enabled = true;
     bool m_holding = false;
     bool m_refused = false; // the system said no: not asked again until the sound stops
+    std::chrono::milliseconds m_retryEvery;
+    QElapsedTimer m_sinceFailedRelease; // running: a release did not get through (still held)
 };
 
 } // namespace gigchain::ui

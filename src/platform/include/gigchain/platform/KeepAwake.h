@@ -8,11 +8,14 @@
 
 namespace gigchain::platform {
 
-// Keeps the screen on (no blanking, no lock) and the computer from going to
-// sleep on its own while the app plays (#92). A MIDI keyboard is no activity
-// to the system: only a typing keyboard and a mouse are, so in the middle of
-// a set the screen would go dark and lock. The way each system offers:
-//   Windows  SetThreadExecutionState (display and system required)
+// Keeps the screen on and the computer from going to sleep on its own while
+// the app plays (#92). A MIDI keyboard is no activity to the system: only a
+// typing keyboard and a mouse are, so in the middle of a set the screen
+// would go dark and lock. The way each system offers:
+//   Windows  SetThreadExecutionState (display and system required): the
+//            display is not turned off, so the lock that comes with it does
+//            not either; a screen saver set in Windows still starts (it is
+//            off unless the player turned it on: the help says so)
 //   macOS    an IOKit power assertion (no display sleep while it is held)
 //   Linux    org.freedesktop.ScreenSaver.Inhibit on the session bus (blanking
 //            and lock: GNOME, KDE and most desktops) and logind's "idle"

@@ -7,6 +7,7 @@
 #include <QRegularExpression>
 #include <QtTest>
 
+#include <chrono>
 #include <vector>
 
 using namespace gigchain;
@@ -23,6 +24,7 @@ private slots:
         m_engine = std::make_unique<test::SpyEngine>();
         m_asked.clear();
         m_refuse = false;
+        m_refuseRelease = false;
     }
 
     void theScreenIsKeptOnWhileTheSoundRuns()
@@ -98,12 +100,44 @@ private slots:
         QVERIFY(awake.holding());
     }
 
+    // Letting go failed (Windows kept the request): still held, said once,
+    // asked again a while later (not at every poll), and let go when the
+    // system takes it.
+    void aFailedReleaseIsTriedAgain()
+    {
+        StayAwake awake(*m_engine, ask(), true, std::chrono::milliseconds(50));
+        m_engine->clock.running = true;
+        awake.poll();
+        QVERIFY(awake.holding());
+
+        m_refuseRelease = true;
+        m_engine->clock.running = false;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"still holding"_s));
+        awake.poll();
+        awake.poll(); // (too soon to ask again)
+        QCOMPARE(m_asked, (std::vector<bool>{true, false}));
+        QVERIFY(awake.holding()); // not let go: it says so
+        QTest::qWait(80);
+        awake.poll(); // asked again, quietly
+        QCOMPARE(m_asked, (std::vector<bool>{true, false, false}));
+        QVERIFY(awake.holding());
+
+        m_refuseRelease = false;
+        QTest::qWait(80);
+        awake.poll();
+        QCOMPARE(m_asked, (std::vector<bool>{true, false, false, false}));
+        QVERIFY(!awake.holding());
+        awake.poll();
+        QCOMPARE(m_asked.size(), 4U); // let go: nothing more to ask
+    }
+
 private:
     StayAwake::Ask ask()
     {
         return [this](bool on) -> core::Result<void> {
             m_asked.push_back(on);
             if (on && m_refuse) return core::fail(core::ErrorCode::SystemRefused, u"no screen saver here"_s);
+            if (!on && m_refuseRelease) return core::fail(core::ErrorCode::SystemRefused, u"still holding"_s);
             return {};
         };
     }
@@ -111,6 +145,7 @@ private:
     std::unique_ptr<test::SpyEngine> m_engine;
     std::vector<bool> m_asked;
     bool m_refuse = false;
+    bool m_refuseRelease = false;
 };
 
 QTEST_GUILESS_MAIN(TestStayAwake)

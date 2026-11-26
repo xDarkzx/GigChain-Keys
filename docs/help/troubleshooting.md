@@ -78,7 +78,9 @@ keyboard and a mouse. So the app keeps the screen on while the sound is
 running: **Settings > Audio > Keep the screen on while the sound is running**,
 on unless you switch it off. On Linux it asks the desktop's screen saver (GNOME,
 KDE and most others answer); a desktop without one may still blank the screen
-on its own timer.
+on its own timer. On Windows a **screen saver** you turned on still starts
+(Windows has them off unless you chose one): set it to **(None)** in
+Windows' **Settings > Personalization > Lock screen > Screen saver** for gigs.
 
 ## Still stuck?
 

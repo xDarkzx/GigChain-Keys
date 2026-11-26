@@ -41,7 +41,10 @@ core::Result<void> KeepAwake::hold(bool on, const QString& reason)
         return {};
     }
     const IOReturn result = IOPMAssertionRelease(m_system->assertion);
-    m_system->assertion = kIOPMNullAssertionID; // (a failed release cannot be tried again with it)
+    // Kept when the release did not get through (tried again, and on the
+    // way out); gone when it did, or when macOS no longer knows it.
+    if (result == kIOReturnSuccess || result == kIOReturnNotFound || result == kIOReturnBadArgument)
+        m_system->assertion = kIOPMNullAssertionID;
     if (result != kIOReturnSuccess)
         return core::fail(core::ErrorCode::SystemRefused,
                           u"macOS did not let the screen sleep again: IOPMAssertionRelease error 0x%1"_s
