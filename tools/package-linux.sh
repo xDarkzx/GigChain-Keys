@@ -132,6 +132,12 @@ cp "$WORK/$PACKAGE.xml" "$APPDIR/usr/share/mime/packages/"
 # Qt's database drivers for ODBC, PostgreSQL and Mimer need libraries no
 # player has: they could never load (the app uses no database).
 rm -f "$APPDIR"/usr/plugins/sqldrivers/libqsql{odbc,psql,mimer}.so
+# The desktop's own file dialogs (#93): Qt's portal theme, which the launcher
+# chooses. It needs only Qt's D-Bus library (found two folders up, as Qt
+# builds its plugins). Not GTK's theme: it would bring GTK in.
+mkdir -p "$APPDIR/usr/plugins/platformthemes"
+cp "$QT_ROOT_DIR/plugins/platformthemes/libqxdgdesktopportal.so" "$APPDIR/usr/plugins/platformthemes/"
+[ -e "$APPDIR/usr/lib/libQt6DBus.so.6" ] || cp -L "$QT_ROOT_DIR/lib/libQt6DBus.so.6" "$APPDIR/usr/lib/"
 # The Qt plugin deploys Qt Multimedia without the --exclude-library list
 # above, so it brought PulseAudio in anyway (#37): the build machine's
 # libpulse next to the player's own libpulse-simple, two Pulse versions in
@@ -161,6 +167,7 @@ while IFS= read -r -d '' file; do
     [ -n "$leaked" ] && problems+=("${file#"$APPDIR/"} loads from the build machine: $leaked")
 done < <(find "$APPDIR/usr" -type f \( -perm -u+x -o -name '*.so*' \) -print0)
 for needed in "usr/bin/$EXE" "usr/bin/${EXE}Scan" usr/lib/libQt6Core.so.6 usr/lib/libQt6Quick.so.6 usr/plugins/platforms/libqxcb.so \
+    usr/plugins/platformthemes/libqxdgdesktopportal.so \
     usr/qml/QtQuick/Controls usr/bin/LICENSE.txt usr/bin/THIRD-PARTY-NOTICES.txt "usr/bin/samples/piano/Concert Grand.sfz" \
     usr/bin/samples/piano/Upright.sfz usr/bin/samples/piano/Rhodes.sfz usr/bin/samples/piano/CREDITS.txt \
     usr/bin/samples/pads/strings.txt usr/bin/samples/pads/piano.txt usr/bin/samples/pads/CREDITS.txt; do
