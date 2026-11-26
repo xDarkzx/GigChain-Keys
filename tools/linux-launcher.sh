@@ -10,6 +10,11 @@
 # pw-jack changes nothing; where JACK itself runs (no PipeWire), it is not used.
 #   GIGCHAIN_NO_PW_JACK=1   start it without pw-jack, whatever is installed
 #
+# The file and folder dialogs are the desktop's own (#93): Qt's portal theme,
+# which the packages carry, hands them to the XDG desktop portal (GNOME's,
+# KDE's... chooser, in the player's language). Without a portal running, Qt's
+# own dialog, as before. A theme the player chose (QT_QPA_PLATFORMTHEME) stays.
+#
 # Through pw-jack, JACK runs at PipeWire's graph size, which stays at its
 # default (often 1024 samples) unless the app asks for less: so the buffer
 # size saved in Settings > Audio is asked for with PIPEWIRE_LATENCY (#83),
@@ -40,6 +45,11 @@ pipewire_running() {
     esac
     [ -S "$socket" ]
 }
+
+if [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then
+    QT_QPA_PLATFORMTHEME=xdgdesktopportal
+    export QT_QPA_PLATFORMTHEME
+fi
 
 if [ -z "${GIGCHAIN_NO_PW_JACK:-}" ] && command -v pw-jack >/dev/null 2>&1 && pipewire_running; then
     if [ -z "${PIPEWIRE_LATENCY:-}" ] && latency="$(saved_latency)"; then

@@ -17,6 +17,7 @@ printf 'app'
 for arg in "$@"; do printf ' [%s]' "$arg"; done
 [ -n "${PIPEWIRE_LATENCY:-}" ] && printf ' latency=%s' "$PIPEWIRE_LATENCY"
 printf '\n'
+printf '%s' "${QT_QPA_PLATFORMTHEME:-}" > "$(dirname "$0")/../../theme" # (#93: read by theme_is)
 EOF
 cat > "$work/bin/pw-jack" <<'EOF'
 #!/bin/sh
@@ -124,6 +125,33 @@ expect "no settings file: nothing asked" "pw-jack app" \
     "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" "XDG_CONFIG_HOME=$work/nowhere" -- "$work/launcher"
 expect "not through pw-jack: nothing asked" "app" \
     "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/norun" "XDG_CONFIG_HOME=$work/cfg-256" -- "$work/launcher"
+
+# The desktop's own file dialogs (#93): Qt's portal theme, unless the player
+# chose a theme. theme_is <name> <wanted theme>: what the last start gave the app.
+theme_is() {
+    local got
+    got="$(cat "$work/theme" 2>/dev/null || echo '(the app did not start)')"
+    if [ "$got" = "$2" ]; then
+        echo "ok   $1"
+    else
+        echo "FAIL $1: the app got theme '$got', want '$2'"
+        failures=$((failures + 1))
+    fi
+    rm -f "$work/theme"
+}
+rm -f "$work/theme"
+expect "file dialogs, through pw-jack: started" "pw-jack app" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/run" -- "$work/launcher"
+theme_is "file dialogs, through pw-jack: the desktop's own, through the portal" xdgdesktopportal
+expect "file dialogs, started directly: started" "app" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/norun" -- "$work/launcher"
+theme_is "file dialogs, started directly: the desktop's own, through the portal" xdgdesktopportal
+expect "file dialogs, AppImage: started" "app" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/norun" -- "$work/AppRun"
+theme_is "file dialogs, AppImage: the desktop's own, through the portal" xdgdesktopportal
+expect "a theme the player chose: started" "app" \
+    "$WITH_PW_JACK" "XDG_RUNTIME_DIR=$work/norun" "QT_QPA_PLATFORMTHEME=gtk3" -- "$work/launcher"
+theme_is "a theme the player chose: left as it is" gtk3
 
 if [ "$failures" -gt 0 ]; then
     echo "$failures launcher check(s) failed" >&2
