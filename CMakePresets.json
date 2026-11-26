@@ -133,6 +133,15 @@
       }
     },
     {
+      "name": "mac-intel-release",
+      "inherits": "mac-release",
+      "description": "macOS, Intel (GitHub's Intel Mac machines: .github/workflows/mac.yml; #79)",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "x86_64",
+        "VCPKG_TARGET_TRIPLET": "x64-osx-13"
+      }
+    },
+    {
       "name": "spike",
       "inherits": "base",
       "cacheVariables": {
@@ -189,6 +198,10 @@
     {
       "name": "mac-release",
       "configurePreset": "mac-release"
+    },
+    {
+      "name": "mac-intel-release",
+      "configurePreset": "mac-intel-release"
     },
     {
       "name": "spike",
@@ -280,6 +293,11 @@
       "name": "mac-release",
       "inherits": "base",
       "configurePreset": "mac-release"
+    },
+    {
+      "name": "mac-intel-release",
+      "inherits": "base",
+      "configurePreset": "mac-intel-release"
     },
     {
       "name": "fuzz",

@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.24)
 include(${CMAKE_CURRENT_SOURCE_DIR}/branding.cmake) # the product's name: change it there
-# The Mac: Apple Silicon, macOS 13 and newer (Qt 6.10's floor; Qt says not
-# to go lower). Before project() so every target, and vcpkg's, agrees.
+# The Mac: macOS 13 and newer (Qt 6.10's floor; Qt says not to go lower),
+# Apple Silicon unless the preset says Intel (mac-intel-release: x86_64, #79).
+# Before project() so every target, and vcpkg's, agrees.
 if(CMAKE_HOST_APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Oldest macOS the app runs on")
-    set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Apple Silicon only")
+    set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "arm64 (Apple Silicon) or x86_64 (Intel)")
 endif()
 project(GigChain VERSION ${PRODUCT_VERSION} LANGUAGES CXX)
 
