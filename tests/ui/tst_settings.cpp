@@ -291,6 +291,31 @@ private slots:
         QVERIFY(!again.reopenLastSetlist());
     }
 
+    // The screen stays on while the sound runs (#92): on until switched off,
+    // taken on OK (the switch then follows at once).
+    void keepingTheScreenOnIsOnUntilSwitchedOff()
+    {
+        QVERIFY(SettingsController::keepScreenOn(*m_settings)); // never chosen: on
+        SettingsController settings(*m_engine, *m_doc, *m_settings);
+        settings.load();
+        QVERIFY(settings.keepScreenOn());
+        QSignalSpy applied(&settings, &SettingsController::keepScreenOnApplied);
+        settings.setKeepScreenOn(false);
+        QVERIFY(SettingsController::keepScreenOn(*m_settings)); // nothing before OK
+        QVERIFY(applied.isEmpty());
+        QVERIFY(settings.apply());
+        QVERIFY(!SettingsController::keepScreenOn(*m_settings));
+        QCOMPARE(applied.size(), 1);
+        QCOMPARE(applied.first().first().toBool(), false);
+        QCOMPARE(m_engine->setupChanges, 0); // audio untouched
+
+        SettingsController again(*m_engine, *m_doc, *m_settings);
+        again.load();
+        QVERIFY(!again.keepScreenOn());
+        again.resetToDefaults();
+        QVERIFY(again.keepScreenOn());
+    }
+
     void theLanguageIsChosenForTheNextStart()
     {
         SettingsController settings(*m_engine, *m_doc, *m_settings);

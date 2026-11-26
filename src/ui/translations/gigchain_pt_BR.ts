@@ -3479,6 +3479,18 @@ Digite ou cole na aba Cifra.</translation>
         <translation>No máximo uma vez por minuto, com o que costuma resolver (um buffer maior acima).</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>Tela</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>Manter a tela ligada enquanto o som estiver rodando</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>Seu computador não conta tocar um teclado MIDI como uso, então no meio do show a tela pode apagar e bloquear. Desative isto para deixá-la entrar em repouso como de costume (na bateria, por exemplo).</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translation>Limitador de segurança</translation>
     </message>
@@ -4008,6 +4020,13 @@ Digite ou cole na aba Cifra.</translation>
     <message>
         <source>%1 songs</source>
         <translation>%1 músicas</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>Tocando ao vivo</translation>
     </message>
 </context>
 <context>

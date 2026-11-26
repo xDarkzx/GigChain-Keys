@@ -3461,6 +3461,18 @@ Type or paste them in the Chart tab.</source>
         <translation>1 分に 1 回まで、よく効く対処（上でバッファを大きく）と一緒に。</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>画面</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>サウンドが動いている間は画面をオンのままにする</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>コンピューターは MIDI キーボードの演奏を操作とみなさないため、演奏の途中で画面が暗くなりロックされることがあります。オフにすると、通常どおりスリープします（バッテリー駆動時など）。</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translation>セーフティ・リミッター</translation>
     </message>
@@ -3978,6 +3990,13 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 songs</source>
         <translation>%1 曲</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>ライブ演奏中</translation>
     </message>
 </context>
 <context>

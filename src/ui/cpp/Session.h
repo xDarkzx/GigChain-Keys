@@ -20,6 +20,7 @@
 #include "SetlistModel.h"
 #include "SettingsController.h"
 #include "StartupProgress.h"
+#include "StayAwake.h"
 
 #include <QVariantMap>
 
@@ -75,6 +76,7 @@ private:
     StartupProgress m_loading; // the loading overlay (after start-up)
     PracticeController m_practice; // the Practice tab (after the document it reads)
     WarmupController m_warmup;     // its warm-ups (after the player they load)
+    StayAwake m_stayAwake;         // the screen kept on while the sound runs (#92)
 };
 
 } // namespace gigchain::ui

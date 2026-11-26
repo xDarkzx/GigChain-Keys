@@ -1,2 +1,5 @@
 gigchain_add_test(tst_platform SOURCES tst_platform.cpp LIBS gigchain::platform)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(tst_platform PRIVATE Qt6::DBus) # (a stand-in screen saver, #92)
+endif()
 gigchain_add_test(tst_process SOURCES tst_process.cpp LIBS gigchain::platform)

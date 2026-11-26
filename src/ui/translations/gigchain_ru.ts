@@ -3456,6 +3456,18 @@ Type or paste them in the Chart tab.</source>
         <translation>Не чаще раза в минуту, с тем, что обычно помогает (буфер побольше выше).</translation>
     </message>
     <message>
+        <source>Screen</source>
+        <translation>Экран</translation>
+    </message>
+    <message>
+        <source>Keep the screen on while the sound is running</source>
+        <translation>Не выключать экран, пока идёт звук</translation>
+    </message>
+    <message>
+        <source>Your computer doesn&apos;t count playing a MIDI keyboard as using it, so mid-set the screen could go dark and lock. Switch this off to let it sleep as usual (on battery, say).</source>
+        <translation>Компьютер не считает игру на MIDI-клавиатуре использованием, поэтому посреди выступления экран может погаснуть и заблокироваться. Выключите это, чтобы он засыпал как обычно (например, от батареи).</translation>
+    </message>
+    <message>
         <source>Safety limiter</source>
         <translation>Защитный лимитер</translation>
     </message>
@@ -3976,6 +3988,13 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>%1 songs</source>
         <translation>Песен: %1</translation>
+    </message>
+</context>
+<context>
+    <name>StayAwake</name>
+    <message>
+        <source>Playing live</source>
+        <translation>Живое выступление</translation>
     </message>
 </context>
 <context>
