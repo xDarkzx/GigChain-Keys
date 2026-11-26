@@ -289,7 +289,12 @@ int soak()
         // A chord held across the change, let go after it.
         const std::array<int, 3>& chord = chords.at(static_cast<std::size_t>(step) % chords.size());
         for (const int note : chord) engine.injectNote(1, note, 90);
-        if (!patch.channels.empty()) {
+        // Every loop cleared each 6th step, whatever sound is up: that step is
+        // always the empty sound's (5 % 3), so under the channel check below it
+        // never ran, and a loop kept its layers until all were used (#75).
+        if (step % 6 == 5) {
+            engine.clearAllLoops();
+        } else if (!patch.channels.empty()) {
             const core::ChannelId& channel = patch.channels.front().id;
             switch (step % 6) {
             case 0: // record
@@ -298,8 +303,7 @@ int soak()
                 engine.loopCommand(channel, LoopCommand::Record);
                 break;
             case 3: engine.loopCommand(channel, LoopCommand::Undo); break;
-            case 4: engine.loopCommand(channel, LoopCommand::PlayStop); break;
-            default: engine.clearAllLoops(); break;
+            default: engine.loopCommand(channel, LoopCommand::PlayStop); break;
             }
         }
         if (step % 4 == 0) engine.playBackingTrack(true);
