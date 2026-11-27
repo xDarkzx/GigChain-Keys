@@ -891,6 +891,13 @@ private slots:
         auto* layout = m_qml->rootObjects().value(0)->property("mixerLayout").value<QObject*>();
         QVERIFY(layout != nullptr);
         QVERIFY(item(u"mixerBottom"_s)->isVisible());
+        // A 1080p screen's window (1600x1000, the loop station shown): the strip's
+        // fader keeps room to ride a level (it had 83 pixels, under the mixer's cap of 60% of the room).
+        {
+            QQuickItem* fader = findItem(item(u"mixerBottom"_s), u"channelFader"_s);
+            QVERIFY(fader != nullptr);
+            QTRY_VERIFY2(fader->height() >= 140, qPrintable(u"the fader is %1 high"_s.arg(fader->height())));
+        }
         // "" when its strips stand upright (the fader taller than wide) with the aux and master in sight, else what was found.
         const auto notUpright = [](QQuickItem* in) -> QString {
             auto* strips = in->findChild<QQuickItem*>(u"mixerStrips"_s);

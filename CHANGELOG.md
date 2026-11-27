@@ -75,6 +75,11 @@ players reported on GitHub.
   the same section: a word or chord changed in either copy changes both.
   A section the flow leaves out stays in the chart, marked "Not in the
   flow". Reported on GitHub (#99).
+- **The mixer's faders on a 1080p screen.** With the mixer along the
+  bottom and the loop station shown, a strip's fader was squeezed to a
+  stub. A short strip now drops its section labels and the instrument's
+  icon instead (the slot still names the instrument), so its fader has
+  about twice the travel. A taller mixer looks as before.
 
 ## [0.12.0] - 2026-11-23 (alpha)
 
