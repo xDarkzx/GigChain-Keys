@@ -842,6 +842,20 @@ QVariantList DocumentController::chartLinesInFlow(const QString& chordPro) const
             rowChords << chord;
         }
         line.insert(u"rowChords"_s, rowChords);
+        // (The words' chords as the Chart tab draws them, each in its word's cell: the same.)
+        QVariantList cells;
+        for (const QVariant& c : line.value(u"cells"_s).toList()) {
+            QVariantMap cell = c.toMap();
+            QVariantList chords;
+            for (const QVariant& ch : cell.value(u"chords"_s).toList()) {
+                QVariantMap chord = ch.toMap();
+                chord.insert(u"steps"_s, only(chord.value(u"steps"_s).toList(), part));
+                chords << chord;
+            }
+            cell.insert(u"chords"_s, chords);
+            cells << cell;
+        }
+        line.insert(u"cells"_s, cells);
         line.insert(u"steps"_s, allSteps);
         if (line.value(u"sectionIndex"_s).toInt() >= 0) line.insert(u"place"_s, place);
         return line;

@@ -949,6 +949,21 @@ private slots:
         QCOMPARE(shown, (QStringList{u"B003@0#0"_s, u"one@1#0"_s, u"B004@2#0"_s, u"two@3#0"_s,
                                      u"B003@0#1 again"_s, u"one@1#1"_s, u"B004@2#1 again"_s, u"two@3#1"_s,
                                      u"Bridge@%1#0 unplayed"_s.arg(bridge), u"three@%1#0"_s.arg(bridge + 1)}));
+        // Each copy lights its own time through: the words' chords (the cells the
+        // Chart tab draws) as the segments, never the other copy's step.
+        QList<QVariantList> cellSteps;
+        for (const QVariant& l : m_doc->chartLinesToEdit(m_doc->currentChart())) {
+            const QVariantMap line = l.toMap();
+            if (line.value(u"lyrics"_s).toString() != u"one"_s) continue;
+            const QVariantList chords = line.value(u"cells"_s).toList().value(0).toMap().value(u"chords"_s).toList();
+            QCOMPARE(chords.size(), 1);
+            cellSteps << chords.at(0).toMap().value(u"steps"_s).toList();
+            QCOMPARE(cellSteps.last(), line.value(u"segments"_s).toList().value(0).toMap().value(u"steps"_s).toList());
+        }
+        QCOMPARE(cellSteps.size(), 2);
+        QCOMPARE(cellSteps.at(0).size(), 1);
+        QCOMPARE(cellSteps.at(1).size(), 1);
+        QVERIFY(cellSteps.at(0) != cellSteps.at(1));
         QVERIFY(m_doc->setSongFlow({}));
     }
 
