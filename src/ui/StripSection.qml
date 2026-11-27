@@ -26,6 +26,7 @@ Rectangle {
 
     Text {
         id: title
+        objectName: "sectionLabel"
         visible: section.label !== ""
         anchors.horizontalCenter: parent.horizontalCenter
         y: 3

@@ -461,7 +461,8 @@ Rectangle {
         // The sound: its icon and the instrument (or audio input) it plays.
         StripSection {
             Layout.fillWidth: true
-            label: strip.compact ? "" : strip.inputLeft > 0 ? qsTr("INPUT") : qsTr("INSTRUMENT")
+            // (A short strip keeps INPUT: its slot names no instrument for an audio input.)
+            label: strip.inputLeft > 0 ? qsTr("INPUT") : strip.compact ? "" : qsTr("INSTRUMENT")
         // instrument icon
         Rectangle {
             visible: !strip.compact // (the slot below names the instrument)
