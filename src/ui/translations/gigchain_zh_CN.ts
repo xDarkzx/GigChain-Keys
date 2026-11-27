@@ -717,6 +717,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
 <context>
     <name>ChartView</name>
     <message>
+        <source>Played again: the same words and chords as above (a change here changes both)</source>
+        <translation>再次演奏：与上面相同的歌词与和弦（在这里修改会同时改动两处）</translation>
+    </message>
+    <message>
+        <source>Not in the flow: not played (+ in the flow adds it)</source>
+        <translation>不在曲序中：不会演奏（用曲序里的 + 加入）</translation>
+    </message>
+    <message>
         <source>Delete this note (Ctrl+Z brings it back)</source>
         <translation>删除此备注（Ctrl+Z 可恢复）</translation>
     </message>

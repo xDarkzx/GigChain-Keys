@@ -176,6 +176,12 @@ public:
     // "place" in songFlow(); each line "steps", the steps on it (each copy
     // only its own time through). Without a flow: the chart's order.
     Q_INVOKABLE QVariantList chartLinesInFlow(const QString& chordPro) const;
+    // The Chart tab's lines (#99): chartLines() without a flow. With one,
+    // chartLinesInFlow(), each line's "copy" the time its section is shown
+    // (0, then 1, 2... for a repeat: the same chart lines, so editing either
+    // edits both) and a repeat's title "again"; then the sections the flow
+    // leaves out, still there to edit, their titles "unplayed".
+    Q_INVOKABLE QVariantList chartLinesToEdit(const QString& chordPro) const;
     // The current song's chart edited in place (the Chart tab): `line` is a
     // chartLines() line's "line", `at` a character of its words, `chord` the
     // line's chord number. Each is an undo step (typing a line is one); a

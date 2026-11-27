@@ -733,6 +733,14 @@ Mettez un accord entre [crochets] juste avant le mot sur lequel il change.</tran
 <context>
     <name>ChartView</name>
     <message>
+        <source>Played again: the same words and chords as above (a change here changes both)</source>
+        <translation>Rejouée : les mêmes paroles et accords qu’au-dessus (une modification ici change les deux)</translation>
+    </message>
+    <message>
+        <source>Not in the flow: not played (+ in the flow adds it)</source>
+        <translation>Hors de la structure : pas jouée (le + de la structure l’ajoute)</translation>
+    </message>
+    <message>
         <source>Delete this note (Ctrl+Z brings it back)</source>
         <translation>Supprimer cette note (Ctrl+Z la rétablit)</translation>
     </message>

@@ -2872,14 +2872,15 @@ Window {
             for (int i = 1; i <= 12; ++i) QTest::mouseMove(w, from + ((to - from) * i / 12), 15);
             QTest::mouseRelease(w, Qt::LeftButton, {}, to);
             QTRY_COMPARE(partTexts(), (QStringList{u"Verse 2"_s, u"Verse 1"_s, u"Chorus  ×2"_s}));
-            // #32: the chart being edited moves with it (each section once, as first played).
+            // #32: the chart being edited moves with it (written once each, as first
+            // played); the Chart tab shows it as played (#99: the chorus twice).
             auto* edited = findItem(scene, u"chartView"_s);
             QVERIFY(edited != nullptr);
             QStringList titles;
             for (const QVariant& l : edited->property("lines").toList()) {
                 if (l.toMap().value(u"sectionIndex"_s).toInt() >= 0) titles << l.toMap().value(u"label"_s).toString();
             }
-            QCOMPARE(titles, (QStringList{u"Verse 2"_s, u"Verse 1"_s, u"Chorus"_s}));
+            QCOMPARE(titles, (QStringList{u"Verse 2"_s, u"Verse 1"_s, u"Chorus"_s, u"Chorus"_s}));
             QVERIFY(doc.currentChart().startsWith(u"{comment: Verse 2}\n[Dm]e [E]f\n"_s));
             // One undo step brings back the flow and the chart as they were.
             QVERIFY(doc.undo());
@@ -2914,6 +2915,53 @@ Window {
             QCOMPARE(titles, (QStringList{u"Verse 2"_s, u"Chorus"_s, u"Verse 1"_s, u"Chorus"_s, u"Chorus"_s}));
         }
         QVERIFY(doc.setSongFlow({}));
+    }
+
+    // The Chart tab shows a section the flow plays twice twice (#99: the
+    // + in the flow added B003 and B004 again, the chart showed them once).
+    // The repeat says so, and the caret asked for in it goes to it, not to
+    // the first copy of the same line.
+    void theChartTabShowsTheFlowsRepeats()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.setSongChart(0, u"{start_of_section: B003}\none\n{start_of_section: B004}\ntwo\n"_s));
+        const auto part = [](const QString& name) { return QVariantMap{{u"name"_s, name}, {u"occurrence"_s, 1}}; };
+        QVERIFY(doc.setSongFlow({part(u"B003"_s), part(u"B004"_s), part(u"B003"_s), part(u"B004"_s)}));
+        settle();
+        auto* edited = findItem(window()->contentItem(), u"chartView"_s);
+        QVERIFY(edited != nullptr && edited->isVisible());
+        QStringList titles;
+        QStringList notes;
+        for (QQuickItem* header : findAll(edited, u"sectionHeader"_s)) {
+            titles << header->property("label").toString();
+            notes << header->property("note").toString();
+        }
+        QCOMPARE(titles, (QStringList{u"B003"_s, u"B004"_s, u"B003"_s, u"B004"_s}));
+        QVERIFY(notes.at(0).isEmpty() && notes.at(1).isEmpty());
+        QVERIFY2(notes.at(2).startsWith(u"Played again"_s), qPrintable(notes.at(2)));
+        QList<QQuickItem*> ones;
+        const std::function<void(QQuickItem*)> lines = [&](QQuickItem* i) {
+            if (QString::fromLatin1(i->metaObject()->className()).startsWith(u"LiveChartLine"_s) && i->property("lyrics").toString() == u"one"_s) ones << i;
+            for (QQuickItem* child : i->childItems()) lines(child);
+        };
+        lines(edited);
+        QCOMPARE(ones.size(), 2);
+        QQuickItem* second = ones.at(0)->property("copy").toInt() == 1 ? ones.at(0) : ones.at(1);
+        QQuickItem* first = second == ones.at(0) ? ones.at(1) : ones.at(0);
+        QCOMPARE(second->property("copy").toInt(), 1);
+        QVERIFY(edited->setProperty("focusRequest", QVariantMap{{u"line"_s, 1}, {u"cursor"_s, 1}, {u"copy"_s, 1}}));
+        QTRY_VERIFY(second->property("typingLine").toBool());
+        QVERIFY(!first->property("typingLine").toBool());
+        // And back to the first copy: each copy takes only the caret asked of it.
+        QVERIFY(edited->setProperty("focusRequest", QVariantMap{{u"line"_s, 1}, {u"cursor"_s, 1}, {u"copy"_s, 0}}));
+        QTRY_VERIFY(first->property("typingLine").toBool());
+        settle();
+        QVERIFY(first->property("typingLine").toBool());
+        QVERIFY(!second->property("typingLine").toBool());
+        QVERIFY(doc.setSongFlow({}));
+        settle();
     }
 
     // A full song's chart stays light to edit (the tester's log: every edit

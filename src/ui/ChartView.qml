@@ -34,6 +34,7 @@ Item {
     property var focusRequest: null
     // The line being edited (its empty chord boxes shown), -1: none.
     property int openLine: -1
+    property int openCopy: 0 // (which copy of it: a section the flow plays again is shown again)
     // A chord tapped (on stage) or asked for (its menu, in the editor): how to play it.
     signal chordClicked(string name)
     property DocumentController doc: null
@@ -44,8 +45,9 @@ Item {
     // The chord the song's timeline has come to (from EngineStatus), lit.
     property int currentStep: -1
     property bool followStarted: false
-    // The lines in the song's flow order (DocumentController.chartLinesInFlow,
-    // on stage): the section title lit is the part playing (`currentPlace`,
+    // The lines in the song's flow order (DocumentController.chartLinesInFlow
+    // on stage, chartLinesToEdit in the Chart tab when the song has a flow):
+    // the section title lit is the part playing (`currentPlace`,
     // its place in the flow), not every time its section comes round.
     property bool flowOrder: false
     property int currentPlace: -1
@@ -186,6 +188,16 @@ Item {
                 const next = chart.lines[lineLoader.index + step]
                 return next !== undefined && (next.kind === "lyrics" || next.kind === "blank") ? next : null
             }
+            // Which copy of the section it is in (a repeat the flow plays: 1, 2...), and
+            // the copy chart line `line` is asked in from here (its neighbour's, or its own).
+            readonly property int copy: modelData.copy !== undefined ? modelData.copy : 0
+            function copyOf(line) {
+                for (const step of [-1, 1]) {
+                    const next = lineLoader.neighbour(step)
+                    if (next !== null && next.line === line) return next.copy !== undefined ? next.copy : 0
+                }
+                return lineLoader.copy
+            }
             width: chart.width
             z: (lineLoader.item as LiveChartLine) !== null && (lineLoader.item as LiveChartLine).dragging ? 5 : 0
             sourceComponent: chart.liveEdit && lineLoader.typable ? liveLine
@@ -207,11 +219,15 @@ Item {
                     lineBelow: lineLoader.neighbour(1) !== null ? lineLoader.neighbour(1).line : -1
                     lengthAbove: lineLoader.neighbour(-1) !== null && lineLoader.neighbour(-1).lyrics !== undefined
                                  ? lineLoader.neighbour(-1).lyrics.length : 0
-                    open: chart.openLine === lineLoader.modelData.line
-                    onOpenRequested: (line) => chart.openLine = line
+                    copy: lineLoader.copy
+                    open: chart.openLine === lineLoader.modelData.line && chart.openCopy === lineLoader.copy
+                    onOpenRequested: (line) => {
+                        chart.openCopy = lineLoader.copy
+                        chart.openLine = line
+                    }
                     focusRequest: chart.focusRequest
-                    onWantFocus: (line, cursor) => chart.focusRequest = { line: line, cursor: cursor }
-                    onWantCell: (line, cell, what) => chart.focusRequest = { line: line, cell: cell, what: what }
+                    onWantFocus: (line, cursor) => chart.focusRequest = { line: line, cursor: cursor, copy: lineLoader.copyOf(line) }
+                    onWantCell: (line, cell, what) => chart.focusRequest = { line: line, cell: cell, what: what, copy: lineLoader.copyOf(line) }
                     onChordDiagramRequested: (name) => chart.chordClicked(name)
                     onFocusTaken: Qt.callLater(() => chart.focusRequest = null) // (not while lines are being built)
                 }
@@ -232,6 +248,9 @@ Item {
                              : lineLoader.sectionIndex === chart.currentSection
                     playing: chart.playing
                     bar: chart.bar
+                    note: lineLoader.modelData.again === true
+                          ? qsTr("Played again: the same words and chords as above (a change here changes both)")
+                          : lineLoader.modelData.unplayed === true ? qsTr("Not in the flow: not played (+ in the flow adds it)") : ""
                 }
             }
             Component {

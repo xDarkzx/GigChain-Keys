@@ -69,6 +69,12 @@ players reported on GitHub.
 - **Linux, JACK on PipeWire:** the **Buffer size** you choose is used
   (it was ignored), and Settings shows the size you chose next to the
   server's. Reported on GitHub (#83).
+- **The chart shows the song as its flow plays it.** A section added
+  again with the flow's **+** (or played once more) now shows again in
+  the Chart tab too, not only in Perform, marked "Played again". It is
+  the same section: a word or chord changed in either copy changes both.
+  A section the flow leaves out stays in the chart, marked "Not in the
+  flow". Reported on GitHub (#99).
 
 ## [0.12.0] - 2026-11-23 (alpha)
 

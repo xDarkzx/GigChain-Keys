@@ -842,6 +842,20 @@ QVariantList DocumentController::chartLinesInFlow(const QString& chordPro) const
             rowChords << chord;
         }
         line.insert(u"rowChords"_s, rowChords);
+        // (The words' chords as the Chart tab draws them, each in its word's cell: the same.)
+        QVariantList cells;
+        for (const QVariant& c : line.value(u"cells"_s).toList()) {
+            QVariantMap cell = c.toMap();
+            QVariantList chords;
+            for (const QVariant& ch : cell.value(u"chords"_s).toList()) {
+                QVariantMap chord = ch.toMap();
+                chord.insert(u"steps"_s, only(chord.value(u"steps"_s).toList(), part));
+                chords << chord;
+            }
+            cell.insert(u"chords"_s, chords);
+            cells << cell;
+        }
+        line.insert(u"cells"_s, cells);
         line.insert(u"steps"_s, allSteps);
         if (line.value(u"sectionIndex"_s).toInt() >= 0) line.insert(u"place"_s, place);
         return line;
@@ -872,6 +886,38 @@ QVariantList DocumentController::chartLinesInFlow(const QString& chordPro) const
         const auto part = std::ranges::find(map.partFlow, place);
         const int partIndex = part != map.partFlow.end() ? static_cast<int>(part - map.partFlow.begin()) : -2; // (-2: no chords there)
         for (const QVariant& line : blocks.at(static_cast<std::size_t>(section))) shown << copied(line.toMap(), partIndex, place);
+    }
+    return shown;
+}
+
+QVariantList DocumentController::chartLinesToEdit(const QString& chordPro) const
+{
+    if (currentSongFlow().empty()) return chartLines(chordPro);
+    QVariantList shown;
+    std::map<int, int> times; // per section: how many times it is shown so far
+    int copy = 0;             // the time the section the line is in is shown (0: the first)
+    for (const QVariant& l : chartLinesInFlow(chordPro)) {
+        QVariantMap line = l.toMap();
+        const int section = line.value(u"sectionIndex"_s).toInt();
+        if (section >= 0) {
+            copy = times[section]++;
+            if (copy > 0) line.insert(u"again"_s, true);
+        }
+        line.insert(u"copy"_s, copy);
+        shown << line;
+    }
+    // The sections the flow leaves out, in the chart's order, after the rest.
+    bool left = false;
+    for (const QVariant& l : chartLines(chordPro)) {
+        QVariantMap line = l.toMap();
+        const int section = line.value(u"sectionIndex"_s).toInt();
+        if (section >= 0) {
+            left = !times.contains(section);
+            if (left) line.insert(u"unplayed"_s, true);
+        }
+        if (!left) continue;
+        line.insert(u"copy"_s, 0);
+        shown << line;
     }
     return shown;
 }

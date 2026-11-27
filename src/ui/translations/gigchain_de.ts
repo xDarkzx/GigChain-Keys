@@ -734,6 +734,14 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
 <context>
     <name>ChartView</name>
     <message>
+        <source>Played again: the same words and chords as above (a change here changes both)</source>
+        <translation>Wird noch einmal gespielt: dieselben Worte und Akkorde wie oben (eine Änderung hier ändert beide)</translation>
+    </message>
+    <message>
+        <source>Not in the flow: not played (+ in the flow adds it)</source>
+        <translation>Nicht im Ablauf: wird nicht gespielt (+ im Ablauf fügt ihn hinzu)</translation>
+    </message>
+    <message>
         <source>Delete this note (Ctrl+Z brings it back)</source>
         <translation>Diese Notiz löschen (Strg+Z holt sie zurück)</translation>
     </message>

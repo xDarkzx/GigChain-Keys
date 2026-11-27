@@ -744,6 +744,14 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
 <context>
     <name>ChartView</name>
     <message>
+        <source>Played again: the same words and chords as above (a change here changes both)</source>
+        <translation>Dimainkan lagi: lirik dan chord yang sama seperti di atas (mengubah di sini mengubah keduanya)</translation>
+    </message>
+    <message>
+        <source>Not in the flow: not played (+ in the flow adds it)</source>
+        <translation>Tidak ada di alur: tidak dimainkan (+ di alur menambahkannya)</translation>
+    </message>
+    <message>
         <source>Delete this note (Ctrl+Z brings it back)</source>
         <translation>Hapus catatan ini (Ctrl+Z mengembalikannya)</translation>
     </message>
