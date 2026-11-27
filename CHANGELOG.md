@@ -8,6 +8,68 @@ Downloads for every version are on the
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-30 (alpha)
+
+The app in ten more languages; a download for Intel Macs; strips you drag
+into your own order; a screen that stays on mid-set; and the fixes Linux
+players reported on GitHub.
+
+### Added
+
+- **Ten more languages.** GigChain Keys, its messages and its Windows
+  installer now speak Hindi, Portuguese (Brazil), Spanish, Indonesian,
+  German, French, Russian, Japanese, Korean and Chinese (Simplified). It
+  starts in your computer's language when it has it; **Settings > General >
+  Language** picks another (shown at the next start). The knob labels on
+  the app's own instruments stay in English, as on hardware synths. The
+  translations are new: if something reads wrong in your language, please
+  say so on GitHub or Discord.
+- **Intel Macs.** A download for Macs with an Intel processor (the file
+  ending in `x86_64.dmg`, macOS 13 or later), next to the Apple Silicon one. It is the newest and least tested build, so reports
+  are especially welcome. Asked for on GitHub (#79).
+- **Strips in your order.** Drag a strip by the grip at its top left (the
+  six dots), with the mouse or a finger, and drop it where you want it; a
+  line shows where it will land. Near the edge of the mixer the strips
+  scroll along. Every strip keeps its own plugins and settings (nothing
+  reloads), the selected strip stays selected, and Undo puts the old order
+  back. On stage there is no grip, so nothing moves by accident mid-song.
+  Asked for on GitHub (#94).
+- **The screen stays on while you play.** While the sound is running, the
+  computer is kept awake and the screen on: no blanking, no lock, no sleep
+  in the middle of a song. It lets go when the sound stops. **Settings >
+  Audio > Keep the screen on while the sound is running** switches it off.
+  On Windows, a screen saver you turned on yourself still starts: set it to
+  (None) for gigs. Asked for on GitHub (#92).
+- **An Apply button in Settings**: try a keyboard's mode, channel or touch
+  and keep the window open. Asked for on GitHub (#85).
+- **Hidden instruments one by one.** **Settings > Plugins** lists every
+  instrument you hid, each with its own **Show again**; the browser offers
+  **Show all hidden instruments** only when some are hidden. Asked for on
+  GitHub (#84).
+
+### Changed
+
+- **One at a time, on a touch screen:** the first touch on another strip's
+  fader only selects that strip (and its sound); the fader moves once the
+  strip is selected. Playing all together is unchanged. Asked for on
+  GitHub (#86).
+- **Linux: your desktop's own file and folder dialogs** (GNOME's, KDE's...),
+  with their places, search and recent files, in your language. Without a
+  desktop portal running, the app's dialog appears as before. Asked for on
+  GitHub (#93).
+
+### Fixed
+
+- **Linux, JACK and PipeWire with yabridge plugins:** the app no longer
+  closes by itself when the sound stops or restarts (quitting, Settings >
+  OK, a MIDI port coming or going). Reported on GitHub (#81).
+- **Linux, JACK:** when the server changes its buffer size, the sound
+  comes back on its own instead of staying silent. Reported on GitHub
+  (#82).
+- **Linux, JACK on PipeWire:** the **Buffer size** you choose is used
+  (it was ignored), and Settings shows the size you chose next to the
+  server's. Reported on GitHub (#83).
+
 ## [0.12.0] - 2026-11-23 (alpha)
 
 Two keyboards, two sounds; chords in the song's key; a welcome on the first
