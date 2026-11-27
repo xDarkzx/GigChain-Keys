@@ -202,6 +202,21 @@ Rectangle {
                                     text: qsTr("Take it out")
                                     onTriggered: { const g = bar.copyGroups(); g.splice(group.index, 1); bar.save(g) }
                                 }
+                                MenuSeparator {}
+                                // #100: to paste into another song (its words, chords, length and instruments).
+                                StageMenuItem {
+                                    objectName: "flowCopy"
+                                    text: qsTr("Copy section")
+                                    enabled: group.modelData.section >= 0
+                                    onTriggered: bar.doc.copySection(group.modelData.section)
+                                }
+                                StageMenuItem {
+                                    objectName: "flowPasteAfter"
+                                    text: bar.doc.copiedSection !== "" ? qsTr("Paste %1 after this").arg(bar.doc.copiedSection)
+                                                                       : qsTr("Paste a section (copy one first)")
+                                    enabled: bar.doc.copiedSection !== ""
+                                    onTriggered: bar.doc.pasteSection(group.modelData.first + group.modelData.count)
+                                }
                             }
                         }
                     }
@@ -265,6 +280,14 @@ Rectangle {
                     }
                     onObjectAdded: (index, object) => addMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => addMenu.removeItem(object)
+                }
+                MenuSeparator {}
+                StageMenuItem {
+                    objectName: "flowPasteEnd"
+                    text: bar.doc.copiedSection !== "" ? qsTr("Paste %1 at the end").arg(bar.doc.copiedSection)
+                                                       : qsTr("Paste a section (copy one first)")
+                    enabled: bar.doc.copiedSection !== ""
+                    onTriggered: bar.doc.pasteSection(-1)
                 }
             }
         }

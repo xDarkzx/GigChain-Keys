@@ -389,6 +389,71 @@ private slots:
         QVERIFY(arrangeSongChart(s, 9).error().code == ErrorCode::OutOfRange);
     }
 
+    // A section copied from one song and pasted into another (#100): its
+    // lines (title, words, chords), its length, and its instruments by
+    // name (the other song has other channels: those of the same name; none
+    // of them there, it plays the default). Pasted after a part of the
+    // flow, it is played there and written there; with no flow, it goes
+    // where asked in the chart's own order, the song still with no flow.
+    // A paste that cannot be made leaves the song as it was.
+    void aSectionIsCopiedIntoAnotherSong()
+    {
+        Setlist s = abc();
+        QVERIFY(addChannel(s, Cursor{0, 0}, kPiano).has_value());
+        QVERIFY(addChannel(s, Cursor{0, 0}, kOrgan).has_value());
+        Song& from = s.songs.at(0);
+        from.chart = u"{comment: Verse}\n[Am]a\n\n{start_of_section: Hook}\n[C]Words of the [G]hook\nx2\n\n{comment: Outro}\n[E]e\n"_s;
+        from.sections = {SectionSetup{.name = u"Hook"_s, .occurrence = 1, .bars = 8, .assigned = true,
+                                      .channels = {from.patches.at(0).channels.at(1).id}}}; // the organ
+        const auto copied = copySongSection(s, 0, 1);
+        QVERIFY2(copied.has_value(), copied.has_value() ? "" : qPrintable(copied.error().message));
+        QCOMPARE(copied->label, u"Hook"_s);
+        QCOMPARE(copied->chordPro, u"{start_of_section: Hook}\n[C]Words of the [G]hook\nx2\n"_s);
+        QCOMPARE(copied->bars, 8);
+        QVERIFY(copied->assigned);
+        QCOMPARE(copied->channels, (std::vector<QString>{u"Organ"_s}));
+        QVERIFY(copySongSection(s, 0, 3).error().code == ErrorCode::OutOfRange);
+
+        // Into a song with a flow (Verse, Chorus, Verse), after its first part.
+        QVERIFY(addChannel(s, Cursor{1, 0}, kOrgan).has_value());
+        Song& to = s.songs.at(1);
+        to.chart = u"{comment: Verse}\n[D]v\n\n{comment: Chorus}\n[G]c\n"_s;
+        to.flow = {{.name = u"Verse"_s}, {.name = u"Chorus"_s}, {.name = u"Verse"_s}};
+        QVERIFY2(pasteSongSection(s, 1, *copied, 1).has_value(), "pasted"); // (its place in the flow: the second)
+        QCOMPARE(to.chart, u"{comment: Verse}\n[D]v\n\n{start_of_section: Hook}\n[C]Words of the [G]hook\nx2\n\n{comment: Chorus}\n[G]c\n"_s);
+        QStringList flow;
+        for (const SectionRef& part : to.flow) flow << part.name;
+        QCOMPARE(flow, (QStringList{u"Verse"_s, u"Hook"_s, u"Chorus"_s, u"Verse"_s}));
+        QCOMPARE(to.sections.size(), 1u);
+        QCOMPARE(to.sections.at(0).name, u"Hook"_s);
+        QCOMPARE(to.sections.at(0).bars, 8);
+        QVERIFY(to.sections.at(0).assigned);
+        QCOMPARE(to.sections.at(0).channels, (std::vector<ChannelId>{to.patches.at(0).channels.at(0).id})); // its organ
+
+        // Into a song with no flow and no organ: at the end, playing the default, still no flow.
+        Song& third = s.songs.at(2);
+        third.chart = u"{comment: Intro}\n[F]i\n"_s;
+        QVERIFY(pasteSongSection(s, 2, *copied, -1).has_value());
+        QCOMPARE(third.chart, u"{comment: Intro}\n[F]i\n\n{start_of_section: Hook}\n[C]Words of the [G]hook\nx2\n"_s);
+        QVERIFY(third.flow.empty());
+        QCOMPARE(third.sections.size(), 1u);
+        QVERIFY(!third.sections.at(0).assigned);
+        QCOMPARE(third.sections.at(0).bars, 8);
+        // ...and once more, first (before its intro).
+        QVERIFY(pasteSongSection(s, 2, *copied, 0).has_value());
+        QVERIFY(third.chart.startsWith(u"{start_of_section: Hook}\n[C]Words of the [G]hook\nx2\n\n{comment: Intro}\n"_s));
+        QVERIFY(third.flow.empty());
+        QCOMPARE(third.sections.size(), 2u); // each Hook its own (the first and the second)
+
+        // Too long for a chart: refused, the song as it was.
+        const Song before = third;
+        SectionCopy huge = *copied;
+        huge.chordPro += QString(limits::kMaxChartLength, u'a');
+        QVERIFY(!pasteSongSection(s, 2, huge, -1).has_value());
+        QVERIFY(s.songs.at(2) == before);
+        QVERIFY(pasteSongSection(s, 9, *copied, -1).error().code == ErrorCode::OutOfRange);
+    }
+
     // No song at all (-1) is said as such, not as "Song 0 does not exist";
     // a song past the end is named as the player counts (from 1).
     void noSongIsSaidPlainly()

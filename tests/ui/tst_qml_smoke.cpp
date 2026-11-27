@@ -2964,6 +2964,43 @@ Window {
         settle();
     }
 
+    // A section copied from one song's flow and pasted into another's (#100):
+    // the part's menu copies it, another song's part pastes it after itself.
+    void aFlowPartIsCopiedIntoAnotherSong()
+    {
+        QObject* root = m_qml->rootObjects().value(0);
+        QVERIFY(root->setProperty("editMixerOpen", false));
+        ui::DocumentController& doc = m_session->document();
+        QVERIFY(doc.setSongChart(0, u"{comment: Verse}\n[Am]a\n\n{start_of_section: Hook}\n[C]the hook\n"_s));
+        settle();
+        auto* bar = findItem(window()->contentItem(), u"flowBar"_s);
+        QVERIFY(bar != nullptr && bar->isVisible());
+        auto* paste = findAll(bar, u"flowPart"_s).value(0)->findChild<QObject*>(u"flowPasteAfter"_s);
+        QVERIFY(paste != nullptr);
+        QVERIFY(!paste->property("enabled").toBool()); // nothing copied yet
+        auto* copy = findAll(bar, u"flowPart"_s).value(1)->findChild<QObject*>(u"flowCopy"_s);
+        QVERIFY(copy != nullptr);
+        QVERIFY(QMetaObject::invokeMethod(copy, "triggered"));
+        QCOMPARE(doc.copiedSection(), u"Hook"_s);
+
+        QVERIFY(doc.addSong());
+        const int other = doc.songIndex();
+        QVERIFY(doc.setSongChart(other, u"{comment: Intro}\n[F]i\n\n{comment: Outro}\n[G]o\n"_s));
+        settle();
+        QTRY_COMPARE(findAll(bar, u"flowPart"_s).size(), 2);
+        paste = findAll(bar, u"flowPart"_s).value(0)->findChild<QObject*>(u"flowPasteAfter"_s);
+        QVERIFY(paste != nullptr && paste->property("enabled").toBool());
+        QCOMPARE(paste->property("text").toString(), u"Paste Hook after this"_s);
+        QVERIFY(QMetaObject::invokeMethod(paste, "triggered"));
+        QCOMPARE(doc.currentChart(), u"{comment: Intro}\n[F]i\n\n{start_of_section: Hook}\n[C]the hook\n\n{comment: Outro}\n[G]o\n"_s);
+        QStringList parts;
+        QTRY_COMPARE(findAll(bar, u"flowPart"_s).size(), 3);
+        for (QQuickItem* part : findAll(bar, u"flowPart"_s)) parts << part->property("text").toString();
+        QCOMPARE(parts, (QStringList{u"Intro"_s, u"Hook"_s, u"Outro"_s}));
+        QVERIFY(doc.removeSong(other));
+        settle();
+    }
+
     // A full song's chart stays light to edit (the tester's log: every edit
     // froze the screen for about a second). Each edit builds the chart's
     // lines again, so what a line is made of is what an edit costs: no menu

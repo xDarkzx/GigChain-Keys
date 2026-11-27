@@ -389,6 +389,37 @@ bool DocumentController::setSongFlow(const QVariantList& flow)
     return true;
 }
 
+QString DocumentController::copiedSection() const
+{
+    return m_sectionCopy.has_value() ? m_sectionCopy->label : QString();
+}
+
+bool DocumentController::copySection(int section)
+{
+    auto copy = core::copySongSection(m_setlist, songIndex(), section);
+    if (!copy) return report(copy.error());
+    m_sectionCopy = std::move(*copy);
+    const QString message = tr("%1 copied: paste it into another song from its flow (right-click a part, or +)").arg(m_sectionCopy->label);
+    qCInfo(lcUi).noquote() << message;
+    reportMessage(message, Notifications::Info);
+    emit copiedSectionChanged();
+    return true;
+}
+
+bool DocumentController::pasteSection(int at)
+{
+    if (!m_sectionCopy.has_value()) {
+        return report(core::Error{core::ErrorCode::InvalidData, tr("Copy a section first (right-click a part of a song's flow)")});
+    }
+    if (auto r = core::pasteSongSection(m_setlist, songIndex(), *m_sectionCopy, at); !r) return report(r.error());
+    qCInfo(lcUi).noquote() << "Pasted section" << m_sectionCopy->label << "at place" << at;
+    m_coalesceKey.clear(); // a step of its own
+    setDirty(true);
+    applySectionsToEngine(); // (and sectionsChanged)
+    emit chartChanged();
+    return true;
+}
+
 QVariantMap DocumentController::chordDiagram(const QString& name, int inversion) const
 {
     const auto shape = core::parseChordName(name);

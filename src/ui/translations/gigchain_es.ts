@@ -673,6 +673,14 @@
         <translation>Editar como texto (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>Pegar %1 al final</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Pegar una sección (copia una antes)</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translation>Acorde…</translation>
     </message>
@@ -1594,12 +1602,28 @@ Pon un acorde entre [corchetes] justo antes de la palabra en la que cambia.</tra
         <translation>Quitarla</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>Copiar sección</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>Pegar %1 después de esta</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Pegar una sección (copia una antes)</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>Poner %1</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>Añadir una sección a la estructura (un coro otra vez, después del puente...)</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>Pegar %1 al final</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5164,6 +5188,14 @@ Escríbelos o pégalos en la pestaña Chart.</translation>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>El chart no tiene ninguna sección &quot;%1&quot; para poner en la estructura de la canción</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>%1 copiada: pégala en otra canción desde su estructura (clic derecho en una parte, o +)</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>Copia una sección antes (clic derecho en una parte de la estructura de una canción)</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>

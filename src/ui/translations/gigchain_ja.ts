@@ -670,6 +670,14 @@
         <translation>テキストとして編集 (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>%1 を最後に貼り付け</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>セクションを貼り付け（先にコピー）</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translation>コード…</translation>
     </message>
@@ -1592,12 +1600,28 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>外す</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>セクションをコピー</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>%1 をこの後に貼り付け</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>セクションを貼り付け（先にコピー）</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>%1 を入れる</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>流れにセクションを追加（ブリッジの後にもう一度サビ…）</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>%1 を最後に貼り付け</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5129,6 +5153,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>譜面に、曲の流れに入れるセクション「%1」がありません</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>%1 をコピーしました：別の曲の曲の流れから貼り付けます（パートを右クリック、または +）</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>先にセクションをコピーしてください（曲の流れのパートを右クリック）</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>

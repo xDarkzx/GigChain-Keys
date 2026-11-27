@@ -714,6 +714,14 @@
         <translation>Text की तरह edit करें (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>%1 को अंत में paste करें</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Section paste करें (पहले एक copy करें)</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translatorcomment>same</translatorcomment>
         <translation>Chord…</translation>
@@ -1641,12 +1649,28 @@ Chord को [brackets] में ठीक उस शब्द से पहल
         <translation>निकाल दें</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>Section copy करें</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>%1 को इसके बाद paste करें</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Section paste करें (पहले एक copy करें)</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>%1 रखें</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>Flow में एक section जोड़ें (bridge के बाद फिर से chorus...)</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>%1 को अंत में paste करें</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5341,6 +5365,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>Chart में ऐसा कोई section &quot;%1&quot; नहीं जिसे गाने के flow में रखा जा सके</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>%1 copy हो गया: इसे किसी दूसरे गाने के Flow से paste करें (किसी part पर right-click करें, या +)</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>पहले एक section copy करें (गाने के Flow के किसी part पर right-click करें)</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>

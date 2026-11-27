@@ -320,6 +320,100 @@ Result<void> arrangeSongChart(Setlist& setlist, int songIndex)
     return {};
 }
 
+Result<SectionCopy> copySongSection(const Setlist& setlist, int songIndex, int section)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
+    const Song& song = setlist.songs.at(toIndex(songIndex));
+    const Chart chart = parseChordPro(song.chart);
+    const std::vector<ChartSection> sections = chartSections(chart);
+    if (!inRange(section, sections.size())) {
+        return fail(ErrorCode::OutOfRange, u"%1 has no section %2 to copy"_s.arg(song.name).arg(section + 1));
+    }
+    const ChartSection& copied = sections.at(toIndex(section));
+    // Its lines: from its title to the next one's, the blank lines closing it left out.
+    std::size_t end = toIndex(section) + 1 < sections.size() ? toIndex(sections.at(toIndex(section) + 1).line) : chart.lines.size();
+    while (end > toIndex(copied.line) + 1 && chart.lines.at(end - 1).kind == ChartLine::Kind::Blank) --end;
+    Chart lines;
+    lines.lines.assign(chart.lines.begin() + copied.line, chart.lines.begin() + static_cast<std::ptrdiff_t>(end));
+    SectionCopy copy{.label = copied.label, .chordPro = toChordPro(lines) + u'\n', .bars = 0, .assigned = false, .channels = {}};
+    const SectionRef ref{.name = copied.name, .occurrence = copied.occurrence};
+    const auto setup = std::ranges::find_if(song.sections, [&ref](const SectionSetup& s) {
+        return s.name.compare(ref.name, Qt::CaseInsensitive) == 0 && s.occurrence == ref.occurrence;
+    });
+    if (setup != song.sections.end()) {
+        copy.bars = setup->bars;
+        copy.assigned = setup->assigned;
+        for (const ChannelId& id : setup->channels) {
+            for (const Patch& patch : song.patches) {
+                const auto channel = std::ranges::find(patch.channels, id, &Channel::id);
+                if (channel == patch.channels.end()) continue;
+                if (std::ranges::find(copy.channels, channel->name) == copy.channels.end()) copy.channels.push_back(channel->name);
+                break;
+            }
+        }
+    }
+    return copy;
+}
+
+Result<void> pasteSongSection(Setlist& setlist, int songIndex, const SectionCopy& copy, int at)
+{
+    if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);
+    Song& song = setlist.songs.at(toIndex(songIndex));
+    const Song kept = song;
+    const auto refused = [&song, &kept](Error error) -> Result<void> {
+        song = kept; // (as it was)
+        return tl::unexpected(std::move(error));
+    };
+    const std::vector<ChartSection> before = chartSections(parseChordPro(song.chart));
+    // The parts as played: the flow, or the chart's own order.
+    const bool hadFlow = !song.flow.empty();
+    std::vector<SectionRef> order = song.flow;
+    if (!hadFlow) {
+        std::ranges::transform(before, std::back_inserter(order),
+                               [](const ChartSection& s) { return SectionRef{.name = s.name, .occurrence = s.occurrence}; });
+    }
+    if (order.size() >= static_cast<std::size_t>(limits::kMaxFlowParts)) {
+        return fail(ErrorCode::LimitExceeded, u"A song's flow has at most %1 parts"_s.arg(limits::kMaxFlowParts));
+    }
+    // Written at the end first, then moved to its place (as a part dragged there is).
+    QString text = song.chart;
+    while (text.endsWith(u'\n')) text.chop(1);
+    if (!text.isEmpty()) text += u"\n\n"_s;
+    text += copy.chordPro;
+    if (!text.endsWith(u'\n')) text += u'\n';
+    if (auto r = setSongChart(setlist, songIndex, text); !r) return refused(r.error());
+    const std::vector<ChartSection> after = chartSections(parseChordPro(song.chart));
+    if (after.size() != before.size() + 1) {
+        return refused(Error{ErrorCode::InvalidData, u"\"%1\" did not read as one section of %2's chart"_s.arg(copy.label, song.name)});
+    }
+    const SectionRef pasted{.name = after.back().name, .occurrence = after.back().occurrence};
+    // What it plays: the song's channels of the same names.
+    std::vector<ChannelId> channels;
+    for (const QString& name : copy.channels) {
+        for (const Patch& patch : song.patches) {
+            const auto channel = std::ranges::find(patch.channels, name, &Channel::name);
+            if (channel == patch.channels.end()) continue;
+            if (std::ranges::find(channels, channel->id) == channels.end()) channels.push_back(channel->id);
+            break;
+        }
+    }
+    // (Assigned to none of them here: the default, not silence; a silent break stays silent.)
+    const bool assigned = copy.assigned && (!channels.empty() || copy.channels.empty());
+    std::erase_if(song.sections, [&pasted](const SectionSetup& s) {
+        return s.name.compare(pasted.name, Qt::CaseInsensitive) == 0 && s.occurrence == pasted.occurrence;
+    });
+    if (assigned || copy.bars > 0) {
+        song.sections.push_back(SectionSetup{.name = pasted.name, .occurrence = pasted.occurrence, .bars = copy.bars,
+                                             .assigned = assigned, .channels = assigned ? channels : std::vector<ChannelId>{}});
+    }
+    const std::size_t place = at < 0 ? order.size() : std::min(toIndex(at), order.size());
+    order.insert(order.begin() + static_cast<std::ptrdiff_t>(place), pasted);
+    song.flow = order;
+    if (auto r = arrangeSongChart(setlist, songIndex); !r) return refused(r.error());
+    if (!hadFlow) song.flow.clear(); // (the chart's order is the one asked for; still no flow)
+    return {};
+}
+
 Result<void> setChordInversion(Setlist& setlist, int songIndex, const QString& chord, int inversion)
 {
     if (!inRange(songIndex, setlist.songs.size())) return missingSong(songIndex);

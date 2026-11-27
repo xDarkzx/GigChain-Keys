@@ -666,6 +666,14 @@
         <translation>以文本编辑 (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>把 %1 粘贴到末尾</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>粘贴段落（先复制一个）</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translation>和弦…</translation>
     </message>
@@ -1587,12 +1595,28 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>拿掉</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>复制段落</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>把 %1 粘贴到这之后</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>粘贴段落（先复制一个）</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>放入 %1</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>向曲序添加段落（桥段后再来一遍副歌…）</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>把 %1 粘贴到末尾</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5119,6 +5143,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>谱子中没有可放入曲序的“%1”段落</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>已复制 %1：在另一首歌的曲序里粘贴（右键点一个部分，或点 +）</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>请先复制一个段落（右键点歌曲曲序里的一个部分）</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>

@@ -46,6 +46,12 @@ players reported on GitHub.
   instrument you hid, each with its own **Show again**; the browser offers
   **Show all hidden instruments** only when some are hidden. Asked for on
   GitHub (#84).
+- **Copy a section into another song.** Right-click a part of the flow:
+  **Copy section**. In another song, right-click a part: **Paste ... after
+  this**, or the flow's **+** (or the chart's **⋯**): **Paste ... at the
+  end**. It brings its words, chords and length, and plays that song's
+  instruments of the same names. Ctrl+Z takes it out. Asked for on GitHub
+  (#100).
 
 ### Changed
 

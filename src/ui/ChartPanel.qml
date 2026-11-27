@@ -175,6 +175,14 @@ Rectangle {
                             panel.editing = true
                         }
                     }
+                    // A section copied from a song's flow (#100), here too: a song with no sections has no flow.
+                    StageMenuItem {
+                        objectName: "chartPasteSection"
+                        text: panel.doc.copiedSection !== "" ? qsTr("Paste %1 at the end").arg(panel.doc.copiedSection)
+                                                             : qsTr("Paste a section (copy one first)")
+                        enabled: panel.doc.copiedSection !== "" && panel.doc.songIndex >= 0
+                        onTriggered: panel.doc.pasteSection(-1)
+                    }
                 }
             }
         }

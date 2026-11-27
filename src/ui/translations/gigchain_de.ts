@@ -683,6 +683,14 @@
         <translation>Als Text bearbeiten (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>%1 am Ende einfügen</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Abschnitt einfügen (erst einen kopieren)</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translation>Akkord…</translation>
     </message>
@@ -1605,12 +1613,28 @@ Setz einen Akkord in [eckige Klammern] direkt vor das Wort, auf dem er wechselt.
         <translation>Herausnehmen</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>Abschnitt kopieren</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>%1 danach einfügen</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Abschnitt einfügen (erst einen kopieren)</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>%1 einfügen</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>Einen Abschnitt zum Ablauf hinzufügen (ein Chorus nach der Bridge nochmal…)</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>%1 am Ende einfügen</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5214,6 +5238,14 @@ Tipp sie im Tab Chart ein oder füge sie ein.</translation>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>Das Chart hat keinen Abschnitt „%1“, der in den Ablauf des Songs kann</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>%1 kopiert: in einem anderen Song über dessen Ablauf einfügen (Rechtsklick auf einen Teil, oder +)</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>Erst einen Abschnitt kopieren (Rechtsklick auf einen Teil im Ablauf eines Songs)</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>
