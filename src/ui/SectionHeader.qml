@@ -23,6 +23,7 @@ Column {
     property bool current: false // the section in force
     property bool playing: false // the song is being counted
     property int bar: 0
+    property string note: ""     // under the title: played again, or not played (the Chart tab)
 
     readonly property bool known: doc !== null && section !== undefined && section !== null
     readonly property color lit: header.current ? (header.playing ? Theme.chord : Theme.accent) : Theme.accentBlue
@@ -134,6 +135,19 @@ Column {
             Keys.onEscapePressed: visible = false
             onActiveFocusChanged: if (!activeFocus) visible = false
         }
+    }
+
+    // The Chart tab (#99): a section the flow plays again, or leaves out, says so.
+    Text {
+        objectName: "sectionNote"
+        visible: text !== ""
+        width: header.width
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.Wrap
+        text: header.note
+        color: Theme.textDim
+        font.pixelSize: Theme.smallFontSize * header.size
+        font.italic: true
     }
 
     // What it plays, and how long it is.

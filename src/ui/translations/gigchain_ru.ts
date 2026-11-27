@@ -717,6 +717,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
 <context>
     <name>ChartView</name>
     <message>
+        <source>Played again: the same words and chords as above (a change here changes both)</source>
+        <translation>Играется ещё раз: те же слова и аккорды, что выше (изменение здесь меняет оба)</translation>
+    </message>
+    <message>
+        <source>Not in the flow: not played (+ in the flow adds it)</source>
+        <translation>Нет в порядке: не играется (+ в порядке добавляет его)</translation>
+    </message>
+    <message>
         <source>Delete this note (Ctrl+Z brings it back)</source>
         <translation>Удалить эту заметку (Ctrl+Z вернёт её)</translation>
     </message>

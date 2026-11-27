@@ -876,6 +876,38 @@ QVariantList DocumentController::chartLinesInFlow(const QString& chordPro) const
     return shown;
 }
 
+QVariantList DocumentController::chartLinesToEdit(const QString& chordPro) const
+{
+    if (currentSongFlow().empty()) return chartLines(chordPro);
+    QVariantList shown;
+    std::map<int, int> times; // per section: how many times it is shown so far
+    int copy = 0;             // the time the section the line is in is shown (0: the first)
+    for (const QVariant& l : chartLinesInFlow(chordPro)) {
+        QVariantMap line = l.toMap();
+        const int section = line.value(u"sectionIndex"_s).toInt();
+        if (section >= 0) {
+            copy = times[section]++;
+            if (copy > 0) line.insert(u"again"_s, true);
+        }
+        line.insert(u"copy"_s, copy);
+        shown << line;
+    }
+    // The sections the flow leaves out, in the chart's order, after the rest.
+    bool left = false;
+    for (const QVariant& l : chartLines(chordPro)) {
+        QVariantMap line = l.toMap();
+        const int section = line.value(u"sectionIndex"_s).toInt();
+        if (section >= 0) {
+            left = !times.contains(section);
+            if (left) line.insert(u"unplayed"_s, true);
+        }
+        if (!left) continue;
+        line.insert(u"copy"_s, 0);
+        shown << line;
+    }
+    return shown;
+}
+
 bool DocumentController::renamePatch(int song, int patch, const QString& name)
 {
     if (auto r = core::renamePatch(m_setlist, core::Cursor{song, patch}, name); !r) return report(r.error());

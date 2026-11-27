@@ -727,6 +727,14 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
 <context>
     <name>ChartView</name>
     <message>
+        <source>Played again: the same words and chords as above (a change here changes both)</source>
+        <translation>Tocada de novo: a mesma letra e os mesmos acordes de cima (mudar aqui muda as duas)</translation>
+    </message>
+    <message>
+        <source>Not in the flow: not played (+ in the flow adds it)</source>
+        <translation>Fora do roteiro: não é tocada (o + no roteiro a coloca)</translation>
+    </message>
+    <message>
         <source>Delete this note (Ctrl+Z brings it back)</source>
         <translation>Apagar esta nota (Ctrl+Z traz de volta)</translation>
     </message>

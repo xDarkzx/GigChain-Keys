@@ -717,6 +717,14 @@ Put a chord in [brackets] right before the word it changes on.</source>
 <context>
     <name>ChartView</name>
     <message>
+        <source>Played again: the same words and chords as above (a change here changes both)</source>
+        <translation>다시 연주: 위와 같은 가사와 코드 (여기서 바꾸면 둘 다 바뀝니다)</translation>
+    </message>
+    <message>
+        <source>Not in the flow: not played (+ in the flow adds it)</source>
+        <translation>플로우에 없음: 연주되지 않습니다 (플로우의 +로 추가)</translation>
+    </message>
+    <message>
         <source>Delete this note (Ctrl+Z brings it back)</source>
         <translation>이 메모 삭제 (Ctrl+Z로 되돌리기)</translation>
     </message>

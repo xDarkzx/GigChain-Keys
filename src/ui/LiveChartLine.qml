@@ -28,6 +28,9 @@ Item {
     property int lineAbove: -1        // the chart lines above / below that can be typed in (-1: none)
     property int lineBelow: -1
     property int lengthAbove: 0       // the words' length of the line above (Backspace joins onto it)
+    // Which time its section is shown (0; 1, 2... a repeat the flow plays,
+    // the same chart line): a request for the caret is for one of them.
+    property int copy: 0
     // From the chart, after an edit rebuilt the lines: {line, cursor} types
     // the line as text; {line, cell, what} types in a cell's box or word.
     property var focusRequest: null
@@ -845,6 +848,7 @@ Item {
     function takeFocusIfAsked() {
         const asked = live.focusRequest
         if (asked === null || asked === undefined || asked.line !== live.chartLine) return
+        if ((asked.copy !== undefined ? asked.copy : 0) !== live.copy) return // (the same line shown again: the other copy)
         if (asked.cell !== undefined) {
             live.focusTaken()
             if (asked.cell < 0 || asked.cell >= cellsRepeater.count) return

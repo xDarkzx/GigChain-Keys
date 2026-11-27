@@ -921,6 +921,37 @@ private slots:
         QVERIFY(m_doc->lastError().contains(u"inversion"_s));
     }
 
+    // The Chart tab shows the song as its flow plays it (#99): a section
+    // played twice is there twice, the repeat marked "again" and its lines
+    // the same chart lines (editing either edits both), each copy numbered;
+    // a section the flow leaves out is still there to edit, after the rest,
+    // marked "unplayed". Without a flow: chartLines() as it is.
+    void theChartTabShowsTheFlowsRepeats()
+    {
+        // (Named as the reporter's: + Section writes a name like these as {start_of_section}.)
+        const QString chart = u"{start_of_section: B003}\n[C]one\n{start_of_section: B004}\n[G]two\n{comment: Bridge}\n[F]three\n"_s;
+        QVERIFY(m_doc->setSongChart(0, chart));
+        QCOMPARE(m_doc->chartLinesToEdit(m_doc->currentChart()), m_doc->chartLines(m_doc->currentChart()));
+
+        const auto part = [](const QString& name) { return QVariantMap{{u"name"_s, name}, {u"occurrence"_s, 1}}; };
+        QVERIFY(m_doc->setSongFlow({part(u"B003"_s), part(u"B004"_s), part(u"B003"_s), part(u"B004"_s)}));
+        QStringList shown;
+        for (const QVariant& l : m_doc->chartLinesToEdit(m_doc->currentChart())) {
+            const QVariantMap line = l.toMap();
+            QString text = line.value(u"sectionIndex"_s).toInt() >= 0 ? line.value(u"label"_s).toString()
+                                                                      : line.value(u"lyrics"_s).toString();
+            text += u"@%1#%2"_s.arg(line.value(u"line"_s).toInt()).arg(line.value(u"copy"_s).toInt());
+            if (line.value(u"again"_s).toBool()) text += u" again"_s;
+            if (line.value(u"unplayed"_s).toBool()) text += u" unplayed"_s;
+            shown << text;
+        }
+        const int bridge = static_cast<int>(m_doc->currentChart().split(u'\n').indexOf(u"{comment: Bridge}"_s));
+        QCOMPARE(shown, (QStringList{u"B003@0#0"_s, u"one@1#0"_s, u"B004@2#0"_s, u"two@3#0"_s,
+                                     u"B003@0#1 again"_s, u"one@1#1"_s, u"B004@2#1 again"_s, u"two@3#1"_s,
+                                     u"Bridge@%1#0 unplayed"_s.arg(bridge), u"three@%1#0"_s.arg(bridge + 1)}));
+        QVERIFY(m_doc->setSongFlow({}));
+    }
+
     // The song's flow: the chart's order until one is set; a flow of its own
     // (a verse after a verse, the chorus twice) is the timeline the engine
     // plays; an undo step; a section the chart does not have is refused.

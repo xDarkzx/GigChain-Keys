@@ -724,6 +724,14 @@ Pon un acorde entre [corchetes] justo antes de la palabra en la que cambia.</tra
 <context>
     <name>ChartView</name>
     <message>
+        <source>Played again: the same words and chords as above (a change here changes both)</source>
+        <translation>Se toca otra vez: la misma letra y los mismos acordes de arriba (un cambio aquí cambia las dos)</translation>
+    </message>
+    <message>
+        <source>Not in the flow: not played (+ in the flow adds it)</source>
+        <translation>Fuera de la estructura: no se toca (el + de la estructura la añade)</translation>
+    </message>
+    <message>
         <source>Delete this note (Ctrl+Z brings it back)</source>
         <translation>Borrar esta nota (Ctrl+Z la recupera)</translation>
     </message>

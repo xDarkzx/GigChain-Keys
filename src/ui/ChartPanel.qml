@@ -432,13 +432,16 @@ Rectangle {
                     onFocusRequestChanged: Qt.callLater(() => {
                         const asked = panelChart.focusRequest
                         if (asked === null || asked === undefined) return
-                        const shown = panelChart.lines
-                        const last = shown.length > 0 ? shown[shown.length - 1].line : -1
+                        // (The chart's last line: with a flow, not always the last shown.)
+                        const last = panelChart.lines.reduce((most, shown) => Math.max(most, shown.line), -1)
                         if (asked.line <= last) return
                         panelChart.focusRequest = null
                         newLine.forceActiveFocus()
                     })
-                    lines: panel.doc.chartLines(panel.doc.currentChart)
+                    // As the song is played (#99): a section its flow plays twice shown twice.
+                    lines: panel.doc.songFlow.length >= 0 ? panel.doc.chartLinesToEdit(panel.doc.currentChart) : [] // (again when the flow changes)
+                    flowOrder: panel.doc.songFlowSet
+                    currentPlace: panel.engineStatus.songPlace
                     doc: panel.doc
                     currentSection: panel.engineStatus.songSection
                     playing: panel.engineStatus.songPlaying

@@ -766,6 +766,14 @@ Chord को [brackets] में ठीक उस शब्द से पहल
 <context>
     <name>ChartView</name>
     <message>
+        <source>Played again: the same words and chords as above (a change here changes both)</source>
+        <translation>फिर से बजता है: ऊपर वाले ही शब्द और chords (यहाँ बदलाव दोनों को बदलता है)</translation>
+    </message>
+    <message>
+        <source>Not in the flow: not played (+ in the flow adds it)</source>
+        <translation>Flow में नहीं: बजता नहीं (Flow में + इसे जोड़ता है)</translation>
+    </message>
+    <message>
         <source>Delete this note (Ctrl+Z brings it back)</source>
         <translation>यह note मिटाएँ (Ctrl+Z वापस लाता है)</translation>
     </message>
