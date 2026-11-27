@@ -91,6 +91,10 @@ Rectangle {
     transform: Translate { x: strip.lifted ? strip.liftOffset : 0 }
 
     readonly property real peakDb: peak > 0 ? 20 * Math.log10(peak) : -200
+    // Shorter than a whole strip (a 1080p screen's mixer under the chart, the
+    // loop station over it): the sections' labels and the instrument's icon
+    // go, so the fader keeps room to ride a level (it was squeezed to 83 pixels).
+    readonly property bool compact: height > 0 && height < Theme.stripHeight - 40
     property int menuEffect: -1 // effect the effect menu acts on
 
     width: Theme.stripWidth
@@ -457,9 +461,11 @@ Rectangle {
         // The sound: its icon and the instrument (or audio input) it plays.
         StripSection {
             Layout.fillWidth: true
-            label: strip.inputLeft > 0 ? qsTr("INPUT") : qsTr("INSTRUMENT")
+            // (A short strip keeps INPUT: its slot names no instrument for an audio input.)
+            label: strip.inputLeft > 0 ? qsTr("INPUT") : strip.compact ? "" : qsTr("INSTRUMENT")
         // instrument icon
         Rectangle {
+            visible: !strip.compact // (the slot below names the instrument)
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredWidth: 34
             Layout.preferredHeight: 34
@@ -498,7 +504,7 @@ Rectangle {
 
         StripSection {
             Layout.fillWidth: true
-            label: qsTr("AUDIO FX")
+            label: strip.compact ? "" : qsTr("AUDIO FX")
         // effect slots, then one empty slot to add another. The list grows
         // with each effect; past four it scrolls, so the fader keeps its room.
         ListView {
@@ -551,7 +557,7 @@ Rectangle {
         // The send to the aux effects (the Aux strip's reverb or delay) and the pan, side by side.
         StripSection {
             Layout.fillWidth: true
-            label: qsTr("SEND · PAN")
+            label: strip.compact ? "" : qsTr("SEND · PAN")
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
             spacing: 2
