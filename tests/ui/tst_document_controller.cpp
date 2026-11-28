@@ -967,6 +967,33 @@ private slots:
         QVERIFY(m_doc->setSongFlow({}));
     }
 
+    // A section copied from the flow and pasted into another song (#100):
+    // what is copied is said and kept (copiedSection) as songs change; the
+    // paste is one undo step; nothing copied, or a section not there: said.
+    void aSectionIsCopiedAndPastedIntoAnotherSong()
+    {
+        QVERIFY(m_doc->copiedSection().isEmpty());
+        QVERIFY(!m_doc->pasteSection(-1));
+        QVERIFY2(m_doc->lastError().contains(u"Copy"_s), qPrintable(m_doc->lastError()));
+        QVERIFY(m_doc->setSongChart(0, u"{comment: Verse}\n[Am]a\n\n{start_of_section: Hook}\n[C]the hook\n"_s));
+        QVERIFY(!m_doc->copySection(5));
+        QSignalSpy copiedChanged(m_doc.get(), &DocumentController::copiedSectionChanged);
+        QVERIFY(m_doc->copySection(1));
+        QCOMPARE(copiedChanged.count(), 1);
+        QCOMPARE(m_doc->copiedSection(), u"Hook"_s);
+
+        QVERIFY(m_doc->addSong());
+        const int other = m_doc->songIndex();
+        QVERIFY(other > 0); // (the new song, chosen)
+        QVERIFY(m_doc->setSongChart(other, u"{comment: Intro}\n[F]i\n"_s));
+        QCOMPARE(m_doc->copiedSection(), u"Hook"_s); // (still there in another song)
+        QVERIFY(m_doc->pasteSection(0));
+        QVERIFY(m_doc->currentChart().startsWith(u"{start_of_section: Hook}\n[C]the hook\n\n{comment: Intro}\n"_s));
+        QVERIFY(!m_doc->songFlowSet());
+        QVERIFY(m_doc->undo());
+        QCOMPARE(m_doc->currentChart(), u"{comment: Intro}\n[F]i\n"_s);
+    }
+
     // The song's flow: the chart's order until one is set; a flow of its own
     // (a verse after a verse, the chorus twice) is the timeline the engine
     // plays; an undo step; a section the chart does not have is refused.

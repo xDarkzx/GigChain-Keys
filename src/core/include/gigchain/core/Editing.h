@@ -45,6 +45,25 @@ Result<void> setSongFlow(Setlist& setlist, int songIndex, const std::vector<Sect
 // sections' instruments keep to each section. No flow, or already in its
 // order: the chart is left as it is.
 Result<void> arrangeSongChart(Setlist& setlist, int songIndex);
+// A song's section as it is copied into another song (#100): its lines
+// (title, words, chords) as ChordPro, its length and what it plays, by the
+// instruments' names (another song has other channels).
+struct SectionCopy
+{
+    QString label;    // its title, as written
+    QString chordPro; // from its title to its last line (the blank lines after it left out)
+    int bars = 0;     // 0: guessed from the chart
+    bool assigned = false;
+    std::vector<QString> channels; // the names of the channels it plays (assigned)
+};
+// Section `section` of a song's chart (chartSections()' order) copied.
+Result<SectionCopy> copySongSection(const Setlist& setlist, int songIndex, int section);
+// A copied section put into a song at place `at` of its flow (0: first; -1
+// or past the end: last); with no flow, at that place in the chart's own
+// order, and the song still has no flow. Its instruments are the song's
+// channels of the same names; none of them there: it plays the default.
+// Refused (the song as it was) when the chart would be too long.
+Result<void> pasteSongSection(Setlist& setlist, int songIndex, const SectionCopy& copy, int at);
 // The inversion chosen for chord `chord` of a song (0 to 3); -1 forgets it.
 Result<void> setChordInversion(Setlist& setlist, int songIndex, const QString& chord, int inversion);
 // Loops start and stop on the bars (true) or press to press.

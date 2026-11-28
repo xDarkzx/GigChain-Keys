@@ -666,6 +666,14 @@
         <translation>텍스트로 편집 (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>%1 끝에 붙여넣기</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>섹션 붙여넣기 (먼저 하나 복사)</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translation>코드…</translation>
     </message>
@@ -1587,12 +1595,28 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>빼기</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>섹션 복사</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>이 뒤에 %1 붙여넣기</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>섹션 붙여넣기 (먼저 하나 복사)</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>%1 넣기</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>플로우에 섹션 추가 (브리지 뒤에 다시 연주하는 코러스 등)</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>%1 끝에 붙여넣기</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5119,6 +5143,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>차트에 곡의 플로우에 넣을 &quot;%1&quot; 섹션이 없습니다</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>%1 복사됨: 다른 곡의 플로우에서 붙여넣으세요 (파트를 오른쪽 클릭하거나 +)</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>먼저 섹션을 복사하세요 (곡 플로우의 파트를 오른쪽 클릭)</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>

@@ -2,6 +2,7 @@
 
 #include "Notifications.h"
 
+#include "gigchain/core/Editing.h"
 #include "gigchain/core/Error.h"
 #include "gigchain/core/Model.h"
 #include "gigchain/core/Navigation.h"
@@ -229,6 +230,16 @@ public:
     // undo step. A part naming no section of the chart is refused, said. The
     // chart's sections are then written in the flow's order (core::arrangeSongChart).
     Q_INVOKABLE bool setSongFlow(const QVariantList& flow);
+    // A section copied (#100: a flow part's menu) to paste into another song,
+    // kept as songs change: its title ("": nothing copied).
+    Q_PROPERTY(QString copiedSection READ copiedSection NOTIFY copiedSectionChanged)
+    [[nodiscard]] QString copiedSection() const;
+    // Section `section` of the current song's chart (chartSections()' order)
+    // copied: its lines, its length and its instruments (by name). Said.
+    Q_INVOKABLE bool copySection(int section);
+    // The copied section put into the current song at place `at` of its
+    // flow (0: first; -1: last; core::pasteSongSection): one undo step.
+    Q_INVOKABLE bool pasteSection(int at);
     // Enter while typing a line: its words become `lyrics` and it splits at
     // `at` (of the new words), as one undo step.
     Q_INVOKABLE bool editLineAndSplit(int line, const QString& lyrics, int at);
@@ -465,6 +476,7 @@ signals:
     void undoChanged();
     void songChanged(); // the current song, or its tempo, time, backing track
     void sectionsChanged(); // the current song's sections or what they play
+    void copiedSectionChanged();
     void chordInversionsChanged(); // the current song's chosen inversions (or which song is current)
     void loopControlsChanged();
     void mixerControlsChanged();
@@ -581,6 +593,7 @@ private:
     core::Setlist m_committed; // the setlist after the last recorded edit
     core::Cursor m_committedCursor;
     QString m_coalesceKey;     // set by an edit that merges with the same edit just before
+    std::optional<core::SectionCopy> m_sectionCopy; // copySection(), for pasteSection()
     QString m_lastCoalesceKey;
     qint64 m_lastEditMs = 0;
     bool m_restoring = false;

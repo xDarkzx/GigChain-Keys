@@ -682,6 +682,14 @@
         <translation>Modifier en texte (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>Coller %1 à la fin</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Coller une section (en copier une d’abord)</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translation>Accord…</translation>
     </message>
@@ -1603,12 +1611,28 @@ Mettez un accord entre [crochets] juste avant le mot sur lequel il change.</tran
         <translation>La retirer</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>Copier la section</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>Coller %1 après celle-ci</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Coller une section (en copier une d’abord)</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>Placer %1</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>Ajouter une section à la structure (un refrain rejoué, après le pont...)</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>Coller %1 à la fin</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5191,6 +5215,14 @@ Tapez-les ou collez-les dans l’onglet Grille.</translation>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>La grille n’a pas de section « %1 » à mettre dans la structure du morceau</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>%1 copiée : collez-la dans une autre chanson depuis sa structure (clic droit sur une partie, ou +)</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>Copiez d’abord une section (clic droit sur une partie de la structure d’une chanson)</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>

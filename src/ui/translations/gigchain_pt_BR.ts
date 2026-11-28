@@ -676,6 +676,14 @@
         <translation>Editar como texto (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>Colar %1 no fim</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Colar uma seção (copie uma antes)</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translation>Acorde…</translation>
     </message>
@@ -1597,12 +1605,28 @@ Coloque o acorde entre [colchetes] logo antes da palavra em que ele muda.</trans
         <translation>Tirar</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>Copiar seção</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>Colar %1 depois desta</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Colar uma seção (copie uma antes)</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>Colocar %1</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>Adicionar uma seção ao roteiro (um refrão de novo, depois da ponte...)</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>Colar %1 no fim</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5171,6 +5195,14 @@ Digite ou cole na aba Cifra.</translation>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>A cifra não tem nenhuma seção &quot;%1&quot; para colocar no roteiro da música</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>%1 copiada: cole-a em outra música pelo roteiro dela (clique com o botão direito numa parte, ou +)</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>Copie uma seção antes (clique com o botão direito numa parte do roteiro de uma música)</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>

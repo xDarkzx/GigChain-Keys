@@ -666,6 +666,14 @@
         <translation>Править как текст (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>Вставить %1 в конец</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Вставить раздел (сначала скопируйте)</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translation>Аккорд…</translation>
     </message>
@@ -1587,12 +1595,28 @@ Put a chord in [brackets] right before the word it changes on.</source>
         <translation>Убрать</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>Копировать раздел</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>Вставить %1 после этого</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Вставить раздел (сначала скопируйте)</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>Поставить %1</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>Добавить раздел в порядок (повтор припева после бриджа...)</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>Вставить %1 в конец</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5125,6 +5149,14 @@ Type or paste them in the Chart tab.</source>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>В листе нет раздела «%1», чтобы поставить его в порядок песни</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>%1 скопирован: вставьте его в другую песню через её порядок (правый щелчок по части или +)</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>Сначала скопируйте раздел (правый щелчок по части в порядке песни)</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>

@@ -692,6 +692,14 @@
         <translation>Edit sebagai teks (ChordPro)</translation>
     </message>
     <message>
+        <source>Paste %1 at the end</source>
+        <translation>Tempel %1 di akhir</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Tempel bagian (salin satu dulu)</translation>
+    </message>
+    <message>
         <source>Chord…</source>
         <translatorcomment>same</translatorcomment>
         <translation>Chord…</translation>
@@ -1618,12 +1626,28 @@ Taruh chord dalam [kurung siku] tepat sebelum kata tempat chord berganti.</trans
         <translation>Keluarkan</translation>
     </message>
     <message>
+        <source>Copy section</source>
+        <translation>Salin bagian</translation>
+    </message>
+    <message>
+        <source>Paste %1 after this</source>
+        <translation>Tempel %1 setelah ini</translation>
+    </message>
+    <message>
+        <source>Paste a section (copy one first)</source>
+        <translation>Tempel bagian (salin satu dulu)</translation>
+    </message>
+    <message>
         <source>Put in %1</source>
         <translation>Masukkan %1</translation>
     </message>
     <message>
         <source>Add a section to the flow (a chorus played again, after the bridge...)</source>
         <translation>Tambah bagian ke alur (chorus sekali lagi, setelah bridge...)</translation>
+    </message>
+    <message>
+        <source>Paste %1 at the end</source>
+        <translation>Tempel %1 di akhir</translation>
     </message>
     <message>
         <source>Chart order</source>
@@ -5235,6 +5259,14 @@ Ketik atau tempel di tab Chart.</translation>
     <message>
         <source>The chart has no section &quot;%1&quot; to put in the song&apos;s flow</source>
         <translation>Chart tidak punya bagian &quot;%1&quot; untuk dimasukkan ke alur lagu</translation>
+    </message>
+    <message>
+        <source>%1 copied: paste it into another song from its flow (right-click a part, or +)</source>
+        <translation>%1 disalin: tempel ke lagu lain dari alurnya (klik kanan sebuah bagian, atau +)</translation>
+    </message>
+    <message>
+        <source>Copy a section first (right-click a part of a song&apos;s flow)</source>
+        <translation>Salin satu bagian dulu (klik kanan sebuah bagian di alur lagu)</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a chord this app knows</source>
